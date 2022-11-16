@@ -1,32 +1,18 @@
 # Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
+*.deps
+Bombe
+GridGenerator
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache
+config.guess
+config.log
+config.status
+config.sub
+configure
+depmod
+install-sh
+missing
+depcomp
