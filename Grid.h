@@ -48,6 +48,7 @@ public:
         revealed(revealed_)
     {}
 };
+class GridRule;
 
 class GridRegion
 {
@@ -60,7 +61,7 @@ public:
     bool global = false;
     bool stale = false;
     std::set<XYPos> elements;
-
+    GridRule* rule = NULL;
 
     bool overlaps(GridRegion& other);
     void reset(RegionType type);
@@ -94,7 +95,7 @@ public:
     GridRule(SaveObject* sobj);
     SaveObject* save();
     bool matches(GridRule& other);
-    void import_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3);
+    void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3);
     bool is_legal();
 };
 
@@ -144,8 +145,8 @@ public:
         APPLY_RULE_RESP_ERROR
     };
 
-    ApplyRuleResp apply_rule(GridRule rule, GridRegion* r1, GridRegion* r2, GridRegion* r3);
-    ApplyRuleResp apply_rule(GridRule rule);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3);
+    ApplyRuleResp apply_rule(GridRule& rule);
     void add_new_regions();
     void add_one_new_region();
 

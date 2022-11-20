@@ -190,6 +190,7 @@ void GameState::advance()
         levels.pop_front();
         SDL_UnlockMutex(levels_mutex);
         skip_level = false;
+        reset_rule_gen_region();
     }
 
     if (auto_region)
@@ -258,26 +259,27 @@ void GameState::audio()
 {
 }
 
-void GameState::reset_selected_region()
+void GameState::reset_rule_gen_region()
 {
-    selected_region[0] = NULL;
-    selected_region[1] = NULL;
-    selected_region[2] = NULL;
-    selected_region_count = 0;
-    selected_region_undef_num = 0;
+    rule_gen_region[0] = NULL;
+    rule_gen_region[1] = NULL;
+    rule_gen_region[2] = NULL;
+    rule_gen_region_count = 0;
+    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
     update_constructed_rule();
+    right_panel_mode = RIGHT_MENU_NONE;
 }
 void GameState::update_constructed_rule()
 {
     constructed_rule_is_logical = false;
-    if (!selected_region_count)
+    if (!rule_gen_region_count)
         return;
 
-    constructed_rule.import_selected_regions(selected_region[0], selected_region[1], selected_region[2]);
+    constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2]);
     for (int i = 0; i < 8; i++)
     {
-        if ((selected_region_undef_num >> i) & 1)
+        if ((rule_gen_region_undef_num >> i) & 1)
         {
             constructed_rule.square_counts[i] = -1;
         }
@@ -487,49 +489,49 @@ void GameState::render(bool saving)
     {
 
 
-        if ((mouse - (right_panel_offset + XYPos(button_size / 2, 0))).inside(XYPos(button_size, button_size)) && selected_region_count >= 1)
-            hover = selected_region[0];
-        if ((mouse - (right_panel_offset + XYPos(button_size / 2 + button_size * 2, button_size))).inside(XYPos(button_size, button_size)) && selected_region_count >= 2)
-            hover = selected_region[1];
-        if ((mouse - (right_panel_offset + XYPos(button_size / 2, button_size * 4))).inside(XYPos(button_size, button_size)) && selected_region_count >= 2)
-            hover = selected_region[2];
+        if ((mouse - (right_panel_offset + XYPos(button_size / 2, 0))).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 1)
+            hover = rule_gen_region[0];
+        if ((mouse - (right_panel_offset + XYPos(button_size / 2 + button_size * 2, button_size))).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 2)
+            hover = rule_gen_region[1];
+        if ((mouse - (right_panel_offset + XYPos(button_size / 2, button_size * 4))).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 2)
+            hover = rule_gen_region[2];
 
         if ((mouse - (right_panel_offset + XYPos(button_size / 2, button_size))).inside(XYPos(button_size*3, button_size * 5)))
         {
             XYPos pos = mouse - (right_panel_offset + XYPos(button_size / 2, button_size));
             XYPos gpos = pos / button_size;
-            if (gpos == XYPos(0,0) && selected_region_count >= 1)
+            if (gpos == XYPos(0,0) && rule_gen_region_count >= 1)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 1;
             }
-            if (gpos == XYPos(1,0) && selected_region_count >= 2)
+            if (gpos == XYPos(1,0) && rule_gen_region_count >= 2)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 3;
             }
-            if (gpos == XYPos(2,1) && selected_region_count >= 2)
+            if (gpos == XYPos(2,1) && rule_gen_region_count >= 2)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 2;
             }
 
-            if (gpos == XYPos(0,1) && selected_region_count >= 3)
+            if (gpos == XYPos(0,1) && rule_gen_region_count >= 3)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 5;
             }
-            if (gpos == XYPos(1,1) && selected_region_count >= 3)
+            if (gpos == XYPos(1,1) && rule_gen_region_count >= 3)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 7;
             }
-            if (gpos == XYPos(0,2) && selected_region_count >= 3)
+            if (gpos == XYPos(0,2) && rule_gen_region_count >= 3)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 4;
             }
-            if (gpos == XYPos(1,2) && selected_region_count >= 3)
+            if (gpos == XYPos(1,2) && rule_gen_region_count >= 3)
             {
                 hover_rulemaker = true;
                 hover_rulemaker_bits = 6;
@@ -552,22 +554,22 @@ void GameState::render(bool saving)
         {
             bool show = true;
             {
-                if (selected_region_count >= 1)
+                if (rule_gen_region_count >= 1)
                 {
                     bool b = (hover_rulemaker_bits & 1);
-                    if (selected_region[0]->elements.count(pos) != b)
+                    if (rule_gen_region[0]->elements.count(pos) != b)
                         show = false;
                 }
-                if (selected_region_count >= 2)
+                if (rule_gen_region_count >= 2)
                 {
                     bool b = (hover_rulemaker_bits & 2);
-                    if (selected_region[1]->elements.count(pos) != b)
+                    if (rule_gen_region[1]->elements.count(pos) != b)
                         show = false;
                 }
-                if (selected_region_count >= 3)
+                if (rule_gen_region_count >= 3)
                 {
                     bool b = (hover_rulemaker_bits & 4);
-                    if (selected_region[2]->elements.count(pos) != b)
+                    if (rule_gen_region[2]->elements.count(pos) != b)
                         show = false;
                 }
             }
@@ -825,225 +827,394 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
 
-    if (selected_region_count >= 1)
+    if (right_panel_mode == RIGHT_MENU_REGION)
     {
-        set_region_colour(sdl_texture, selected_region[0]->type.value, selected_region[0]->colour, 255);
+        set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, 255);
         {
         SDL_Rect src_rect = {1344, 256, 256, 384};
-        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2, button_size  * 3};
+        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 1 * button_size, button_size * 1, button_size  * 2};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
 
         {
         SDL_Rect src_rect = {64, 512, 192, 192};
-        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2 / 3, button_size * 2 / 3};
+        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 1 * button_size, button_size * 2 / 3, button_size * 2 / 3};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         {
         SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-        render_region_type(selected_region[0]->type, XYPos(right_panel_offset.x + button_size / 2, right_panel_offset.y), button_size * 2 / 3);
+        render_region_type(inspected_region->type, XYPos(right_panel_offset.x + button_size / 2, right_panel_offset.y + 1 * button_size), button_size * 2 / 3);
         }
-        if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 1)
+        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
         {
-            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-            SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 3, right_panel_offset.y + 0 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
+            int count = inspected_region->elements.size();
+            SDL_Rect src_rect = {192 * count, 0, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size/8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-    }
-    if (selected_region_count >= 2)
-    {
-        set_region_colour(sdl_texture, selected_region[1]->type.value, selected_region[1]->colour, 255);
         {
-        SDL_Rect src_rect = {1344, 256, 256, 384};
-        SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 1.5), right_panel_offset.y + 1 * button_size, button_size * 2, button_size  * 3};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-        SDL_Rect src_rect = {64, 512, 192, 192};
-        SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + 1 * button_size, button_size * 2 / 3, button_size * 2 / 3};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-        SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-        render_region_type(selected_region[1]->type, XYPos(right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + button_size), button_size * 2 / 3);
-        }
-        if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 2)
-        {
-            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-            SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size, right_panel_offset.y + 1 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-    }
-    if (selected_region_count >= 3)
-    {
-        set_region_colour(sdl_texture, selected_region[2]->type.value, selected_region[2]->colour, 255);
-        {
-        SDL_Rect src_rect = {1344, 256, 256, 384};
-        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 2 * button_size, button_size * 2, button_size  * 3};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-        SDL_Rect src_rect = {64, 512, 192, 192};
-        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3, button_size * 2 / 3, button_size * 2 / 3};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-        SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-        render_region_type(selected_region[2]->type, XYPos(right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3), button_size * 2 / 3);
-        }
-        if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 4)
-        {
-            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-            SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16 + button_size / 3, right_panel_offset.y + 5 * button_size - button_size, button_size * 2 / 3, button_size * 2 / 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-    }
-    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-    if (selected_region_count >= 1)
-    {
-        {
-            SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
+            SDL_Rect src_rect = { 1088, 576, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-    }
-    if (selected_region_count >= 1 && constructed_rule.apply_region_bitmap)
-    {
+        if (inspected_region->rule)
         {
-            SDL_Rect src_rect = { 192 * ((constructed_rule_is_logical) ? 3 : 4) + 128, 192 * ((constructed_rule_is_logical) ? 2 : 3), 192, 192 };
-            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + 4 * button_size, button_size, button_size };
+            SDL_Rect src_rect = { 704, 768, 192, 192 };
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 0, right_panel_offset.y + 4 * button_size, button_size, button_size };
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
     }
 
-
-    int counts[10] = {};
-
-    if (selected_region_count >= 1)
+    if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
-        counts[1] = selected_region[0]->elements.size();
-    }
-    if (selected_region_count >= 2)
-    {
-        counts[2] = selected_region[1]->elements.size();
-        for (XYPos pos : selected_region[1]->elements)
+        if (rule_gen_region_count >= 1)
         {
-            if (selected_region[0]->elements.count(pos))
+            set_region_colour(sdl_texture, rule_gen_region[0]->type.value, rule_gen_region[0]->colour, 255);
             {
-                counts[1]--;
-                counts[2]--;
-                counts[3]++;
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
-        }
-    }
-    if (selected_region_count >= 3)
-    {
-        counts[4] = selected_region[2]->elements.size();
 
-        for (XYPos pos : selected_region[2]->elements)
-        {
-            bool r1 = selected_region[0]->elements.count(pos);
-            bool r2 = selected_region[1]->elements.count(pos);
-            if (r1 && r2)
             {
-                counts[3]--;
-                counts[4]--;
-                counts[7]++;
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
-            else if (r1)
             {
-                counts[1]--;
-                counts[4]--;
-                counts[5]++;
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(rule_gen_region[0]->type, XYPos(right_panel_offset.x + button_size / 2, right_panel_offset.y), button_size * 2 / 3);
             }
-            else if (r2)
+            if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 1)
             {
-                counts[2]--;
-                counts[4]--;
-                counts[6]++;
-            }
-        }
-    }
-
-
-    XYPos sq_pos[8] = { XYPos(0,0), XYPos(0,0), XYPos(2,1), XYPos(1,0),
-                        XYPos(0,2), XYPos(0,1), XYPos(1,2), XYPos(1,1)};
-
-    for (int i = 1; i < (1 << selected_region_count); i++)
-    {
-        SDL_Rect src_rect = {192 * counts[i], 0, 192, 192};
-        if (selected_region_undef_num & (1 << i)) src_rect = {896, 192, 192, 192};
-        SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size * sq_pos[i].x + button_size/8, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size/8, button_size*6/8, button_size*6/8};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        if ((constructed_rule.apply_region_bitmap >> i) & 1)
-        {
-            if (constructed_rule.apply_type == GridRule::REGION)
-            {
-                set_region_colour(sdl_texture, constructed_rule.apply_region_type.value, 0, 255);
-                src_rect = {64, 512, 192, 192};
-                dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-                render_region_type(constructed_rule.apply_region_type, XYPos(right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2), button_size / 2);
                 SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-            }
-            else if (constructed_rule.apply_type == GridRule::BOMB || constructed_rule.apply_type == GridRule::CLEAR)
-            {
-                src_rect = {(constructed_rule.apply_type == GridRule::BOMB) ? 320 : 320 + 192, 192, 192, 192};
-                dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
+                SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 3, right_panel_offset.y + 0 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (rule_gen_region_count >= 2)
+        {
+            set_region_colour(sdl_texture, rule_gen_region[1]->type.value, rule_gen_region[1]->colour, 255);
+            {
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 1.5), right_panel_offset.y + 1 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + 1 * button_size, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(rule_gen_region[1]->type, XYPos(right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + button_size), button_size * 2 / 3);
+            }
+            if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 2)
+            {
+                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size, right_panel_offset.y + 1 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (rule_gen_region_count >= 3)
+        {
+            set_region_colour(sdl_texture, rule_gen_region[2]->type.value, rule_gen_region[2]->colour, 255);
+            {
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 2 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(rule_gen_region[2]->type, XYPos(right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3), button_size * 2 / 3);
+            }
+            if ((constructed_rule.apply_type == GridRule::SHOW || constructed_rule.apply_type == GridRule::HIDE) && constructed_rule.apply_region_bitmap & 4)
+            {
+                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                SDL_Rect src_rect = {(constructed_rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16 + button_size / 3, right_panel_offset.y + 5 * button_size - button_size, button_size * 2 / 3, button_size * 2 / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+        if (rule_gen_region_count >= 1)
+        {
+            {
+                SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (rule_gen_region_count >= 1 && constructed_rule.apply_region_bitmap)
+        {
+            {
+                SDL_Rect src_rect = { 192 * ((constructed_rule_is_logical) ? 3 : 4) + 128, 192 * ((constructed_rule_is_logical) ? 2 : 3), 192, 192 };
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + 4 * button_size, button_size, button_size };
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+
+
+        int counts[10] = {};
+
+        if (rule_gen_region_count >= 1)
+        {
+            counts[1] = rule_gen_region[0]->elements.size();
+        }
+        if (rule_gen_region_count >= 2)
+        {
+            counts[2] = rule_gen_region[1]->elements.size();
+            for (XYPos pos : rule_gen_region[1]->elements)
+            {
+                if (rule_gen_region[0]->elements.count(pos))
+                {
+                    counts[1]--;
+                    counts[2]--;
+                    counts[3]++;
+                }
+            }
+        }
+        if (rule_gen_region_count >= 3)
+        {
+            counts[4] = rule_gen_region[2]->elements.size();
+
+            for (XYPos pos : rule_gen_region[2]->elements)
+            {
+                bool r1 = rule_gen_region[0]->elements.count(pos);
+                bool r2 = rule_gen_region[1]->elements.count(pos);
+                if (r1 && r2)
+                {
+                    counts[3]--;
+                    counts[4]--;
+                    counts[7]++;
+                }
+                else if (r1)
+                {
+                    counts[1]--;
+                    counts[4]--;
+                    counts[5]++;
+                }
+                else if (r2)
+                {
+                    counts[2]--;
+                    counts[4]--;
+                    counts[6]++;
+                }
+            }
+        }
+
+
+        XYPos sq_pos[8] = { XYPos(0,0), XYPos(0,0), XYPos(2,1), XYPos(1,0),
+                            XYPos(0,2), XYPos(0,1), XYPos(1,2), XYPos(1,1)};
+
+        for (int i = 1; i < (1 << rule_gen_region_count); i++)
+        {
+            SDL_Rect src_rect = {192 * counts[i], 0, 192, 192};
+            if (rule_gen_region_undef_num & (1 << i)) src_rect = {896, 192, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size * sq_pos[i].x + button_size/8, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size/8, button_size*6/8, button_size*6/8};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if ((constructed_rule.apply_region_bitmap >> i) & 1)
+            {
+                if (constructed_rule.apply_type == GridRule::REGION)
+                {
+                    set_region_colour(sdl_texture, constructed_rule.apply_region_type.value, 0, 255);
+                    src_rect = {64, 512, 192, 192};
+                    dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+                    render_region_type(constructed_rule.apply_region_type, XYPos(right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2), button_size / 2);
+                    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                }
+                else if (constructed_rule.apply_type == GridRule::BOMB || constructed_rule.apply_type == GridRule::CLEAR)
+                {
+                    src_rect = {(constructed_rule.apply_type == GridRule::BOMB) ? 320 : 320 + 192, 192, 192, 192};
+                    dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
             }
         }
     }
 
-//     if (selected_region_count >= 1)
+    if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
+    {
+        if (inspected_rule->region_count >= 1)
+        {
+            set_region_colour(sdl_texture, inspected_rule->region_type[0].value, 0, 255);
+            {
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+
+            {
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2, right_panel_offset.y + 0 * button_size, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(inspected_rule->region_type[0], XYPos(right_panel_offset.x + button_size / 2, right_panel_offset.y), button_size * 2 / 3);
+            }
+            if ((inspected_rule->apply_type == GridRule::SHOW || inspected_rule->apply_type == GridRule::HIDE) && inspected_rule->apply_region_bitmap & 1)
+            {
+                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                SDL_Rect src_rect = {(inspected_rule->apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 3, right_panel_offset.y + 0 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (inspected_rule->region_count >= 2)
+        {
+            set_region_colour(sdl_texture, inspected_rule->region_type[1].value, 0, 255);
+            {
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 1.5), right_panel_offset.y + 1 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + 1 * button_size, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(inspected_rule->region_type[0], XYPos(right_panel_offset.x + int(button_size * 3.5) - button_size * 2 / 3, right_panel_offset.y + button_size), button_size * 2 / 3);
+            }
+            if ((inspected_rule->apply_type == GridRule::SHOW || inspected_rule->apply_type == GridRule::HIDE) && inspected_rule->apply_region_bitmap & 2)
+            {
+                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                SDL_Rect src_rect = {(inspected_rule->apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + int(button_size * 3.5) - button_size, right_panel_offset.y + 1 * button_size + button_size / 3, button_size * 2 / 3, button_size * 2 / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (inspected_rule->region_count >= 3)
+        {
+            set_region_colour(sdl_texture, inspected_rule->region_type[2].value, 0, 255);
+            {
+            SDL_Rect src_rect = {1344, 256, 256, 384};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 2 * button_size, button_size * 2, button_size  * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_Rect src_rect = {64, 512, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3, button_size * 2 / 3, button_size * 2 / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_region_type(inspected_rule->region_type[0], XYPos(right_panel_offset.x + button_size / 2 + button_size / 16, right_panel_offset.y + 5 * button_size - button_size * 2 / 3), button_size * 2 / 3);
+            }
+            if ((inspected_rule->apply_type == GridRule::SHOW || inspected_rule->apply_type == GridRule::HIDE) && inspected_rule->apply_region_bitmap & 4)
+            {
+                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                SDL_Rect src_rect = {(inspected_rule->apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 16 + button_size / 3, right_panel_offset.y + 5 * button_size - button_size, button_size * 2 / 3, button_size * 2 / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+        // if (rule_gen_region_count >= 1)
+        // {
+        //     {
+        //         SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
+        //         SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y, button_size, button_size};
+        //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        //     }
+        // }
+        // if (rule_gen_region_count >= 1 && constructed_rule.apply_region_bitmap)
+        // {
+        //     {
+        //         SDL_Rect src_rect = { 192 * ((constructed_rule_is_logical) ? 3 : 4) + 128, 192 * ((constructed_rule_is_logical) ? 2 : 3), 192, 192 };
+        //         SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + 4 * button_size, button_size, button_size };
+        //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        //     }
+        // }
+
+
+        XYPos sq_pos[8] = { XYPos(0,0), XYPos(0,0), XYPos(2,1), XYPos(1,0),
+                            XYPos(0,2), XYPos(0,1), XYPos(1,2), XYPos(1,1)};
+
+        for (int i = 1; i < (1 << inspected_rule->region_count); i++)
+        {
+            SDL_Rect src_rect = {192 * inspected_rule->square_counts[i], 0, 192, 192};
+            if (inspected_rule->square_counts[i] < 0) src_rect = {896, 192, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size * sq_pos[i].x + button_size/8, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size/8, button_size*6/8, button_size*6/8};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if ((inspected_rule->apply_region_bitmap >> i) & 1)
+            {
+                if (inspected_rule->apply_type == GridRule::REGION)
+                {
+                    set_region_colour(sdl_texture, inspected_rule->apply_region_type.value, 0, 255);
+                    src_rect = {64, 512, 192, 192};
+                    dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+                    render_region_type(inspected_rule->apply_region_type, XYPos(right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2), button_size / 2);
+                    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                }
+                else if (inspected_rule->apply_type == GridRule::BOMB || inspected_rule->apply_type == GridRule::CLEAR)
+                {
+                    src_rect = {(inspected_rule->apply_type == GridRule::BOMB) ? 320 : 320 + 192, 192, 192, 192};
+                    dst_rect = {right_panel_offset.x + button_size + button_size * sq_pos[i].x, right_panel_offset.y + sq_pos[i].y * button_size + button_size + button_size / 2, button_size / 2, button_size / 2};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
+            }
+        }
+    }
+
+//     if (rule_gen_region_count >= 1)
 //     {
 //         SDL_Rect src_rect = {192 * counts[1], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 1)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 1)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size/8 + button_size/8, right_panel_offset.y + 1 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //     }
-//     if (selected_region_count >= 2)
+//     if (rule_gen_region_count >= 2)
 //     {
 //         {
 //         SDL_Rect src_rect = {192 * counts[2], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 2)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 2)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + 2 * button_size + button_size / 2 + button_size/8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
 //         {
 //         SDL_Rect src_rect = {192 * counts[3], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 3)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 3)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + 1 * button_size + button_size / 2 + button_size/8, right_panel_offset.y + 1 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
 //     }
-//     if (selected_region_count >= 3)
+//     if (rule_gen_region_count >= 3)
 //     {
 //         {
 //         SDL_Rect src_rect = {192 * counts[4], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 4)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 4)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 8, right_panel_offset.y + 3 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
 //         {
 //         SDL_Rect src_rect = {192 * counts[5], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 5)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 5)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size / 8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
 //         {
 //         SDL_Rect src_rect = {192 * counts[6], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 6)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 6)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + 1 * button_size + button_size / 2 + button_size/8, right_panel_offset.y + 3 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
 //         {
 //         SDL_Rect src_rect = {192 * counts[7], 0, 192, 192};
-//         if (selected_region_undef_num & (1 << 7)) src_rect = {896, 192, 192, 192};
+//         if (rule_gen_region_undef_num & (1 << 7)) src_rect = {896, 192, 192, 192};
 //         SDL_Rect dst_rect = {right_panel_offset.x + 1 * button_size + button_size / 2 + button_size/8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
 //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //         }
@@ -1086,7 +1257,7 @@ void GameState::grid_click(XYPos pos, bool right)
         {
             grid->reveal(pos);
             show_clue = false;
-            reset_selected_region();
+            reset_rule_gen_region();
         }
         else
             deaths++;
@@ -1149,12 +1320,28 @@ void GameState::grid_click(XYPos pos, bool right)
         {
             if (mouse_mode == MOUSE_MODE_SELECT)
             {
-                if (selected_region_count < 3)
+                if (inspected_region == hover && right_panel_mode == RIGHT_MENU_REGION)
                 {
-                    selected_region[selected_region_count] = hover;
-                    selected_region_count++;
-                    update_constructed_rule();
+                    right_panel_mode = RIGHT_MENU_RULE_GEN;
+                    if (rule_gen_region_count < 3)
+                    {
+                        rule_gen_region[rule_gen_region_count] = hover;
+                        rule_gen_region_count++;
+                        update_constructed_rule();
+                    }
                 }
+                else
+                {
+                    right_panel_mode = RIGHT_MENU_REGION;
+                    inspected_region = hover;
+                }
+
+                // if (rule_gen_region_count < 3)
+                // {
+                //     rule_gen_region[rule_gen_region_count] = hover;
+                //     rule_gen_region_count++;
+                //     update_constructed_rule();
+                // }
             }
             if (mouse_mode == MOUSE_MODE_HIDE)
             {
@@ -1184,11 +1371,20 @@ void GameState::left_panel_click(XYPos pos, bool right)
         {
             if (region.global)
             {
-                if (selected_region_count < 3)
+                if (inspected_region == &region && right_panel_mode == RIGHT_MENU_REGION)
                 {
-                    selected_region[selected_region_count] = &region;
-                    selected_region_count++;
-                    update_constructed_rule();
+                    right_panel_mode = RIGHT_MENU_RULE_GEN;
+                    if (rule_gen_region_count < 3)
+                    {
+                        rule_gen_region[rule_gen_region_count] = &region;
+                        rule_gen_region_count++;
+                        update_constructed_rule();
+                    }
+                }
+                else
+                {
+                    right_panel_mode = RIGHT_MENU_REGION;
+                    inspected_region = &region;
                 }
             }
         }
@@ -1239,122 +1435,148 @@ void GameState::right_panel_click(XYPos pos, bool right)
         }
     }
 
-
-    if ((mouse_mode == MOUSE_MODE_HIDE) || (mouse_mode == MOUSE_MODE_SHOW))
+    if (right_panel_mode == RIGHT_MENU_REGION)
     {
-        int r = 0;
-        if ((pos - XYPos(button_size / 2, 0)).inside(XYPos(button_size, button_size)) && selected_region_count >= 1)
-            r = 1;
-        else if ((pos - XYPos(button_size / 2 + button_size * 2, button_size)).inside(XYPos(button_size, button_size)) && selected_region_count >= 2)
-            r = 2;
-        else if ((pos - XYPos(button_size / 2, button_size * 4)).inside(XYPos(button_size, button_size)) && selected_region_count >= 2)
-            r = 4;
-        if (r)
+        if ((pos - XYPos(button_size * 3, 0)).inside(XYPos(button_size, button_size)))
         {
-                constructed_rule.apply_region_bitmap ^= r;
-                constructed_rule.apply_type = (mouse_mode == MOUSE_MODE_HIDE) ? GridRule::HIDE : GridRule::SHOW;
+            right_panel_mode = RIGHT_MENU_RULE_GEN;
+            if (rule_gen_region_count < 3)
+            {
+                rule_gen_region[rule_gen_region_count] = inspected_region;
+                rule_gen_region_count++;
                 update_constructed_rule();
+            }
+            return;
+        }
+        if ((pos - XYPos(button_size * 0, button_size * 4)).inside(XYPos(button_size, button_size)))
+        {
+            if(inspected_region->rule)
+            {
+                right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                inspected_rule = inspected_region->rule;
+            }
+            return;
         }
     }
 
-    if ((pos - XYPos(button_size / 2, button_size)).inside(XYPos(button_size * 3, button_size * 5)))
+    if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
-        XYPos ppos = pos - XYPos(button_size / 2, button_size);
-        XYPos gpos = ppos / button_size;
-        bool hover_rulemaker = false;
-        unsigned hover_rulemaker_bits = 0;
-
-        if (gpos == XYPos(0, 0) && selected_region_count >= 1)
+        if ((mouse_mode == MOUSE_MODE_HIDE) || (mouse_mode == MOUSE_MODE_SHOW))
         {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 1;
-        }
-        if (gpos == XYPos(1, 0) && selected_region_count >= 2)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 3;
-        }
-        if (gpos == XYPos(2, 1) && selected_region_count >= 2)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 2;
-        }
-
-        if (gpos == XYPos(0, 1) && selected_region_count >= 3)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 5;
-        }
-        if (gpos == XYPos(1, 1) && selected_region_count >= 3)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 7;
-        }
-        if (gpos == XYPos(0, 2) && selected_region_count >= 3)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 4;
-        }
-        if (gpos == XYPos(1, 2) && selected_region_count >= 3)
-        {
-            hover_rulemaker = true;
-            hover_rulemaker_bits = 6;
-        }
-
-        if (hover_rulemaker)
-        {
-            if (mouse_mode == MOUSE_MODE_SELECT)
+            int r = 0;
+            if ((pos - XYPos(button_size / 2, 0)).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 1)
+                r = 1;
+            else if ((pos - XYPos(button_size / 2 + button_size * 2, button_size)).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 2)
+                r = 2;
+            else if ((pos - XYPos(button_size / 2, button_size * 4)).inside(XYPos(button_size, button_size)) && rule_gen_region_count >= 3)
+                r = 4;
+            if (r)
             {
-                selected_region_undef_num ^= 1 << hover_rulemaker_bits;
-                update_constructed_rule();
+                    constructed_rule.apply_region_bitmap ^= r;
+                    constructed_rule.apply_type = (mouse_mode == MOUSE_MODE_HIDE) ? GridRule::HIDE : GridRule::SHOW;
+                    update_constructed_rule();
             }
-            else if ((mouse_mode == MOUSE_MODE_BOMB) || (mouse_mode == MOUSE_MODE_CLEAR) || (mouse_mode == MOUSE_MODE_DRAWING_REGION))
+        }
+
+        if ((pos - XYPos(button_size / 2, button_size)).inside(XYPos(button_size * 3, button_size * 5)))
+        {
+            XYPos ppos = pos - XYPos(button_size / 2, button_size);
+            XYPos gpos = ppos / button_size;
+            bool hover_rulemaker = false;
+            unsigned hover_rulemaker_bits = 0;
+
+            if (gpos == XYPos(0, 0) && rule_gen_region_count >= 1)
             {
-                constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
-                if (mouse_mode == MOUSE_MODE_DRAWING_REGION)
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 1;
+            }
+            if (gpos == XYPos(1, 0) && rule_gen_region_count >= 2)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 3;
+            }
+            if (gpos == XYPos(2, 1) && rule_gen_region_count >= 2)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 2;
+            }
+
+            if (gpos == XYPos(0, 1) && rule_gen_region_count >= 3)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 5;
+            }
+            if (gpos == XYPos(1, 1) && rule_gen_region_count >= 3)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 7;
+            }
+            if (gpos == XYPos(0, 2) && rule_gen_region_count >= 3)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 4;
+            }
+            if (gpos == XYPos(1, 2) && rule_gen_region_count >= 3)
+            {
+                hover_rulemaker = true;
+                hover_rulemaker_bits = 6;
+            }
+
+            if (hover_rulemaker)
+            {
+                if (mouse_mode == MOUSE_MODE_SELECT)
                 {
-                    if (constructed_rule.apply_type != GridRule::REGION)
-                        constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
-                    if (constructed_rule.apply_region_type != edited_region.type)
-                        constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
-                    constructed_rule.apply_type = GridRule::REGION;
-                    constructed_rule.apply_region_type = edited_region.type;
+                    rule_gen_region_undef_num ^= 1 << hover_rulemaker_bits;
+                    update_constructed_rule();
                 }
-                else
+                else if ((mouse_mode == MOUSE_MODE_BOMB) || (mouse_mode == MOUSE_MODE_CLEAR) || (mouse_mode == MOUSE_MODE_DRAWING_REGION))
                 {
-                    GridRule::ApplyType t = (mouse_mode == MOUSE_MODE_BOMB) ? GridRule::BOMB : GridRule::CLEAR;
-                    if (constructed_rule.apply_type != t)
+                    constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                    if (mouse_mode == MOUSE_MODE_DRAWING_REGION)
                     {
-                        constructed_rule.apply_type = t;
-                        constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                        if (constructed_rule.apply_type != GridRule::REGION)
+                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                        if (constructed_rule.apply_region_type != edited_region.type)
+                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                        constructed_rule.apply_type = GridRule::REGION;
+                        constructed_rule.apply_region_type = edited_region.type;
+                    }
+                    else
+                    {
+                        GridRule::ApplyType t = (mouse_mode == MOUSE_MODE_BOMB) ? GridRule::BOMB : GridRule::CLEAR;
+                        if (constructed_rule.apply_type != t)
+                        {
+                            constructed_rule.apply_type = t;
+                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                        }
+                    }
+                    update_constructed_rule();
+                }
+            }
+        }
+        if ((pos - XYPos(button_size * 3 , button_size * 4)).inside(XYPos(button_size, button_size)))
+            if (rule_gen_region_count)
+                {
+                    constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2]);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if ((rule_gen_region_undef_num >> i) & 1)
+                        {
+                            constructed_rule.square_counts[i] = -1;
+                        }
+                    }
+                    if (constructed_rule.is_legal())
+                    {
+                        rules.push_back(constructed_rule);
+                        reset_rule_gen_region();
                     }
                 }
-                update_constructed_rule();
-            }
-        }
-    }
-    if ((pos - XYPos(button_size * 3 , button_size * 4)).inside(XYPos(button_size, button_size)))
-        if (selected_region_count)
-            {
-                constructed_rule.import_selected_regions(selected_region[0], selected_region[1], selected_region[2]);
-                for (int i = 0; i < 8; i++)
-                {
-                    if ((selected_region_undef_num >> i) & 1)
-                    {
-                        constructed_rule.square_counts[i] = -1;
-                    }
-                }
-                if (constructed_rule.is_legal())
-                {
-                    rules.push_back(constructed_rule);
-                    reset_selected_region();
-                }
-            }
 
-    if ((pos - XYPos(button_size * 3, 0)).inside(XYPos(button_size, button_size)))
-    {
-        if (selected_region_count)
-            selected_region_count--;
+        if ((pos - XYPos(button_size * 3, 0)).inside(XYPos(button_size, button_size)))
+        {
+            if (rule_gen_region_count)
+                rule_gen_region_count--;
+        }
     }
 
 
@@ -1471,7 +1693,7 @@ bool GameState::events()
                 }
                 if (right && mouse_mode == MOUSE_MODE_SELECT)
                 {
-                    reset_selected_region();
+                    reset_rule_gen_region();
                     break;
                 }
                 if ((mouse - left_panel_offset).inside(panel_size))

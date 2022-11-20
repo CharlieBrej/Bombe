@@ -42,15 +42,19 @@ public:
         RIGHT_MENU_NONE,
         RIGHT_MENU_REGION,
         RIGHT_MENU_RULE_GEN,
-        }
-        right_panel_mode = RIGHT_MENU_RULE_GEN;
+        RIGHT_MENU_RULE_INSPECT,
+}
+        right_panel_mode = RIGHT_MENU_NONE;
 
 
-    GridRegion *selected_region[3] = {};
-    unsigned selected_region_count = 0;
-    unsigned selected_region_undef_num = 0;
+    GridRegion *rule_gen_region[3] = {};
+    unsigned rule_gen_region_count = 0;
+    unsigned rule_gen_region_undef_num = 0;
     GridRule constructed_rule;
     bool constructed_rule_is_logical = false;
+
+    GridRegion *inspected_region = NULL;
+    GridRule *inspected_rule = NULL;
 
     int grid_size;
     XYPos panel_size;
@@ -84,8 +88,8 @@ public:
     void advance();
     void audio();
 
-    GridRule rule_from_selected_region();
-    void reset_selected_region();
+    GridRule rule_from_rule_gen_region();
+    void reset_rule_gen_region();
     void update_constructed_rule();
     unsigned taken_to_size(unsigned total);
     XYPos taken_to_pos(unsigned count, unsigned total);

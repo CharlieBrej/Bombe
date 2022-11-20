@@ -122,7 +122,7 @@ bool GridRule::matches(GridRule& other)
     return true;
 }
 
-void GridRule::import_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3)
+void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
     for (int i = 0; i < 8; i++)
         square_counts[i] = 0;
@@ -1363,7 +1363,7 @@ GridRule Grid::rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRe
     return rule;
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule rule, GridRegion* r1, GridRegion* r2, GridRegion* r3)
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
     if (rule.stale && r1->stale && (!r2 || r2->stale) && (!r3 || r3->stale))
         return APPLY_RULE_RESP_NONE;
@@ -1430,6 +1430,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule rule, GridRegion* r1, GridRegion* 
         {
             reg.elements.insert(pos);
         }
+        reg.rule = &rule;
         bool found = (std::find(regions.begin(), regions.end(), reg) != regions.end())  ||
                      (std::find(regions_to_add.begin(), regions_to_add.end(),reg) != regions_to_add.end());
 
@@ -1445,7 +1446,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule rule, GridRegion* r1, GridRegion* 
     return APPLY_RULE_RESP_HIT;
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule rule)
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
 {
     assert(rule.region_count);
     for (GridRegion& r1 : regions)
