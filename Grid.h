@@ -50,18 +50,26 @@ public:
 };
 class GridRule;
 
+enum GridVisLevel{
+    GRID_VIS_LEVEL_SHOW,
+    GRID_VIS_LEVEL_HIDE,
+    GRID_VIS_LEVEL_BIN,
+};
+
+
 class GridRegion
 {
 public:
     RegionType type;
     unsigned colour;
     unsigned fade = 0;
-    bool hidden = false;
+    GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     bool visibility_forced = false;
     bool global = false;
     bool stale = false;
     std::set<XYPos> elements;
     GridRule* rule = NULL;
+    GridRule* vis_rule = NULL;
 
     bool overlaps(GridRegion& other);
     void reset(RegionType type);
@@ -85,10 +93,12 @@ public:
         CLEAR,
         HIDE,
         SHOW,
+        BIN,
     } apply_type = REGION;
     RegionType apply_region_type;
     uint8_t apply_region_bitmap = 0;
     bool stale = false;
+    bool deleted = false;
 
 
     GridRule(){};

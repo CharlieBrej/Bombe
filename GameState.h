@@ -31,8 +31,7 @@ public:
         MOUSE_MODE_BOMB,
         MOUSE_MODE_CLEAR,
         MOUSE_MODE_SELECT,
-        MOUSE_MODE_HIDE,
-        MOUSE_MODE_SHOW,
+        MOUSE_MODE_VIS,
         MOUSE_MODE_DRAWING_REGION
         }
         mouse_mode = MOUSE_MODE_BOMB;
@@ -43,7 +42,7 @@ public:
         RIGHT_MENU_REGION,
         RIGHT_MENU_RULE_GEN,
         RIGHT_MENU_RULE_INSPECT,
-}
+        }
         right_panel_mode = RIGHT_MENU_NONE;
 
 
@@ -68,7 +67,8 @@ public:
     int deaths = 0;
     int cooldown = 0;
 
-    bool show_mode = false;
+    GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
+    GridVisLevel vis_mode = GRID_VIS_LEVEL_HIDE;
 
     bool auto_region = true;
     bool show_clue = false;

@@ -38,7 +38,7 @@ void GridRegion::reset(RegionType type_)
     type = type_;
     fade = 0;
     colour = colours_used[type.value]++;
-    hidden = false;
+    vis_level = GRID_VIS_LEVEL_SHOW;
     visibility_forced = false;
     global = false;
     elements.clear();
@@ -94,6 +94,8 @@ SaveObject* GridRule::save()
 
 bool GridRule::matches(GridRule& other)
 {
+    if (deleted != other.deleted)
+        return false;
     if (region_count != other.region_count)
         return false;
     if ((square_counts[1] >= 0) && (square_counts[1] != other.square_counts[1]))
@@ -179,7 +181,7 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
 
 bool GridRule::is_legal()
 {
-    if (apply_type == HIDE || apply_type == SHOW)
+    if (apply_type == HIDE || apply_type == SHOW || apply_type == BIN)
         return true;
     z3::context c;
     z3::solver s(c);
@@ -246,6 +248,8 @@ bool GridRule::is_legal()
         case HIDE:
             return true;
         case SHOW:
+            return true;
+        case BIN:
             return true;
     }
 
@@ -574,7 +578,7 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
     {
         for (GridRegion& r : regions)
         {
-            r.hidden = false;
+            r.vis_level = GRID_VIS_LEVEL_SHOW;
             r.visibility_forced = true;
             printf("reset regions\n");
         }
@@ -584,12 +588,12 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
 
     for (GridRegion& r : regions)
     {
-        if (r.hidden)
+        if (r.vis_level != GRID_VIS_LEVEL_SHOW)
             continue;
-        r.hidden = true;
+        r.vis_level = GRID_VIS_LEVEL_HIDE;
 
         if (!is_determinable_using_regions(pos, true))
-            r.hidden = false;
+            r.vis_level = GRID_VIS_LEVEL_SHOW;
         else
             r.visibility_forced = true;
     }
@@ -700,7 +704,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 
     for (GridRegion& r : regions)
     {
-        if (r.hidden && hidden)
+        if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && hidden)
           continue;
         for (const XYPos& p : r.elements)
         {
@@ -777,7 +781,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 
     for (GridRegion& r : regions)
     {
-        if (r.hidden && hidden)
+        if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && hidden)
           continue;
         std::set<unsigned> seen;
         z3::expr e = c.int_val(0);
@@ -1251,7 +1255,7 @@ bool Grid::add_regions(int level)
             GridRegion reg;
             reg.reset(RegionType(RegionType::EQUAL, hidden_bombs));
             reg.elements = elements;
-            reg.hidden = true;
+            reg.vis_level = GRID_VIS_LEVEL_HIDE;
             reg.global = true;
             reg.visibility_forced = true;
             if (!contains(regions, reg) && !contains(regions_to_add, reg))
@@ -1368,15 +1372,26 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     if (rule.stale && r1->stale && (!r2 || r2->stale) && (!r3 || r3->stale))
         return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
-    if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW))
+    if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
     {
-        bool h = (rule.apply_type == GridRule::HIDE);
+        GridVisLevel vis_level =  (rule.apply_type == GridRule::SHOW) ? GRID_VIS_LEVEL_SHOW :
+                                  (rule.apply_type == GridRule::HIDE) ? GRID_VIS_LEVEL_HIDE :
+                                                                        GRID_VIS_LEVEL_BIN;
         if ((rule.apply_region_bitmap & 1) && !r1->visibility_forced)
-            r1->hidden = h;
+        {
+            r1->vis_level = vis_level;
+            r1->vis_rule = &rule;
+        }
         if ((rule.apply_region_bitmap & 2) && !r2->visibility_forced)
-            r2->hidden = h;
+        {
+            r2->vis_level = vis_level;
+            r2->vis_rule = &rule;
+        }
         if ((rule.apply_region_bitmap & 4) && !r3->visibility_forced)
-            r3->hidden = h;
+        {
+            r3->vis_level = vis_level;
+            r3->vis_rule = &rule;
+        }
         return APPLY_RULE_RESP_NONE;
     }
 
@@ -1453,6 +1468,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
     {
         if (r1.type != rule.region_type[0])
             continue;
+        if (r1.vis_level == GRID_VIS_LEVEL_BIN)
+            continue;
         if (rule.region_count == 1)
         {
             if (rule.stale && r1.stale)
@@ -1472,6 +1489,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
                 if (r2.type != rule.region_type[1])
                     continue;
                 if (r2 == r1)
+                    continue;
+                if (r2.vis_level == GRID_VIS_LEVEL_BIN)
                     continue;
                 if (rule.region_count == 2)
                 {
@@ -1498,6 +1517,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
                         if (r3.type != rule.region_type[2])
                             continue;
                         if ((r3 == r1) || (r3 == r2))
+                            continue;
+                        if (r1.vis_level == GRID_VIS_LEVEL_BIN)
                             continue;
                         if (!r1.overlaps(r3) && !r2.overlaps(r3))
                             continue;
