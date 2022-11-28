@@ -30,6 +30,10 @@ z3::expr RegionType::apply_z3_rule(z3::expr in)
     {
         return in >= value;
     }
+    if (type == XORY)
+    {
+        return (in == value) || (in == (value + 2));
+    }
     assert(0);
 }
 
@@ -40,7 +44,6 @@ void GridRegion::reset(RegionType type_)
     colour = colours_used[type.value]++;
     vis_level = GRID_VIS_LEVEL_SHOW;
     visibility_forced = false;
-    global = false;
     elements.clear();
 }
 
@@ -366,7 +369,7 @@ void Grid::solve_easy()
         add_new_regions();
         for (GridRule& rule : global_rules)
         {
-            while (apply_rule(rule))
+            while (apply_rule(rule) != APPLY_RULE_RESP_NONE)
                 rep = true;
         }
         for (GridRegion& r : regions)
@@ -425,7 +428,7 @@ bool Grid::is_solveable(bool use_high_count)
             if (!vals[p].revealed)
                 hidden++;
 
-        count_revealed = (hidden <= 8);
+//        count_revealed = (hidden <= 8);
 
 
 
@@ -615,12 +618,12 @@ int Grid::solve_complexity(XYPos q, std::set<XYPos>* needed)
 
     assert(!tst.has_solution());
 
-    tst.count_revealed = false;
-    if (tst.has_solution())
-    {
-        tst.count_revealed = true;
-        cnt += 3;
-    }
+    // tst.count_revealed = false;
+    // if (tst.has_solution())
+    // {
+    //     tst.count_revealed = true;
+    //     cnt += 3;
+    // }
 
 
     FOR_XY(p, XYPos(), size)
@@ -650,12 +653,12 @@ int Grid::solve_complexity(XYPos q, Grid& min_grid)
 
     int cnt = 0;
 
-    tst.count_revealed = false;
-    if (!tst.is_determinable(q))
-    {
-        tst.count_revealed = true;
-        cnt += 3;
-    }
+    // tst.count_revealed = false;
+    // if (!tst.is_determinable(q))
+    // {
+    //     tst.count_revealed = true;
+    //     cnt += 3;
+    // }
 
 
     FOR_XY(p, XYPos(), size)
@@ -847,7 +850,6 @@ bool Grid::has_solution(void)
 //       return true;
 //   if (no_solution_cache.count(str))
 //       return false;
-
     z3::context c;
     z3::expr_vector vec(c);
     std::map<XYPos, unsigned> vec_index;
@@ -870,44 +872,44 @@ bool Grid::has_solution(void)
             hidden++;
     }
 
-    if (count_revealed) // && (hidden < 12))
-    {
-        z3::expr_vector t(c);
-        int cnt = 0;
-        int cntn = 0;
-        FOR_XY(p, XYPos(), size)
-        {
-            if (!vals[p].revealed)
-            {
-                t.push_back(vec[vec_index[p]]);
-                if (vals[p].bomb)
-                    cnt++;
-                else
-                    cntn++;
-
-            }
-        }
-        cnt-=count_dec;
-        if (cnt < 0)
-        {
-//            no_solution_cache.insert(str);
-//            printf("cnt < 0\n");
-            return false;
-        }
-//        printf("cnt: %d %d\n", cnt, cntn);
-
-        if (t.size() == 0)
-        {
-//            no_solution_cache.insert(str);
-//            printf("t.size() == 0\n");
-            return false;
-        }
-        else
-        {
-            s.add(atleast(t, cnt));
-            s.add(atmost(t, cnt));
-        }
-    }
+//     if (count_revealed) // && (hidden < 12))
+//     {
+//         z3::expr_vector t(c);
+//         int cnt = 0;
+//         int cntn = 0;
+//         FOR_XY(p, XYPos(), size)
+//         {
+//             if (!vals[p].revealed)
+//             {
+//                 t.push_back(vec[vec_index[p]]);
+//                 if (vals[p].bomb)
+//                     cnt++;
+//                 else
+//                     cntn++;
+//
+//             }
+//         }
+//         cnt-=count_dec;
+//         if (cnt < 0)
+//         {
+// //            no_solution_cache.insert(str);
+// //            printf("cnt < 0\n");
+//             return false;
+//         }
+// //        printf("cnt: %d %d\n", cnt, cntn);
+//
+//         if (t.size() == 0)
+//         {
+// //            no_solution_cache.insert(str);
+// //            printf("t.size() == 0\n");
+//             return false;
+//         }
+//         else
+//         {
+//             s.add(atleast(t, cnt));
+//             s.add(atmost(t, cnt));
+//         }
+//     }
 
     FOR_XY(p, XYPos(), size)
     {
@@ -929,6 +931,8 @@ bool Grid::has_solution(void)
                 {
                     if (cnt == 0)
                     {
+                        if (clue.type == RegionType::XORY)
+                            continue;
                         if (clue.type == RegionType::MORE)
                             continue;
 //                        no_solution_cache.insert(str);
@@ -942,18 +946,43 @@ bool Grid::has_solution(void)
 
             if (t.size())
             {
-                if (clue.type  != RegionType::LESS)
-                    s.add(atleast(t, cnt));
-                if (clue.type  != RegionType::MORE)
+                if (clue.type == RegionType::LESS)
+                {
                     s.add(atmost(t, cnt));
+                }
+                if (clue.type == RegionType::MORE)
+                {
+                    s.add(atleast(t, cnt));
+                }
+                if (clue.type == RegionType::EQUAL)
+                {
+                    s.add(atleast(t, cnt));
+                    s.add(atmost(t, cnt));
+                }
+                if (clue.type != RegionType::XORY)
+                    if (cnt >= 0)
+                    {
+                        s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 2) && atmost(t, cnt + 2)));
+                    }
+
+                    if (cnt >= -2)
+                    {
+                        s.add(atleast(t, cnt + 2));
+                        s.add(atmost(t, cnt + 2));
+                    }
+
 //                s.add(sum(t) == cnt);
             }
             else
             {
-                if (cnt && (clue.type != RegionType::LESS))
+                if (cnt && ((clue.type == RegionType::MORE) || (clue.type == RegionType::EQUAL)))
                 {
 //                    no_solution_cache.insert(str);
 //            	    printf("cnt but all taken\n");
+                    return false;
+                }
+                if (cnt != 0 && cnt != -2 && (clue.type == RegionType::XORY))
+                {
                     return false;
                 }
             }
@@ -974,41 +1003,41 @@ bool Grid::has_solution(void)
 
 void Grid::make_harder(void)
 {
-    {
-        std::vector<XYPos> tgt;
-        FOR_XY(p, XYPos(), size)
-        {
-            if (!vals[p].bomb)
-                tgt.push_back(p);
-        }
-        std::shuffle(tgt.begin(), tgt.end(), rnd.gen);
-
-        int do_count = 0; //tgt.size();
-        for (XYPos p : tgt)
-        {
-            Grid tst = *this;
-            if (!do_count--)
-                break;
-
-            tst = *this;
-            if (rnd & 1)
-            {
-                tst.vals[p].clue.type = RegionType::LESS;
-//                tst.vals[p].clue.value += rnd % 2;
-            }
-            else
-            {
-                tst.vals[p].clue.type = RegionType::MORE;
-//                tst.vals[p].clue.value -= rnd % 2;
-                if (tst.vals[p].clue.value < 0)
-                    tst.vals[p].clue.value = 0;
-            }
-            if (tst.is_solveable())
-            {
-                vals[p].clue = tst.vals[p].clue;
-            }
-        }
-    }
+//     {
+//         std::vector<XYPos> tgt;
+//         FOR_XY(p, XYPos(), size)
+//         {
+//             if (!vals[p].bomb)
+//                 tgt.push_back(p);
+//         }
+//         std::shuffle(tgt.begin(), tgt.end(), rnd.gen);
+//
+//         int do_count = 0; //tgt.size();
+//         for (XYPos p : tgt)
+//         {
+//             Grid tst = *this;
+//             if (!do_count--)
+//                 break;
+//
+//             tst = *this;
+//             if (rnd & 1)
+//             {
+//                 tst.vals[p].clue.type = RegionType::LESS;
+// //                tst.vals[p].clue.value += rnd % 2;
+//             }
+//             else
+//             {
+//                 tst.vals[p].clue.type = RegionType::MORE;
+// //                tst.vals[p].clue.value -= rnd % 2;
+//                 if (tst.vals[p].clue.value < 0)
+//                     tst.vals[p].clue.value = 0;
+//             }
+//             if (tst.is_solveable())
+//             {
+//                 vals[p].clue = tst.vals[p].clue;
+//             }
+//         }
+//     }
 
 
 
@@ -1053,6 +1082,30 @@ void Grid::make_harder(void)
             }
             else
             {
+                if (rnd % 10 < 15)
+                {
+                    tst = *this;
+                    tst.vals[p].clue.type = RegionType::XORY;
+                    if (tst.is_solveable())
+                    {
+                        vals[p].clue.type = RegionType::XORY;
+                        continue;
+                    }
+                }
+
+                if ((rnd % 10 < 15) && (vals[p].clue.value >= 2))
+                {
+                    tst = *this;
+                    tst.vals[p].clue.type = RegionType::XORY;
+                    tst.vals[p].clue.value -= 2;
+                    if (tst.is_solveable())
+                    {
+                        vals[p].clue.value -= 2;
+                        vals[p].clue.type = RegionType::XORY;
+                        continue;
+                    }
+                }
+
                 tst = *this;
                 tst.vals[p].clue.type = RegionType::LESS;
                 if (tst.is_solveable())
@@ -1070,44 +1123,32 @@ void Grid::make_harder(void)
                             assert(0);
                         }
                         printf("tst.vals[p].clue.value %d++ \n", tst.vals[p].clue.value);
-                        vals[p].clue.type = RegionType::LESS;
-                        vals[p].clue.value = tst.vals[p].clue.value;
-                    }
-                }
-                else
-                {
-                    tst = *this;
-                    tst.vals[p].clue.type = RegionType::MORE;
-                    if (tst.is_solveable())
-                    {
-                        tst.vals[p].clue.type = RegionType::MORE;
-                        while (true)
+                        if (tst.vals[p].clue.value)
                         {
-                            tst = *this;
-                            tst.vals[p].clue.type = RegionType::MORE;
-                            tst.vals[p].clue.value--;
-                            if (!tst.is_solveable())
-                                break;
-                            printf("tst.vals[p].clue.value %d-- \n", tst.vals[p].clue.value);
-                            vals[p].clue.type = RegionType::MORE;
+                            vals[p].clue.type = RegionType::LESS;
                             vals[p].clue.value = tst.vals[p].clue.value;
                         }
-
-
                     }
+                    continue;
                 }
-                if (vals[p].clue.value == 0)
-                {
-                    if (vals[p].clue.type == RegionType::MORE)
-                    {
-                        vals[p].clue.type = RegionType::NONE;
-                        assert(0);
-                    }
-                    else if (vals[p].clue.type == RegionType::LESS)
-                    {
-                        vals[p].clue.type = RegionType::EQUAL;
-                    }
 
+                tst = *this;
+                tst.vals[p].clue.type = RegionType::MORE;
+                if (tst.is_solveable())
+                {
+                    tst.vals[p].clue.type = RegionType::MORE;
+                    while (true)
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::MORE;
+                        tst.vals[p].clue.value--;
+                        if (!tst.is_solveable())
+                            break;
+                        printf("tst.vals[p].clue.value %d-- \n", tst.vals[p].clue.value);
+                        vals[p].clue.type = RegionType::MORE;
+                        vals[p].clue.value = tst.vals[p].clue.value;
+                    }
+                    continue;
                 }
             }
         }
@@ -1143,10 +1184,10 @@ void Grid::reveal_switch(XYPos q)
     reveal(q);
     vals[q].bomb = !vals[q].bomb;
     vals[q].clue.type = RegionType::NONE;
-    if (vals[q].bomb)
-        count_dec++;
-    else
-        count_dec--;
+    // if (vals[q].bomb)
+    //     count_dec++;
+    // else
+    //     count_dec--;
 //    printf("%d\n", count_dec);
 }
 
@@ -1156,7 +1197,7 @@ std::string Grid::to_string()
 
     s += 'A' + size.x;
     s += 'A' + size.y;
-    s += 'A' + count_revealed;
+//    s += 'A' + count_revealed;
     FOR_XY(p, XYPos(), size)
     {
         GridPlace g = vals[p];
@@ -1195,7 +1236,7 @@ void Grid::from_string(std::string s)
 
     a = s[2] - 'A';
     if (a < 0 || a > 1) return;
-    g.count_revealed = a;
+//    g.count_revealed = a;
 
     int i = 3;
     FOR_XY(p, XYPos(), size)
@@ -1250,19 +1291,19 @@ bool Grid::add_regions(int level)
                 elements.insert(p);
             }
         }
-        if (hidden_bombs <= 8)
-        {
-            GridRegion reg;
-            reg.reset(RegionType(RegionType::EQUAL, hidden_bombs));
-            reg.elements = elements;
-            reg.vis_level = GRID_VIS_LEVEL_HIDE;
-            reg.global = true;
-            reg.visibility_forced = true;
-            if (!contains(regions, reg) && !contains(regions_to_add, reg))
-            {
-                regions.push_back(reg);
-            }
-        }
+        // if (hidden_bombs <= 8)
+        // {
+        //     GridRegion reg;
+        //     reg.reset(RegionType(RegionType::EQUAL, hidden_bombs));
+        //     reg.elements = elements;
+        //     reg.vis_level = GRID_VIS_LEVEL_HIDE;
+        //     reg.global = true;
+        //     reg.visibility_forced = true;
+        //     if (!contains(regions, reg) && !contains(regions_to_add, reg))
+        //     {
+        //         regions.push_back(reg);
+        //     }
+        // }
     }
 
 
@@ -1285,6 +1326,11 @@ bool Grid::add_regions(int level)
                 {
                     clue.value--;
                 }
+            }
+            if (clue.value < 0 && clue.value >= -2 && clue.type == RegionType::XORY)
+            {
+                clue.value += 2;
+                clue.type = RegionType::EQUAL;
             }
             if (clue.value < 0)
                 continue;
@@ -1369,8 +1415,6 @@ GridRule Grid::rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRe
 
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
-    if (rule.stale && r1->stale && (!r2 || r2->stale) && (!r3 || r3->stale))
-        return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
     if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
     {
@@ -1452,7 +1496,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         if (!found)
         {
             regions_to_add.push_back(reg);
-            return APPLY_RULE_RESP_NONE;
+            return APPLY_RULE_RESP_HIT;
         }
         else
             return APPLY_RULE_RESP_NONE;
@@ -1461,18 +1505,18 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     return APPLY_RULE_RESP_HIT;
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
 {
     assert(rule.region_count);
     for (GridRegion& r1 : regions)
     {
         if (r1.type != rule.region_type[0])
             continue;
-        if (r1.vis_level == GRID_VIS_LEVEL_BIN)
+        if (r1.vis_level == GRID_VIS_LEVEL_BIN && !force)
             continue;
         if (rule.region_count == 1)
         {
-            if (rule.stale && r1.stale)
+            if (rule.stale && r1.stale && !force)
                 continue;
             GridRule try_rule = rule_from_selected_regions(&r1, NULL, NULL);
             if (rule.matches(try_rule))
@@ -1490,11 +1534,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
                     continue;
                 if (r2 == r1)
                     continue;
-                if (r2.vis_level == GRID_VIS_LEVEL_BIN)
+                if (r2.vis_level == GRID_VIS_LEVEL_BIN && !force)
                     continue;
                 if (rule.region_count == 2)
                 {
-                    if (rule.stale && r1.stale && r2.stale)
+                    if (rule.stale && r1.stale && r2.stale && !force)
                         continue;
                     if (!r1.overlaps(r2))
                         continue;
@@ -1512,13 +1556,13 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule)
                 {
                     for (GridRegion& r3 : regions)
                     {
-                        if (rule.stale && r1.stale && r2.stale && r3.stale)
+                        if (rule.stale && r1.stale && r2.stale && r3.stale && !force)
                             continue;
                         if (r3.type != rule.region_type[2])
                             continue;
                         if ((r3 == r1) || (r3 == r2))
                             continue;
-                        if (r1.vis_level == GRID_VIS_LEVEL_BIN)
+                        if (r1.vis_level == GRID_VIS_LEVEL_BIN && !force)
                             continue;
                         if (!r1.overlaps(r3) && !r2.overlaps(r3))
                             continue;

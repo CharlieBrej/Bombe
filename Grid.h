@@ -16,6 +16,7 @@ public:
         EQUAL,
         LESS,
         MORE,
+        XORY,
         NONE,
     } type = EQUAL;
     int8_t value = 0;
@@ -65,7 +66,6 @@ public:
     unsigned fade = 0;
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     bool visibility_forced = false;
-    bool global = false;
     bool stale = false;
     std::set<XYPos> elements;
     GridRule* rule = NULL;
@@ -113,9 +113,6 @@ class Grid
 {
 public:
     XYPos size;
-    bool count_revealed = true;
-
-    int count_dec = 0;
 
     std::map<XYPos, GridPlace> vals;
     std::list<GridRegion> regions;
@@ -156,7 +153,7 @@ public:
     };
 
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3);
-    ApplyRuleResp apply_rule(GridRule& rule);
+    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void add_new_regions();
     void add_one_new_region();
 

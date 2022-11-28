@@ -51,7 +51,7 @@ void mainloop()
 
     int frame = 0;
     SDL_Thread *save_thread = NULL;
-    
+
 	while(true)
 	{
         unsigned oldtime = SDL_GetTicks();
@@ -85,7 +85,7 @@ void mainloop()
         {
             game_state->render();
         }
-        
+
         unsigned newtime = SDL_GetTicks();
         if ((newtime - oldtime) < 5)
         {
@@ -116,9 +116,9 @@ int main( int argc, char* argv[] )
     SDLNet_Init();
     TTF_Init();
     Mix_Init(0);
-    
+
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     SDL_SetHint("SDL_MOUSE_AUTO_CAPTURE", "0");
 
     mainloop();
