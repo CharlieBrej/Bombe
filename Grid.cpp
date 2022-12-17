@@ -30,9 +30,17 @@ z3::expr RegionType::apply_z3_rule(z3::expr in)
     {
         return in >= value;
     }
-    if (type == XORY)
+    if (type == XOR2)
     {
         return (in == value) || (in == (value + 2));
+    }
+    if (type == XOR3)
+    {
+        return (in == value) || (in == (value + 3));
+    }
+    if (type == XOR22)
+    {
+        return (in == value) || (in == (value + 2)) || (in == (value + 4));
     }
     assert(0);
 }
@@ -43,7 +51,7 @@ void GridRegion::reset(RegionType type_)
     fade = 0;
     colour = colours_used[type.value]++;
     vis_level = GRID_VIS_LEVEL_SHOW;
-    visibility_forced = false;
+    visibility_force = VIS_FORCE_NONE;
     elements.clear();
 }
 
@@ -306,6 +314,47 @@ Grid::Grid()
 {
 }
 
+Grid::Grid(std::string s)
+{
+    if (s.length() < 5)
+        return;
+    int a = s[0] - 'A';
+    if (a < 0 || a > 50) return;
+    size.x = a;
+
+    a = s[1] - 'A';
+    if (a < 0 || a > 50) return;
+    size.y = a;
+
+    a = s[2] - 'A';
+    assert(a == 0);
+
+    int i = 3;
+    FOR_XY(p, XYPos(), size)
+    {
+        if (i >= s.length()) return;
+        char c = s[i++];
+
+        vals[p] = GridPlace(true, true);
+
+        if (c == '_')
+        {
+            vals[p].revealed = false;
+            if (i >= s.length()) return;
+            c = s[i++];
+        }
+
+        if (c != '!')
+        {
+            vals[p].bomb = false;
+            vals[p].clue.type = RegionType::Type(c - 'A');
+            if (i >= s.length()) return;
+            c = s[i++];
+            vals[p].clue.value = c - '0';
+        }
+    }
+}
+
 void Grid::print(void)
 {
   XYPos p;
@@ -349,9 +398,8 @@ void Grid::solve_easy()
 {
     if (global_rules.empty())
     {
-        std::string sin = "[{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[1,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,3,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[3,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,2,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[2,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[256,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,2,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":1,\"region_type\":[513,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":1,\"square_counts\":[0,4,0,-1,0,0,0,0],\"region_count\":1,\"region_type\":[4,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,258,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,3,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,513,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,3,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":514,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":1,\"region_type\":[514,257,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,0,2,0,0,0,0],\"region_count\":2,\"region_type\":[257,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":1,\"square_counts\":[0,3,0,-1,0,0,0,0],\"region_count\":1,\"region_type\":[515,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,257,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":1,\"square_counts\":[0,6,-1,-1,0,0,0,0],\"region_count\":1,\"region_type\":[6,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,3,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,2,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,0,3,0,0,0,0],\"region_count\":2,\"region_type\":[1,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":3,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":516,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[516,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,513,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":515,\"apply_type\":1,\"square_counts\":[0,5,0,-1,0,0,0,0],\"region_count\":1,\"region_type\":[5,513,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,4,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,1,5,0,0,0,0],\"region_count\":2,\"region_type\":[515,4,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,513,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[257,0,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,-1,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,514,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,2,0,3,0,0,0,0],\"region_count\":2,\"region_type\":[4,514,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":517,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,257,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":517,\"apply_type\":1,\"square_counts\":[0,5,0,-1,0,0,0,0],\"region_count\":1,\"region_type\":[517,257,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,0,13,0,0,0,0],\"region_count\":2,\"region_type\":[515,516,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,1,3,0,0,0,0],\"region_count\":2,\"region_type\":[514,3,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,1,2,0,0,0,0],\"region_count\":2,\"region_type\":[513,2,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":3,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,2,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":6,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[7,1,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":518,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,257,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":3,\"square_counts\":[0,0,0,7,0,0,0,0],\"region_count\":2,\"region_type\":[517,518,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,6,0]}]";
-            //"[{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[4,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[0,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[2,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[515,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[256,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[514,768,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[1,768,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[3,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,515,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[513,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,6,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[6,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,7,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[519,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[516,768,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,3,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[256,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,7,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[7,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,513,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[516,257,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,513,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,5,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[517,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,5,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[5,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,-1,0,0],\"region_count\":3,\"region_type\":[2,1,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[7,3,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,-1,0,0],\"region_count\":3,\"region_type\":[3,2,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,-1,0,0],\"region_count\":3,\"region_type\":[4,2,2]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,257,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,7,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[8,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,6,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[7,257,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,3,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":2,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,258,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[514,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,0,-1,0,-1,0,0],\"region_count\":3,\"region_type\":[5,1,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,257,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,-1,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[257,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,258,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,258,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,1,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,1,-1,-1,1,0,-1,0],\"region_count\":3,\"region_type\":[2,2,2]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,8,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[8,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,5,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,1,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,9,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[9,768,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,4,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,-1,-1,0],\"region_count\":3,\"region_type\":[1,2,1]},{\"apply_region_bitmap\":2,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,-1,-1,-1,0],\"region_count\":3,\"region_type\":[4,1,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[2,3,1]},{\"apply_region_bitmap\":5,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,1,-1,-1],\"region_count\":3,\"region_type\":[257,1,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[514,257,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,-1,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,515,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,514,768]},{\"apply_region_bitmap\":5,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[1,1,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,1,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[1,3,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[516,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":3,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,5,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,257,768]},{\"apply_region_bitmap\":4,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[1,515,2]},{\"apply_region_bitmap\":1,\"apply_region_type\":2,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,2,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,3,768]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,258,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,0,-1,0,-1,0,-1],\"region_count\":3,\"region_type\":[6,258,1]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,257,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,6,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[8,258,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,-1,-1,0,-1],\"region_count\":3,\"region_type\":[3,257,257]},{\"apply_region_bitmap\":4,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,-1,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[2,257,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,2,0,-1,0,-1,0,-1],\"region_count\":3,\"region_type\":[5,258,257]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,4,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,0,-1,0,-1,0,-1],\"region_count\":3,\"region_type\":[6,258,257]},{\"apply_region_bitmap\":7,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,0,0,-1,0,0,-1,-1],\"region_count\":3,\"region_type\":[258,3,257]},{\"apply_region_bitmap\":2,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,-1,3,-1,0,0,0,0],\"region_count\":2,\"region_type\":[259,6,768]},{\"apply_region_bitmap\":1,\"apply_region_type\":768,\"apply_type\":1,\"square_counts\":[0,3,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,258,768]},{\"apply_region_bitmap\":5,\"apply_region_type\":768,\"apply_type\":2,\"square_counts\":[0,-1,1,-1,-1,1,-1,-1],\"region_count\":3,\"region_type\":[257,2,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,1,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,257,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,514,0]},{\"apply_region_bitmap\":5,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[257,1,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":2,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[259,3,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,258,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":2,\"apply_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,3,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":516,\"apply_type\":0,\"square_counts\":[0,5,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,257,0]},{\"apply_region_bitmap\":3,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,259,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[259,514,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":258,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[259,1,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":257,\"apply_type\":0,\"square_counts\":[0,-1,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[258,2,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,4,0,-1,0,-1,0,-1],\"region_count\":3,\"region_type\":[7,257,258]},{\"apply_region_bitmap\":1,\"apply_region_type\":513,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,259,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":3,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,1,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,4,-1,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[6,257,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":1,\"apply_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,3,0]},{\"apply_region_bitmap\":1,\"apply_region_type\":0,\"apply_type\":1,\"square_counts\":[0,1,-1,-1,-1,-1,-1,-1],\"region_count\":3,\"region_type\":[4,258,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,2,-1,-1,-1,-1,0,0],\"region_count\":3,\"region_type\":[4,257,257]},{\"apply_region_bitmap\":1,\"apply_region_type\":514,\"apply_type\":0,\"square_counts\":[0,-1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,257,0]}]";
-        //"[{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,-1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[0,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,1,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[1,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,3,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[3,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,2,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,2,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[2,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,5,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[5,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,4,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[4,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,0,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,2,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,7,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[7,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,8,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[8,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,-1,1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,3,0]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,-1,2,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,4,0]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,2,0]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,-1,3,-1,0,0,0,0],\"region_count\":2,\"region_type\":[1,4,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":5,\"apply_region_type\":0,\"square_counts\":[0,-1,0,-1,-1,1,-1,-1],\"region_count\":3,\"region_type\":[1,1,1]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,-1,3,-1,0,0,0,0],\"region_count\":2,\"region_type\":[2,5,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,4,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[5,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,1,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,3,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,-1,0,-1,0,0,0,0],\"region_count\":2,\"region_type\":[3,3,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,5,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[6,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,6,-1,2,0,0,0,0],\"region_count\":2,\"region_type\":[7,1,0]},{\"apply_region\":0,\"apply_region_bitmap\":4,\"apply_region_type\":0,\"square_counts\":[0,0,0,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[1,2,1]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,0,-1,-1,0,0,-1,0],\"region_count\":3,\"region_type\":[1,2,1]},{\"apply_region\":0,\"apply_region_bitmap\":4,\"apply_region_type\":0,\"square_counts\":[0,0,0,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[1,2,2]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,5,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[7,2,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,2,0,2,0,2,0,0],\"region_count\":3,\"region_type\":[4,1,1]},{\"apply_region\":0,\"apply_region_bitmap\":5,\"apply_region_type\":0,\"square_counts\":[0,-1,1,-1,-1,1,-1,-1],\"region_count\":3,\"region_type\":[1,2,1]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,-1,-1,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[1,3,1]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,6,0,0,0,0,0,0],\"region_count\":1,\"region_type\":[6,0,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":1,\"square_counts\":[0,2,0,-1,-1,-1,0,0],\"region_count\":3,\"region_type\":[5,2,1]},{\"apply_region\":0,\"apply_region_bitmap\":2,\"apply_region_type\":0,\"square_counts\":[0,0,-1,-1,0,0,0,0],\"region_count\":2,\"region_type\":[4,4,0]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,-1,0,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[2,4,2]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,3,0,-1,0,-1,0,0],\"region_count\":3,\"region_type\":[5,1,1]},{\"apply_region\":0,\"apply_region_bitmap\":1,\"apply_region_type\":0,\"square_counts\":[0,-1,0,-1,-1,0,-1,0],\"region_count\":3,\"region_type\":[1,2,1]}]";
+        std::string sin = "[{\"apply_region_bitmap\":4,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":2,\"region_type\":[257,257,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":1,\"region_type\":[256,257,256],\"square_counts\":[0,-1,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":1,\"region_count\":1,\"region_type\":[257,257,256],\"square_counts\":[0,1,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":1,\"region_count\":1,\"region_type\":[258,257,256],\"square_counts\":[0,2,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":1,\"region_count\":1,\"region_type\":[259,257,256],\"square_counts\":[0,3,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,258,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":770,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,259,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":770,\"apply_type\":1,\"region_count\":1,\"region_type\":[770,259,256],\"square_counts\":[0,2,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":770,\"apply_type\":1,\"region_count\":1,\"region_type\":[260,259,256],\"square_counts\":[0,4,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":769,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,258,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":769,\"apply_type\":1,\"region_count\":1,\"region_type\":[769,258,256],\"square_counts\":[0,1,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":2,\"region_type\":[259,258,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":1,\"region_count\":1,\"region_type\":[261,258,256],\"square_counts\":[0,5,0,0,0,0,0,0]},{\"apply_region_bitmap\":6,\"apply_region_type\":1024,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,257,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":1024,\"apply_type\":2,\"region_count\":2,\"region_type\":[1024,257,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":12,\"apply_region_type\":258,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,1024,256],\"square_counts\":[0,1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":258,\"apply_type\":5,\"region_count\":2,\"region_type\":[259,770,256],\"square_counts\":[0,1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":260,\"apply_type\":0,\"region_count\":2,\"region_type\":[261,257,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":2,\"region_type\":[258,258,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":1,\"region_type\":[512,256,256],\"square_counts\":[0,-1,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":2,\"region_type\":[257,513,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":769,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,513,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,769,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":513,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,515,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":2,\"region_type\":[514,258,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":32,\"apply_region_type\":256,\"apply_type\":2,\"region_count\":3,\"region_type\":[513,257,513],\"square_counts\":[0,-1,0,-1,-1,-1,-1,-1]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":1,\"region_count\":1,\"region_type\":[262,257,513],\"square_counts\":[0,6,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":770,\"apply_type\":0,\"region_count\":2,\"region_type\":[260,514,513],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":770,\"apply_type\":0,\"region_count\":2,\"region_type\":[259,513,513],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":513,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,514,513],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":513,\"apply_type\":1,\"region_count\":1,\"region_type\":[1025,514,513],\"square_counts\":[0,1,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":258,\"apply_type\":1,\"region_count\":2,\"region_type\":[1026,513,513],\"square_counts\":[0,1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":258,\"apply_type\":2,\"region_count\":2,\"region_type\":[513,1025,513],\"square_counts\":[0,1,0,2,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":1024,\"apply_type\":0,\"region_count\":2,\"region_type\":[1025,1025,513],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"apply_type\":2,\"region_count\":1,\"region_type\":[1024,1025,513],\"square_counts\":[0,1,0,0,0,0,0,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":2,\"region_type\":[1025,513,513],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":257,\"apply_type\":2,\"region_count\":2,\"region_type\":[1026,514,513],\"square_counts\":[0,0,1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":256,\"apply_type\":1,\"region_count\":1,\"region_type\":[1028,256,256],\"square_counts\":[0,4,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":1024,\"apply_type\":2,\"region_count\":2,\"region_type\":[1025,257,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"apply_type\":5,\"region_count\":2,\"region_type\":[257,1025,256],\"square_counts\":[0,0,0,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"apply_type\":1,\"region_count\":1,\"region_type\":[1026,1025,256],\"square_counts\":[0,2,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"apply_type\":1,\"region_count\":1,\"region_type\":[1027,1025,256],\"square_counts\":[0,3,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":1,\"region_type\":[1025,1025,256],\"square_counts\":[0,2,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":258,\"apply_type\":0,\"region_count\":1,\"region_type\":[1026,1025,256],\"square_counts\":[0,3,0,0,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":258,\"apply_type\":2,\"region_count\":2,\"region_type\":[514,1026,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":10,\"apply_region_type\":259,\"apply_type\":0,\"region_count\":2,\"region_type\":[1027,513,256],\"square_counts\":[0,2,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":10,\"apply_region_type\":258,\"apply_type\":0,\"region_count\":2,\"region_type\":[1024,257,256],\"square_counts\":[0,-1,0,-1,0,0,0,0]},{\"apply_region_bitmap\":10,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":2,\"region_type\":[1025,257,256],\"square_counts\":[0,1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":257,\"apply_type\":2,\"region_count\":2,\"region_type\":[258,1024,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":257,\"apply_type\":1,\"region_count\":1,\"region_type\":[1030,1024,256],\"square_counts\":[0,6,0,0,0,0,0,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":257,\"apply_type\":2,\"region_count\":2,\"region_type\":[1024,513,256],\"square_counts\":[0,0,-1,2,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":1025,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,1026,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":773,\"apply_type\":0,\"region_count\":2,\"region_type\":[262,257,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":773,\"apply_type\":1,\"region_count\":1,\"region_type\":[773,257,256],\"square_counts\":[0,5,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":771,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,260,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":770,\"apply_type\":0,\"region_count\":2,\"region_type\":[771,257,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":8,\"apply_region_type\":257,\"apply_type\":0,\"region_count\":2,\"region_type\":[513,769,256],\"square_counts\":[0,0,0,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":771,\"apply_type\":0,\"region_count\":2,\"region_type\":[260,257,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":2,\"apply_region_type\":771,\"apply_type\":1,\"region_count\":1,\"region_type\":[771,257,256],\"square_counts\":[0,3,0,0,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":258,\"apply_type\":0,\"region_count\":2,\"region_type\":[257,259,256],\"square_counts\":[0,0,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":770,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,260,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]},{\"apply_region_bitmap\":4,\"apply_region_type\":769,\"apply_type\":0,\"region_count\":2,\"region_type\":[258,259,256],\"square_counts\":[0,-1,-1,-1,0,0,0,0]}]";
+
         SaveObject* sobj = SaveObject::load(sin);
         SaveObjectList* rlist = sobj->get_list();
         for (int i = 0; i < rlist->get_count(); i++)
@@ -582,7 +630,7 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
         for (GridRegion& r : regions)
         {
             r.vis_level = GRID_VIS_LEVEL_SHOW;
-            r.visibility_forced = true;
+            r.visibility_force = GridRegion::VIS_FORCE_HINT;
             printf("reset regions\n");
         }
     }
@@ -598,7 +646,7 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
         if (!is_determinable_using_regions(pos, true))
             r.vis_level = GRID_VIS_LEVEL_SHOW;
         else
-            r.visibility_forced = true;
+            r.visibility_force = GridRegion::VIS_FORCE_HINT;
     }
 
     solves.clear();
@@ -701,7 +749,6 @@ bool Grid::is_determinable(XYPos q)
 
 bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 {
-
     std::map <XYPos, unsigned> pos_to_set;
     unsigned set_index = 10000000;
 
@@ -931,7 +978,9 @@ bool Grid::has_solution(void)
                 {
                     if (cnt == 0)
                     {
-                        if (clue.type == RegionType::XORY)
+                        if (clue.type == RegionType::XOR2)
+                            continue;
+                        if (clue.type == RegionType::XOR3)
                             continue;
                         if (clue.type == RegionType::MORE)
                             continue;
@@ -959,7 +1008,7 @@ bool Grid::has_solution(void)
                     s.add(atleast(t, cnt));
                     s.add(atmost(t, cnt));
                 }
-                if (clue.type != RegionType::XORY)
+                if (clue.type != RegionType::XOR2)
                     if (cnt >= 0)
                     {
                         s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 2) && atmost(t, cnt + 2)));
@@ -970,6 +1019,17 @@ bool Grid::has_solution(void)
                         s.add(atleast(t, cnt + 2));
                         s.add(atmost(t, cnt + 2));
                     }
+                    if (clue.type != RegionType::XOR3)
+                        if (cnt >= 0)
+                        {
+                            s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 3) && atmost(t, cnt + 3)));
+                        }
+
+                        if (cnt >= -3)
+                        {
+                            s.add(atleast(t, cnt + 3));
+                            s.add(atmost(t, cnt + 3));
+                        }
 
 //                s.add(sum(t) == cnt);
             }
@@ -981,7 +1041,11 @@ bool Grid::has_solution(void)
 //            	    printf("cnt but all taken\n");
                     return false;
                 }
-                if (cnt != 0 && cnt != -2 && (clue.type == RegionType::XORY))
+                if (cnt != 0 && cnt != -2 && (clue.type == RegionType::XOR2))
+                {
+                    return false;
+                }
+                if (cnt != 0 && cnt != -3 && (clue.type == RegionType::XOR3))
                 {
                     return false;
                 }
@@ -1001,7 +1065,7 @@ bool Grid::has_solution(void)
     }
 }
 
-void Grid::make_harder(void)
+void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z)
 {
 //     {
 //         std::vector<XYPos> tgt;
@@ -1082,73 +1146,136 @@ void Grid::make_harder(void)
             }
             else
             {
-                if (rnd % 10 < 15)
+                if (x_y_z)
                 {
-                    tst = *this;
-                    tst.vals[p].clue.type = RegionType::XORY;
-                    if (tst.is_solveable())
-                    {
-                        vals[p].clue.type = RegionType::XORY;
-                        continue;
-                    }
-                }
-
-                if ((rnd % 10 < 15) && (vals[p].clue.value >= 2))
-                {
-                    tst = *this;
-                    tst.vals[p].clue.type = RegionType::XORY;
-                    tst.vals[p].clue.value -= 2;
-                    if (tst.is_solveable())
-                    {
-                        vals[p].clue.value -= 2;
-                        vals[p].clue.type = RegionType::XORY;
-                        continue;
-                    }
-                }
-
-                tst = *this;
-                tst.vals[p].clue.type = RegionType::LESS;
-                if (tst.is_solveable())
-                {
-                    vals[p].clue.type = RegionType::LESS;
-                    while (true)
+                    if (rnd % 10 < 5)
                     {
                         tst = *this;
-                        tst.vals[p].clue.type = RegionType::LESS;
-                        tst.vals[p].clue.value++;
-                        if (!tst.is_solveable())
-                            break;
-                        if (tst.vals[p].clue.value > 9)
+                        tst.vals[p].clue.type = RegionType::XOR22;
+                        if (tst.is_solveable())
                         {
-                            assert(0);
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
                         }
-                        printf("tst.vals[p].clue.value %d++ \n", tst.vals[p].clue.value);
-                        if (tst.vals[p].clue.value)
+                    }
+                    if (rnd % 10 < 5 && (vals[p].clue.value >= 2))
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR22;
+                        tst.vals[p].clue.value -= 2;
+                        if (tst.is_solveable())
                         {
-                            vals[p].clue.type = RegionType::LESS;
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+                    if (rnd % 10 < 5 && (vals[p].clue.value >= 4))
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR22;
+                        tst.vals[p].clue.value -= 4;
+                        if (tst.is_solveable())
+                        {
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+                }
+                if (x_y)
+                {
+                    if (rnd % 10 < 5)
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR3;
+                        if (tst.is_solveable())
+                        {
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+
+                    if ((rnd % 10 < 5) && (vals[p].clue.value >= 3))
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR3;
+                        tst.vals[p].clue.value -= 3;
+                        if (tst.is_solveable())
+                        {
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+
+                    if (rnd % 10 < 5)
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR2;
+                        if (tst.is_solveable())
+                        {
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+
+                    if ((rnd % 10 < 5) && (vals[p].clue.value >= 2))
+                    {
+                        tst = *this;
+                        tst.vals[p].clue.type = RegionType::XOR2;
+                        tst.vals[p].clue.value -= 2;
+                        if (tst.is_solveable())
+                        {
+                            vals[p].clue = tst.vals[p].clue;
+                            continue;
+                        }
+                    }
+                }
+
+                if (plus_minus)
+                {
+                    tst = *this;
+                    tst.vals[p].clue.type = RegionType::LESS;
+                    if (tst.is_solveable())
+                    {
+                        vals[p].clue.type = RegionType::LESS;
+                        while (true)
+                        {
+                            tst = *this;
+                            tst.vals[p].clue.type = RegionType::LESS;
+                            tst.vals[p].clue.value++;
+                            if (!tst.is_solveable())
+                                break;
+                            if (tst.vals[p].clue.value > 9)
+                            {
+                                assert(0);
+                            }
+                            printf("tst.vals[p].clue.value %d++ \n", tst.vals[p].clue.value);
+                            if (tst.vals[p].clue.value)
+                            {
+                                vals[p].clue.type = RegionType::LESS;
+                                vals[p].clue.value = tst.vals[p].clue.value;
+                            }
+                        }
+                        continue;
+                    }
+
+                    tst = *this;
+                    tst.vals[p].clue.type = RegionType::MORE;
+                    if (tst.is_solveable())
+                    {
+                        tst.vals[p].clue.type = RegionType::MORE;
+                        while (true)
+                        {
+                            tst = *this;
+                            tst.vals[p].clue.type = RegionType::MORE;
+                            tst.vals[p].clue.value--;
+                            if (!tst.is_solveable())
+                                break;
+                            printf("tst.vals[p].clue.value %d-- \n", tst.vals[p].clue.value);
+                            vals[p].clue.type = RegionType::MORE;
                             vals[p].clue.value = tst.vals[p].clue.value;
                         }
+                        continue;
                     }
-                    continue;
-                }
-
-                tst = *this;
-                tst.vals[p].clue.type = RegionType::MORE;
-                if (tst.is_solveable())
-                {
-                    tst.vals[p].clue.type = RegionType::MORE;
-                    while (true)
-                    {
-                        tst = *this;
-                        tst.vals[p].clue.type = RegionType::MORE;
-                        tst.vals[p].clue.value--;
-                        if (!tst.is_solveable())
-                            break;
-                        printf("tst.vals[p].clue.value %d-- \n", tst.vals[p].clue.value);
-                        vals[p].clue.type = RegionType::MORE;
-                        vals[p].clue.value = tst.vals[p].clue.value;
-                    }
-                    continue;
                 }
             }
         }
@@ -1197,6 +1324,7 @@ std::string Grid::to_string()
 
     s += 'A' + size.x;
     s += 'A' + size.y;
+    s += 'A';
 //    s += 'A' + count_revealed;
     FOR_XY(p, XYPos(), size)
     {
@@ -1234,8 +1362,8 @@ void Grid::from_string(std::string s)
     if (a < 0 || a > 50) return;
     g.size.y = a;
 
-    a = s[2] - 'A';
-    if (a < 0 || a > 1) return;
+//    a = s[2] - 'A';
+//    if (a < 0 || a > 1) return;
 //    g.count_revealed = a;
 
     int i = 3;
@@ -1327,9 +1455,19 @@ bool Grid::add_regions(int level)
                     clue.value--;
                 }
             }
-            if (clue.value < 0 && clue.value >= -2 && clue.type == RegionType::XORY)
+            if (clue.value < 0 && clue.type == RegionType::XOR22)
             {
                 clue.value += 2;
+                clue.type = RegionType::XOR2;
+            }
+            if (clue.value < 0 && clue.value >= -2 && clue.type == RegionType::XOR2)
+            {
+                clue.value += 2;
+                clue.type = RegionType::EQUAL;
+            }
+            if (clue.value < 0 && clue.value >= -3 && clue.type == RegionType::XOR3)
+            {
+                clue.value += 3;
                 clue.type = RegionType::EQUAL;
             }
             if (clue.value < 0)
@@ -1421,17 +1559,17 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         GridVisLevel vis_level =  (rule.apply_type == GridRule::SHOW) ? GRID_VIS_LEVEL_SHOW :
                                   (rule.apply_type == GridRule::HIDE) ? GRID_VIS_LEVEL_HIDE :
                                                                         GRID_VIS_LEVEL_BIN;
-        if ((rule.apply_region_bitmap & 1) && !r1->visibility_forced)
+        if ((rule.apply_region_bitmap & 1) && !r1->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r1->vis_level = vis_level;
             r1->vis_rule = &rule;
         }
-        if ((rule.apply_region_bitmap & 2) && !r2->visibility_forced)
+        if ((rule.apply_region_bitmap & 2) && !r2->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r2->vis_level = vis_level;
             r2->vis_rule = &rule;
         }
-        if ((rule.apply_region_bitmap & 4) && !r3->visibility_forced)
+        if ((rule.apply_region_bitmap & 4) && !r3->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r3->vis_level = vis_level;
             r3->vis_rule = &rule;

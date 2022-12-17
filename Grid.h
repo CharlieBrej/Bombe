@@ -13,11 +13,13 @@ class RegionType
 public:
     enum Type
     {
+        NONE,
         EQUAL,
         LESS,
         MORE,
-        XORY,
-        NONE,
+        XOR2,
+        XOR3,
+        XOR22,
     } type = EQUAL;
     int8_t value = 0;
 
@@ -65,7 +67,12 @@ public:
     unsigned colour;
     unsigned fade = 0;
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
-    bool visibility_forced = false;
+    enum
+    {
+        VIS_FORCE_NONE,
+        VIS_FORCE_HINT,
+        VIS_FORCE_USER,
+    } visibility_force = VIS_FORCE_NONE;
     bool stale = false;
     std::set<XYPos> elements;
     GridRule* rule = NULL;
@@ -120,6 +127,7 @@ public:
 
     Grid(XYPos);
     Grid();
+    Grid(std::string s);
     void print(void);
     GridPlace get(XYPos p);
     void solve_easy();
@@ -135,7 +143,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
     bool has_solution(void);
-    void make_harder(void);
+    void make_harder(bool plus_minus, bool x_y, bool x_y_z);
     void reveal(XYPos p);
     void reveal_switch(XYPos q);
     std::string to_string();

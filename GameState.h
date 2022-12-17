@@ -69,14 +69,30 @@ public:
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     GridVisLevel vis_mode = GRID_VIS_LEVEL_HIDE;
+    bool xor_is_3 = false;
 
     bool auto_region = true;
-    bool show_clue = false;
+    bool get_hint = false;
     Grid clue_needs;
     std::set<XYPos> clue_solves;
 
     std::list<Grid*> levels;
     SDL_mutex *levels_mutex;
+
+    class LevelProgress
+    {
+    public:
+        unsigned counts[4] = {};
+        std::vector<uint8_t> level_status;
+    };
+
+    std::vector<LevelProgress> level_progress;
+
+    unsigned current_level_set_index = 0;
+    unsigned current_level_index = 0;
+    bool current_level_is_temp = true;
+    bool current_level_hinted = false;
+    bool current_level_manual = false;
 
 
     GameState(std::ifstream& loadfile);
@@ -95,7 +111,9 @@ public:
     XYPos taken_to_pos(unsigned count, unsigned total);
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
-    void render_box(XYPos pos, XYPos size);
+    void render_box2(XYPos pos, XYPos size);
+    void render_box(XYPos pos, XYPos size, int button_size = 32);
+    void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);
     void grid_click(XYPos pos, bool right);

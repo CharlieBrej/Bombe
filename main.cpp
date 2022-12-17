@@ -16,21 +16,6 @@
 #endif
 
 
-int main2( int argc, char* argv[] )
-{
-    Grid g(XYPos(6,6));
-    g.print();
-
-    g.make_harder();
-    g.print();
-
-    g.solve(100);
-    g.print();
-	return 0;
-}
-
-
-
 void mainloop()
 {
     int save_index = 0;
