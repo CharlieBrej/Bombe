@@ -135,10 +135,15 @@ bool GridRule::matches(GridRule& other)
     return true;
 }
 
-void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3)
+void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 16; i++)
         square_counts[i] = 0;
+    if (!r1)
+    {
+        region_count = 0;
+    }
+
     if (r1)
     {
         region_count = 1;
@@ -168,26 +173,43 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
 
         for (XYPos pos : r3->elements)
         {
-            if (r1->elements.count(pos) && r2->elements.count(pos))
+            int i = 0;
+            if (r1->elements.count(pos))
+                i |= 1;
+            if (r2->elements.count(pos))
+                i |= 2;
+            if (i)
             {
-                square_counts[3]--;
+                square_counts[i]--;
                 square_counts[4]--;
-                square_counts[7]++;
-            }
-            else if (r1->elements.count(pos))
-            {
-                square_counts[1]--;
-                square_counts[4]--;
-                square_counts[5]++;
-            }
-            else if (r2->elements.count(pos))
-            {
-                square_counts[2]--;
-                square_counts[4]--;
-                square_counts[6]++;
+                square_counts[4 | i]++;
             }
         }
     }
+    if (r4)
+    {
+        region_count = 4;
+        region_type[3] = r4->type;
+        square_counts[8] = r4->elements.size();
+
+        for (XYPos pos : r4->elements)
+        {
+            int i = 0;
+            if (r1->elements.count(pos))
+                i |= 1;
+            if (r2->elements.count(pos))
+                i |= 2;
+            if (r3->elements.count(pos))
+                i |= 4;
+            if (i)
+            {
+                square_counts[i]--;
+                square_counts[8]--;
+                square_counts[8 | i]++;
+            }
+        }
+    }
+
 }
 
 bool GridRule::is_legal()

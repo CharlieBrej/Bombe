@@ -91,8 +91,8 @@ class GridRule
 {
 public:
     uint8_t region_count = 0;
-    RegionType region_type[3] = {};
-    int8_t square_counts[8] = {};
+    RegionType region_type[4] = {};
+    int8_t square_counts[16] = {};
     enum ApplyType
     {
         REGION,
@@ -103,7 +103,7 @@ public:
         BIN,
     } apply_type = REGION;
     RegionType apply_region_type;
-    uint8_t apply_region_bitmap = 0;
+    uint16_t apply_region_bitmap = 0;
     bool stale = false;
     bool deleted = false;
 
@@ -112,7 +112,7 @@ public:
     GridRule(SaveObject* sobj);
     SaveObject* save();
     bool matches(GridRule& other);
-    void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3);
+    void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     bool is_legal();
 };
 

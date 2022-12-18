@@ -46,8 +46,8 @@ public:
         right_panel_mode = RIGHT_MENU_NONE;
 
 
-    GridRegion *rule_gen_region[3] = {};
-    unsigned rule_gen_region_count = 0;
+    GridRegion *rule_gen_region[4] = {};
+//    unsigned rule_gen_region_count = 0;
     unsigned rule_gen_region_undef_num = 0;
     GridRule constructed_rule;
     bool constructed_rule_is_logical = false;
@@ -114,6 +114,7 @@ public:
     void render_box2(XYPos pos, XYPos size);
     void render_box(XYPos pos, XYPos size, int button_size = 32);
     void render_number(unsigned num, XYPos pos, XYPos siz);
+    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);
     void grid_click(XYPos pos, bool right);
