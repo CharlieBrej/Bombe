@@ -32,7 +32,8 @@ public:
         MOUSE_MODE_CLEAR,
         MOUSE_MODE_SELECT,
         MOUSE_MODE_VIS,
-        MOUSE_MODE_DRAWING_REGION
+        MOUSE_MODE_DRAWING_REGION,
+        MOUSE_MODE_FILTER,
         }
         mouse_mode = MOUSE_MODE_BOMB;
     GridRegion edited_region;
@@ -54,10 +55,13 @@ public:
 
     GridRegion *inspected_region = NULL;
     GridRule *inspected_rule = NULL;
+    bool rule_gen_target_square_count = false;
+    std::set<XYPos> filter_pos;
 
     int grid_size;
     XYPos panel_size;
     int square_size = 1;
+    int button_size = 1;
     XYPos left_panel_offset;
     XYPos right_panel_offset;
     XYPos grid_offset;

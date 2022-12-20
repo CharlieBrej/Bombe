@@ -20,10 +20,10 @@ public:
         XOR2,
         XOR3,
         XOR22,
-    } type = EQUAL;
+    } type = NONE;
     int8_t value = 0;
 
-    RegionType() : type (EQUAL), value(0) {}
+    RegionType() : type (NONE), value(0) {}
     RegionType(char dummy,  unsigned t) : type (Type(t >> 8)), value(t & 255) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
 
@@ -79,6 +79,7 @@ public:
     GridRule* vis_rule = NULL;
 
     bool overlaps(GridRegion& other);
+    bool contains_all(std::set<XYPos>& other);
     void reset(RegionType type);
     bool operator==(const GridRegion& other) const
     {
@@ -122,6 +123,7 @@ public:
     XYPos size;
 
     std::map<XYPos, GridPlace> vals;
+    std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::list<GridRegion> regions;
     std::list<GridRegion> regions_to_add;
 
@@ -130,6 +132,8 @@ public:
     Grid(std::string s);
     void print(void);
     GridPlace get(XYPos p);
+    RegionType& get_clue(XYPos p);
+
     void solve_easy();
     bool solve(int hard);
     bool is_solveable(bool use_high_count = false);
@@ -143,14 +147,14 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
     bool has_solution(void);
-    void make_harder(bool plus_minus, bool x_y, bool x_y_z);
+    void make_harder(bool plus_minus, bool x_y, bool x_y_z, int row_col);
     void reveal(XYPos p);
     void reveal_switch(XYPos q);
     std::string to_string();
-    void from_string(std::string s);
     bool is_solved(void);
 
-    static GridRule rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3);
+    static GridRule rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
+    bool add_region(std::set<XYPos>& elements, RegionType clue);
     bool add_regions(int level);
 
     enum ApplyRuleResp
@@ -160,7 +164,7 @@ public:
         APPLY_RULE_RESP_ERROR
     };
 
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void add_new_regions();
     void add_one_new_region();
