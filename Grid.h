@@ -5,8 +5,48 @@
 #include <map>
 #include <set>
 #include <list>
+#include <bitset>
 
 void grid_set_rnd(int a = 0);
+
+class XYSet
+{
+    static const unsigned WIDTH = 12;
+    static const unsigned SIZE = WIDTH*WIDTH;
+    std::bitset <SIZE> d;
+public:
+    XYSet(){}
+    XYSet(const std::bitset<SIZE> d_) : d(d_){}
+
+    unsigned p2i(XYPos p) { return p.x + p.y * WIDTH; }
+    XYPos i2p(unsigned i) { return XYPos(i % WIDTH, i / WIDTH); }
+    bool get(unsigned i) {return d[i];}
+    bool get(XYPos p) {return get(p2i(p));}
+    void set(unsigned i) {d[i] = 1;}
+    void set(XYPos p) {set(p2i(p));}
+    void clear(unsigned i) {d[i] = 0;}
+    void clear(XYPos p) {clear(p2i(p));}
+    unsigned count() {return d.count();}
+    bool any() {return d.any();}
+    bool none() {return d.none();}
+    XYPos first() {if (get(0)) return XYPos(0,0); else return next(XYPos(0,0));}
+    XYPos next(XYPos p) {unsigned i = p2i(p); do {i++; if (i>= SIZE) return XYPos(-1,-1);} while(!get(i)); return i2p(i);}
+    void clear() { d.reset(); }
+    void insert(XYPos p) { set(p); }
+
+    bool contains(XYPos p) {return get(p);}
+    bool empty() {return d.none();}
+    bool operator==(const XYSet& other) const { return (d == other.d); }
+    XYSet operator~() const {return XYSet(~d); }
+    XYSet operator&(const XYSet other) const {return XYSet(d & other.d); }
+    XYSet operator|(const XYSet other) const {return XYSet(d | other.d); }
+    bool overlaps(const XYSet other) const {return (d & other.d).any(); }
+
+
+};
+
+#define FOR_XY_SET(NAME, SET) for (XYPos NAME = SET.first(); NAME.x >= 0; NAME = SET.next(NAME))
+
 
 class RegionType
 {
@@ -20,23 +60,25 @@ public:
         XOR2,
         XOR3,
         XOR22,
+        BOMB = 100,
+        CLEAR = 101,
+        VISIBILITY = 102,
     } type = NONE;
     int8_t value = 0;
 
+
     RegionType() : type (NONE), value(0) {}
-    RegionType(char dummy,  unsigned t) : type (Type(t >> 8)), value(t & 255) {}
+    RegionType(char dummy, unsigned t) : type (Type(t >> 8)), value(t & 255) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
 
-    bool operator==(const RegionType& other) const
-    {
-        return (type == other.type) && (value == other.value);
-    }
+    bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value); }
+    unsigned as_int() const { return (int(type) << 8 | value); }
 
-    unsigned as_int() const
-    {
-        return (int(type) << 8 | value);
-    }
+    template<class RESP, class IN> RESP apply_rule(IN in);
     z3::expr apply_z3_rule(z3::expr in);
+    bool apply_int_rule(unsigned in);
+
+    int max();
 };
 
 class GridPlace
@@ -74,7 +116,8 @@ public:
         VIS_FORCE_USER,
     } visibility_force = VIS_FORCE_NONE;
     bool stale = false;
-    std::set<XYPos> elements;
+    XYSet elements;
+
     GridRule* rule = NULL;
     GridRule* vis_rule = NULL;
 
@@ -93,7 +136,7 @@ class GridRule
 public:
     uint8_t region_count = 0;
     RegionType region_type[4] = {};
-    int8_t square_counts[16] = {};
+    RegionType square_counts[16] = {};
     enum ApplyType
     {
         REGION,
@@ -110,9 +153,11 @@ public:
 
 
     GridRule(){};
-    GridRule(SaveObject* sobj);
+    GridRule(SaveObject* sob, int version);
     SaveObject* save();
-    bool matches(GridRule& other);
+    static void get_square_counts(uint8_t square_counts[16], GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
+
+    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     bool is_legal();
 };
@@ -153,8 +198,7 @@ public:
     std::string to_string();
     bool is_solved(void);
 
-    static GridRule rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
-    bool add_region(std::set<XYPos>& elements, RegionType clue);
+    bool add_region(XYSet& elements, RegionType clue);
     bool add_regions(int level);
 
     enum ApplyRuleResp

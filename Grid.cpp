@@ -16,7 +16,8 @@ void grid_set_rnd(int a)
     rnd.gen.seed(a);
 }
 
-z3::expr RegionType::apply_z3_rule(z3::expr in)
+template<class RESP, class IN>
+RESP RegionType::apply_rule(IN in)
 {
     if (type == EQUAL)
     {
@@ -44,6 +45,48 @@ z3::expr RegionType::apply_z3_rule(z3::expr in)
     }
     assert(0);
 }
+z3::expr RegionType::apply_z3_rule(z3::expr in)
+{
+    return apply_rule<z3::expr,z3::expr>(in);
+}
+
+bool RegionType::apply_int_rule(unsigned in)
+{
+    return apply_rule<bool,unsigned>(in);
+}
+
+int RegionType::max()
+{
+    if (type == NONE)
+    {
+        return -1;
+    }
+    if (type == EQUAL)
+    {
+        return value;
+    }
+    if (type == LESS)
+    {
+        return value;
+    }
+    if (type == MORE)
+    {
+        return -1;
+    }
+    if (type == XOR2)
+    {
+        return value + 2;
+    }
+    if (type == XOR3)
+    {
+        return value + 3;
+    }
+    if (type == XOR22)
+    {
+        return value + 4;
+    }
+    assert(0);
+}
 
 void GridRegion::reset(RegionType type_)
 {
@@ -57,13 +100,9 @@ void GridRegion::reset(RegionType type_)
 
 bool GridRegion::overlaps(GridRegion& other)
 {
-    for (const XYPos& e : elements)
-    {
-        if (other.elements.contains(e))
-            return true;
-    }
-    return false;
+    return elements.overlaps(other.elements);
 }
+
 bool GridRegion::contains_all(std::set<XYPos>& other)
 {
     for (const XYPos& p : other)
@@ -74,21 +113,40 @@ bool GridRegion::contains_all(std::set<XYPos>& other)
     return true;
 }
 
-GridRule::GridRule(SaveObject* sobj)
+GridRule::GridRule(SaveObject* sobj, int version)
 {
     SaveObjectMap* omap = sobj->get_map();
     region_count = omap->get_num("region_count");
     apply_type = ApplyType(omap->get_num("apply_type"));
-    apply_region_type = RegionType('a', omap->get_num("apply_region_type"));
+    apply_region_type = RegionType('a',omap->get_num("apply_region_type"));
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
     for (int i = 0; i < rlist->get_count(); i++)
-        region_type[i] = RegionType('a', rlist->get_num(i));
+        region_type[i] = RegionType('a',rlist->get_num(i));
 
     rlist = omap->get_item("square_counts")->get_list();
     for (int i = 0; i < rlist->get_count(); i++)
-        square_counts[i] = rlist->get_num(i);
+    {
+        int v = rlist->get_num(i);
+        if (version >= 3)
+            square_counts[i] = RegionType('a',v);
+        else
+        {
+            if (v < 0)
+                square_counts[i] = RegionType(RegionType::NONE, 0);
+            else
+                square_counts[i] = RegionType(RegionType::EQUAL, v);
+        }
+
+    }
+
+        // if (version > 2)
+        //     square_counts[i] = RegionType('a', rlist->get_num(i));
+        // else
+        //     square_counts[i] = RegionType(RegionType::EQUAL, rlist->get_num(i));
+
+
 }
 
 SaveObject* GridRule::save()
@@ -106,129 +164,128 @@ SaveObject* GridRule::save()
 
     SaveObjectList* square_counts_list = new SaveObjectList;
     for (int i = 0; i < (1<<region_count); i++)
-        square_counts_list->add_num(square_counts[i]);
+        square_counts_list->add_num(square_counts[i].as_int());
     omap->add_item("square_counts", square_counts_list);
 
     return omap;
 }
 
-bool GridRule::matches(GridRule& other)
+void GridRule::get_square_counts(uint8_t square_counts[16], GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
-    if (deleted != other.deleted)
-        return false;
-    if (region_count != other.region_count)
-        return false;
-    if ((square_counts[1] >= 0) && (square_counts[1] != other.square_counts[1]))
-        return false;
-    if (region_type[0] != other.region_type[0])
-        return false;
-    if (region_count >= 2)
+    for (int i = 0; i < 16; i++)
+        square_counts[i] = 0;
+
+    if (!r1)
+        return;
+
+    if (!r2)
     {
-        if ((square_counts[2] >= 0) && (square_counts[2] != other.square_counts[2]))
-            return false;
-        if ((square_counts[3] >= 0) && (square_counts[3] != other.square_counts[3]))
-            return false;
-        if (region_type[1] != other.region_type[1])
-            return false;
+        XYSet a0 = r1->elements;
+        square_counts[1] = (a0).count();
+        return;
     }
-    if (region_count >= 3)
+    if (!r3)
     {
-        if (region_type[2] != other.region_type[2])
-            return false;
-        for (int i = 4; i < 8; i++)
-        {
-            if ((square_counts[i] >= 0) && (square_counts[i] != other.square_counts[i]))
-                return false;
-        }
+        XYSet a0 = r1->elements;
+        XYSet a1 = r2->elements;
+        square_counts[1] =  (a0 & ~a1).count();
+        square_counts[2] = (~a0 &  a1).count();
+        square_counts[3] = ( a0 &  a1).count();
+        return;
     }
-    if (region_count >= 4)
+    if (!r4)
     {
-        if (region_type[3] != other.region_type[3])
+        XYSet a0 = r1->elements;
+        XYSet a1 = r2->elements;
+        XYSet a2 = r3->elements;
+        square_counts[1] =  (a0 & ~a1 & ~a2).count();
+        square_counts[2] = (~a0 &  a1 & ~a2).count();
+        square_counts[3] = ( a0 &  a1 & ~a2).count();
+        square_counts[4] = (~a0 & ~a1 &  a2).count();
+        square_counts[5] = ( a0 & ~a1 &  a2).count();
+        square_counts[6] = (~a0 &  a1 &  a2).count();
+        square_counts[7] = ( a0 &  a1 &  a2).count();
+        return;
+    }
+
+    {
+        XYSet a0 = r1->elements;
+        XYSet a1 = r2->elements;
+        XYSet a2 = r3->elements;
+        XYSet a3 = r4->elements;
+        square_counts[1] =  ( a0 & ~a1 & ~a2 & ~a3).count();
+        square_counts[2] =  (~a0 &  a1 & ~a2 & ~a3).count();
+        square_counts[3] =  ( a0 &  a1 & ~a2 & ~a3).count();
+        square_counts[4] =  (~a0 & ~a1 &  a2 & ~a3).count();
+        square_counts[5] =  ( a0 & ~a1 &  a2 & ~a3).count();
+        square_counts[6] =  (~a0 &  a1 &  a2 & ~a3).count();
+        square_counts[7] =  ( a0 &  a1 &  a2 & ~a3).count();
+        square_counts[8] =  (~a0 & ~a1 & ~a2 &  a3).count();
+        square_counts[9] =  ( a0 & ~a1 & ~a2 &  a3).count();
+        square_counts[10] = (~a0 &  a1 & ~a2 &  a3).count();
+        square_counts[11] = ( a0 &  a1 & ~a2 &  a3).count();
+        square_counts[12] = (~a0 & ~a1 &  a2 &  a3).count();
+        square_counts[13] = ( a0 & ~a1 &  a2 &  a3).count();
+        square_counts[14] = (~a0 &  a1 &  a2 &  a3).count();
+        square_counts[15] = ( a0 &  a1 &  a2 &  a3).count();
+        return;
+    }
+}
+
+bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
+{
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+        if (square_counts[i].type == RegionType::NONE)
+            continue;
+        XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+        if (r2)
+            s = s & ((i & 2) ? r2->elements : ~r2->elements);
+        if (r3)
+            s = s & ((i & 4) ? r3->elements : ~r3->elements);
+        if (r4)
+            s = s & ((i & 8) ? r4->elements : ~r4->elements);
+        if (!square_counts[i].apply_int_rule(s.count()))
             return false;
-        for (int i = 8; i < 16; i++)
-        {
-            if ((square_counts[i] >= 0) && (square_counts[i] != other.square_counts[i]))
-                return false;
-        }
     }
     return true;
 }
 
 void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
-    for (int i = 0; i < 16; i++)
-        square_counts[i] = 0;
-    if (!r1)
-    {
-        region_count = 0;
-    }
+    region_count = 0;
 
     if (r1)
     {
         region_count = 1;
         region_type[0] = r1->type;
-        square_counts[1] = r1->elements.size();
     }
     if (r2)
     {
         region_count = 2;
         region_type[1] = r2->type;
-        square_counts[2] = r2->elements.size();
-        for (XYPos pos : r2->elements)
-        {
-            if (r1->elements.count(pos))
-            {
-                square_counts[1]--;
-                square_counts[2]--;
-                square_counts[3]++;
-            }
-        }
     }
     if (r3)
     {
         region_count = 3;
         region_type[2] = r3->type;
-        square_counts[4] = r3->elements.size();
-
-        for (XYPos pos : r3->elements)
-        {
-            int i = 0;
-            if (r1->elements.count(pos))
-                i |= 1;
-            if (r2->elements.count(pos))
-                i |= 2;
-            if (i)
-            {
-                square_counts[i]--;
-                square_counts[4]--;
-                square_counts[4 | i]++;
-            }
-        }
     }
     if (r4)
     {
         region_count = 4;
         region_type[3] = r4->type;
-        square_counts[8] = r4->elements.size();
-
-        for (XYPos pos : r4->elements)
-        {
-            int i = 0;
-            if (r1->elements.count(pos))
-                i |= 1;
-            if (r2->elements.count(pos))
-                i |= 2;
-            if (r3->elements.count(pos))
-                i |= 4;
-            if (i)
-            {
-                square_counts[i]--;
-                square_counts[8]--;
-                square_counts[8 | i]++;
-            }
-        }
     }
 
+    uint8_t sqc[16];
+    get_square_counts(sqc, r1, r2, r3, r4);
+
+    for (int i = 1; i < 16; i++)
+        square_counts[i] = RegionType(RegionType::NONE, 0);
+
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+        square_counts[i] = RegionType(RegionType::EQUAL, sqc[i]);
+    }
 }
 
 bool GridRule::is_legal()
@@ -248,8 +305,9 @@ bool GridRule::is_legal()
         x_name << "A" << i;
         vec.push_back(c.int_const(x_name.str().c_str()));
         s.add(vec[i] >= 0);
-        if (int(square_counts[i]) >= 0)
-            s.add(vec[i] <= int(square_counts[i]));
+        int m = square_counts[i].max();
+        if (m >= 0)
+            s.add(vec[i] <= int(m));
     }
 
     if (region_count == 1)
@@ -287,9 +345,10 @@ bool GridRule::is_legal()
         if ((apply_region_bitmap >> i) & 1)
         {
             e = e + vec[i];
-            if ((square_counts[i] < 0) && (apply_type == BOMB))
+            int m = square_counts[i].max();
+            if ((m < 0) && (apply_type == BOMB))
                 return false;
-            tot += square_counts[i];
+            tot += m;
         }
     }
 
@@ -489,7 +548,7 @@ void Grid::solve_easy()
         SaveObjectList* rlist = sobj->get_list();
         for (int i = 0; i < rlist->get_count(); i++)
         {
-            global_rules.push_back(rlist->get_item(i));
+            global_rules.push_back(GridRule(rlist->get_item(i), 2));
         }
     }
 
@@ -841,11 +900,11 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     {
         if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && hidden)
           continue;
-        for (const XYPos& p : r.elements)
+        FOR_XY_SET (p, r.elements)
         {
             set_index++;
             unsigned v = pos_to_set[p];
-            for (const XYPos& p2 : r.elements)
+            FOR_XY_SET (p2, r.elements)
             {
                 if (pos_to_set[p2] == v)
                     pos_to_set[p2] = set_index;
@@ -921,7 +980,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
         std::set<unsigned> seen;
         z3::expr e = c.int_val(0);
 
-        for (const XYPos& p : r.elements)
+        FOR_XY_SET (p, r.elements)
         {
             unsigned si = pos_to_set[p];
             if (!seen.count(si))
@@ -1226,21 +1285,21 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, int row_col)
             }
             if (x_y_z)
             {
-                if (rnd % 10 < 5)
+                if (rnd % 10 < 5 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::XOR22;
+                    tst.get_clue(p).value -= 2;
                     if (tst.is_solveable())
                     {
                         get_clue(p) = tst.get_clue(p);
                         continue;
                     }
                 }
-                if (rnd % 10 < 5 && (get_clue(p).value >= 2))
+                if (rnd % 10 < 5)
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::XOR22;
-                    tst.get_clue(p).value -= 2;
                     if (tst.is_solveable())
                     {
                         get_clue(p) = tst.get_clue(p);
@@ -1365,7 +1424,7 @@ void Grid::reveal(XYPos p)
     std::list<GridRegion>::iterator it = regions.begin();
     while (it != regions.end())
     {
-        if((*it).elements.count(p))
+        if((*it).elements.get(p))
             it = regions.erase(it);
         else
             ++it;
@@ -1374,7 +1433,7 @@ void Grid::reveal(XYPos p)
     it = regions_to_add.begin();
     while (it != regions_to_add.end())
     {
-        if((*it).elements.count(p))
+        if((*it).elements.get(p))
             it = regions_to_add.erase(it);
         else
             ++it;
@@ -1451,9 +1510,9 @@ bool Grid::is_solved(void)
     return true;
 }
 
-bool Grid::add_region(std::set<XYPos>& elements, RegionType clue)
+bool Grid::add_region(XYSet& elements, RegionType clue)
 {
-    if (!elements.size())
+    if (!elements.count())
         return false;
     if (clue.value < 0 && clue.type == RegionType::XOR22)
     {
@@ -1493,13 +1552,13 @@ bool Grid::add_regions(int level)
             RegionType clue = edges[XYPos(0,y)];
             if (clue.type == RegionType::NONE)
                 continue;
-            std::set<XYPos> elements;
+            XYSet elements;
             for (int x = 0; x < size.x; x++)
             {
                 XYPos n = XYPos(x,y);
                 if (!get(n).revealed)
                 {
-                    elements.insert(n);
+                    elements.set(n);
                 }
                 else if (get(n).bomb)
                 {
@@ -1517,13 +1576,13 @@ bool Grid::add_regions(int level)
             RegionType clue = edges[XYPos(1,x)];
             if (clue.type == RegionType::NONE)
                 continue;
-            std::set<XYPos> elements;
+            XYSet elements;
             for (int y = 0; y < size.y; y++)
             {
                 XYPos n = XYPos(x,y);
                 if (!get(n).revealed)
                 {
-                    elements.insert(n);
+                    elements.set(n);
                 }
                 else if (get(n).bomb)
                 {
@@ -1537,7 +1596,7 @@ bool Grid::add_regions(int level)
 
     FOR_XY(p, XYPos(), size)
     {
-        std::set<XYPos> elements;
+        XYSet elements;
         GridPlace g = vals[p];
         if (g.revealed && !g.bomb && ((g.clue.type != RegionType::NONE)))
         {
@@ -1548,7 +1607,7 @@ bool Grid::add_regions(int level)
                 XYPos n = p + offset;
                 if (!get(n).revealed)
                 {
-                    elements.insert(n);
+                    elements.set(n);
                 }
                 else if (get(n).bomb)
                 {
@@ -1562,86 +1621,6 @@ bool Grid::add_regions(int level)
     return false;
 }
 
-GridRule Grid::rule_from_selected_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
-{
-    GridRule rule;
-
-    if (r1)
-    {
-        rule.region_count = 1;
-        rule.region_type[0] = r1->type;
-        rule.square_counts[1] = r1->elements.size();
-    }
-    if (r2)
-    {
-        rule.region_count = 2;
-        rule.region_type[1] = r2->type;
-        rule.square_counts[2] = r2->elements.size();
-        for (XYPos pos : r2->elements)
-        {
-            if (r1->elements.count(pos))
-            {
-                rule.square_counts[1]--;
-                rule.square_counts[2]--;
-                rule.square_counts[3]++;
-            }
-        }
-    }
-    if (r3)
-    {
-        rule.region_count = 3;
-        rule.region_type[2] = r3->type;
-        rule.square_counts[4] = r3->elements.size();
-
-        for (XYPos pos : r3->elements)
-        {
-            if (r1->elements.count(pos) && r2->elements.count(pos))
-            {
-                rule.square_counts[3]--;
-                rule.square_counts[4]--;
-                rule.square_counts[7]++;
-            }
-            else if (r1->elements.count(pos))
-            {
-                rule.square_counts[1]--;
-                rule.square_counts[4]--;
-                rule.square_counts[5]++;
-            }
-            else if (r2->elements.count(pos))
-            {
-                rule.square_counts[2]--;
-                rule.square_counts[4]--;
-                rule.square_counts[6]++;
-            }
-        }
-    }
-    if (r4)
-    {
-        rule.region_count = 4;
-        rule.region_type[3] = r4->type;
-        rule.square_counts[8] = r4->elements.size();
-
-        for (XYPos pos : r4->elements)
-        {
-            int i = 0;
-            if (r1->elements.count(pos))
-                i |= 1;
-            if (r2->elements.count(pos))
-                i |= 2;
-            if (r3->elements.count(pos))
-                i |= 4;
-            if (i)
-            {
-                rule.square_counts[i]--;
-                rule.square_counts[8]--;
-                rule.square_counts[8 | i]++;
-            }
-        }
-    }
-
-    return rule;
-}
-
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     assert(rule.apply_region_bitmap);
@@ -1650,22 +1629,22 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         GridVisLevel vis_level =  (rule.apply_type == GridRule::SHOW) ? GRID_VIS_LEVEL_SHOW :
                                   (rule.apply_type == GridRule::HIDE) ? GRID_VIS_LEVEL_HIDE :
                                                                         GRID_VIS_LEVEL_BIN;
-        if ((rule.apply_region_bitmap & 1) && !r1->visibility_force != GridRegion::VIS_FORCE_USER)
+        if ((rule.apply_region_bitmap & 1) && r1->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r1->vis_level = vis_level;
             r1->vis_rule = &rule;
         }
-        if ((rule.apply_region_bitmap & 2) && !r2->visibility_force != GridRegion::VIS_FORCE_USER)
+        if ((rule.apply_region_bitmap & 2) && r2->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r2->vis_level = vis_level;
             r2->vis_rule = &rule;
         }
-        if ((rule.apply_region_bitmap & 4) && !r3->visibility_force != GridRegion::VIS_FORCE_USER)
+        if ((rule.apply_region_bitmap & 4) && r3->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r3->vis_level = vis_level;
             r3->vis_rule = &rule;
         }
-        if ((rule.apply_region_bitmap & 8) && !r4->visibility_force != GridRegion::VIS_FORCE_USER)
+        if ((rule.apply_region_bitmap & 8) && r4->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r4->vis_level = vis_level;
             r4->vis_rule = &rule;
@@ -1673,50 +1652,51 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         return APPLY_RULE_RESP_NONE;
     }
 
-    std::set<XYPos> itter_elements;
+    XYSet itter_elements;
     GridRegion* itter = NULL;
-    for (XYPos pos : r1->elements)
+    FOR_XY_SET(pos, r1->elements)
         itter_elements.insert(pos);
     if (r2)
-        for (XYPos pos : r2->elements)
+        FOR_XY_SET(pos, r2->elements)
             itter_elements.insert(pos);
     if (r3)
-        for (XYPos pos : r3->elements)
+        FOR_XY_SET(pos, r3->elements)
             itter_elements.insert(pos);
     if (r4)
-        for (XYPos pos : r4->elements)
+        FOR_XY_SET(pos, r4->elements)
             itter_elements.insert(pos);
 
-    std::set<XYPos> to_reveal;
+    XYSet to_reveal;
 
-    for (XYPos pos : itter_elements)
+    FOR_XY_SET(pos, itter_elements)
     {
         unsigned m = 0;
-        if (r1->elements.count(pos))
+        if (r1->elements.get(pos))
             m |= 1;
-        if (r2 && (r2->elements.count(pos)))
+        if (r2 && (r2->elements.get(pos)))
             m |= 2;
-        if (r3 && (r3->elements.count(pos)))
+        if (r3 && (r3->elements.get(pos)))
             m |= 4;
-        if (r4 && (r4->elements.count(pos)))
+        if (r4 && (r4->elements.get(pos)))
             m |= 8;
         if ((rule.apply_region_bitmap >> m) & 1)
-            to_reveal.insert(pos);
+            to_reveal.set(pos);
     }
     if (to_reveal.empty())
         return APPLY_RULE_RESP_NONE;
 
     if ((rule.apply_type == GridRule::BOMB) || (rule.apply_type == GridRule::CLEAR))
     {
-        for (XYPos pos : to_reveal)
+        FOR_XY_SET(pos, to_reveal)
         {
             if (vals[pos].bomb != (rule.apply_type == GridRule::BOMB))
             {
                 printf("wrong\n");
+                assert(0);
                 return APPLY_RULE_RESP_ERROR;
             }
         }
-        for (XYPos pos : to_reveal)
+        FOR_XY_SET(pos, to_reveal)
             reveal(pos);
         return APPLY_RULE_RESP_HIT;
     }
@@ -1724,9 +1704,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     {
         GridRegion reg;
         reg.reset(rule.apply_region_type);
-        for (XYPos pos : to_reveal)
+        FOR_XY_SET(pos, to_reveal)
         {
-            reg.elements.insert(pos);
+            reg.elements.set(pos);
         }
         reg.rule = &rule;
         bool found = (std::find(regions.begin(), regions.end(), reg) != regions.end())  ||
@@ -1744,8 +1724,40 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     return APPLY_RULE_RESP_HIT;
 }
 
+static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
+{
+    if (r1 != start && !(connected & 1) && start->overlaps(*r1))
+    {
+        connected |= 1;
+        find_connected(r1, connected, r1, r2, r3, r4);
+    }
+    if (!r2)
+        return;
+    if (r2 != start && !(connected & 2) && start->overlaps(*r2))
+    {
+        connected |= 2;
+        find_connected(r2, connected, r1, r2, r3, r4);
+    }
+    if (!r3)
+        return;
+    if (r3 != start && !(connected & 4) && start->overlaps(*r3))
+    {
+        connected |= 4;
+        find_connected(r3, connected, r1, r2, r3, r4);
+    }
+    if (!r4)
+        return;
+    if (r4 != start && !(connected & 8) && start->overlaps(*r4))
+    {
+        connected |= 8;
+        find_connected(r4, connected, r1, r2, r3, r4);
+    }
+}
+
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
 {
+    if (rule.deleted)
+        return APPLY_RULE_RESP_NONE;
     assert(rule.region_count);
     for (GridRegion& r1 : regions)
     {
@@ -1757,8 +1769,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
         {
             if (rule.stale && r1.stale && !force)
                 continue;
-            GridRule try_rule = rule_from_selected_regions(&r1, NULL, NULL, NULL);
-            if (rule.matches(try_rule))
+            if (rule.matches(&r1, NULL, NULL, NULL))
             {
                 ApplyRuleResp resp = apply_rule(rule, &r1, NULL, NULL, NULL);
                 if (resp != APPLY_RULE_RESP_NONE)
@@ -1781,10 +1792,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                         continue;
                     if (!r1.overlaps(r2))
                         continue;
-                    GridRule try_rule = rule_from_selected_regions(&r1, &r2, NULL, NULL);
-                    if (!try_rule.square_counts[3])
-                        continue;
-                    if (rule.matches(try_rule))
+                    if (rule.matches(&r1, &r2, NULL, NULL))
                     {
                         ApplyRuleResp resp = apply_rule(rule, &r1, &r2, NULL, NULL);
                         if (resp != APPLY_RULE_RESP_NONE)
@@ -1803,15 +1811,13 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                             continue;
                         if (r3.vis_level == GRID_VIS_LEVEL_BIN && !force)
                             continue;
-                        if (!r1.overlaps(r3) && !r2.overlaps(r3))
-                            continue;
                         if(rule.region_count == 3)
                         {
-                            GridRule try_rule = rule_from_selected_regions(&r1, &r2, &r3, NULL);
-                            int c = int(try_rule.square_counts[3] != 0) + int(try_rule.square_counts[5] != 0) + int(try_rule.square_counts[6] != 0);
-                            if (c < 2 && !try_rule.square_counts[7])
+                            unsigned connected = 1;
+                            find_connected(&r1, connected, &r1, &r2, &r3, NULL);
+                            if (connected != 0x7)
                                 continue;
-                            if (rule.matches(try_rule))
+                            if (rule.matches(&r1, &r2, &r3, NULL))
                             {
                                 ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, NULL);
                                 if (resp != APPLY_RULE_RESP_NONE)
@@ -1830,15 +1836,13 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                                     continue;
                                 if (r4.vis_level == GRID_VIS_LEVEL_BIN && !force)
                                     continue;
-                                if (!r1.overlaps(r4) && !r2.overlaps(r4) && !r3.overlaps(r4))
-                                    continue;
                                 assert (rule.region_count == 4);
                                 {
-                                    GridRule try_rule = rule_from_selected_regions(&r1, &r2, &r3, &r4);
-                                    if (!try_rule.square_counts[9] && !try_rule.square_counts[10] && !try_rule.square_counts[11] &&
-                                        !try_rule.square_counts[12] && !try_rule.square_counts[13] && !try_rule.square_counts[14] && !try_rule.square_counts[15])
+                                    unsigned connected = 1;
+                                    find_connected(&r1, connected, &r1, &r2, &r3, &r4);
+                                    if (connected != 0xF)
                                         continue;
-                                    if (rule.matches(try_rule))
+                                    if (rule.matches(&r1, &r2, &r3, &r4))
                                     {
                                         ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, &r4);
                                         if (resp != APPLY_RULE_RESP_NONE)

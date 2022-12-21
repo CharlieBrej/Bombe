@@ -30,13 +30,12 @@ public:
     enum {
         MOUSE_MODE_BOMB,
         MOUSE_MODE_CLEAR,
-        MOUSE_MODE_SELECT,
+        MOUSE_MODE_NONE,
         MOUSE_MODE_VIS,
         MOUSE_MODE_DRAWING_REGION,
         MOUSE_MODE_FILTER,
         }
         mouse_mode = MOUSE_MODE_BOMB;
-    GridRegion edited_region;
 
     enum {
         RIGHT_MENU_NONE,
@@ -49,8 +48,9 @@ public:
 
     GridRegion *rule_gen_region[4] = {};
 //    unsigned rule_gen_region_count = 0;
-    unsigned rule_gen_region_undef_num = 0;
+//    unsigned rule_gen_region_undef_num = 0;
     GridRule constructed_rule;
+    RegionType region_type = RegionType(RegionType::EQUAL, 1);
     bool constructed_rule_is_logical = false;
 
     GridRegion *inspected_region = NULL;
@@ -68,7 +68,6 @@ public:
     bool full_screen = false;
 
     bool skip_level = false;
-    int deaths = 0;
     int cooldown = 0;
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
