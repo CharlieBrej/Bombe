@@ -1267,10 +1267,10 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, int row_col)
                 tgt.push_back(p);
         }
         for (int i = 0; i < size.y; i++)
-            if (edges.contains(XYPos(0, i)))
+            if (edges.count(XYPos(0, i)))
                 tgt.push_back(XYPos(-1, i));
         for (int i = 0; i < size.x; i++)
-            if (edges.contains(XYPos(1, i)))
+            if (edges.count(XYPos(1, i)))
                 tgt.push_back(XYPos(i, -1));
 
         std::shuffle(tgt.begin(), tgt.end(), rnd.gen);
@@ -1485,7 +1485,7 @@ std::string Grid::to_string()
     for (int i = 0; i < size.y; i++)
     {
         RegionType clue;
-        if (edges.contains(XYPos(0, i)))
+        if (edges.count(XYPos(0, i)))
             clue = edges[XYPos(0, i)];
         s += 'A' + (char)(clue.type);
         s += '0' + clue.value;
@@ -1494,7 +1494,7 @@ std::string Grid::to_string()
     for (int i = 0; i < size.x; i++)
     {
         RegionType clue;
-        if (edges.contains(XYPos(1, i)))
+        if (edges.count(XYPos(1, i)))
             clue = edges[XYPos(1, i)];
         s += 'A' + (char)(clue.type);
         s += '0' + clue.value;
@@ -1549,7 +1549,7 @@ bool Grid::add_regions(int level)
 {
     for (int y = 0; y < size.y; y++)
     {
-        if (edges.contains(XYPos(0,y)))
+        if (edges.count(XYPos(0,y)))
         {
             RegionType clue = edges[XYPos(0,y)];
             if (clue.type == RegionType::NONE)
@@ -1573,7 +1573,7 @@ bool Grid::add_regions(int level)
     }
     for (int x = 0; x < size.x; x++)
     {
-        if (edges.contains(XYPos(1,x)))
+        if (edges.count(XYPos(1,x)))
         {
             RegionType clue = edges[XYPos(1,x)];
             if (clue.type == RegionType::NONE)

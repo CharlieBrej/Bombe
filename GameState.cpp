@@ -846,7 +846,7 @@ void GameState::render(bool saving)
 //                SDL_SetTextureColorMod(sdl_texture, 255, 0, 0);
             if (clue_solves.count(pos))
                 SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
-            if (filter_pos.contains(pos))
+            if (filter_pos.count(pos))
                 SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
         }
         SDL_Rect src_rect = {64, 256, 192, 192};
@@ -1426,7 +1426,7 @@ void GameState::grid_click(XYPos pos, bool right)
 //     }
     if (mouse_mode == MOUSE_MODE_FILTER)
     {
-        if (filter_pos.contains(pos))
+        if (filter_pos.count(pos))
             filter_pos.erase(pos);
         else
             filter_pos.insert(pos);

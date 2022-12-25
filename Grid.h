@@ -72,6 +72,7 @@ public:
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
 
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value); }
+    bool operator!=(const RegionType& other) const { return !(*this == other); }
     unsigned as_int() const { return (int(type) << 8 | value); }
 
     template<class RESP, class IN> RESP apply_rule(IN in);
