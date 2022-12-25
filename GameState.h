@@ -69,6 +69,7 @@ public:
 
     bool skip_level = false;
     int cooldown = 0;
+    bool last_active_was_hit = false;
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     GridVisLevel vis_mode = GRID_VIS_LEVEL_HIDE;

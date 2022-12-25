@@ -133,10 +133,11 @@ GridRule::GridRule(SaveObject* sobj, int version)
             square_counts[i] = RegionType('a',v);
         else
         {
-            if (v < 0)
+            int8_t v2 = v;
+            if (v2 < 0)
                 square_counts[i] = RegionType(RegionType::NONE, 0);
             else
-                square_counts[i] = RegionType(RegionType::EQUAL, v);
+                square_counts[i] = RegionType(RegionType::EQUAL, v2);
         }
 
     }
@@ -254,6 +255,7 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
 void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     region_count = 0;
+    apply_region_bitmap = 0;
 
     if (r1)
     {
@@ -1623,6 +1625,8 @@ bool Grid::add_regions(int level)
 
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
+    if (rule.deleted)
+        return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
     if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
     {
@@ -1758,12 +1762,22 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
 {
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
+    std::set<GridRegion*> unstale_regions;
+    for (GridRegion& r : regions)
+    {
+        if (!r.stale)
+            unstale_regions.insert(&r);
+    }
+    if (unstale_regions.empty() && rule.stale && !force)
+        return APPLY_RULE_RESP_NONE;
+
+    bool ignore_bin = (rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN);
     assert(rule.region_count);
     for (GridRegion& r1 : regions)
     {
         if (r1.type != rule.region_type[0])
             continue;
-        if (r1.vis_level == GRID_VIS_LEVEL_BIN && !force)
+        if (r1.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
             continue;
         if (rule.region_count == 1)
         {
@@ -1784,7 +1798,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                     continue;
                 if (r2 == r1)
                     continue;
-                if (r2.vis_level == GRID_VIS_LEVEL_BIN && !force)
+                if (r2.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
                     continue;
                 if (rule.region_count == 2)
                 {
@@ -1809,7 +1823,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                             continue;
                         if ((r3 == r1) || (r3 == r2))
                             continue;
-                        if (r3.vis_level == GRID_VIS_LEVEL_BIN && !force)
+                        if (r3.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
                             continue;
                         if(rule.region_count == 3)
                         {
@@ -1834,7 +1848,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                                     continue;
                                 if ((r4 == r1) || (r4 == r2) || (r4 == r3))
                                     continue;
-                                if (r4.vis_level == GRID_VIS_LEVEL_BIN && !force)
+                                if (r4.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
                                     continue;
                                 assert (rule.region_count == 4);
                                 {

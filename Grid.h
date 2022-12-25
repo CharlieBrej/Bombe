@@ -11,7 +11,7 @@ void grid_set_rnd(int a = 0);
 
 class XYSet
 {
-    static const unsigned WIDTH = 12;
+    static const unsigned WIDTH = 10;
     static const unsigned SIZE = WIDTH*WIDTH;
     std::bitset <SIZE> d;
 public:
