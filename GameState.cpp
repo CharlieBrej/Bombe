@@ -138,7 +138,7 @@ GameState::GameState(std::ifstream& loadfile)
 	    SDL_FreeSurface(icon_surface);
     }
 
-    font = TTF_OpenFont("fixed.ttf", 19);
+    font = TTF_OpenFont("font.ttf", 32);
 
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
     Mix_AllocateChannels(32);
@@ -210,7 +210,6 @@ GameState::~GameState()
 SDL_Texture* GameState::loadTexture(const char* filename)
 {
     SDL_Surface* loadedSurface = IMG_Load(filename);
-
 	assert(loadedSurface);
     SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, loadedSurface);
 	assert(new_texture);
@@ -454,6 +453,7 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
 
     SDL_SetTextureColorMod(sdl_texture, r, g, b);
 }
+
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken)
 {
     XYPosFloat avg;
@@ -546,12 +546,41 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
 
 }
 
-void GameState::render_box2(XYPos pos, XYPos size)
+void GameState::render_tooltip()
 {
+    if (tooltip_string != "")
     {
-        SDL_Rect src_rect = {64, 256, 192, 192};
-        SDL_Rect dst_rect = {pos.x, pos.y, size.x, size.y};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        SDL_Color color = {0x0, 0x0, 0x0};
+        SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, tooltip_string.c_str(), color);
+        SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
+        SDL_Rect txt_rect;
+        SDL_GetClipRect(text_surface, &txt_rect);
+
+        SDL_Rect dst_rect;
+        dst_rect.w = txt_rect.w * button_size / 64;
+        dst_rect.h = txt_rect.h * button_size / 64;
+        dst_rect.x = mouse.x - dst_rect.w;
+        dst_rect.y = mouse.y + button_size / 8;
+        if (dst_rect.x < 0)
+            dst_rect.x = 0;
+        SDL_Rect bg_rect = {160, 608, 1, 1};
+
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &bg_rect, &dst_rect);
+        SDL_RenderCopy(sdl_renderer, new_texture, &txt_rect, &dst_rect);
+
+        SDL_DestroyTexture(new_texture);
+        SDL_FreeSurface(text_surface);
+    }
+}
+
+void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text)
+{
+    if ((mouse.x >= dst_rect.x) &&
+        (mouse.x < (dst_rect.x + dst_rect.w)) &&
+        (mouse.y >= dst_rect.y) &&
+        (mouse.y < (dst_rect.y + dst_rect.h)))
+    {
+        tooltip_string = text;
     }
 }
 
@@ -720,6 +749,7 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 void GameState::render(bool saving)
 {
+    tooltip_string = "";
     XYPos window_size;
     bool row_col_clues = !grid->edges.empty();
     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
@@ -759,8 +789,6 @@ void GameState::render(bool saving)
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
-
-
         if ((mouse - (right_panel_offset + XYPos(0, 0))).inside(XYPos(button_size, button_size)) && constructed_rule.region_count >= 1)
             hover = rule_gen_region[0];
         if ((mouse - (right_panel_offset + XYPos(2 * button_size, 0))).inside(XYPos(button_size, button_size)) && constructed_rule.region_count >= 2)
@@ -979,6 +1007,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {704, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Hint");
     }
     {
         SDL_Rect src_rect = {704 + 192, 960, 192, 192};
@@ -986,16 +1015,19 @@ void GameState::render(bool saving)
         if (auto_region)
             src_rect = {1280, 768, 192, 192};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Auto Region");
     }
     {
         SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Refresh Regions");
     }
     {
         SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Skip Level");
     }
 
     {
@@ -1005,6 +1037,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {1088, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Visible");
     }
     {
         if (vis_level == GRID_VIS_LEVEL_HIDE)
@@ -1012,6 +1045,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {896, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 1, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Hidden");
     }
     {
         if (vis_level == GRID_VIS_LEVEL_BIN)
@@ -1019,6 +1053,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {512, 768, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Trash");
     }
     XYPos p = XYPos(0,0);
     for (int i = 0; i < level_progress.size(); i++)
@@ -1027,10 +1062,10 @@ void GameState::render(bool saving)
         if (i == current_level_set_index)
             render_box(pos, XYPos(button_size, button_size), button_size/4);
 
-        render_number(level_progress[i].counts[0], pos + XYPos(0, button_size / 12), XYPos(button_size /2, button_size / 3));
-        render_number(level_progress[i].counts[1], pos + XYPos(button_size /2, button_size / 12), XYPos(button_size /2, button_size / 3));
-        render_number(level_progress[i].counts[2], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size /2, button_size / 3));
-        render_number(level_progress[i].counts[3], pos + XYPos(button_size /2, button_size / 2 + button_size / 12), XYPos(button_size /2, button_size / 3));
+        render_number(level_progress[i].counts[0], pos + XYPos(0, button_size / 12), XYPos(button_size, button_size / 3));
+//        render_number(level_progress[i].counts[1], pos + XYPos(button_size /2, button_size / 12), XYPos(button_size /2, button_size / 3));
+//        render_number(level_progress[i].counts[2], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size /2, button_size / 3));
+        render_number(level_progress[i].counts[3], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size, button_size / 3));
 
         p.x++;
         if (p.x >= 5)
@@ -1093,11 +1128,14 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {512, 192, 192, 192};
         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 6, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Clear");
+
         if (mouse_mode == MOUSE_MODE_BOMB)
             render_box(right_panel_offset + XYPos(button_size * 2, button_size * 6), XYPos(button_size, button_size), button_size/4);
         src_rect = {320, 192, 192, 192};
         dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 6, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Bomb");
     }
 
     {
@@ -1106,6 +1144,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {896, 192, 192, 192};
         SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y + button_size * 6, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Don't Care");
     }
 
     {
@@ -1120,6 +1159,12 @@ void GameState::render(bool saving)
 
         SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 6, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        if (vis_mode == GRID_VIS_LEVEL_SHOW)
+            add_tooltip(dst_rect, "Move to Visible");
+        if (vis_mode == GRID_VIS_LEVEL_HIDE)
+            add_tooltip(dst_rect, "Move to Hidden");
+        if (vis_mode == GRID_VIS_LEVEL_BIN)
+            add_tooltip(dst_rect, "Move to Trash");
     }
 
     {
@@ -1129,6 +1174,7 @@ void GameState::render(bool saving)
         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 6, button_size, button_size};
         if (!filter_pos.empty())
             src_rect.x += 192;
+        add_tooltip(dst_rect, "Filter");
 
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
@@ -1163,12 +1209,14 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = { 1088, 576, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Add to Rule Generator");
         }
         if (inspected_region->rule)
         {
             SDL_Rect src_rect = { 704, 768, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 0, right_panel_offset.y + 4 * button_size, button_size, button_size };
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Show Creation Rule");
         }
 
         if (inspected_region->vis_rule)
@@ -1176,6 +1224,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = { 896, 768, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size, button_size, button_size };
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Show Visibility Rule");
         }
     }
     if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_RULE_INSPECT)
@@ -1371,6 +1420,8 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Cancel");
+
             }
 
             if (rule.region_count >= 1 && constructed_rule.apply_region_bitmap)
@@ -1378,6 +1429,10 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = { 192 * ((constructed_rule_is_logical) ? 3 : 4) + 128, 192 * ((constructed_rule_is_logical) ? 2 : 3), 192, 192 };
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                if (constructed_rule_is_logical)
+                    add_tooltip(dst_rect, "OK");
+                else
+                    add_tooltip(dst_rect, "Illogical");
             }
 
         }
@@ -1387,11 +1442,12 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = { inspected_rule->deleted ? 1280 + 192 : 1280, 768, 192, 192 };
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Remove Rule");
             }
         }
 
     }
-
+    render_tooltip();
     SDL_RenderPresent(sdl_renderer);
 }
 

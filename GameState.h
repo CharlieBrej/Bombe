@@ -72,6 +72,7 @@ public:
     XYPos right_panel_offset;
     XYPos grid_offset;
     bool full_screen = false;
+    std::string tooltip_string = "";
 
     bool skip_level = false;
     int cooldown = 0;
@@ -121,7 +122,8 @@ public:
     XYPos taken_to_pos(unsigned count, unsigned total);
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
-    void render_box2(XYPos pos, XYPos size);
+    void render_tooltip();
+    void add_tooltip(SDL_Rect& dst_rect, const char* text);
     void render_box(XYPos pos, XYPos size, int button_size = 32);
     void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz);
