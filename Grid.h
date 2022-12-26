@@ -62,7 +62,7 @@ public:
         XOR22,
         BOMB = 100,
         CLEAR = 101,
-        VISIBILITY = 102,
+        VISIBILITY = 200,
     } type = NONE;
     int8_t value = 0;
 

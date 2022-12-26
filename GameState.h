@@ -12,7 +12,7 @@
 #include <list>
 #include <set>
 
-
+extern bool IS_DEMO;
 
 class GameState
 {
@@ -21,6 +21,12 @@ public:
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
     TTF_Font *font;
+
+    std::string steam_session_string;
+    bool achievement[10] = {};
+    std::string steam_name;
+    uint64_t steam_id = 0;
+
 
     Grid *grid;
     std::list<GridRule> rules;

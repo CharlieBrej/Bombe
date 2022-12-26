@@ -4,7 +4,7 @@ STEAM_FLAGS = -DNO_STEAM
 STEAM_LDADD =
 else
 STEAM_FLAGS = 
-STEAM_LDADD =  # -lsteam_api
+STEAM_LDADD =  -lsteam_api
 endif
 
 EXTRA_FLAGS =

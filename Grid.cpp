@@ -4,7 +4,7 @@
 #include "Grid.h"
 #include <sstream>
 
-
+bool IS_DEMO = true;
 static std::random_device rd;
 static Rand rnd(rd());
 //static Rand rnd(1);

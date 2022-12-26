@@ -15,6 +15,103 @@
     #include <filesystem>
 #endif
 
+#ifndef NO_STEAM
+#define STEAM
+#endif
+
+#ifdef STEAM
+#include "steam/steam_api.h"
+#endif
+#ifdef STEAM
+
+static const char* const achievement_names[] = {NULL};
+
+class SteamGameManager
+{
+private:
+	STEAM_CALLBACK( SteamGameManager, OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived);
+	STEAM_CALLBACK( SteamGameManager, OnGameOverlayActivated, GameOverlayActivated_t, m_CallbackGameOverlayActivated );
+    STEAM_CALLBACK( SteamGameManager, OnGetAuthSessionTicketResponse, GetAuthSessionTicketResponse_t, m_OnGetAuthSessionTicketResponse);
+    ISteamUserStats *m_pSteamUserStats;
+    bool stats_ready = false;
+    bool achievement_got[10] = {false};
+    bool needs_send = false;
+    bool auth_buffer_ready = false;
+    uint32 auth_buffer_size;
+    uint8 auth_buffer[1024];
+
+public:
+    SteamGameManager():
+    	m_CallbackUserStatsReceived( this, &SteamGameManager::OnUserStatsReceived ),
+	    m_CallbackGameOverlayActivated( this, &SteamGameManager::OnGameOverlayActivated ),
+	    m_OnGetAuthSessionTicketResponse( this, &SteamGameManager::OnGetAuthSessionTicketResponse )
+    {
+        m_pSteamUserStats = SteamUserStats();
+        m_pSteamUserStats->RequestCurrentStats();
+
+
+	{
+		HAuthTicket handle = SteamUser()->GetAuthSessionTicket(auth_buffer, 1024, &auth_buffer_size);
+	}
+
+
+    };
+    void set_achievements(unsigned index)
+    {
+        if (achievement_got[index])
+            return;
+        achievement_got[index] = true;
+        m_pSteamUserStats->SetAchievement(achievement_names[index]);
+        needs_send = true;
+    }
+    void update_achievements(GameState* game_state);
+};
+
+void SteamGameManager::OnUserStatsReceived( UserStatsReceived_t *pCallback )
+{
+    stats_ready = true;
+    for (int i = 0; achievement_names[i]; i++)
+        m_pSteamUserStats->GetAchievement( achievement_names[i], &achievement_got[i]);
+}
+
+void SteamGameManager::OnGameOverlayActivated( GameOverlayActivated_t* pCallback )
+{
+}
+
+void SteamGameManager::OnGetAuthSessionTicketResponse( GetAuthSessionTicketResponse_t* pCallback )
+{
+    auth_buffer_ready = true;
+}
+
+void SteamGameManager::update_achievements(GameState* game_state)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        if (game_state->achievement[i])
+            set_achievements(i);
+    }
+
+    if (needs_send)
+    {
+        m_pSteamUserStats->StoreStats();
+        needs_send = false;
+    }
+    if (auth_buffer_ready && game_state->steam_session_string.empty())
+    {
+        const char* lut = "0123456789ABCDEF";
+        std::string str;
+        for (int i = 0; i < auth_buffer_size; i++)
+        {
+            uint8_t c = auth_buffer[i];
+            str += lut[c >> 4];
+            str += lut[c & 0xF];
+        }
+        game_state->steam_session_string = str;
+    }
+}
+
+#endif
+
 
 void mainloop()
 {
@@ -33,6 +130,19 @@ void mainloop()
 #endif
         game_state = new GameState(loadfile);
     }
+#ifdef STEAM
+    SteamGameManager steam_manager;
+//    game_state->set_steam_user(SteamUser()->GetSteamID().CSteamID::ConvertToUint64(), SteamFriends()->GetPersonaName());
+
+    int friend_count = SteamFriends()->GetFriendCount( k_EFriendFlagImmediate );
+    for (int i = 0; i < friend_count; ++i)
+    {
+	    CSteamID friend_id = SteamFriends()->GetFriendByIndex(i, k_EFriendFlagImmediate);
+        // game_state->add_friend(friend_id.ConvertToUint64());
+    }
+#else
+    game_state->steam_session_string = "dummy";
+#endif
 
     int frame = 0;
     SDL_Thread *save_thread = NULL;
@@ -95,6 +205,19 @@ void mainloop()
 
 int main( int argc, char* argv[] )
 {
+    {
+       std::ifstream ifile;
+       ifile.open("FULL");
+       IS_DEMO = !ifile;
+    }
+
+    int game_id = IS_DEMO ? 2263470 : 2262930;
+#ifdef STEAM
+	if (SteamAPI_RestartAppIfNecessary(game_id))
+		return 1;
+	if (!SteamAPI_Init())
+		return 1;
+#endif
 
     SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO);
     IMG_Init(IMG_INIT_PNG);
@@ -113,6 +236,10 @@ int main( int argc, char* argv[] )
     SDLNet_Quit();
 	IMG_Quit();
 	SDL_Quit();
+
+    #ifdef STEAM
+        SteamAPI_Shutdown();
+    #endif
 
 
 	return 0;
