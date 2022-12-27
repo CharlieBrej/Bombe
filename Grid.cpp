@@ -1286,7 +1286,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
             }
             if (misc)
             {
-                if (rnd % 10 < 3)
+                if (rnd % 10 < 4)
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::NOTEQUAL;
@@ -1297,7 +1297,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                         continue;
                     }
                 }
-                if (rnd % 10 < 3 && (get_clue(p).value >= 3))
+                if (rnd % 10 < 4 && (get_clue(p).value >= 3))
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::NOTEQUAL;
@@ -1308,7 +1308,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                         continue;
                     }
                 }
-                if (rnd % 10 < 2 && (get_clue(p).value >= 2))
+                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::NOTEQUAL;
@@ -1319,7 +1319,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                         continue;
                     }
                 }
-                if (rnd % 10 < 2)
+                if (rnd % 10 < 4)
                 {
                     tst = *this;
                     tst.get_clue(p).type = RegionType::NOTEQUAL;

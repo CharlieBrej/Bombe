@@ -286,11 +286,16 @@ void GameState::advance()
         else
         {
             bool hit = false;
-            while (grid->add_regions(-1)) {}
+            bool check_vis = false;
+            while (grid->add_regions(-1)) {check_vis = true;}
 
             if (!last_active_was_hit)
             {
                 grid->add_one_new_region();
+                check_vis = true;
+            }
+            if (check_vis)
+            {
                 for (std::list<GridRule>::iterator it=rules.begin(); it != rules.end(); ++it)
                 {
                     GridRule& rule = *it;
@@ -958,16 +963,14 @@ void GameState::render(bool saving)
     {
         if (!hover || (&region == hover))
         {
-            if (region.fade < 255)
-            {
-                region.fade += std::min(10, 255 - int(region.fade));
-            }
+            region.fade += std::min(10, 255 - int(region.fade));
         }
         else
         {
-            if (region.fade)
+            region.fade -= std::min(10, int(region.fade - 100));
+            if (region.fade < 100)
             {
-                region.fade -= std::min(10, int(region.fade - 100));
+                region.fade += std::min(10, 100 - int(region.fade));
             }
         }
     }
