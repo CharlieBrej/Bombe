@@ -57,6 +57,20 @@ public:
 //    unsigned rule_gen_region_undef_num = 0;
     GridRule constructed_rule;
     RegionType region_type = RegionType(RegionType::EQUAL, 1);
+    int region_menu = 0;
+    XYPos region_item_selected = XYPos(0, 0);
+    const RegionType menu_region_types1[5] = {  RegionType(RegionType::EQUAL, 1),
+                                                RegionType(RegionType::MORE, 1),
+                                                RegionType(RegionType::XOR2, 0),
+                                                RegionType(RegionType::XOR22, 0),
+                                                RegionType(RegionType::NONE, 0)};
+    const RegionType menu_region_types2[5] = {  RegionType(RegionType::NOTEQUAL, 1),
+                                                RegionType(RegionType::LESS, 1),
+                                                RegionType(RegionType::XOR3, 0),
+                                                RegionType(RegionType::XOR222, 0),
+                                                RegionType(RegionType::NONE, 0)};
+
+
     bool constructed_rule_is_logical = false;
 
     GridRegion *inspected_region = NULL;
@@ -124,8 +138,9 @@ public:
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_tooltip();
     void add_tooltip(SDL_Rect& dst_rect, const char* text);
-    void render_box(XYPos pos, XYPos size, int button_size = 32);
+    void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
+    void render_number_string(std::string str, XYPos pos, XYPos siz);
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);

@@ -60,6 +60,8 @@ public:
         XOR2,
         XOR3,
         XOR22,
+        XOR222,
+        NOTEQUAL,
         BOMB = 100,
         CLEAR = 101,
         VISIBILITY = 200,
@@ -193,7 +195,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
     bool has_solution(void);
-    void make_harder(bool plus_minus, bool x_y, bool x_y_z, int row_col);
+    void make_harder(bool plus_minus, bool x_y, bool misc, int row_col);
     void reveal(XYPos p);
     void reveal_switch(XYPos q);
     std::string to_string();

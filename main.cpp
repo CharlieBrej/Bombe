@@ -147,12 +147,11 @@ void mainloop()
     int frame = 0;
     SDL_Thread *save_thread = NULL;
 
+    unsigned oldtime = SDL_GetTicks();
 	while(true)
 	{
-        unsigned oldtime = SDL_GetTicks();
 		if (game_state->events())
             break;
-        game_state->advance();
         game_state->audio();
 #ifdef STEAM
         steam_manager.update_achievements(game_state);
@@ -182,9 +181,13 @@ void mainloop()
         }
 
         unsigned newtime = SDL_GetTicks();
-        if ((newtime - oldtime) < 5)
+        unsigned diff = (newtime - oldtime) / 20;
+        if (diff > 5)
+            diff = 5;
+        while (diff--)
         {
-            SDL_Delay(5 - (newtime - oldtime));
+            game_state->advance();
+            oldtime = newtime;
         }
 	}
     SDL_HideWindow(game_state->sdl_window);
