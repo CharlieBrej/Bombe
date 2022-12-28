@@ -53,8 +53,6 @@ public:
 
 
     GridRegion *rule_gen_region[4] = {};
-//    unsigned rule_gen_region_count = 0;
-//    unsigned rule_gen_region_undef_num = 0;
     GridRule constructed_rule;
     RegionType region_type = RegionType(RegionType::EQUAL, 1);
     int region_menu = 0;
@@ -72,6 +70,7 @@ public:
 
 
     bool constructed_rule_is_logical = false;
+    bool constructed_rule_is_already_present = false;
 
     GridRegion *inspected_region = NULL;
     GridRegionCause inspected_rule;

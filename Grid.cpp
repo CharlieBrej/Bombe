@@ -245,6 +245,28 @@ void GridRule::get_square_counts(uint8_t square_counts[16], GridRegion* r1, Grid
     }
 }
 
+bool GridRule::matches(GridRule& other)
+{
+    if (deleted || other.deleted)
+        return false;
+    if (region_count != other.region_count)
+        return false;
+    for (int i = 0; i < region_count; i++)
+        if (region_type[i] != other.region_type[i])
+            return false;
+    for (int i = 0; i < (1 << region_count); i++)
+        if (square_counts[i] != other.square_counts[i])
+            return false;
+    if (apply_type != other.apply_type)
+        return false;
+    if (apply_region_type != other.apply_region_type)
+        return false;
+    if (apply_region_bitmap != other.apply_region_bitmap)
+        return false;
+    return true;
+
+}
+
 bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     for (int i = 1; i < (1 << region_count); i++)

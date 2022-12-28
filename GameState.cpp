@@ -397,16 +397,13 @@ void GameState::reset_rule_gen_region()
 
 void GameState::update_constructed_rule()
 {
-    // constructed_rule_is_logical = false;
-    //
-    // for (int i = 0; i < 16; i++)
-    // {
-    //     if ((rule_gen_region_undef_num >> i) & 1)
-    //     {
-    //         constructed_rule.square_counts[i] = -1;
-    //     }
-    // }
     constructed_rule_is_logical = constructed_rule.is_legal();
+    constructed_rule_is_already_present = false;
+    for (GridRule& rule : rules)
+    {
+        if (constructed_rule.matches(rule))
+            constructed_rule_is_already_present = true;
+    }
 }
 
 unsigned GameState::taken_to_size(unsigned total)
@@ -1435,23 +1432,49 @@ void GameState::render(bool saving)
 
             if (rule.region_count >= 1 && constructed_rule.apply_region_bitmap)
             {
-                SDL_Rect src_rect = { 192 * ((constructed_rule_is_logical) ? 3 : 4) + 128, 192 * ((constructed_rule_is_logical) ? 2 : 3), 192, 192 };
-                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                if (constructed_rule_is_logical)
-                    add_tooltip(dst_rect, "OK");
-                else
+                if (!constructed_rule_is_logical)
+                {
+                    SDL_Rect src_rect = {896, 576, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     add_tooltip(dst_rect, "Illogical");
-            }
+                }
+                else if (constructed_rule_is_already_present)
+                {
+                    SDL_Rect src_rect = {1088, 768, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Rule already present");
+                }
+                else
 
+                {
+                    SDL_Rect src_rect = {704, 384, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "OK");
+                }
+            }
         }
         if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
         {
             {
-                SDL_Rect src_rect = { inspected_rule.rule->deleted ? 1280 + 192 : 1280, 768, 192, 192 };
+                SDL_Rect src_rect = { inspected_rule.rule->deleted ? 1280 + 192 : 1280, 768, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Remove Rule");
+            }
+            {
+                SDL_Rect src_rect = {1280, 576, 192, 192};
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Edit Rule");
+            }
+            {
+                SDL_Rect src_rect = {1472, 576, 192, 192};
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Duplicate Rule");
             }
         }
 
@@ -1712,6 +1735,22 @@ void GameState::right_panel_click(XYPos pos, bool right)
             inspected_rule.rule->deleted = !inspected_rule.rule->deleted;
             inspected_rule.rule->stale = false;
         }
+        if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size * 2, button_size)))
+        {
+            constructed_rule = *inspected_rule.rule;
+            rule_gen_region[0] = inspected_rule.regions[0];
+            rule_gen_region[1] = inspected_rule.regions[1];
+            rule_gen_region[2] = inspected_rule.regions[2];
+            rule_gen_region[3] = inspected_rule.regions[3];
+            constructed_rule.deleted = false;
+            constructed_rule.stale = false;
+            if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size, button_size)))
+            {
+                inspected_rule.rule->deleted = true;
+            }
+            right_panel_mode = RIGHT_MENU_RULE_GEN;
+            update_constructed_rule();
+        }
     }
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_RULE_INSPECT)
@@ -1881,7 +1920,7 @@ void GameState::right_panel_click(XYPos pos, bool right)
 
         if ((pos - XYPos(button_size * 4 , button_size * 0)).inside(XYPos(button_size, button_size)))
         {
-            if (constructed_rule.region_count)
+            if (constructed_rule.region_count && constructed_rule.apply_region_bitmap)
             {
                 if (constructed_rule.is_legal())
                 {
