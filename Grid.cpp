@@ -104,14 +104,10 @@ int RegionType::max()
     assert(0);
 }
 
-void GridRegion::reset(RegionType type_)
+GridRegion::GridRegion(RegionType type_)
 {
     type = type_;
-    fade = 0;
     colour = colours_used[type.value]++;
-    vis_level = GRID_VIS_LEVEL_SHOW;
-    visibility_force = VIS_FORCE_NONE;
-    elements.clear();
 }
 
 bool GridRegion::overlaps(GridRegion& other)
@@ -1518,9 +1514,14 @@ void Grid::reveal(XYPos p)
     while (it != regions.end())
     {
         if((*it).elements.get(p))
-            it = regions.erase(it);
+        {
+            std::list<GridRegion>::iterator old_it = it;
+            old_it++;
+            deleted_regions.splice(deleted_regions.end(),regions, it);
+            it = old_it;
+        }
         else
-            ++it;
+            it++;
     }
 
     it = regions_to_add.begin();
@@ -1637,8 +1638,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
     }
     assert (clue.value >= 0);
     {
-        GridRegion reg;
-        reg.reset(clue);
+        GridRegion reg(clue);
         reg.elements = elements;
         if (!contains(regions, reg) && !contains(regions_to_add, reg))
         {
@@ -1740,22 +1740,22 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         if ((rule.apply_region_bitmap & 1) && r1->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r1->vis_level = vis_level;
-            r1->vis_rule = &rule;
+            r1->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 2) && r2->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r2->vis_level = vis_level;
-            r2->vis_rule = &rule;
+            r2->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 4) && r3->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r3->vis_level = vis_level;
-            r3->vis_rule = &rule;
+            r3->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 8) && r4->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r4->vis_level = vis_level;
-            r4->vis_rule = &rule;
+            r4->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         return APPLY_RULE_RESP_NONE;
     }
@@ -1810,16 +1810,14 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     }
     else if (rule.apply_type == GridRule::REGION)
     {
-        GridRegion reg;
-        reg.reset(rule.apply_region_type);
+        GridRegion reg(rule.apply_region_type);
         FOR_XY_SET(pos, to_reveal)
         {
             reg.elements.set(pos);
         }
-        reg.rule = &rule;
+        reg.gen_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         bool found = (std::find(regions.begin(), regions.end(), reg) != regions.end())  ||
                      (std::find(regions_to_add.begin(), regions_to_add.end(),reg) != regions_to_add.end());
-
         if (!found)
         {
             regions_to_add.push_back(reg);

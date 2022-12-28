@@ -181,14 +181,11 @@ void mainloop()
         }
 
         unsigned newtime = SDL_GetTicks();
-        unsigned diff = (newtime - oldtime) / 20;
-        if (diff > 5)
-            diff = 5;
-        while (diff--)
-        {
-            game_state->advance();
-            oldtime = newtime;
-        }
+        unsigned diff = newtime - oldtime;
+        if (diff > 100)
+            diff = 100;
+        game_state->advance(diff);
+        oldtime = newtime;
 	}
     SDL_HideWindow(game_state->sdl_window);
     {
@@ -200,6 +197,7 @@ void mainloop()
         std::ofstream outfile1 (save_filename.c_str());
 #endif
         omap->save(outfile1);
+        delete omap;
         frame = 0;
     }
     delete game_state;

@@ -48,6 +48,15 @@ void LevelSet::init_global()
         LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
         global_level_sets[i] = (lset);
     }
+    delete omap;
+}
+void LevelSet::delete_global()
+{
+    for (LevelSet* level_set : global_level_sets)
+    {
+        delete level_set;
+    }
+    global_level_sets.clear();
 }
 
 void LevelSet::save_global()

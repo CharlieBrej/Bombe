@@ -74,7 +74,7 @@ public:
     bool constructed_rule_is_logical = false;
 
     GridRegion *inspected_region = NULL;
-    GridRule *inspected_rule = NULL;
+    GridRegionCause inspected_rule;
     bool rule_gen_target_square_count = false;
     std::set<XYPos> filter_pos;
 
@@ -126,7 +126,7 @@ public:
     ~GameState();
     SDL_Texture* loadTexture(const char* filename);
 
-    void advance();
+    void advance(int steps);
     void audio();
 
     GridRule rule_from_rule_gen_region();

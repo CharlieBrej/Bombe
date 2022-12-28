@@ -104,6 +104,23 @@ enum GridVisLevel{
     GRID_VIS_LEVEL_BIN,
 };
 
+class GridRegion;
+class GridRegionCause
+{
+public:
+    GridRule* rule = NULL;
+    GridRegion* regions[4] = {};
+    GridRegionCause(){};
+    GridRegionCause(GridRule* rule_, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
+    {
+        rule = rule_;
+        regions[0] = r1;
+        regions[1] = r2;
+        regions[2] = r3;
+        regions[3] = r4;
+    }
+};
+
 
 class GridRegion
 {
@@ -121,12 +138,12 @@ public:
     bool stale = false;
     XYSet elements;
 
-    GridRule* rule = NULL;
-    GridRule* vis_rule = NULL;
+    GridRegionCause gen_cause;
+    GridRegionCause vis_cause;
 
+    GridRegion(RegionType type);
     bool overlaps(GridRegion& other);
     bool contains_all(std::set<XYPos>& other);
-    void reset(RegionType type);
     bool operator==(const GridRegion& other) const
     {
         return (type == other.type) && (elements == other.elements);
@@ -174,6 +191,7 @@ public:
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::list<GridRegion> regions;
     std::list<GridRegion> regions_to_add;
+    std::list<GridRegion> deleted_regions;
 
     Grid(XYPos);
     Grid();
