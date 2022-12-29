@@ -264,7 +264,6 @@ bool GridRule::matches(GridRule& other)
     if (apply_region_bitmap != other.apply_region_bitmap)
         return false;
     return true;
-
 }
 
 bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
