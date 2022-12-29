@@ -129,8 +129,27 @@ GridRule::GridRule(SaveObject* sobj, int version)
 {
     SaveObjectMap* omap = sobj->get_map();
     region_count = omap->get_num("region_count");
-    apply_type = ApplyType(omap->get_num("apply_type"));
     apply_region_type = RegionType('a',omap->get_num("apply_region_type"));
+
+    if (omap->has_key("apply_type"))
+    {
+        enum ApplyType
+        {
+            REGION,
+            BOMB,
+            CLEAR,
+            HIDE,
+            SHOW,
+            BIN,
+        } apply_type = ApplyType(omap->get_num("apply_type"));
+        if (apply_type == BOMB) apply_region_type = RegionType(RegionType::SET, 1);
+        if (apply_type == CLEAR) apply_region_type = RegionType(RegionType::SET, 0);
+        if (apply_type == SHOW) apply_region_type = RegionType(RegionType::VISIBILITY, 0);
+        if (apply_type == HIDE) apply_region_type = RegionType(RegionType::VISIBILITY, 1);
+        if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
+    }
+
+
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
@@ -153,20 +172,12 @@ GridRule::GridRule(SaveObject* sobj, int version)
         }
 
     }
-
-        // if (version > 2)
-        //     square_counts[i] = RegionType('a', rlist->get_num(i));
-        // else
-        //     square_counts[i] = RegionType(RegionType::EQUAL, rlist->get_num(i));
-
-
 }
 
 SaveObject* GridRule::save()
 {
     SaveObjectMap* omap = new SaveObjectMap;
     omap->add_num("region_count", region_count);
-    omap->add_num("apply_type", apply_type);
     omap->add_num("apply_region_type", apply_region_type.as_int());
     omap->add_num("apply_region_bitmap", apply_region_bitmap);
 
@@ -257,8 +268,6 @@ bool GridRule::matches(GridRule& other)
     for (int i = 0; i < (1 << region_count); i++)
         if (square_counts[i] != other.square_counts[i])
             return false;
-    if (apply_type != other.apply_type)
-        return false;
     if (apply_region_type != other.apply_region_type)
         return false;
     if (apply_region_bitmap != other.apply_region_bitmap)
@@ -325,7 +334,7 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
 
 bool GridRule::is_legal()
 {
-    if (apply_type == HIDE || apply_type == SHOW || apply_type == BIN)
+    if (apply_region_type.type == RegionType::VISIBILITY)
         return true;
     z3::context c;
     z3::solver s(c);
@@ -381,29 +390,24 @@ bool GridRule::is_legal()
         {
             e = e + vec[i];
             int m = square_counts[i].max();
-            if ((m < 0) && (apply_type == BOMB))
+            if ((m < 0) && (apply_region_type == RegionType(RegionType::SET,1)))
                 return false;
             tot += m;
         }
     }
 
-    switch(apply_type)
+    if (apply_region_type.type == RegionType::VISIBILITY)
+        return true;
+    else if (apply_region_type.type == RegionType::SET)
     {
-        case REGION:
-            s.add(!apply_region_type.apply_z3_rule(e));
-            break;
-        case BOMB:
+        if (apply_region_type.value)
             s.add(e != tot);
-            break;
-        case CLEAR:
+        else
             s.add(e != 0);
-            break;
-        case HIDE:
-            return true;
-        case SHOW:
-            return true;
-        case BIN:
-            return true;
+    }
+    else
+    {
+        s.add(!apply_region_type.apply_z3_rule(e));
     }
 
     if (s.check() == z3::sat)
@@ -603,14 +607,14 @@ void Grid::solve_easy()
             return;
         for (GridRule& rule : global_rules)
         {
-            if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
+            if (rule.apply_region_type.type == RegionType::VISIBILITY)
             {
                 apply_rule(rule);
             }
         }
         for (GridRule& rule : global_rules)
         {
-            if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
+            if (rule.apply_region_type.type == RegionType::VISIBILITY)
                 continue;
             while (apply_rule(rule) != APPLY_RULE_RESP_NONE)
                 rep = true;
@@ -1753,11 +1757,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
-    if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
+    if (rule.apply_region_type.type == RegionType::VISIBILITY)
     {
-        GridVisLevel vis_level =  (rule.apply_type == GridRule::SHOW) ? GRID_VIS_LEVEL_SHOW :
-                                  (rule.apply_type == GridRule::HIDE) ? GRID_VIS_LEVEL_HIDE :
-                                                                        GRID_VIS_LEVEL_BIN;
+        GridVisLevel vis_level =  GridVisLevel(rule.apply_region_type.value);
         if ((rule.apply_region_bitmap & 1) && r1->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r1->vis_level = vis_level;
@@ -1814,11 +1816,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     if (to_reveal.empty())
         return APPLY_RULE_RESP_NONE;
 
-    if ((rule.apply_type == GridRule::BOMB) || (rule.apply_type == GridRule::CLEAR))
+    if ((rule.apply_region_type.type == RegionType::SET))
     {
         FOR_XY_SET(pos, to_reveal)
         {
-            if (vals[pos].bomb != (rule.apply_type == GridRule::BOMB))
+            if (vals[pos].bomb != (rule.apply_region_type.value))
             {
                 printf("wrong\n");
                 assert(0);
@@ -1829,7 +1831,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
             reveal(pos);
         return APPLY_RULE_RESP_HIT;
     }
-    else if (rule.apply_type == GridRule::REGION)
+    else
     {
         GridRegion reg(rule.apply_region_type);
         FOR_XY_SET(pos, to_reveal)
@@ -1894,7 +1896,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
     if (unstale_regions.empty() && rule.stale && !force)
         return APPLY_RULE_RESP_NONE;
 
-    bool ignore_bin = (rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN);
+    bool ignore_bin = (rule.apply_region_type.type == RegionType::VISIBILITY);
     assert(rule.region_count);
     for (GridRegion& r1 : regions)
     {

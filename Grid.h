@@ -62,9 +62,8 @@ public:
         XOR22,
         XOR222,
         NOTEQUAL,
-        BOMB = 100,
-        CLEAR = 101,
-        VISIBILITY = 200,
+        SET = 100,
+        VISIBILITY = 101,
     } type = NONE;
     int8_t value = 0;
 
@@ -157,15 +156,6 @@ public:
     uint8_t region_count = 0;
     RegionType region_type[4] = {};
     RegionType square_counts[16] = {};
-    enum ApplyType
-    {
-        REGION,
-        BOMB,
-        CLEAR,
-        HIDE,
-        SHOW,
-        BIN,
-    } apply_type = REGION;
     RegionType apply_region_type;
     uint16_t apply_region_bitmap = 0;
     bool stale = false;

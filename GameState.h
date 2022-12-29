@@ -34,14 +34,10 @@ public:
 
     XYPos mouse;
     enum {
-        MOUSE_MODE_BOMB,
-        MOUSE_MODE_CLEAR,
         MOUSE_MODE_NONE,
-        MOUSE_MODE_VIS,
-        MOUSE_MODE_DRAWING_REGION,
         MOUSE_MODE_FILTER,
         }
-        mouse_mode = MOUSE_MODE_BOMB;
+        mouse_mode = MOUSE_MODE_NONE;
 
     enum {
         RIGHT_MENU_NONE,
@@ -54,14 +50,13 @@ public:
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
-    RegionType region_type = RegionType(RegionType::EQUAL, 1);
+    RegionType region_type = RegionType(RegionType::SET, 0);
     int region_menu = 0;
-    XYPos region_item_selected = XYPos(0, 0);
     const RegionType menu_region_types1[5] = {  RegionType(RegionType::EQUAL, 1),
                                                 RegionType(RegionType::MORE, 1),
                                                 RegionType(RegionType::XOR2, 0),
                                                 RegionType(RegionType::XOR22, 0),
-                                                RegionType(RegionType::NONE, 0)};
+                                                RegionType(RegionType::VISIBILITY, 0)};
     const RegionType menu_region_types2[5] = {  RegionType(RegionType::NOTEQUAL, 1),
                                                 RegionType(RegionType::LESS, 1),
                                                 RegionType(RegionType::XOR3, 0),

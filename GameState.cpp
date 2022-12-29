@@ -305,7 +305,7 @@ void GameState::advance(int steps)
                     GridRule& rule = *it;
                     if (rule.deleted)
                         continue;
-                    if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
+                    if (rule.apply_region_type.type == RegionType::VISIBILITY)
                     {
                         Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
                         if (resp == Grid::APPLY_RULE_RESP_NONE)
@@ -321,7 +321,7 @@ void GameState::advance(int steps)
                 if (rule.deleted)
                     continue;
 //                if (hit) break;
-                if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
+                if (rule.apply_region_type.type == RegionType::VISIBILITY)
                     continue;
 
                 Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
@@ -345,25 +345,6 @@ void GameState::advance(int steps)
             }
             if (hit)
             {
-                // for (GridRegion& r : grid->regions)
-                // {
-                //     if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_BIN)
-                //     {
-                //         r.vis_level = GRID_VIS_LEVEL_SHOW;
-                //         r.stale = false;
-                //     }
-                // }
-                // for (GridRule& rule : rules)
-                // {
-                //     if (rule.deleted)
-                //         continue;
-                //     if ((rule.apply_type == GridRule::HIDE) || (rule.apply_type == GridRule::SHOW) || (rule.apply_type == GridRule::BIN))
-                //     {
-                //         Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-                //         assert(resp == Grid::APPLY_RULE_RESP_NONE);
-                //     }
-                //
-                // }
             }
             else
             {
@@ -768,6 +749,27 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
         std::string digits = "!" + std::to_string(reg.value);
         render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
     }
+    else if (reg.type == RegionType::VISIBILITY)
+    {
+        if (reg.value > 2)
+            return;
+        SDL_Rect src_rect = {(reg.value == 1) ? 896 : 1088, 384, 192, 192};
+        if (reg.value == 2)
+        {
+            src_rect.x = 512;
+            src_rect.y = 768;
+        }
+        int border = siz / 8;
+        SDL_Rect dst_rect = {pos.x + border, pos.y + border, (int)(siz - border * 2), (int)(siz - border * 2)};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+    }
+    else if (reg.type == RegionType::SET)
+    {
+        SDL_Rect src_rect = {(reg.value == 1) ? 320 : 512, 192, 192, 192};
+        int border = siz / 8;
+        SDL_Rect dst_rect = {pos.x + border, pos.y + border, (int)(siz - border * 2), (int)(siz - border * 2)};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+    }
     else
     {
         assert(0);
@@ -1164,36 +1166,45 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
+        {
+            SDL_Rect src_rect = {384, 864, 128, 128};
+            SDL_Rect dst_rect = {right_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
 
         RegionType r_type = menu_region_types1[region_menu];
         if (r_type.type != RegionType::NONE)
+        {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
-                if ((mouse_mode == MOUSE_MODE_DRAWING_REGION) && (region_type == r_type))
+                if (region_type == r_type)
                     render_box(right_panel_offset+ pos * button_size + XYPos(0, button_size * 8), XYPos(button_size, button_size), button_size/4);
                 render_region_type(r_type, right_panel_offset + pos * button_size + XYPos(0, button_size * 8), button_size);
                 r_type.value ++;
             }
+        }
 
         r_type = menu_region_types2[region_menu];
         if (r_type.type != RegionType::NONE)
+        {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
-                if ((mouse_mode == MOUSE_MODE_DRAWING_REGION) && (region_type == r_type))
+                if (region_type == r_type)
                     render_box(right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2), XYPos(button_size, button_size), button_size/4);
                 render_region_type(r_type, right_panel_offset + pos * button_size + XYPos(0, button_size * 10 + button_size/2), button_size);
                 r_type.value ++;
             }
+        }
 
         {
-            if (mouse_mode == MOUSE_MODE_CLEAR)
+            if (region_type == RegionType(RegionType::SET, 0))
                 render_box(right_panel_offset + XYPos(button_size * 1, button_size * 6), XYPos(button_size, button_size), button_size/4);
             SDL_Rect src_rect = {512, 192, 192, 192};
             SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Clear");
 
-            if (mouse_mode == MOUSE_MODE_BOMB)
+            if (region_type == RegionType(RegionType::SET, 1))
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 6), XYPos(button_size, button_size), button_size/4);
             src_rect = {320, 192, 192, 192};
             dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 6, button_size, button_size};
@@ -1202,32 +1213,12 @@ void GameState::render(bool saving)
         }
 
         {
-            if (mouse_mode == MOUSE_MODE_NONE)
+            if (region_type.type == RegionType::NONE)
                 render_box(right_panel_offset + XYPos(0, button_size * 6), XYPos(button_size, button_size), button_size/4);
             SDL_Rect src_rect = {896, 192, 192, 192};
             SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Don't Care");
-        }
-
-        {
-            if (mouse_mode == MOUSE_MODE_VIS)
-                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 6), XYPos(button_size, button_size), button_size/4);
-            SDL_Rect src_rect = {vis_mode == GRID_VIS_LEVEL_SHOW ? 1088 : 896, 384, 192, 192};
-            if (vis_mode == GRID_VIS_LEVEL_BIN)
-            {
-                src_rect.x = 512;
-                src_rect.y = 768;
-            }
-
-            SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 6, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            if (vis_mode == GRID_VIS_LEVEL_SHOW)
-                add_tooltip(dst_rect, "Move to Visible");
-            if (vis_mode == GRID_VIS_LEVEL_HIDE)
-                add_tooltip(dst_rect, "Move to Hidden");
-            if (vis_mode == GRID_VIS_LEVEL_BIN)
-                add_tooltip(dst_rect, "Move to Trash");
         }
     }
 
@@ -1366,11 +1357,11 @@ void GameState::render(bool saving)
             render_region_bubble(rule.region_type[3], colour, right_panel_offset + XYPos(button_size / 12 + 4 * button_size + button_size / 3, 4 * button_size + button_size / 3), button_size * 2 / 3);
         }
 
-        if (rule.apply_type == GridRule::SHOW || rule.apply_type == GridRule::HIDE || rule.apply_type == GridRule::BIN)
+        if (rule.apply_region_type.type == RegionType::VISIBILITY)
         {
             SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-            SDL_Rect src_rect = {(rule.apply_type == GridRule::SHOW) ? 1088 : 896, 384, 192, 192};
-            if (rule.apply_type == GridRule::BIN)
+            SDL_Rect src_rect = {(rule.apply_region_type.value == 0) ? 1088 : 896, 384, 192, 192};
+            if (rule.apply_region_type.value == 2)
             {
                 src_rect.x = 512;
                 src_rect.y = 768;
@@ -1416,16 +1407,6 @@ void GameState::render(bool saving)
             XYPos p = XYPos(x,y);
 
             RegionType r_type = rule.square_counts[i];
-            // if (right_panel_mode == RIGHT_MENU_RULE_GEN)
-            // {
-            //     if (rule_gen_region_undef_num & (1 << i)) r_type = RegionType(RegionType::NONE, 0);
-            // }
-            // else
-            // {
-            //     if (rule.square_counts[i] < 0) r_type = RegionType(RegionType::NONE, 0);
-            // }
-
-            // bool hover_rulemaker_lower_right = false;
 
             render_region_type(r_type, right_panel_offset + p * button_size, button_size);
 
@@ -1440,15 +1421,13 @@ void GameState::render(bool saving)
 
             if ((rule.apply_region_bitmap >> i) & 1)
             {
-                if (rule.apply_type == GridRule::REGION)
+                if (rule.apply_region_type.type < 50)
                 {
                     render_region_bubble(rule.apply_region_type, 0, right_panel_offset + XYPos(button_size / 2, button_size / 2) + p * button_size, button_size / 2);
                 }
-                else if (rule.apply_type == GridRule::BOMB || rule.apply_type == GridRule::CLEAR)
+                else if (rule.apply_region_type.type == RegionType::SET)
                 {
-                    SDL_Rect src_rect = {(rule.apply_type == GridRule::BOMB) ? 320 : 320 + 192, 192, 192, 192};
-                    SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size * p.x, right_panel_offset.y + p.y * button_size + button_size / 2, button_size / 2, button_size / 2};
-                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    render_region_type(rule.apply_region_type, right_panel_offset + XYPos(button_size / 2, button_size / 2) + p * button_size, button_size / 2);
                 }
             }
             if (hover_rulemaker && hover_rulemaker_bits == i && right_panel_mode == RIGHT_MENU_RULE_GEN)
@@ -1465,7 +1444,7 @@ void GameState::render(bool saving)
             {
                 XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
                 RegionType new_region_type = region_type;
-                if (mouse_mode != MOUSE_MODE_DRAWING_REGION)
+                if (region_type.type >= 50)
                     new_region_type = RegionType(RegionType::NONE, 0);
                 if (new_region_type == rule.square_counts[hover_rulemaker_bits])
                 {
@@ -1490,7 +1469,7 @@ void GameState::render(bool saving)
             {
                 XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
 
-                if (mouse_mode != MOUSE_MODE_DRAWING_REGION)
+                if (region_type.type > 50)
                 {
                     SDL_Rect src_rect = {256, 992, 128, 128};
                     SDL_Rect dst_rect = {p.x, p.y, button_size, button_size};
@@ -1501,37 +1480,26 @@ void GameState::render(bool saving)
                     SDL_Rect dst_rect = {p.x + button_size * 3 / 4 , p.y, button_size / 2, button_size / 2};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 }
-                if (mouse_mode == MOUSE_MODE_DRAWING_REGION)
+                if (region_type.type < 50)
                 {
                     render_region_bubble(region_type, 0, p, button_size);
                 }
-                else if (mouse_mode == MOUSE_MODE_BOMB || mouse_mode == MOUSE_MODE_CLEAR)
+                else
                 {
-                    SDL_Rect src_rect = {(mouse_mode == MOUSE_MODE_BOMB) ? 320 : 320 + 192, 192, 192, 192};
-                    SDL_Rect dst_rect = {p.x, p.y, button_size, button_size};
-                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    render_region_type(region_type, p, button_size);
                 }
             }
         }
         if (hover_rulemaker_region_base && right_panel_mode == RIGHT_MENU_RULE_GEN)
         {
             XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
-            if (mouse_mode == MOUSE_MODE_VIS)
+            if (region_type.type == RegionType::VISIBILITY)
             {
                 {
                     SDL_Rect src_rect = {384, 992, 64, 64};
                     SDL_Rect dst_rect = {p.x + button_size * 3 / 4 , p.y, button_size / 2, button_size / 2};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    {
-                        SDL_Rect src_rect = {(vis_mode == GRID_VIS_LEVEL_SHOW) ? 1088 : 896, 384, 192, 192};
-                        if (vis_mode == GRID_VIS_LEVEL_BIN)
-                        {
-                            src_rect.x = 512;
-                            src_rect.y = 768;
-                        }
-                        SDL_Rect dst_rect = {p.x, p.y, button_size, button_size};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    }
+                    render_region_type(region_type, p, button_size);
                 }
             }
         }
@@ -1609,26 +1577,6 @@ void GameState::grid_click(XYPos pos, bool right)
     }
 
     pos /= square_size;
-//     if ((mouse_mode == MOUSE_MODE_BOMB) || (mouse_mode == MOUSE_MODE_CLEAR))
-//     {
-//         current_level_manual = true;
-//         GridPlace place = grid->get(pos);
-//         if (place.revealed)
-//             return;
-//         if ((mouse_mode == MOUSE_MODE_BOMB) != place.bomb)
-//         {
-// //            deaths++;
-//             return;
-//         }
-//         if (grid->is_determinable(pos))
-//         {
-//             grid->reveal(pos);
-//             reset_rule_gen_region();
-//         }
-// //        else
-// //            deaths++;
-//
-//     }
     if (mouse_mode == MOUSE_MODE_FILTER)
     {
         if (filter_pos.count(pos))
@@ -1636,7 +1584,7 @@ void GameState::grid_click(XYPos pos, bool right)
         else
             filter_pos.insert(pos);
     }
-    else    // if((mouse_mode == MOUSE_MODE_SELECT) || (mouse_mode == MOUSE_MODE_VIS))
+    else
     {
         GridRegion* hover = NULL;
         if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
@@ -1732,7 +1680,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
     if ((pos - XYPos(button_size * 4, button_size * 1)).inside(XYPos(button_size,button_size)))
     {
         if(mouse_mode == MOUSE_MODE_FILTER)
-            mouse_mode = MOUSE_MODE_BOMB;
+            mouse_mode = MOUSE_MODE_NONE;
         else
             mouse_mode = MOUSE_MODE_FILTER;
     }
@@ -1887,20 +1835,18 @@ void GameState::right_panel_click(XYPos pos, bool right)
 
         if (region_index >= 0)
         {
-            if ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (mouse_mode == MOUSE_MODE_VIS))
+            if ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (region_type.type == RegionType::VISIBILITY))
             {
                 constructed_rule.apply_region_bitmap ^= 1 << region_index;
-                if (vis_mode == GRID_VIS_LEVEL_SHOW)
-                    constructed_rule.apply_type = GridRule::SHOW;
-                else if (vis_mode == GRID_VIS_LEVEL_HIDE)
-                    constructed_rule.apply_type = GridRule::HIDE;
-                else
-                    constructed_rule.apply_type = GridRule::BIN;
+                if (constructed_rule.apply_region_type != region_type)
+                {
+                    constructed_rule.apply_region_type = region_type;
+                    constructed_rule.apply_region_bitmap = 1 << region_index;
+                }
                 update_constructed_rule();
             }
             else
             {
-                printf("test\n");
                 right_panel_mode = RIGHT_MENU_REGION;
                 inspected_region = rule_cause.regions[region_index];
             }
@@ -1910,24 +1856,11 @@ void GameState::right_panel_click(XYPos pos, bool right)
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
         if ((pos - XYPos(button_size * 1, button_size * 6)).inside(XYPos(button_size,button_size)))
-                mouse_mode = MOUSE_MODE_CLEAR;
+            region_type = RegionType(RegionType::SET, 0);
         if ((pos - XYPos(button_size * 2, button_size * 6)).inside(XYPos(button_size,button_size)))
-                mouse_mode = MOUSE_MODE_BOMB;
+            region_type = RegionType(RegionType::SET, 1);
         if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size,button_size)))
-        {
-            mouse_mode = MOUSE_MODE_NONE;
-        }
-        if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size,button_size)))
-        {
-            if (mouse_mode == MOUSE_MODE_VIS)
-            {
-                if (vis_mode == GRID_VIS_LEVEL_SHOW)  vis_mode = GRID_VIS_LEVEL_HIDE;
-                else if (vis_mode == GRID_VIS_LEVEL_HIDE)  vis_mode = GRID_VIS_LEVEL_BIN;
-                else vis_mode = GRID_VIS_LEVEL_SHOW;
-
-            }
-            mouse_mode = MOUSE_MODE_VIS;
-        }
+            region_type = RegionType(RegionType::NONE, 0);
 
         if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(5 * button_size,1 * button_size)))
         {
@@ -1936,29 +1869,19 @@ void GameState::right_panel_click(XYPos pos, bool right)
 
         if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(5 * button_size,2 * button_size)))
         {
-            mouse_mode = MOUSE_MODE_DRAWING_REGION;
-            region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
+            XYPos region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
+            region_type = menu_region_types1[region_menu];
+            region_type.value += region_item_selected.x + region_item_selected.y * 5;
         }
 
         if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))
         {
-            mouse_mode = MOUSE_MODE_DRAWING_REGION;
-            region_item_selected = (pos - XYPos(0, button_size * 10 + button_size / 2)) / button_size + XYPos(0, 2);
-        }
-
-        if (region_item_selected.y < 2)
-        {
-            region_type = menu_region_types1[region_menu];
-            region_type.value += region_item_selected.x + region_item_selected.y * 5;
-        }
-        else
-        {
+            XYPos region_item_selected = (pos - XYPos(0, button_size * 10 + button_size / 2)) / button_size;
             region_type = menu_region_types2[region_menu];
-            region_type.value += region_item_selected.x + (region_item_selected.y - 2) * 5;
+            region_type.value += region_item_selected.x + (region_item_selected.y) * 5;
         }
-        if (region_type.type == RegionType::NONE)
-            mouse_mode = MOUSE_MODE_NONE;
-
+        if (region_type.type == RegionType::VISIBILITY && region_type.value > 2)
+            region_type = RegionType(RegionType::VISIBILITY, 0);
         if ((pos - XYPos(0, button_size)).inside(XYPos(button_size * 4, button_size * 6)))
         {
             XYPos gpos = pos / button_size;
@@ -1991,7 +1914,7 @@ void GameState::right_panel_click(XYPos pos, bool right)
                 {
                     uint8_t square_counts[16];
                     RegionType new_region_type = region_type;
-                    if (mouse_mode != MOUSE_MODE_DRAWING_REGION)
+                    if (region_type.type >= 50)
                         new_region_type = RegionType(RegionType::NONE, 0);
                     GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
@@ -2005,26 +1928,13 @@ void GameState::right_panel_click(XYPos pos, bool right)
 //                    rule_gen_region_undef_num ^= 1 << hover_rulemaker_bits;
                     update_constructed_rule();
                 }
-                else if ((mouse_mode == MOUSE_MODE_BOMB) || (mouse_mode == MOUSE_MODE_CLEAR) || (mouse_mode == MOUSE_MODE_DRAWING_REGION))
+                else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                 {
                     constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
-                    if (mouse_mode == MOUSE_MODE_DRAWING_REGION)
                     {
-                        if (constructed_rule.apply_type != GridRule::REGION)
-                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
                         if (constructed_rule.apply_region_type != region_type)
                             constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
-                        constructed_rule.apply_type = GridRule::REGION;
                         constructed_rule.apply_region_type = region_type;
-                    }
-                    else
-                    {
-                        GridRule::ApplyType t = (mouse_mode == MOUSE_MODE_BOMB) ? GridRule::BOMB : GridRule::CLEAR;
-                        if (constructed_rule.apply_type != t)
-                        {
-                            constructed_rule.apply_type = t;
-                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
-                        }
                     }
                     update_constructed_rule();
                 }
