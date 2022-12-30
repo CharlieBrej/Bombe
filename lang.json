@@ -1,0 +1,41 @@
+{
+    "English":
+    {
+        "tutorial":
+        [
+            [
+                {"x": 100,  "y": 750,           "text":"Numbers state how many bombs\nare in the 8 neighbouring squares"},
+                {"x": 940,  "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"},
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Generator"},
+                {"x":1050,  "y": 100, "left":1, "text":"Region type"},
+                {"x":1050,  "y": 530, "left":1, "text":"Number of sqaures"},
+                {"x":1240,  "y": 560,           "text":"Action to take"},
+
+                {"x":1200,  "y": 730,           "text":"Mark as all Bombs"},
+                {"x":1200,  "y": 900,           "text":"Mark as all Clear"},
+                {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"},
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"Number of sqaures\ncan be set to\n\"Don't Care\""},
+                {"x": 640,  "y": 500,           "text":"Up to 4 regions\ncan be added to the\nRule Generator"},
+                {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new Regions"},
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"Exactly 6"},
+                {"x": 240,  "y": 200,           "text":"2 or more"},
+                {"x": 240,  "y": 340,           "text":"5 or fewer"},
+                {"x": 240,  "y": 480,           "text":"Any number except 4"},
+                {"x": 240,  "y": 620,           "text":"Either 4 or 6"},
+                {"x": 240,  "y": 760,           "text":"Either 3, 5 or 7"},
+                {"x": 240,  "y": 900,           "text":"Either 2, 4, 6 or 8"},
+
+                {"x":1050,  "y": 100,           "text":"Normal visible"},
+                {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
+                {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
+                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility or regions"},
+            ],
+        ]
+    }
+}

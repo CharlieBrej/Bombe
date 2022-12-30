@@ -21,15 +21,25 @@ public:
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
     TTF_Font *font;
+    SaveObjectMap* lang_data;
+
+    static const int tut_texture_count = 4;
+    SDL_Texture* tutorial_texture[tut_texture_count] = {};
 
     std::string steam_session_string;
     bool achievement[10] = {};
     std::string steam_name;
     uint64_t steam_id = 0;
-
+    std::string language = "English";
 
     Grid *grid;
     std::list<GridRule> rules;
+
+    enum {
+        DISPAY_MODE_NORMAL,
+        DISPAY_MODE_HELP
+
+    } display_mode = DISPAY_MODE_NORMAL;
 
 
     XYPos mouse;
@@ -47,6 +57,7 @@ public:
         }
         right_panel_mode = RIGHT_MENU_NONE;
 
+    int tutorial_index = 0;
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
@@ -84,6 +95,8 @@ public:
 
     bool skip_level = false;
     int cooldown = 0;
+    int completed_count = 0;
+
     bool last_active_was_hit = false;
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
@@ -130,6 +143,7 @@ public:
     XYPos taken_to_pos(unsigned count, unsigned total);
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
+    void render_text_box(XYPos pos, std::string& s, bool left = false);
     void render_tooltip();
     void add_tooltip(SDL_Rect& dst_rect, const char* text);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);

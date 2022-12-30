@@ -55,7 +55,10 @@ GameState::GameState(std::ifstream& loadfile)
         level_progress[i].level_status.resize(global_level_sets[i]->levels.size());
         level_progress[i].counts[0] = global_level_sets[i]->levels.size();
     }
-
+    {
+        std::ifstream loadfile("lang.json");
+        lang_data = SaveObject::load(loadfile)->get_map();
+    }
 
     try
     {
@@ -87,6 +90,8 @@ GameState::GameState(std::ifstream& loadfile)
                     {
                         char c = s[j];
                         uint8_t stat = std::min(c - '0', 4);
+                        if (stat)
+                            completed_count++;
                         level_progress[i].level_status[j] = stat;
                         level_progress[i].counts[stat]++;
                         level_progress[i].counts[0]--;
@@ -107,12 +112,16 @@ GameState::GameState(std::ifstream& loadfile)
     {
 
     }
-    region_type = RegionType(RegionType::EQUAL, 1);
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 0);
 	sdl_texture = loadTexture("texture.png");
+
+    tutorial_texture[0] = loadTexture("tutorial/tut0.png");
+    tutorial_texture[1] = loadTexture("tutorial/tut1.png");
+    tutorial_texture[2] = loadTexture("tutorial/tut2.png");
+    tutorial_texture[3] = loadTexture("tutorial/tut3.png");
 
     {
         SDL_Surface* icon_surface = IMG_Load("icon.png");
@@ -179,12 +188,14 @@ void GameState::save(std::ostream& outfile, bool lite)
 GameState::~GameState()
 {
 //    Mix_FreeMusic(music);
-
+    delete lang_data;
     TTF_CloseFont(font);
 
-	SDL_DestroyTexture(sdl_texture);
-	SDL_DestroyRenderer(sdl_renderer);
-	SDL_DestroyWindow(sdl_window);
+    SDL_DestroyTexture(sdl_texture);
+    for (int i = 0; i < tut_texture_count; i++)
+        SDL_DestroyTexture(tutorial_texture[i]);
+    SDL_DestroyRenderer(sdl_renderer);
+    SDL_DestroyWindow(sdl_window);
     LevelSet::delete_global();
 }
 
@@ -216,6 +227,7 @@ void GameState::advance(int steps)
 
             if (o < n)
             {
+                completed_count++;
                 level_progress[current_level_set_index].counts[o]--;
                 level_progress[current_level_set_index].counts[n]++;
                 level_progress[current_level_set_index].level_status[current_level_index] = n;
@@ -277,7 +289,7 @@ void GameState::advance(int steps)
                 }
                 if (r.vis_level == GRID_VIS_LEVEL_HIDE)
                 {
-                    cooldown = 200;
+                    cooldown = 10000 / (completed_count + 100);
                     return;
                 }
             }
@@ -290,13 +302,13 @@ void GameState::advance(int steps)
         {
             bool hit = false;
             bool check_vis = false;
-            while (grid->add_regions(-1)) {check_vis = true; cooldown = 100;}
+            while (grid->add_regions(-1)) {check_vis = true;}
 
             if (!last_active_was_hit)
             {
                 grid->add_one_new_region();
                 check_vis = true;
-                cooldown = 50;
+                cooldown = 10000 / (completed_count + 10);
             }
             if (check_vis)
             {
@@ -320,7 +332,7 @@ void GameState::advance(int steps)
                 GridRule& rule = *it;
                 if (rule.deleted)
                     continue;
-//                if (hit) break;
+                if (hit) break;
                 if (rule.apply_region_type.type == RegionType::VISIBILITY)
                     continue;
 
@@ -330,7 +342,7 @@ void GameState::advance(int steps)
                     hit = true;
                     last_active_was_hit = true;
                     clue_solves.clear();
-//                    break;
+                    break;
                 }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
                 {
@@ -515,32 +527,69 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
 
 }
 
+void GameState::render_text_box(XYPos pos, std::string& s, bool left)
+{
+    SDL_Color color = {0xFF, 0xFF, 0xFF};
+    std::vector<SDL_Surface*> text_surfaces;
+    std::vector<SDL_Texture*> textures;
+
+    std::string text = s;
+    std::string::size_type start = 0;
+    XYPos text_box_size;
+
+    while (true)
+    {
+        std::string::size_type eol = text.find("\n", start);
+        std::string line = text.substr(start, eol - start);
+
+        SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, line.c_str(), color);
+        text_surfaces.push_back(text_surface);
+        SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
+        textures.push_back(new_texture);
+        SDL_Rect txt_rect;
+        SDL_GetClipRect(text_surface, &txt_rect);
+        text_box_size.x = std::max(text_box_size.x, txt_rect.w * button_size / 64);
+        text_box_size.y += txt_rect.h * button_size / 64;
+        if (eol == std::string::npos)
+            break;
+        start = eol + 1;
+    }
+
+    int border = button_size / 16;
+    XYPos box_pos = pos - XYPos(border, border);
+    XYPos box_size = text_box_size + XYPos(border * 4, border * 2);
+
+    if (left)
+        box_pos.x -= box_size.x;
+    if (box_pos.x < 0)
+        box_pos.x = 0;
+
+    render_box(box_pos, box_size, button_size / 4, 1);
+    XYPos txt_pos = box_pos + XYPos(border * 2, border);
+
+    for (int i = 0; i < textures.size(); i++)
+    {
+        SDL_Rect txt_rect;
+        SDL_GetClipRect(text_surfaces[i], &txt_rect);
+        SDL_Rect dst_rect;
+        dst_rect.w = txt_rect.w * button_size / 64;
+        dst_rect.h = txt_rect.h * button_size / 64;
+        dst_rect.x = txt_pos.x;
+        dst_rect.y = txt_pos.y;
+        SDL_RenderCopy(sdl_renderer, textures[i], &txt_rect, &dst_rect);
+        txt_pos.y += dst_rect.h;
+
+        SDL_DestroyTexture(textures[i]);
+        SDL_FreeSurface(text_surfaces[i]);
+    }
+
+}
+
 void GameState::render_tooltip()
 {
     if (tooltip_string != "")
     {
-        SDL_Color color = {0xFF, 0xFF, 0xFF};
-        SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, tooltip_string.c_str(), color);
-        SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
-        SDL_Rect txt_rect;
-        SDL_GetClipRect(text_surface, &txt_rect);
-
-        SDL_Rect dst_rect;
-        dst_rect.w = txt_rect.w * button_size / 64;
-        dst_rect.h = txt_rect.h * button_size / 64;
-        dst_rect.x = mouse.x - dst_rect.w - button_size / 4;
-        dst_rect.y = mouse.y + button_size / 4;
-        if (dst_rect.x < 0)
-            dst_rect.x = 0;
-        SDL_Rect bg_rect = {160, 608, 1, 1};
-
-//        SDL_RenderCopy(sdl_renderer, sdl_texture, &bg_rect, &dst_rect);
-        int border = button_size / 16;
-        render_box(XYPos(dst_rect.x - border, dst_rect.y - border), XYPos(dst_rect.w + border * 2, dst_rect.h + border * 2), button_size / 4, 1);
-        SDL_RenderCopy(sdl_renderer, new_texture, &txt_rect, &dst_rect);
-
-        SDL_DestroyTexture(new_texture);
-        SDL_FreeSurface(text_surface);
+        render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), tooltip_string, true);
     }
 }
 
@@ -780,20 +829,16 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 void GameState::render(bool saving)
 {
-    tooltip_string = "";
     XYPos window_size;
     bool row_col_clues = !grid->edges.empty();
     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+    SDL_RenderClear(sdl_renderer);
 
     {
         if (window_size.x * 9 > window_size.y * 16)
-        {
             grid_size = window_size.y;
-        }
         else
-        {
             grid_size = (window_size.x * 9) / 16;
-        }
 
         panel_size = XYPos((grid_size * 7) / 18, grid_size);
         grid_offset = (window_size - XYPos(grid_size,grid_size)) / 2;
@@ -805,10 +850,51 @@ void GameState::render(bool saving)
         {
             grid_offset += XYPos(square_size,square_size);
         }
+        button_size = (grid_size * 7) / (18 * 5);
     }
 
-    SDL_RenderClear(sdl_renderer);
+    if (display_mode == DISPAY_MODE_HELP)
+    {
+        int sq_size = std::min(window_size.y / 9, window_size.x / 16);
+        XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
+        XYPos help_image_offset = (window_size - help_image_size) / 2;
 
+        {
+            SDL_Rect src_rect = {0, 0, 1920, 1080};
+            SDL_Rect dst_rect = {help_image_offset.x, help_image_offset.y, help_image_size.x, help_image_size.y};
+            SDL_RenderCopy(sdl_renderer, tutorial_texture[tutorial_index], &src_rect, &dst_rect);
+            SaveObjectMap* lang = lang_data->get_item(language)->get_map();
+            SaveObjectList* tutorial = lang->get_item("tutorial")->get_list();
+            SaveObjectList* tutorial_page = tutorial->get_item(tutorial_index)->get_list();
+            for (int i = 0; i < tutorial_page->get_count(); i++)
+            {
+                SaveObjectMap* text_box = tutorial_page->get_item(i)->get_map();
+                XYPos p;
+                p.x = text_box->get_num("x");
+                p.y = text_box->get_num("y");
+                std::string text = text_box->get_string("text");
+                bool left = text_box->has_key("left");
+                p.x = p.x * help_image_size.x / 1920;
+                p.y = p.y * help_image_size.y / 1080;
+                render_text_box(help_image_offset + p, text, left);
+            }
+        }
+        {
+            SDL_Rect src_rect = {704, 1344, 192*3, 192};
+            SDL_Rect dst_rect = {help_image_offset.x + help_image_size.x - sq_size * 3, help_image_offset.y + help_image_size.y - sq_size, sq_size * 3, sq_size};
+            if (tutorial_index)
+                src_rect.y += 192;
+            if (tutorial_index >= (tut_texture_count - 1))
+                src_rect.y += 192;
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+
+
+        SDL_RenderPresent(sdl_renderer);
+        return;
+    }
+
+    tooltip_string = "";
     bool hover_rulemaker = false;
     XYSet hover_squares_highlight;
     int hover_rulemaker_bits = 0;
@@ -816,9 +902,6 @@ void GameState::render(bool saving)
 
     int hover_rulemaker_region_base_index = -1;
     bool hover_rulemaker_region_base = false;
-
-
-    button_size = (grid_size * 7) / (18 * 5);
 
     GridRegion* hover = NULL;
 
@@ -1047,27 +1130,33 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {704, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Help");
+    }
+    {
+        SDL_Rect src_rect = {1472, 960, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Hint");
     }
     {
         SDL_Rect src_rect = {704 + 192, 960, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         if (auto_region)
             src_rect = {1280, 768, 192, 192};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Auto Region");
     }
     {
-        SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Refresh Regions");
-    }
-    {
         SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Skip Level");
+    }
+    {
+        SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Refresh Regions");
     }
 
     if (!filter_pos.empty())
@@ -1693,6 +1782,8 @@ void GameState::left_panel_click(XYPos pos, bool right)
 
 
     if ((pos - XYPos(button_size * 0, button_size * 0)).inside(XYPos(button_size,button_size)))
+        display_mode = DISPAY_MODE_HELP;
+    if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         current_level_hinted = true;
         clue_solves.clear();
@@ -1704,16 +1795,16 @@ void GameState::left_panel_click(XYPos pos, bool right)
         get_hint = true;
 
     }
-    if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
-        auto_region = !auto_region;
     if ((pos - XYPos(button_size * 2, button_size * 0)).inside(XYPos(button_size,button_size)))
+        auto_region = !auto_region;
+    if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
+        skip_level = true;
+    if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
         grid->regions.clear();
         reset_rule_gen_region();
     }
-    if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
-        skip_level = true;
 
     XYPos gpos = pos / button_size;
     gpos.y -= 6;
@@ -2002,6 +2093,17 @@ bool GameState::events()
                 break;
             case SDL_KEYDOWN:
             {
+                if (display_mode == DISPAY_MODE_HELP)
+                {
+                    switch (e.key.keysym.scancode)
+                    {
+                        case SDL_SCANCODE_F1:
+                        case SDL_SCANCODE_ESCAPE:
+                            display_mode = DISPAY_MODE_NORMAL;
+                            break;
+                    }
+                    break;
+                }
                 switch (e.key.keysym.scancode)
                 {
                     case SDL_SCANCODE_C:
@@ -2021,9 +2123,12 @@ bool GameState::events()
                         break;
                     }
                     case SDL_SCANCODE_ESCAPE:
-		                    quit = true;
+                        quit = true;
                         break;
                     case SDL_SCANCODE_F1:
+                        display_mode = DISPAY_MODE_HELP;
+                        break;
+                    case SDL_SCANCODE_F2:
                     {
                         current_level_hinted = true;
                         clue_solves.clear();
@@ -2037,22 +2142,22 @@ bool GameState::events()
                         get_hint = true;
                         break;
                     }
-                    case SDL_SCANCODE_F2:
-                    {
-                        auto_region = !auto_region;
-                        break;
-                    }
                     case SDL_SCANCODE_F3:
                     {
-                        clue_solves.clear();
-                        grid->regions.clear();
-                        reset_rule_gen_region();
-                        get_hint = false;
+                        auto_region = !auto_region;
                         break;
                     }
                     case SDL_SCANCODE_F4:
                     {
                         skip_level = true;
+                        break;
+                    }
+                    case SDL_SCANCODE_F5:
+                    {
+                        clue_solves.clear();
+                        grid->regions.clear();
+                        reset_rule_gen_region();
+                        get_hint = false;
                         break;
                     }
                     default:
@@ -2085,6 +2190,26 @@ bool GameState::events()
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
                 bool right = (e.button.button != SDL_BUTTON_LEFT);
+
+                if (display_mode == DISPAY_MODE_HELP)
+                {
+                    XYPos window_size;
+                    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+
+                    int sq_size = std::min(window_size.y / 9, window_size.x / 16);
+                    XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
+                    XYPos help_image_offset = (window_size - help_image_size) / 2;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 3, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        if (tutorial_index)
+                            tutorial_index--;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 2, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        display_mode = DISPAY_MODE_NORMAL;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 1, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        if (tutorial_index < (tut_texture_count - 1))
+                            tutorial_index++;
+                    break;
+                }
+
 
                 if ((mouse - left_panel_offset).inside(panel_size))
                 {
