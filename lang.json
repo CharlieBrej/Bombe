@@ -10,7 +10,7 @@
             [
                 {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Generator"},
                 {"x":1050,  "y": 100, "left":1, "text":"Region type"},
-                {"x":1050,  "y": 530, "left":1, "text":"Number of sqaures"},
+                {"x":1050,  "y": 530, "left":1, "text":"Number of squares"},
                 {"x":1240,  "y": 560,           "text":"Action to take"},
 
                 {"x":1200,  "y": 730,           "text":"Mark as all Bombs"},
@@ -18,7 +18,7 @@
                 {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"},
             ],
             [
-                {"x": 150,  "y": 500,           "text":"Number of sqaures\ncan be set to\n\"Don't Care\""},
+                {"x": 150,  "y": 500,           "text":"Number of squares\ncan be set to\n\"Don't Care\""},
                 {"x": 640,  "y": 500,           "text":"Up to 4 regions\ncan be added to the\nRule Generator"},
                 {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new Regions"},
             ],

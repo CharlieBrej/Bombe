@@ -2,27 +2,24 @@
 #include "SaveState.h"
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 std::vector<LevelSet*> global_level_sets;
 
 LevelSet::LevelSet(SaveObjectMap* omap)
 {
-    name = omap->get_string("name");
     SaveObjectList* rlist = omap->get_item("levels")->get_list();
-
-    levels.resize(rlist->get_count());
 
     for (int i = 0; i < rlist->get_count(); i++)
     {
-        levels[i] = rlist->get_string(i);
+        std::string s = rlist->get_string(i);
+        levels.push_back(rlist->get_string(i));
     }
 }
 
 SaveObject* LevelSet::save()
 {
     SaveObjectMap* omap = new SaveObjectMap;
-
-    omap->add_string("name", name);
 
     SaveObjectList* rlist = new SaveObjectList;
     for (const std::string& level : levels)
@@ -42,11 +39,11 @@ void LevelSet::init_global()
     SaveObjectMap* omap = SaveObject::load(loadfile)->get_map();
     SaveObjectList* rlist = omap->get_item("level_sets")->get_list();
 
-    global_level_sets.resize(rlist->get_count());
+    delete_global();
     for (int i = 0; i < rlist->get_count(); i++)
     {
         LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
-        global_level_sets[i] = (lset);
+        global_level_sets.push_back(lset);
     }
     delete omap;
 }

@@ -7,7 +7,6 @@
 class LevelSet
 {
 public:
-    std::string name;
     std::vector<std::string> levels;
 
     LevelSet(){};

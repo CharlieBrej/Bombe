@@ -37,15 +37,10 @@ int main( int argc, char* argv[] )
        { 50,   8, 8, 1, 1,  0, 0},
        { 50,   8, 8, 1, 1,  1, 0},
        { 50,   8, 8, 1, 1,  1, 50},
-       { 50,   9, 9, 0, 0,  0, 0},
-       { 50,   9, 9, 1, 0,  0, 0},
-       { 50,   9, 9, 1, 1,  0, 0},
-       { 50,   9, 9, 1, 1,  1, 0},
-       { 50,   9, 9, 1, 1,  1, 50},
        { -1,    3, 3, 0, 0,  0}
    };
-
-    for (int i = 0; params[i][0] >= 0; i++)
+    int i;
+    for (i = 0; params[i][0] >= 0; i++)
     {
         if (global_level_sets.size() <= i)
             global_level_sets.push_back(new LevelSet());
@@ -59,10 +54,10 @@ int main( int argc, char* argv[] )
                 global_level_sets[i]->levels.push_back(s);
             delete g;
             LevelSet::save_global();
-            printf("got\n");
         }
-
+        global_level_sets[i]->levels.resize(params[i][0]);
     }
+    global_level_sets.resize(i);
     LevelSet::save_global();
 
     return 0;

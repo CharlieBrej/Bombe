@@ -114,8 +114,8 @@ public:
     class LevelProgress
     {
     public:
-        unsigned counts[4] = {};
-        std::vector<uint8_t> level_status;
+        unsigned count_todo = 0;
+        std::vector<bool> level_status;
     };
 
     std::vector<LevelProgress> level_progress;
@@ -123,8 +123,6 @@ public:
     unsigned current_level_set_index = 0;
     unsigned current_level_index = 0;
     bool current_level_is_temp = true;
-    bool current_level_hinted = false;
-    bool current_level_manual = false;
 
 
     GameState(std::ifstream& loadfile);

@@ -53,7 +53,7 @@ GameState::GameState(std::ifstream& loadfile)
     for (int i = 0; i < global_level_sets.size(); i++)
     {
         level_progress[i].level_status.resize(global_level_sets[i]->levels.size());
-        level_progress[i].counts[0] = global_level_sets[i]->levels.size();
+        level_progress[i].count_todo = global_level_sets[i]->levels.size();
     }
     {
         std::ifstream loadfile("lang.json");
@@ -89,12 +89,12 @@ GameState::GameState(std::ifstream& loadfile)
                     for (int j = 0; j < lim; j++)
                     {
                         char c = s[j];
-                        uint8_t stat = std::min(c - '0', 4);
+                        int stat = c - '0';
                         if (stat)
                             completed_count++;
                         level_progress[i].level_status[j] = stat;
-                        level_progress[i].counts[stat]++;
-                        level_progress[i].counts[0]--;
+                        if (stat)
+                            level_progress[i].count_todo--;
                     }
                 }
             }
@@ -166,7 +166,7 @@ SaveObject* GameState::save(bool lite)
     for (LevelProgress& prog : level_progress)
     {
         std::string sstr;
-        for (uint8_t& stat : prog.level_status)
+        for (bool stat : prog.level_status)
         {
             char c = '0' + stat;
             sstr += c;
@@ -216,99 +216,89 @@ void GameState::advance(int steps)
         clue_solves.clear();
         if (grid->is_solved() && !current_level_is_temp)
         {
-            int o = level_progress[current_level_set_index].level_status[current_level_index];
-            int n = 3;
-            if (current_level_manual)
-            {
-                n = 2;
-                if (current_level_hinted)
-                    n = 1;
-            }
-
-            if (o < n)
+            bool o = level_progress[current_level_set_index].level_status[current_level_index];
+            if (!o)
             {
                 completed_count++;
-                level_progress[current_level_set_index].counts[o]--;
-                level_progress[current_level_set_index].counts[n]++;
-                level_progress[current_level_set_index].level_status[current_level_index] = n;
+                level_progress[current_level_set_index].count_todo--;
+                level_progress[current_level_set_index].level_status[current_level_index] = true;
             }
         }
         skip_level = false;
 
-        int want = 0;
-        while (level_progress[current_level_set_index].counts[want] == 0)
-            want++;
-        if (want < 3)
+        if (level_progress[current_level_set_index].count_todo)
         {
-            do
-            {
-                current_level_index++;
-                if (current_level_index >= level_progress[current_level_set_index].level_status.size())
-                    current_level_index = 0;
-            }
-            while (level_progress[current_level_set_index].level_status[current_level_index] > want);
+            if (!current_level_is_temp || level_progress[current_level_set_index].level_status[current_level_index]);
+                do
+                {
+                    current_level_index++;
+                    if (current_level_index >= level_progress[current_level_set_index].level_status.size())
+                        current_level_index = 0;
+                }
+                while (level_progress[current_level_set_index].level_status[current_level_index]);
+
             std::string& s = global_level_sets[current_level_set_index]->levels[current_level_index];
             delete grid;
             grid = new  Grid(s);
             reset_rule_gen_region();
             current_level_is_temp = false;
-            current_level_hinted = false;
-            current_level_manual = false;
         }
     }
 
     if(clue_solves.empty())
         get_hint = false;
-
-    if (cooldown)
+    while (steps)
     {
-        if (steps < cooldown)
+        bool done_summit = false;
+        if (cooldown)
         {
-            cooldown -= steps;
-            return;
-        }
-        cooldown = 0;
-    }
-
-    if (get_hint)
-    {
-        for (GridRegion& r : grid->regions)
-        {
-            if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
+            if (steps < cooldown)
             {
-                r.visibility_force = GridRegion::VIS_FORCE_HINT;
-                r.vis_level = GRID_VIS_LEVEL_HIDE;
+                cooldown -= steps;
+                return;
+            }
+            cooldown = 0;
+        }
 
-                for (const XYPos& pos : clue_solves)
+        if (get_hint)
+        {
+            for (GridRegion& r : grid->regions)
+            {
+                if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
                 {
-                    if (!grid->is_determinable_using_regions(pos, true))
+                    r.visibility_force = GridRegion::VIS_FORCE_HINT;
+                    r.vis_level = GRID_VIS_LEVEL_HIDE;
+
+                    for (const XYPos& pos : clue_solves)
                     {
-                        r.vis_level = GRID_VIS_LEVEL_SHOW;
-                        break;
+                        if (!grid->is_determinable_using_regions(pos, true))
+                        {
+                            r.vis_level = GRID_VIS_LEVEL_SHOW;
+                            break;
+                        }
+                    }
+                    if (r.vis_level == GRID_VIS_LEVEL_HIDE)
+                    {
+                        cooldown = 300;
+                        return;
                     }
                 }
-                if (r.vis_level == GRID_VIS_LEVEL_HIDE)
-                {
-                    cooldown = 10000 / (completed_count + 100);
-                    return;
-                }
             }
+            if (cooldown)
+                continue;
         }
 
-    }
-
-    if (auto_region)
-    {
+        if (auto_region)
         {
             bool hit = false;
             bool check_vis = false;
-            while (grid->add_regions(-1)) {check_vis = true;}
+            while (grid->add_regions(-1)) {check_vis = true;  last_active_was_hit = true; break;}
 
             if (!last_active_was_hit)
             {
                 grid->add_one_new_region();
                 check_vis = true;
-                cooldown = 10000 / (completed_count + 10);
+                last_active_was_hit = true;
             }
             if (check_vis)
             {
@@ -323,8 +313,9 @@ void GameState::advance(int steps)
                         if (resp == Grid::APPLY_RULE_RESP_NONE)
                             rule.stale = true;
                     }
-
                 }
+                cooldown = 50000 / (completed_count + 50);
+                continue;
             }
             last_active_was_hit = false;
             for (std::list<GridRule>::iterator it=rules.begin(); it != rules.end(); ++it)
@@ -357,6 +348,8 @@ void GameState::advance(int steps)
             }
             if (hit)
             {
+                done_summit = true;
+                continue;
             }
             else
             {
@@ -366,6 +359,7 @@ void GameState::advance(int steps)
                 }
             }
         }
+        break;
     }
 }
 
@@ -1218,11 +1212,18 @@ void GameState::render(bool saving)
         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
         if (i == current_level_set_index)
             render_box(pos, XYPos(button_size, button_size), button_size/4);
-
-        render_number(level_progress[i].counts[0], pos + XYPos(0, button_size / 12), XYPos(button_size, button_size / 3));
+        int c = level_progress[i].count_todo;
+        if (c)
+            render_number(level_progress[i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
+        else
+        {
+            SDL_Rect src_rect = {512, 960, 192, 192};
+            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
 //        render_number(level_progress[i].counts[1], pos + XYPos(button_size /2, button_size / 12), XYPos(button_size /2, button_size / 3));
 //        render_number(level_progress[i].counts[2], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size /2, button_size / 3));
-        render_number(level_progress[i].counts[3], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size, button_size / 3));
+//        render_number(level_progress[i].counts[3], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size, button_size / 3));
 
         p.x++;
         if (p.x >= 5)
@@ -1785,7 +1786,6 @@ void GameState::left_panel_click(XYPos pos, bool right)
         display_mode = DISPAY_MODE_HELP;
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
-        current_level_hinted = true;
         clue_solves.clear();
         FOR_XY(pos, XYPos(), grid->size)
         {
@@ -2101,6 +2101,15 @@ bool GameState::events()
                         case SDL_SCANCODE_ESCAPE:
                             display_mode = DISPAY_MODE_NORMAL;
                             break;
+                        case SDL_SCANCODE_F11:
+                        {
+                            full_screen = !full_screen;
+                            SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+                            SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+                            SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+                            SDL_SetWindowInputFocus(sdl_window);
+                            break;
+                        }
                     }
                     break;
                 }
@@ -2130,7 +2139,6 @@ bool GameState::events()
                         break;
                     case SDL_SCANCODE_F2:
                     {
-                        current_level_hinted = true;
                         clue_solves.clear();
                         //grid->find_easiest_move(clue_solves, clue_needs);
                         //grid->find_easiest_move_using_regions(clue_solves);
