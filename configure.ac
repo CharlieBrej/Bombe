@@ -13,6 +13,7 @@ PKG_CHECK_MODULES([SDL2_net], [SDL2_net])
 PKG_CHECK_MODULES([SDL2_ttf], [SDL2_ttf])
 PKG_CHECK_MODULES([Z3], [z3])
 PKG_CHECK_MODULES([ZSTD], [libzstd])
+PKG_CHECK_MODULES([libcurl], [libcurl])
 
 build_linux=no
 build_mac=no

@@ -14,6 +14,14 @@
 
 extern bool IS_DEMO;
 
+struct ServerResp
+{
+    SaveObject* resp = NULL;
+    bool done = false;
+    bool error = false;
+    SDL_SpinLock working = 0;
+};
+
 class GameState
 {
 public:
@@ -28,7 +36,7 @@ public:
 
     std::string steam_session_string;
     bool achievement[10] = {};
-    std::string steam_name;
+    std::string steam_username = "dummy";
     uint64_t steam_id = 0;
     std::string language = "English";
 
@@ -98,6 +106,8 @@ public:
     int cooldown = 0;
     int completed_count = 0;
 
+    unsigned server_timeout = 0;
+
     bool last_active_was_hit = false;
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
@@ -130,6 +140,9 @@ public:
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
     ~GameState();
+    void post_to_server(SaveObject* send, bool sync);
+    void fetch_from_server(SaveObject* send, ServerResp* resp);
+    void save_to_server(bool sync);
     SDL_Texture* loadTexture(const char* filename);
 
     void advance(int steps);

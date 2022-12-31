@@ -5,6 +5,8 @@
 #include "SaveState.h"
 #include "Misc.h"
 #include "LevelSet.h"
+#include "Compress.h"
+
 
 #include <cassert>
 #include <SDL.h>
@@ -202,6 +204,143 @@ GameState::~GameState()
     LevelSet::delete_global();
 }
 
+class ServerComms
+{
+public:
+    SaveObject* send;
+    ServerResp* resp;
+
+    ServerComms(SaveObject* send_, ServerResp* resp_ = NULL):
+        send(send_),
+        resp(resp_)
+    {}
+};
+
+static int fetch_from_server_thread(void *ptr)
+{
+    IPaddress ip;
+    TCPsocket tcpsock;
+    ServerComms* comms = (ServerComms*)ptr;
+    if (SDLNet_ResolveHost(&ip, "brej.org", 42071) == -1)
+//    if (SDLNet_ResolveHost(&ip, "127.0.0.1", 42070) == -1)
+    {
+        printf("SDLNet_ResolveHost: %s\n", SDLNet_GetError());
+        if (comms->resp)
+        {
+            comms->resp->error = true;
+            comms->resp->done = true;
+            SDL_AtomicUnlock(&comms->resp->working);
+        }
+        delete comms->send;
+        delete comms;
+        return 0;
+    }
+
+    tcpsock = SDLNet_TCP_Open(&ip);
+    if (!tcpsock)
+    {
+        printf("SDLNet_TCP_Open: %s\n", SDLNet_GetError());
+        if (comms->resp)
+        {
+            comms->resp->error = true;
+            comms->resp->done = true;
+            SDL_AtomicUnlock(&comms->resp->working);
+        }
+        delete comms->send;
+        delete comms;
+        return 0;
+    }
+
+    try
+    {
+        std::ostringstream stream;
+        comms->send->save(stream);
+        std::string comp = compress_string(stream.str());
+
+        uint32_t length = comp.length();
+        SDLNet_TCP_Send(tcpsock, (char*)&length, 4);
+        SDLNet_TCP_Send(tcpsock, comp.c_str(), length);
+
+        if (comms->resp)
+        {
+            int got = SDLNet_TCP_Recv(tcpsock, (char*)&length, 4);
+            if (got != 4)
+                throw(std::runtime_error("Connection closed early"));
+            char* data = (char*)malloc(length);
+            got = 0;
+            while (got != length)
+            {
+                int n = SDLNet_TCP_Recv(tcpsock, &data[got], length - got);
+                got += n;
+                if (!n)
+                {
+                    free (data);
+                    throw(std::runtime_error("Connection closed early"));
+                }
+            }
+            std::string in_str(data, length);
+            free (data);
+            std::string decomp = decompress_string(in_str);
+            std::istringstream decomp_stream(decomp);
+            comms->resp->resp = SaveObject::load(decomp_stream);
+        }
+
+    }
+    catch (const std::runtime_error& error)
+    {
+        std::cerr << error.what() << "\n";
+        if (comms->resp)
+        {
+            comms->resp->error = true;
+            comms->resp->done = true;
+            SDL_AtomicUnlock(&comms->resp->working);
+        }
+    }
+    SDLNet_TCP_Close(tcpsock);
+    if (comms->resp)
+    {
+        comms->resp->done = true;
+        SDL_AtomicUnlock(&comms->resp->working);
+    }
+    delete comms->send;
+    delete comms;
+    return 0;
+}
+
+void GameState::post_to_server(SaveObject* send, bool sync)
+{
+    if (server_timeout)
+        return;
+    SDL_Thread *thread = SDL_CreateThread(fetch_from_server_thread, "PostToServer", (void *)new ServerComms(send));
+    if (sync)
+        SDL_WaitThread(thread, NULL);
+}
+
+void GameState::fetch_from_server(SaveObject* send, ServerResp* resp)
+{
+    if (server_timeout)
+        return;
+    SDL_AtomicLock(&resp->working);
+    resp->done = false;
+    resp->error = false;
+    delete resp->resp;
+    resp->resp = NULL;
+    SDL_Thread *thread = SDL_CreateThread(fetch_from_server_thread, "FetchFromServer", (void *)new ServerComms(send, resp));
+}
+
+void GameState::save_to_server(bool sync)
+{
+    if (steam_session_string.empty())
+        return;
+    SaveObjectMap* omap = new SaveObjectMap;
+    omap->add_string("command", "save");
+    omap->add_num("steam_id", steam_id);
+    omap->add_string("steam_username", steam_username);
+    omap->add_string("steam_session", steam_session_string);
+    omap->add_num("demo", IS_DEMO);
+    post_to_server(omap, sync);
+}
+
 SDL_Texture* GameState::loadTexture(const char* filename)
 {
     SDL_Surface* loadedSurface = IMG_Load(filename);
@@ -214,6 +353,9 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 
 void GameState::advance(int steps)
 {
+    if (server_timeout)
+        server_timeout--;
+
     if (grid->is_solved() || skip_level)
     {
         clue_solves.clear();

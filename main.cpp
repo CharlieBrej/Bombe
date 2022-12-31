@@ -132,7 +132,8 @@ void mainloop()
     }
 #ifdef STEAM
     SteamGameManager steam_manager;
-//    game_state->set_steam_user(SteamUser()->GetSteamID().CSteamID::ConvertToUint64(), SteamFriends()->GetPersonaName());
+    game_state->steam_username = SteamFriends()->GetPersonaName();
+    game_state->steam_id = SteamUser()->GetSteamID().CSteamID::ConvertToUint64();
 
     int friend_count = SteamFriends()->GetFriendCount( k_EFriendFlagImmediate );
     for (int i = 0; i < friend_count; ++i)
@@ -160,7 +161,8 @@ void mainloop()
         frame++;
         if (frame > 100 * 60)
         {
-            game_state->render(false);
+            game_state->render(true);
+            game_state->save_to_server(false);
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
             save_index = (save_index + 1) % 10;
@@ -200,6 +202,7 @@ void mainloop()
         delete omap;
         frame = 0;
     }
+    game_state->save_to_server(true);
     delete game_state;
 }
 
