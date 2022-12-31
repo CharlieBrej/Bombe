@@ -36,10 +36,11 @@ public:
     std::list<GridRule> rules;
 
     enum {
-        DISPAY_MODE_NORMAL,
-        DISPAY_MODE_HELP
+        DISPLAY_MODE_NORMAL,
+        DISPLAY_MODE_HELP,
+        DISPLAY_MODE_LANGUAGE
 
-    } display_mode = DISPAY_MODE_NORMAL;
+    } display_mode = DISPLAY_MODE_NORMAL;
 
 
     XYPos mouse;

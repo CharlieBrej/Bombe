@@ -1,6 +1,35 @@
 {
     "English":
     {
+        "translate":
+        {
+            "Add to Rule Generator" :       "Add to Rule Generator",
+            "Auto Region" :                 "Auto Region",
+            "Bomb" :                        "Bomb",
+            "Cancel" :                      "Cancel",
+            "Clear" :                       "Clear",
+            "Clear Filter" :                "Clear Filter",
+            "Don't Care" :                  "Don't Care",
+            "Duplicate Rule" :              "Duplicate Rule",
+            "Edit Rule" :                   "Edit Rule",
+            "Filter" :                      "Filter",
+            "Full Screen" :                 "Full Screen",
+            "Go to Rule Constructor" :      "Go to Rule Constructor",
+            "Help" :                        "Help",
+            "Hidden" :                      "Hidden",
+            "Hint" :                        "Hint",
+            "Illogical" :                   "Illogical",
+            "OK" :                          "OK",
+            "Refresh Regions" :             "Refresh Regions",
+            "Remove Rule" :                 "Remove Rule",
+            "Rule already present" :        "Rule already present",
+            "Select Language" :             "Select Language",
+            "Show Creation Rule" :          "Show Creation Rule",
+            "Show Visibility Rule" :        "Show Visibility Rule",
+            "Skip Level" :                  "Skip Level",
+            "Trash" :                       "Trash",
+            "Visible" :                     "Visible",
+        },
         "tutorial":
         [
             [
@@ -37,5 +66,5 @@
                 {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility or regions"},
             ],
         ]
-    }
+    },
 }

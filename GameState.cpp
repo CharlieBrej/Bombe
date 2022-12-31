@@ -69,6 +69,8 @@ GameState::GameState(std::ifstream& loadfile)
             int version = omap->get_num("version");
             if (version < 2)
                 throw(std::runtime_error("Bad Version"));
+            if (omap->has_key("language"))
+                language = omap->get_string("language");
 
 
             SaveObjectList* rlist = omap->get_item("rules")->get_list();
@@ -174,6 +176,7 @@ SaveObject* GameState::save(bool lite)
         plist->add_item(new SaveObjectString(sstr));
     }
     omap->add_item("level_progress", plist);
+    omap->add_string("language", language);
     return omap;
 }
 
@@ -583,6 +586,10 @@ void GameState::render_tooltip()
 {
     if (tooltip_string != "")
     {
+        SaveObjectMap* lang = lang_data->get_item(language)->get_map();
+        SaveObjectMap* trans = lang->get_item("translate")->get_map();
+        std::string n = trans->get_string(tooltip_string);
+
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), tooltip_string, true);
     }
 }
@@ -847,7 +854,7 @@ void GameState::render(bool saving)
         button_size = (grid_size * 7) / (18 * 5);
     }
 
-    if (display_mode == DISPAY_MODE_HELP)
+    if (display_mode == DISPLAY_MODE_HELP)
     {
         int sq_size = std::min(window_size.y / 9, window_size.x / 16);
         XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
@@ -1152,6 +1159,18 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Refresh Regions");
     }
+    {
+        SDL_Rect src_rect = {1472, 1152, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Full Screen");
+    }
+    {
+        SDL_Rect src_rect = {1280, 1344, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 1, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Select Language");
+    }
 
     if (!filter_pos.empty())
     {
@@ -1259,6 +1278,12 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {384, 864, 128, 128};
             SDL_Rect dst_rect = {right_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        for (int i = 0; i < 5; i++)
+        {
+            SDL_Rect src_rect = {512, (region_menu == i) ? 1152 : 1344, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
 
@@ -1652,9 +1677,25 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Duplicate Rule");
             }
         }
-
     }
-    render_tooltip();
+    if (display_mode == DISPLAY_MODE_LANGUAGE)
+    {
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 10 * button_size), button_size/4, 1);
+        int index = 0;
+        for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
+        {
+            std::string s = it->first;
+            if (s == language)
+                SDL_SetTextureColorMod(sdl_texture, 0,255, 0);
+            render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * (2 + index)), s);
+            SDL_SetTextureColorMod(sdl_texture, 255,255, 255);
+            index++;
+        }
+    }
+    else
+    {
+        render_tooltip();
+    }
     SDL_RenderPresent(sdl_renderer);
 }
 
@@ -1783,7 +1824,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
 
 
     if ((pos - XYPos(button_size * 0, button_size * 0)).inside(XYPos(button_size,button_size)))
-        display_mode = DISPAY_MODE_HELP;
+        display_mode = DISPLAY_MODE_HELP;
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
@@ -1805,6 +1846,16 @@ void GameState::left_panel_click(XYPos pos, bool right)
         grid->regions.clear();
         reset_rule_gen_region();
     }
+    if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size,button_size)))
+    {
+        full_screen = !full_screen;
+        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+        SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+        SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+        SDL_SetWindowInputFocus(sdl_window);
+    }
+    if ((pos - XYPos(button_size * 1, button_size * 1)).inside(XYPos(button_size,button_size)))
+        display_mode = DISPLAY_MODE_LANGUAGE;
 
     XYPos gpos = pos / button_size;
     gpos.y -= 6;
@@ -1819,7 +1870,6 @@ void GameState::left_panel_click(XYPos pos, bool right)
             skip_level = true;
         }
     }
-
 }
 
 void GameState::right_panel_click(XYPos pos, bool right)
@@ -2093,13 +2143,13 @@ bool GameState::events()
                 break;
             case SDL_KEYDOWN:
             {
-                if (display_mode == DISPAY_MODE_HELP)
+                if (display_mode == DISPLAY_MODE_HELP || display_mode == DISPLAY_MODE_LANGUAGE)
                 {
                     switch (e.key.keysym.scancode)
                     {
                         case SDL_SCANCODE_F1:
                         case SDL_SCANCODE_ESCAPE:
-                            display_mode = DISPAY_MODE_NORMAL;
+                            display_mode = DISPLAY_MODE_NORMAL;
                             break;
                         case SDL_SCANCODE_F11:
                         {
@@ -2135,7 +2185,7 @@ bool GameState::events()
                         quit = true;
                         break;
                     case SDL_SCANCODE_F1:
-                        display_mode = DISPAY_MODE_HELP;
+                        display_mode = DISPLAY_MODE_HELP;
                         break;
                     case SDL_SCANCODE_F2:
                     {
@@ -2208,7 +2258,7 @@ bool GameState::events()
                 mouse.y = e.button.y;
                 bool right = (e.button.button != SDL_BUTTON_LEFT);
 
-                if (display_mode == DISPAY_MODE_HELP)
+                if (display_mode == DISPLAY_MODE_HELP)
                 {
                     XYPos window_size;
                     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
@@ -2220,13 +2270,31 @@ bool GameState::events()
                         if (tutorial_index)
                             tutorial_index--;
                     if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 2, sq_size)).inside(XYPos(sq_size, sq_size)))
-                        display_mode = DISPAY_MODE_NORMAL;
+                        display_mode = DISPLAY_MODE_NORMAL;
                     if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 1, sq_size)).inside(XYPos(sq_size, sq_size)))
                         if (tutorial_index < (tut_texture_count - 1))
                             tutorial_index++;
                     break;
                 }
-
+                if (display_mode == DISPLAY_MODE_LANGUAGE)
+                {
+                    XYPos p = (mouse - left_panel_offset) / button_size;
+                    p -= XYPos(2,2);
+                    if (p.x >= 0 && p.y >= 0)
+                    {
+                        int index = 0;
+                        for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
+                        {
+                            if (index == p.y)
+                            {
+                                language = it->first;
+                            }
+                            index++;
+                        }
+                        display_mode = DISPLAY_MODE_NORMAL;
+                    }
+                    break;
+                }
 
                 if ((mouse - left_panel_offset).inside(panel_size))
                 {

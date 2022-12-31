@@ -160,9 +160,10 @@ void mainloop()
         frame++;
         if (frame > 100 * 60)
         {
-            game_state->render(true);
+            game_state->render(false);
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
+            save_index = (save_index + 1) % 10;
 
 #ifdef _WIN32
             std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()));
@@ -190,7 +191,6 @@ void mainloop()
     SDL_HideWindow(game_state->sdl_window);
     {
         SaveObject* omap = game_state->save();
-        std::string my_save_filename = save_filename + std::to_string(save_index);
 #ifdef _WIN32
         std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()));
 #else
