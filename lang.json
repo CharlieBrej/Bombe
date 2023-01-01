@@ -41,9 +41,10 @@
                 {"x":1050,  "y": 100, "left":1, "text":"Region type"},
                 {"x":1050,  "y": 530, "left":1, "text":"Number of squares"},
                 {"x":1240,  "y": 560,           "text":"Action to take"},
+                {"x":800,   "y": 630,           "text":"Rule says:\nA region with 3 bombs and\n3 squares must be all bombs"},
 
-                {"x":1200,  "y": 730,           "text":"Mark as all Bombs"},
-                {"x":1200,  "y": 900,           "text":"Mark as all Clear"},
+                {"x":370,   "y": 950,           "text":"Mark as all Bombs"},
+                {"x":1200,  "y": 950,           "text":"Mark as all Clear"},
                 {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"},
             ],
             [
