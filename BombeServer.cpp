@@ -49,7 +49,6 @@ public:
             std::string name;
             uint64_t id = omap->get_num("id");
             omap->get_string("steam_username", name);
-            int top_level = omap->get_num("top_level");
             update_name(id, name);
         }
     }
@@ -164,7 +163,7 @@ public:
                                 close();
                                 break;
                             }
-                            std::string url = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?key=44D5549D3DC57BCF2492489740F0354A&appid=" + std::string(omap->get_num("demo") ? "1981990" : "1952740") + "&ticket=" + steam_session;
+                            std::string url = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?key=44D5549D3DC57BCF2492489740F0354A&appid=" + std::string(omap->get_num("demo") ? "2263470" : "2262930") + "&ticket=" + steam_session;
 
                             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     //                        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
@@ -209,6 +208,9 @@ public:
                         omap->get_string("steam_username", steam_username);
                         db.update_name(omap->get_num("steam_id"), steam_username);
                         printf("save: %s %lld\n", steam_username.c_str(), omap->get_num("steam_id"));
+                        omap->save(std::cout);
+                        std::cout << "\n";
+                        
                         close();
                     }
                     else

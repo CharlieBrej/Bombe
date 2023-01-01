@@ -39,6 +39,23 @@ SaveObject* SaveObject::load(std::istream& f)
         return new SaveObjectMap(f);
     if (c == 'n')
         return new SaveObjectNull(f);
+    if (c == 'f')
+    {
+        assert_exp('f');
+        assert_exp('a');
+        assert_exp('l');
+        assert_exp('s');
+        assert_exp('e');
+        return new SaveObjectNumber(0);
+    }
+    if (c == 't')
+    {
+        assert_exp('t');
+        assert_exp('r');
+        assert_exp('u');
+        assert_exp('e');
+        return new SaveObjectNumber(1);
+    }
     if (c == '[')
         return new SaveObjectList(f);
     if (c == '"')

@@ -114,7 +114,7 @@ GameState::GameState(std::ifstream& loadfile)
 
     if (!load_was_good)
     {
-
+        display_mode = DISPLAY_MODE_HELP;
     }
 
     sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
@@ -338,6 +338,18 @@ void GameState::save_to_server(bool sync)
     omap->add_string("steam_username", steam_username);
     omap->add_string("steam_session", steam_session_string);
     omap->add_num("demo", IS_DEMO);
+    SaveObjectList* plist = new SaveObjectList;
+    for (LevelProgress& prog : level_progress)
+    {
+        std::string sstr;
+        for (bool stat : prog.level_status)
+        {
+            char c = '0' + stat;
+            sstr += c;
+        }
+        plist->add_item(new SaveObjectString(sstr));
+    }
+    omap->add_item("level_progress", plist);
     post_to_server(omap, sync);
 }
 
