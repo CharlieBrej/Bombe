@@ -4,7 +4,8 @@
 #include "Grid.h"
 #include <sstream>
 
-bool IS_DEMO = true;
+bool IS_DEMO = false;
+bool IS_PLAYTEST = false;
 static std::random_device rd;
 static Rand rnd(rd());
 //static Rand rnd(1);
@@ -429,27 +430,46 @@ bool GridRule::is_legal()
     }
 }
 
-Grid::Grid(XYPos size_)
+Grid::Grid(XYPos size_, int merged_count)
 {
-  size = size_;
-  FOR_XY(p, XYPos(), size)
+    size = size_;
+    for (int i = 0; i < merged_count;)
+    {
+        XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
+        XYPos m_size(1 + unsigned(rnd) % 4, 1 + unsigned(rnd) % 4);
+        if (!(m_size + m_pos).inside(size))
+            continue;
+        if (m_size == XYPos(1,1))
+            continue;
+        bool bad = false;
+        for ( const auto &m_reg : merged )
+        {
+            if ( (std::min(m_reg.first.x + m_reg.second.x, m_pos.x + m_size.x) > std::max(m_reg.first.x, m_pos.x)) &&
+                 (std::min(m_reg.first.y + m_reg.second.y, m_pos.y + m_size.y) > std::max(m_reg.first.y, m_pos.y)) )
+                bad = true;
+
+        }
+        if (bad)
+            continue;
+        merged[m_pos] = m_size;
+        i++;
+    }
+
+  XYSet grid_squares = get_sqaures();
+  FOR_XY_SET(p, grid_squares)
   {
     vals[p] = GridPlace((unsigned(rnd)%100) < 40, true);
   }
 
-  FOR_XY(p, XYPos(), size)
+  FOR_XY_SET(p, grid_squares)
   {
     if (!vals[p].bomb)
     {
         int cnt = 0;
-        cnt += get(p + XYPos(-1,-1)).bomb;
-        cnt += get(p + XYPos( 0,-1)).bomb;
-        cnt += get(p + XYPos( 1,-1)).bomb;
-        cnt += get(p + XYPos(-1, 0)).bomb;
-        cnt += get(p + XYPos( 1, 0)).bomb;
-        cnt += get(p + XYPos(-1, 1)).bomb;
-        cnt += get(p + XYPos( 0, 1)).bomb;
-        cnt += get(p + XYPos( 1, 1)).bomb;
+        XYSet neigh = get_neighbors(p);
+        FOR_XY_SET(p, neigh)
+            cnt += get(p).bomb;
+
         vals[p].clue.type = RegionType::EQUAL;
         vals[p].clue.value = cnt;
     }
@@ -476,7 +496,20 @@ Grid::Grid(std::string s)
     assert(a == 0);
 
     int i = 3;
-    FOR_XY(p, XYPos(), size)
+    while (s[i] == '#')
+    {
+        i++;
+        XYPos mp;
+        XYPos ms;
+        mp.x = s[i++] - '0';
+        mp.y = s[i++] - '0';
+        ms.x = s[i++] - '0';
+        ms.y = s[i++] - '0';
+        merged[mp] = ms;
+    }
+
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (i >= s.length()) return;
         char c = s[i++];
@@ -528,42 +561,43 @@ Grid::Grid(std::string s)
             edges[XYPos(1,x)] = t;
     }
 }
-
-void Grid::print(void)
-{
-  XYPos p;
-  for (p.y = 0; p.y < size.y; p.y++)
-  {
-    for (p.x = 0; p.x < size.x; p.x++)
-    {
-        GridPlace gp = vals[p];
-        if (gp.revealed)
-        {
-            if (gp.bomb)
-                std::cout << "B";
-            else
-            {
-                if (gp.clue.type == RegionType::NONE)
-                    std::cout << '.';
-                else
-                    std::cout << (int)gp.clue.value;
-            }
-        }
-        else
-        {
-            std::cout << " ";
-        }
-    }
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-}
+//
+// void Grid::print(void)
+// {
+//   XYPos p;
+//   for (p.y = 0; p.y < size.y; p.y++)
+//   {
+//     for (p.x = 0; p.x < size.x; p.x++)
+//     {
+//         GridPlace gp = vals[p];
+//         if (gp.revealed)
+//         {
+//             if (gp.bomb)
+//                 std::cout << "B";
+//             else
+//             {
+//                 if (gp.clue.type == RegionType::NONE)
+//                     std::cout << '.';
+//                 else
+//                     std::cout << (int)gp.clue.value;
+//             }
+//         }
+//         else
+//         {
+//             std::cout << " ";
+//         }
+//     }
+//     std::cout << "\n";
+//   }
+//   std::cout << "\n";
+// }
 
 GridPlace Grid::get(XYPos p)
 {
-    if (p.inside(size))
-        return vals[p];
-    return GridPlace(false, true);
+    assert(p.inside(size));
+    assert(vals.count(p));
+
+    return vals[p];
 }
 RegionType& Grid::get_clue(XYPos p)
 {
@@ -574,6 +608,101 @@ RegionType& Grid::get_clue(XYPos p)
     assert (p.inside(size));
     return vals[p].clue;
 }
+
+XYPos Grid::get_square_size(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if (p == m_reg.first)
+            return m_reg.second;
+    }
+    return XYPos(1,1);
+
+}
+XYPos Grid::get_base_square(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if ((p - m_reg.first).inside(m_reg.second))
+            return m_reg.first;
+    }
+    return p;
+}
+
+XYSet Grid::get_sqaures()
+{
+    XYSet rep;
+    FOR_XY(pos, XYPos(), size)
+        rep.set(pos);
+    for ( const auto &m_reg : merged )
+    {
+        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
+        {
+            if (pos == m_reg.first)
+                continue;
+            rep.clear(pos);
+        }
+    }
+
+    return rep;
+}
+
+XYSet Grid::get_row(unsigned y)
+{
+    XYSet rep;
+    for (int x = 0; x < size.x; x++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+XYSet Grid::get_column(unsigned x)
+{
+    XYSet rep;
+    for (int y = 0; y < size.y; y++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+XYSet Grid::get_neighbors(XYPos p)
+{
+    XYSet rep;
+    XYPos s = get_square_size(p);
+
+    for (int y = -1; y <= s.y; y++)
+    {
+        XYPos t;
+        t = p + XYPos(-1, y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        t = p + XYPos(s.x, y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        rep.set(p);
+    }
+    for (int x = 0; x < s.x; x++)
+    {
+        XYPos t;
+        t = p + XYPos(x, -1);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        t = p + XYPos(x, s.y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        rep.set(p);
+    }
+
+
+    return rep;
+
+}
+
+
 
 static std::list<GridRule> global_rules;
 
@@ -639,15 +768,14 @@ bool Grid::is_solveable(bool use_high_count)
         solve_easy();
 
         unsigned hidden  = 0;
-        FOR_XY(p, XYPos(), size)
+        XYSet grid_squares = get_sqaures();
+        FOR_XY_SET(p, grid_squares)
             if (!vals[p].revealed)
                 hidden++;
 
 //        count_revealed = (hidden <= 8);
 
-
-
-        FOR_XY(p, XYPos(), size)
+        FOR_XY_SET(p, grid_squares)
         {
             if (!vals[p].revealed)
             {
@@ -693,7 +821,8 @@ bool Grid::solve(int hard)
             }
             rep = true;
         }
-        FOR_XY(p, XYPos(), size)
+        XYSet grid_squares = get_sqaures();
+        FOR_XY_SET(p, grid_squares)
         {
             if (!vals[p].revealed)
             {
@@ -708,7 +837,8 @@ void Grid::find_easiest_move(std::set<XYPos>& best_pos, int& hardness)
 {
     hardness = 10000000;
 
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
         {
@@ -735,7 +865,8 @@ XYPos Grid::find_easiest_move(int& hardness)
     int best_harndess = 10000000;
     XYPos best_pos;
 
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
         {
@@ -760,7 +891,8 @@ void Grid::find_easiest_move(std::set<XYPos>& solves, Grid& needed)
     XYPos best_pos;
     Grid best_grid;
 
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
         {
@@ -777,9 +909,9 @@ void Grid::find_easiest_move(std::set<XYPos>& solves, Grid& needed)
         }
     }
     solves.clear();
-    best_grid.print();
+//    best_grid.print();
 
-    FOR_XY(p, XYPos(), size)
+    FOR_XY_SET(p, grid_squares)
     {
 
         if (!best_grid.get(p).revealed && best_grid.is_determinable(p))
@@ -817,7 +949,8 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
     }
 
     solves.clear();
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (is_determinable_using_regions(p, true))
             solves.insert(p);
@@ -841,7 +974,8 @@ int Grid::solve_complexity(XYPos q, std::set<XYPos>* needed)
     // }
 
 
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (q == p)
             continue;
@@ -876,7 +1010,8 @@ int Grid::solve_complexity(XYPos q, Grid& min_grid)
     // }
 
 
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (q == p)
             continue;
@@ -1026,29 +1161,12 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
         s.add(vec[si] > 0);
     }
 
-
-//    s.add(vec[si] == int(get(q).bomb ? 0 : set_size[si]));
-
-
-//     XYPos pos;
-//     for(pos.y = 0; pos.y < size.y; pos.y++)
-//     {
-//         for(pos.x = 0; pos.x < size.x; pos.x++)
-//         {
-//             printf("%02d ", pos_to_set[pos]);
-//         }
-//         printf("\n");
-//     }
-//     printf("\n");
-
     if (s.check() == z3::sat)
     {
-//        printf("sat\n");
         return false;
     }
     else
     {
-//        printf("unsat\n");
         return true;
     }
 }
@@ -1067,7 +1185,8 @@ bool Grid::has_solution(void)
     z3::context c;
     z3::expr_vector vec(c);
     std::map<XYPos, unsigned> vec_index;
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
         {
@@ -1080,7 +1199,7 @@ bool Grid::has_solution(void)
     z3::solver s(c);
 
     int hidden = 0;
-    FOR_XY(p, XYPos(), size)
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
             hidden++;
@@ -1125,7 +1244,7 @@ bool Grid::has_solution(void)
 //         }
 //     }
 
-    FOR_XY(p, XYPos(), size)
+    FOR_XY_SET(p, grid_squares)
     {
         if (vals[p].revealed && !vals[p].bomb)
         {
@@ -1241,8 +1360,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
         if (rnd % 100 < row_col)
         {
             int c = 0;
-            for (p.x = 0; p.x < size.x; p.x++)
-                if (vals[p].bomb)
+            XYSet grid_squares = get_row(p.y);
+            FOR_XY_SET(n, grid_squares)
+                if (get(n).bomb)
                     c++;
             edges[XYPos(0,p.y)] = RegionType(RegionType::EQUAL, c);
         }
@@ -1252,16 +1372,18 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
         if (rnd % 100 < row_col)
         {
             int c = 0;
-            for (p.y = 0; p.y < size.x; p.y++)
-                if (vals[p].bomb)
+            XYSet grid_squares = get_column(p.x);
+            FOR_XY_SET(n, grid_squares)
+                if (get(n).bomb)
                     c++;
             edges[XYPos(1,p.x)] = RegionType(RegionType::EQUAL, c);
         }
     }
+    XYSet grid_squares = get_sqaures();
 
     {
         std::vector<XYPos> tgt;
-        FOR_XY(p, XYPos(), size)
+        FOR_XY_SET(p, grid_squares)
         {
             if (vals[p].revealed)
                 tgt.push_back(p);
@@ -1282,7 +1404,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
 
     {
         std::vector<XYPos> tgt;
-        FOR_XY(p, XYPos(), size)
+        FOR_XY_SET(p, grid_squares)
         {
             if (!vals[p].bomb)
                 tgt.push_back(p);
@@ -1578,8 +1700,17 @@ std::string Grid::to_string()
     s += 'A' + size.x;
     s += 'A' + size.y;
     s += 'A';
+    for ( const auto &m_reg : merged )
+    {
+        s += '#';
+        s += '0' + m_reg.first.x;
+        s += '0' + m_reg.first.y;
+        s += '0' + m_reg.second.x;
+        s += '0' + m_reg.second.y;
+    }
 //    s += 'A' + count_revealed;
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         GridPlace g = vals[p];
         if (!g.revealed)
@@ -1616,12 +1747,14 @@ std::string Grid::to_string()
         s += 'A' + (char)(clue.type);
         s += '0' + clue.value;
     }
+
     return s;
 }
 
 bool Grid::is_solved(void)
 {
-    FOR_XY(p, XYPos(), size)
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
             return false;
@@ -1676,73 +1809,100 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
 
 bool Grid::add_regions(int level)
 {
-    for (int y = 0; y < size.y; y++)
+    for (const auto &edg : edges)
     {
-        if (edges.count(XYPos(0,y)))
+        XYPos e_pos = edg.first;
+        RegionType clue = edg.second;
+        if (clue.type == RegionType::NONE)
+            continue;
+        XYSet line;
+        if(e_pos.x)
+            line = get_column(e_pos.y);
+        else
+            line = get_row(e_pos.y);
+        XYSet elements;
+        FOR_XY_SET(n, line)
         {
-            RegionType clue = edges[XYPos(0,y)];
-            if (clue.type == RegionType::NONE)
-                continue;
-            XYSet elements;
-            for (int x = 0; x < size.x; x++)
+            if (!get(n).revealed)
             {
-                XYPos n = XYPos(x,y);
-                if (!get(n).revealed)
-                {
-                    elements.set(n);
-                }
-                else if (get(n).bomb)
-                {
-                    clue.value--;
-                }
+                elements.set(n);
             }
-           if (add_region(elements, clue))
-               return true;
-        }
-    }
-    for (int x = 0; x < size.x; x++)
-    {
-        if (edges.count(XYPos(1,x)))
-        {
-            RegionType clue = edges[XYPos(1,x)];
-            if (clue.type == RegionType::NONE)
-                continue;
-            XYSet elements;
-            for (int y = 0; y < size.y; y++)
+            else if (get(n).bomb)
             {
-                XYPos n = XYPos(x,y);
-                if (!get(n).revealed)
-                {
-                    elements.set(n);
-                }
-                else if (get(n).bomb)
-                {
-                    clue.value--;
-                }
+                clue.value--;
             }
-            if (add_region(elements, clue))
-                return true;
         }
+        if (add_region(elements, clue))
+            return true;
     }
 
-    FOR_XY(p, XYPos(), size)
+    // for (int y = 0; y < size.y; y++)
+    // {
+    //     if (edges.count(XYPos(0,y)))
+    //     {
+    //         RegionType clue = edges[XYPos(0,y)];
+    //         if (clue.type == RegionType::NONE)
+    //             continue;
+    //         XYSet elements;
+    //         for (int x = 0; x < size.x; x++)
+    //         {
+    //             XYPos n = XYPos(x,y);
+    //             if (!get(n).revealed)
+    //             {
+    //                 elements.set(n);
+    //             }
+    //             else if (get(n).bomb)
+    //             {
+    //                 clue.value--;
+    //             }
+    //         }
+    //        if (add_region(elements, clue))
+    //            return true;
+    //     }
+    // }
+    // for (int x = 0; x < size.x; x++)
+    // {
+    //     if (edges.count(XYPos(1,x)))
+    //     {
+    //         RegionType clue = edges[XYPos(1,x)];
+    //         if (clue.type == RegionType::NONE)
+    //             continue;
+    //         XYSet elements;
+    //         for (int y = 0; y < size.y; y++)
+    //         {
+    //             XYPos n = XYPos(x,y);
+    //             if (!get(n).revealed)
+    //             {
+    //                 elements.set(n);
+    //             }
+    //             else if (get(n).bomb)
+    //             {
+    //                 clue.value--;
+    //             }
+    //         }
+    //         if (add_region(elements, clue))
+    //             return true;
+    //     }
+    // }
+
+    XYSet grid_squares = get_sqaures();
+    FOR_XY_SET(p, grid_squares)
     {
         XYSet elements;
         GridPlace g = vals[p];
         if (g.revealed && !g.bomb && ((g.clue.type != RegionType::NONE)))
         {
             RegionType clue = g.clue;
-
-            FOR_XY(offset, XYPos(-1,-1), XYPos(2,2))
+            if (!vals[p].bomb)
             {
-                XYPos n = p + offset;
-                if (!get(n).revealed)
+                int cnt = 0;
+                XYSet neigh = get_neighbors(p);
+                FOR_XY_SET(n, neigh)
                 {
-                    elements.set(n);
-                }
-                else if (get(n).bomb)
-                {
-                    clue.value--;
+                    if (!get(n).revealed)
+                        elements.set(n);
+                    else if (get(n).bomb)
+                        clue.value--;
                 }
             }
             if (add_region(elements, clue))
@@ -1816,11 +1976,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     if (to_reveal.empty())
         return APPLY_RULE_RESP_NONE;
 
-    if ((rule.apply_region_type.type == RegionType::SET))
+    if (rule.apply_region_type.type == RegionType::SET)
     {
         FOR_XY_SET(pos, to_reveal)
         {
-            if (vals[pos].bomb != (rule.apply_region_type.value))
+            if (vals[pos].bomb != bool(rule.apply_region_type.value))
             {
                 printf("wrong\n");
                 assert(0);

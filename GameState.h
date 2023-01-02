@@ -13,6 +13,7 @@
 #include <set>
 
 extern bool IS_DEMO;
+extern bool IS_PLAYTEST;
 
 struct ServerResp
 {
@@ -90,7 +91,7 @@ public:
     GridRegion *inspected_region = NULL;
     GridRegionCause inspected_rule;
     bool rule_gen_target_square_count = false;
-    std::set<XYPos> filter_pos;
+    XYSet filter_pos;
 
     int grid_size;
     XYPos panel_size;

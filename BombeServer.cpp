@@ -192,9 +192,12 @@ public:
                             uint64_t server_steam_id = std::stoull(omap->get_string("steamid"));
                             db.steam_sessions[steam_session] = server_steam_id;
                         }
+                        
                         if ((omap->get_num("steam_id") == 0) ||
                             (db.steam_sessions[steam_session] != omap->get_num("steam_id")))
                         {
+                            std::cout << "failed\n";
+                            omap->save(std::cout);
                             close();
                             break;
                         }

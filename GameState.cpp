@@ -141,7 +141,7 @@ GameState::GameState(std::ifstream& loadfile)
 //    Mix_VolumeMusic(music_volume);
 //    music = Mix_LoadMUS("music.ogg");
 //    Mix_PlayMusic(music, -1);
-    grid = new  Grid(XYPos(1,1));
+    grid = new  Grid(XYPos(1,1), 0);
 //    grid->make_harder(true, true);
 
 //    grid->print();
@@ -338,6 +338,7 @@ void GameState::save_to_server(bool sync)
     omap->add_string("steam_username", steam_username);
     omap->add_string("steam_session", steam_session_string);
     omap->add_num("demo", IS_DEMO);
+    omap->add_num("playtest", IS_PLAYTEST);
     SaveObjectList* plist = new SaveObjectList;
     for (LevelProgress& prog : level_progress)
     {
@@ -588,58 +589,51 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
 
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken)
 {
-    XYPosFloat avg;
-    int count = 0;
-    std::list<XYPos> elements;
+    std::vector<XYPos> elements;
 
     FOR_XY_SET(pos, region.elements)
     {
         XYPos n = pos * square_size + taken_to_pos(taken[pos], total_taken[pos]);
-        avg += n;
-        count++;
         elements.push_back(n);
         taken[pos]++;
     }
-    avg /= count;
+    int siz = elements.size();
 
-    struct Local
+    std::vector<int> group;
+    std::vector<std::vector<double>> distances;
+    distances.resize(siz);
+    group.resize(siz);
+
+
+    for (int i = 0; i < siz; i++)
     {
-        XYPosFloat avg;
-        Local(XYPosFloat avg_) :
-            avg(avg_)
-        {}
-        bool operator () (const XYPos i, const XYPos j)
-        {
-            if (avg.angle(i) == avg.angle(j))
-                return avg.distance(i) < avg.distance(j);
-            return avg.angle(i) < avg.angle(j);
-        }
-    };
-    avg += XYPosFloat(0.001,0.001);
-
-    elements.sort(Local(avg));
-
-    set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
-
-    double longest = 0;
-    XYPos longest_tgt;
-    XYPos last = elements.back();
-    for (XYPos pos : elements)
-    {
-        double dist = XYPosFloat(pos).distance(XYPosFloat(last));
-        if (dist > longest)
-        {
-            longest = dist;
-            longest_tgt = pos;
-        }
-        last = pos;
+        group[i] = i;
+        distances[i].resize(siz);
+        for (int j = 0; j < siz; j++)
+            distances[i][j] = XYPosFloat(elements[i]).distance(XYPosFloat(elements[j]));
     }
 
-    last = elements.back();
-    for (XYPos pos : elements)
+    set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
+    while (true)
     {
-        if (pos != longest_tgt)
+        XYPos best_con;
+        double best_distance = std::numeric_limits<double>::infinity();
+        for (int i = 0; i < siz; i++)
         {
+            for (int j = 0; j < siz; j++)
+            {
+                if (group[i] == group[j])
+                    continue;
+                if (distances[i][j] < best_distance)
+                {
+                    best_distance = distances[i][j];
+                    best_con = XYPos(i,j);
+                }
+            }
+        }
+        {
+            XYPos pos = elements[best_con.x];
+            XYPos last = elements[best_con.y];
             double dist = XYPosFloat(pos).distance(XYPosFloat(last));
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
 
@@ -652,8 +646,22 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
         }
-        last = pos;
+
+        int from = group[best_con.x];
+        int to = group[best_con.y];
+        bool diff = false;
+        for (int i = 0; i < siz; i++)
+        {
+            if (group[i] == from)
+                group[i] = to;
+            if (group[i] != to)
+                diff = true;
+        }
+
+        if (!diff)
+            break;
     }
+
     SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
 }
 
@@ -1121,16 +1129,16 @@ void GameState::render(bool saving)
         }
     }
 
-    XYPos pos;
-    for (pos.y = 0; pos.y < grid->size.y; pos.y++)
-    for (pos.x = 0; pos.x < grid->size.x; pos.x++)
+    XYSet grid_squares = grid->get_sqaures();
+    FOR_XY_SET(pos, grid_squares)
     {
+        XYPos size = grid->get_square_size(pos);
         if (hover_rulemaker)
         {
             if (hover_squares_highlight.get(pos))
             {
                 SDL_Rect src_rect = {793, 250, 1, 1};
-                SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
+                SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, size.x * square_size, size.y * square_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
         }
@@ -1138,12 +1146,14 @@ void GameState::render(bool saving)
         {
             if (clue_solves.count(pos))
                 SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
-            if (filter_pos.count(pos))
+            if (filter_pos.get(pos))
                 SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
         }
-        SDL_Rect src_rect = {64, 256, 192, 192};
-        SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        render_box(grid_offset + pos * square_size, size * square_size, square_size / 8, 2);
+
+        // SDL_Rect src_rect = {64, 256, 192, 192};
+        // SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
+        // SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
     }
 
@@ -1155,6 +1165,7 @@ void GameState::render(bool saving)
     {
         XYPos pos = mouse - grid_offset;
         mouse_filter_pos = pos / square_size;
+        mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
     }
     int region_vis_counts[3] = {0,0,0};
     {
@@ -1162,7 +1173,7 @@ void GameState::render(bool saving)
         for (GridRegion& region : grid->regions)
         {
             region_vis_counts[int(region.vis_level)]++;
-            if (!filter_pos.empty() && !region.contains_all(filter_pos))
+            if (!filter_pos.none() && !region.elements.contains(filter_pos))
                 continue;
             if (mouse_filter_pos.x >= 0 && !filter_pos.empty() && !region.elements.contains(mouse_filter_pos))
                 continue;
@@ -1189,11 +1200,12 @@ void GameState::render(bool saving)
     {
         XYPos pos = mouse - grid_offset;
         XYPos gpos = pos / square_size;
+        gpos = grid->get_base_square(gpos);
         XYPos ipos = pos - gpos * square_size;
         unsigned tot = total_taken[gpos];
         unsigned size = taken_to_size(tot);
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 1000; i++)
         {
             XYPos spos = taken_to_pos(i, tot);
             if (XYPosFloat(ipos).distance(spos) < (double(square_size) / (size*2)))
@@ -1248,24 +1260,24 @@ void GameState::render(bool saving)
         }
     }
 
-    for (pos.y = 0; pos.y < grid->size.y; pos.y++)
-    for (pos.x = 0; pos.x < grid->size.x; pos.x++)
+    FOR_XY_SET(pos, grid_squares)
     {
-        SDL_Rect src_rect = {64, 256, 192, 192};
-        SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
-
+        XYPos sq_size = grid->get_square_size(pos);
+        int icon_width = std::min(sq_size.x, sq_size.y);
         GridPlace place = grid->get(pos);
+        XYPos gpos = grid_offset + pos * square_size + (sq_size - XYPos(icon_width,icon_width)) * square_size / 2;
+
         if (place.revealed)
         {
             if (place.bomb)
             {
                 SDL_Rect src_rect = {320, 192, 192, 192};
-                SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
+                SDL_Rect dst_rect = {gpos.x, gpos.y, icon_width * square_size, icon_width * square_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
             else
             {
-                render_region_type(place.clue, grid_offset + pos * square_size, square_size);
+                render_region_type(place.clue, gpos, icon_width * square_size);
             }
         }
     }
@@ -1341,7 +1353,7 @@ void GameState::render(bool saving)
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Filter");
-        int s = filter_pos.size();
+        int s = filter_pos.count();
         if (s)
         {
             render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 6), XYPos(button_size/2, button_size/4));
@@ -1861,21 +1873,19 @@ void GameState::grid_click(XYPos pos, bool right)
         return;
     }
 
-    pos /= square_size;
     if (mouse_mode == MOUSE_MODE_FILTER)
     {
-        if (filter_pos.count(pos))
-            filter_pos.erase(pos);
-        else
-            filter_pos.insert(pos);
+        XYPos gpos = pos / square_size;
+        gpos = grid->get_base_square(gpos);
+        filter_pos.flip(gpos);
     }
     else
     {
         GridRegion* hover = NULL;
         if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
         {
-            XYPos pos = mouse - grid_offset;
             XYPos gpos = pos / square_size;
+            gpos = grid->get_base_square(gpos);
             XYPos ipos = pos - gpos * square_size;
 
             unsigned tot = 0;
@@ -1883,7 +1893,7 @@ void GameState::grid_click(XYPos pos, bool right)
 
             for (GridRegion& region : grid->regions)
             {
-                if (!filter_pos.empty() && !region.contains_all(filter_pos))
+                if (!filter_pos.none() && !region.elements.contains(filter_pos))
                     continue;
                 if (region.vis_level == vis_level)
                 {
@@ -1982,7 +1992,8 @@ void GameState::left_panel_click(XYPos pos, bool right)
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
-        FOR_XY(pos, XYPos(), grid->size)
+        XYSet grid_squares = grid->get_sqaures();
+        FOR_XY_SET(pos, grid_squares)
         {
             if (grid->is_determinable_using_regions(pos, true))
                 clue_solves.insert(pos);
@@ -2070,11 +2081,23 @@ void GameState::right_panel_click(XYPos pos, bool right)
         }
 
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
             inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
+            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->stale = false;
+        }
         if ((pos - XYPos(button_size * 3, button_size * 3)).inside(XYPos(button_size, button_size)))
+        {
             inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
+            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->stale = false;
+        }
         if ((pos - XYPos(button_size * 3, button_size * 4)).inside(XYPos(button_size, button_size)))
+        {
             inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
+            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->stale = false;
+        }
 
     }
 
@@ -2346,7 +2369,8 @@ bool GameState::events()
                         clue_solves.clear();
                         //grid->find_easiest_move(clue_solves, clue_needs);
                         //grid->find_easiest_move_using_regions(clue_solves);
-                        FOR_XY(pos, XYPos(), grid->size)
+                        XYSet grid_squares = grid->get_sqaures();
+                        FOR_XY_SET(pos, grid_squares)
                         {
                             if (grid->is_determinable_using_regions(pos, true))
                                 clue_solves.insert(pos);

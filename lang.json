@@ -64,7 +64,7 @@
                 {"x":1050,  "y": 100,           "text":"Normal visible"},
                 {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
                 {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
-                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility or regions"},
+                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"},
             ],
         ]
     },

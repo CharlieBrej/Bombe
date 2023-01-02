@@ -214,8 +214,13 @@ int main( int argc, char* argv[] )
        ifile.open("FULL");
        IS_DEMO = !ifile;
     }
+    {
+       std::ifstream ifile;
+       ifile.open("PLAYTEST");
+       IS_PLAYTEST = bool(ifile);
+    }
 
-    int game_id = IS_DEMO ? 2263470 : 2262930;
+    int game_id = IS_DEMO ? 2263470 : IS_PLAYTEST ? 2263480 : 2262930;
 #ifdef STEAM
 	if (SteamAPI_RestartAppIfNecessary(game_id))
 		return 1;

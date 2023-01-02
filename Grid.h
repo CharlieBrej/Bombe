@@ -26,6 +26,8 @@ public:
     void set(XYPos p) {set(p2i(p));}
     void clear(unsigned i) {d[i] = 0;}
     void clear(XYPos p) {clear(p2i(p));}
+    void flip(unsigned i) {d.flip(i);}
+    void flip(XYPos p) {flip(p2i(p));}
     unsigned count() {return d.count();}
     bool any() {return d.any();}
     bool none() {return d.none();}
@@ -35,6 +37,7 @@ public:
     void insert(XYPos p) { set(p); }
 
     bool contains(XYPos p) {return get(p);}
+    bool contains(XYSet p) {return !(p & ~*this).any();}
     bool empty() {return d.none();}
     bool operator==(const XYSet& other) const { return (d == other.d); }
     XYSet operator~() const {return XYSet(~d); }
@@ -180,16 +183,24 @@ public:
 
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
+    std::map<XYPos, XYPos> merged;
     std::list<GridRegion> regions;
     std::list<GridRegion> regions_to_add;
     std::list<GridRegion> deleted_regions;
 
-    Grid(XYPos);
+    Grid(XYPos size_, int merged_count);
     Grid();
     Grid(std::string s);
-    void print(void);
+//    void print(void);
     GridPlace get(XYPos p);
     RegionType& get_clue(XYPos p);
+
+    XYPos get_square_size(XYPos p);
+    XYPos get_base_square(XYPos p);
+    XYSet get_sqaures();
+    XYSet get_row(unsigned y);
+    XYSet get_column(unsigned x);
+    XYSet get_neighbors(XYPos p);
 
     void solve_easy();
     bool solve(int hard);
