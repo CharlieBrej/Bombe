@@ -197,7 +197,7 @@ public:
 
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
-    XYSet get_sqaures();
+    XYSet get_squares();
     XYSet get_row(unsigned y);
     XYSet get_column(unsigned x);
     XYSet get_neighbors(XYPos p);
@@ -235,5 +235,6 @@ public:
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void add_new_regions();
     void add_one_new_region();
+    void clear_regions();
 
 };

@@ -637,7 +637,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             double dist = XYPosFloat(pos).distance(XYPosFloat(last));
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
 
-            SDL_Rect src_rect = {64, 256, 1, 1};
+            SDL_Rect src_rect = {160, 608, 1, 1};
             SDL_Rect dst_rect = {grid_offset.x + pos.x, grid_offset.y + pos.y - (square_size / 32), int(dist), square_size / 16};
 
             SDL_Point rot_center;
@@ -750,9 +750,15 @@ void GameState::render_tooltip()
     {
         SaveObjectMap* lang = lang_data->get_item(language)->get_map();
         SaveObjectMap* trans = lang->get_item("translate")->get_map();
-        std::string n = trans->get_string(tooltip_string);
-
-        render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), tooltip_string, true);
+        if (trans->has_key(tooltip_string))
+        {
+            std::string n = trans->get_string(tooltip_string);
+            render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), n, true);
+        }
+        else
+        {
+            render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), tooltip_string, true);
+        }
     }
 }
 
@@ -1129,7 +1135,7 @@ void GameState::render(bool saving)
         }
     }
 
-    XYSet grid_squares = grid->get_sqaures();
+    XYSet grid_squares = grid->get_squares();
     FOR_XY_SET(pos, grid_squares)
     {
         XYPos size = grid->get_square_size(pos);
@@ -1359,6 +1365,14 @@ void GameState::render(bool saving)
             render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 6), XYPos(button_size/2, button_size/4));
 
         }
+    }
+    {
+        SDL_Rect src_rect = {1536, 384, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Rules");
+        int rule_count = rules.size();
+        render_number(rule_count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
 
 
@@ -1992,7 +2006,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
-        XYSet grid_squares = grid->get_sqaures();
+        XYSet grid_squares = grid->get_squares();
         FOR_XY_SET(pos, grid_squares)
         {
             if (grid->is_determinable_using_regions(pos, true))
@@ -2008,7 +2022,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
-        grid->regions.clear();
+        grid->clear_regions();
         reset_rule_gen_region();
     }
     if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size,button_size)))
@@ -2358,9 +2372,9 @@ bool GameState::events()
                         SDL_free(s);
                         break;
                     }
-                    case SDL_SCANCODE_ESCAPE:
-                        quit = true;
-                        break;
+                    // case SDL_SCANCODE_ESCAPE:
+                    //     quit = true;
+                    //     break;
                     case SDL_SCANCODE_F1:
                         display_mode = DISPLAY_MODE_HELP;
                         break;
@@ -2369,7 +2383,7 @@ bool GameState::events()
                         clue_solves.clear();
                         //grid->find_easiest_move(clue_solves, clue_needs);
                         //grid->find_easiest_move_using_regions(clue_solves);
-                        XYSet grid_squares = grid->get_sqaures();
+                        XYSet grid_squares = grid->get_squares();
                         FOR_XY_SET(pos, grid_squares)
                         {
                             if (grid->is_determinable_using_regions(pos, true))
@@ -2391,7 +2405,7 @@ bool GameState::events()
                     case SDL_SCANCODE_F5:
                     {
                         clue_solves.clear();
-                        grid->regions.clear();
+                        grid->clear_regions();
                         reset_rule_gen_region();
                         get_hint = false;
                         break;

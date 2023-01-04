@@ -455,7 +455,7 @@ Grid::Grid(XYPos size_, int merged_count)
         i++;
     }
 
-  XYSet grid_squares = get_sqaures();
+  XYSet grid_squares = get_squares();
   FOR_XY_SET(p, grid_squares)
   {
     vals[p] = GridPlace((unsigned(rnd)%100) < 40, true);
@@ -508,7 +508,7 @@ Grid::Grid(std::string s)
         merged[mp] = ms;
     }
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (i >= s.length()) return;
@@ -629,7 +629,7 @@ XYPos Grid::get_base_square(XYPos p)
     return p;
 }
 
-XYSet Grid::get_sqaures()
+XYSet Grid::get_squares()
 {
     XYSet rep;
     FOR_XY(pos, XYPos(), size)
@@ -768,7 +768,7 @@ bool Grid::is_solveable(bool use_high_count)
         solve_easy();
 
         unsigned hidden  = 0;
-        XYSet grid_squares = get_sqaures();
+        XYSet grid_squares = get_squares();
         FOR_XY_SET(p, grid_squares)
             if (!vals[p].revealed)
                 hidden++;
@@ -821,7 +821,7 @@ bool Grid::solve(int hard)
             }
             rep = true;
         }
-        XYSet grid_squares = get_sqaures();
+        XYSet grid_squares = get_squares();
         FOR_XY_SET(p, grid_squares)
         {
             if (!vals[p].revealed)
@@ -837,7 +837,7 @@ void Grid::find_easiest_move(std::set<XYPos>& best_pos, int& hardness)
 {
     hardness = 10000000;
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
@@ -865,7 +865,7 @@ XYPos Grid::find_easiest_move(int& hardness)
     int best_harndess = 10000000;
     XYPos best_pos;
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
@@ -891,7 +891,7 @@ void Grid::find_easiest_move(std::set<XYPos>& solves, Grid& needed)
     XYPos best_pos;
     Grid best_grid;
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
@@ -949,7 +949,7 @@ void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
     }
 
     solves.clear();
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (is_determinable_using_regions(p, true))
@@ -974,7 +974,7 @@ int Grid::solve_complexity(XYPos q, std::set<XYPos>* needed)
     // }
 
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (q == p)
@@ -1010,7 +1010,7 @@ int Grid::solve_complexity(XYPos q, Grid& min_grid)
     // }
 
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (q == p)
@@ -1185,7 +1185,7 @@ bool Grid::has_solution(void)
     z3::context c;
     z3::expr_vector vec(c);
     std::map<XYPos, unsigned> vec_index;
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
@@ -1379,7 +1379,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
             edges[XYPos(1,p.x)] = RegionType(RegionType::EQUAL, c);
         }
     }
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
 
     {
         std::vector<XYPos> tgt;
@@ -1709,7 +1709,7 @@ std::string Grid::to_string()
         s += '0' + m_reg.second.y;
     }
 //    s += 'A' + count_revealed;
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         GridPlace g = vals[p];
@@ -1753,7 +1753,7 @@ std::string Grid::to_string()
 
 bool Grid::is_solved(void)
 {
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         if (!vals[p].revealed)
@@ -1885,7 +1885,7 @@ bool Grid::add_regions(int level)
     //     }
     // }
 
-    XYSet grid_squares = get_sqaures();
+    XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         XYSet elements;
@@ -2169,4 +2169,10 @@ void Grid::add_one_new_region()
     if (!regions_to_add.empty())
     regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
 
+}
+void Grid::clear_regions()
+{
+    regions.clear();
+    regions_to_add.clear();
+    deleted_regions.clear();
 }

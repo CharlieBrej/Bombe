@@ -46,6 +46,7 @@ int main( int argc, char* argv[] )
             global_level_sets.push_back(new LevelSet());
         while (global_level_sets[i]->levels.size() < params[i][0])
         {
+            printf("%d of %d\n", global_level_sets[i]->levels.size(), params[i][0]);
             Grid* g = new Grid (XYPos(params[i][1], params[i][2]), params[i][3]);
             g->make_harder(params[i][4], params[i][5], params[i][6], params[i][7]);
             std::string s = g->to_string();
