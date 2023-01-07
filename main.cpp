@@ -145,7 +145,7 @@ void mainloop()
     game_state->steam_session_string = "dummy";
 #endif
 
-    int frame = 0;
+    int save_time = 0;
     SDL_Thread *save_thread = NULL;
 
     unsigned oldtime = SDL_GetTicks();
@@ -158,8 +158,7 @@ void mainloop()
         steam_manager.update_achievements(game_state);
         SteamAPI_RunCallbacks();
 #endif
-        frame++;
-        if (frame > 100 * 60)
+        if (save_time > 1000 * 60)
         {
             game_state->render(true);
             game_state->save_to_server(false);
@@ -176,7 +175,7 @@ void mainloop()
 #endif
             omap->save(outfile1);
             omap->save(outfile2);
-            frame = 0;
+            save_time = 0;
         }
         else
         {
@@ -187,6 +186,7 @@ void mainloop()
         unsigned diff = newtime - oldtime;
         if (diff > 100)
             diff = 100;
+        save_time += diff;
         game_state->advance(diff);
         oldtime = newtime;
 	}
@@ -200,7 +200,6 @@ void mainloop()
 #endif
         omap->save(outfile1);
         delete omap;
-        frame = 0;
     }
     game_state->save_to_server(true);
     delete game_state;

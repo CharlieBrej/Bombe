@@ -176,11 +176,25 @@ public:
     bool is_legal();
 };
 
+struct RenderCmd
+{
+    XYRect src;
+    XYRect dst;
+    RenderCmd (XYRect src_, XYRect dst_): src(src_),dst(dst_){}
+};
+
+struct EdgePos
+{
+    RegionType type;
+    double angle;
+    double pos;
+    EdgePos (RegionType type_, double angle_, double pos_): type(type_),angle(angle_),pos(pos_){}
+};
+
 class Grid
 {
 public:
     XYPos size;
-
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
@@ -188,37 +202,43 @@ public:
     std::list<GridRegion> regions_to_add;
     std::list<GridRegion> deleted_regions;
 
-    Grid(XYPos size_, int merged_count);
+protected:
     Grid();
-    Grid(std::string s);
-//    void print(void);
+
+public:
+    virtual ~Grid(){};
+    void randomize(XYPos size_, int merged_count);
+    void from_string(std::string s);
+
+    static Grid* Load(std::string s);
     GridPlace get(XYPos p);
     RegionType& get_clue(XYPos p);
 
+    virtual std::string to_string();
+    virtual Grid* dup() = 0;
+    virtual XYSet get_squares() = 0;
+    virtual XYSet get_row(unsigned y) = 0;
+    virtual XYSet get_column(unsigned x) = 0;
+    virtual XYSet get_neighbors(XYPos p) = 0;
+    virtual void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch) = 0;
+
+    virtual XYPos get_grid_pitch(XYPos grid_size) = 0;
+    virtual XYRect get_square_pos(XYPos pos, XYPos grid_pitch) = 0;
+    virtual XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total) = 0;
+    virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted) = 0;
+
+
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
-    XYSet get_squares();
-    XYSet get_row(unsigned y);
-    XYSet get_column(unsigned x);
-    XYSet get_neighbors(XYPos p);
 
     void solve_easy();
-    bool solve(int hard);
-    bool is_solveable(bool use_high_count = false);
-    void find_easiest_move(std::set<XYPos>& best_pos, int& hardness);
-    XYPos find_easiest_move(int& hardness);
-    void find_easiest_move(std::set<XYPos>& solves, Grid& needed);
-    void find_easiest_move_using_regions(std::set<XYPos>& solves);
-    int solve_complexity(XYPos p, std::set<XYPos> *needed = NULL);
-    int solve_complexity(XYPos q, Grid& min_grid);
+    bool is_solveable();
 
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
     bool has_solution(void);
     void make_harder(bool plus_minus, bool x_y, bool misc, int row_col);
     void reveal(XYPos p);
-    void reveal_switch(XYPos q);
-    std::string to_string();
     bool is_solved(void);
 
     bool add_region(XYSet& elements, RegionType clue);
@@ -236,5 +256,56 @@ public:
     void add_new_regions();
     void add_one_new_region();
     void clear_regions();
+};
 
+class LocalGrid
+{
+private:
+    Grid* grid = NULL;
+public:
+    LocalGrid() {}
+    LocalGrid(Grid& other) { grid = other.dup(); }
+    ~LocalGrid() {delete grid;}
+    void operator=(Grid& other) { delete grid; grid = other.dup(); }
+    Grid& operator*() { return *grid; }
+    Grid* operator->() { return grid; }
+};
+
+class SquareGrid : public Grid
+{
+public:
+    SquareGrid() {}
+    SquareGrid(std::string s) {from_string(s);}
+
+    Grid* dup() {return new SquareGrid(*this);}
+    XYSet get_squares();
+    XYSet get_row(unsigned y);
+    XYSet get_column(unsigned x);
+    XYSet get_neighbors(XYPos p);
+    void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
+    XYPos get_grid_pitch(XYPos grid_size);
+    XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    std::string to_string();
+};
+
+class TriangleGrid : public Grid
+{
+public:
+    TriangleGrid() {}
+    TriangleGrid(std::string s) {from_string(s);}
+
+    Grid* dup() {return new TriangleGrid(*this);}
+    XYSet get_squares();
+    XYSet get_row(unsigned y);
+    XYSet get_column(unsigned x);
+    XYSet get_neighbors(XYPos p);
+    void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
+
+    XYPos get_grid_pitch(XYPos grid_size);
+    XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    std::string to_string();
 };

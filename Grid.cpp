@@ -430,7 +430,7 @@ bool GridRule::is_legal()
     }
 }
 
-Grid::Grid(XYPos size_, int merged_count)
+void Grid::randomize(XYPos size_, int merged_count)
 {
     size = size_;
     for (int i = 0; i < merged_count;)
@@ -480,10 +480,9 @@ Grid::Grid()
 {
 }
 
-Grid::Grid(std::string s)
+void Grid::from_string(std::string s)
 {
-    if (s.length() < 5)
-        return;
+    assert (s.length() >= 4);
     int a = s[0] - 'A';
     if (a < 0 || a > 50) return;
     size.x = a;
@@ -561,36 +560,17 @@ Grid::Grid(std::string s)
             edges[XYPos(1,x)] = t;
     }
 }
-//
-// void Grid::print(void)
-// {
-//   XYPos p;
-//   for (p.y = 0; p.y < size.y; p.y++)
-//   {
-//     for (p.x = 0; p.x < size.x; p.x++)
-//     {
-//         GridPlace gp = vals[p];
-//         if (gp.revealed)
-//         {
-//             if (gp.bomb)
-//                 std::cout << "B";
-//             else
-//             {
-//                 if (gp.clue.type == RegionType::NONE)
-//                     std::cout << '.';
-//                 else
-//                     std::cout << (int)gp.clue.value;
-//             }
-//         }
-//         else
-//         {
-//             std::cout << " ";
-//         }
-//     }
-//     std::cout << "\n";
-//   }
-//   std::cout << "\n";
-// }
+
+Grid* Grid::Load(std::string s)
+{
+    assert(s.length() >= 3);
+    int a = s[0] - 'A';
+    if (a == 0)
+        return new SquareGrid(s.substr (1, std::string::npos));
+    if (a == 1)
+        return new TriangleGrid(s.substr (1, std::string::npos));
+    assert(0);
+}
 
 GridPlace Grid::get(XYPos p)
 {
@@ -628,81 +608,6 @@ XYPos Grid::get_base_square(XYPos p)
     }
     return p;
 }
-
-XYSet Grid::get_squares()
-{
-    XYSet rep;
-    FOR_XY(pos, XYPos(), size)
-        rep.set(pos);
-    for ( const auto &m_reg : merged )
-    {
-        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
-        {
-            if (pos == m_reg.first)
-                continue;
-            rep.clear(pos);
-        }
-    }
-
-    return rep;
-}
-
-XYSet Grid::get_row(unsigned y)
-{
-    XYSet rep;
-    for (int x = 0; x < size.x; x++)
-    {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
-    }
-    return rep;
-}
-
-XYSet Grid::get_column(unsigned x)
-{
-    XYSet rep;
-    for (int y = 0; y < size.y; y++)
-    {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
-    }
-    return rep;
-}
-
-XYSet Grid::get_neighbors(XYPos p)
-{
-    XYSet rep;
-    XYPos s = get_square_size(p);
-
-    for (int y = -1; y <= s.y; y++)
-    {
-        XYPos t;
-        t = p + XYPos(-1, y);
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        t = p + XYPos(s.x, y);
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        rep.set(p);
-    }
-    for (int x = 0; x < s.x; x++)
-    {
-        XYPos t;
-        t = p + XYPos(x, -1);
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        t = p + XYPos(x, s.y);
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        rep.set(p);
-    }
-
-
-    return rep;
-
-}
-
-
 
 static std::list<GridRule> global_rules;
 
@@ -755,7 +660,7 @@ void Grid::solve_easy()
     }
 }
 
-bool Grid::is_solveable(bool use_high_count)
+bool Grid::is_solveable()
 {
     bool rep = true;
 
@@ -791,262 +696,14 @@ bool Grid::is_solveable(bool use_high_count)
     return is_solved();
 }
 
-bool Grid::solve(int hard)
-{
-    bool rep = true;
-    bool solved  = false;
-
-    XYPos best_pos;
-
-    while (rep)
-    {
-        solved  = true;
-        rep = false;
-
-        int hardness;
-        std::set<XYPos> best_pos;
-
-        find_easiest_move(best_pos, hardness);
-        std::cout << ":" << hardness << "\n";
-        if (hardness < 10000)
-        {
-            if (hardness == 1)
-            {
-                for (XYPos p : best_pos)
-                    reveal(p);
-            }
-            else
-            {
-                reveal(*best_pos.begin());
-            }
-            rep = true;
-        }
-        XYSet grid_squares = get_squares();
-        FOR_XY_SET(p, grid_squares)
-        {
-            if (!vals[p].revealed)
-            {
-                solved  = false;
-            }
-        }
-    }
-    return solved;
-}
-
-void Grid::find_easiest_move(std::set<XYPos>& best_pos, int& hardness)
-{
-    hardness = 10000000;
-
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (!vals[p].revealed)
-        {
-            if (is_determinable(p))
-            {
-                int complexity = solve_complexity(p);
-                if (complexity == hardness)
-                {
-                    best_pos.insert(p);
-                }
-                else if (complexity < hardness)
-                {
-                    hardness = complexity;
-                    best_pos.clear();
-                    best_pos.insert(p);
-                }
-            }
-        }
-    }
-}
-
-XYPos Grid::find_easiest_move(int& hardness)
-{
-    int best_harndess = 10000000;
-    XYPos best_pos;
-
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (!vals[p].revealed)
-        {
-            if (is_determinable(p))
-            {
-                int complexity = solve_complexity(p);
-                if (complexity < best_harndess)
-                {
-                    best_harndess = complexity;
-                    best_pos = p;
-                }
-            }
-        }
-    }
-    hardness = best_harndess;
-    return best_pos;
-}
-
-void Grid::find_easiest_move(std::set<XYPos>& solves, Grid& needed)
-{
-    int best_harndess = 10000000;
-    XYPos best_pos;
-    Grid best_grid;
-
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (!vals[p].revealed)
-        {
-            if (is_determinable(p))
-            {
-                Grid min_grid;
-                int complexity = solve_complexity(p, min_grid);
-                if (complexity < best_harndess)
-                {
-                    best_harndess = complexity;
-                    best_grid = min_grid;
-                }
-            }
-        }
-    }
-    solves.clear();
-//    best_grid.print();
-
-    FOR_XY_SET(p, grid_squares)
-    {
-
-        if (!best_grid.get(p).revealed && best_grid.is_determinable(p))
-            solves.insert(p);
-    }
-    needed = best_grid;
-}
-
-void Grid::find_easiest_move_using_regions(std::set<XYPos>& solves)
-{
-    int hardness;
-    XYPos pos = find_easiest_move(hardness);
-    if (!is_determinable_using_regions(pos, true))
-    {
-        for (GridRegion& r : regions)
-        {
-            r.vis_level = GRID_VIS_LEVEL_SHOW;
-            r.visibility_force = GridRegion::VIS_FORCE_HINT;
-            printf("reset regions\n");
-        }
-    }
-
-    assert(is_determinable_using_regions(pos, true));
-
-    for (GridRegion& r : regions)
-    {
-        if (r.vis_level != GRID_VIS_LEVEL_SHOW)
-            continue;
-        r.vis_level = GRID_VIS_LEVEL_HIDE;
-
-        if (!is_determinable_using_regions(pos, true))
-            r.vis_level = GRID_VIS_LEVEL_SHOW;
-        else
-            r.visibility_force = GridRegion::VIS_FORCE_HINT;
-    }
-
-    solves.clear();
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (is_determinable_using_regions(p, true))
-            solves.insert(p);
-    }
-}
-
-int Grid::solve_complexity(XYPos q, std::set<XYPos>* needed)
-{
-    Grid tst = *this;
-    tst.reveal_switch(q);
-
-    int cnt = 0;
-
-    assert(!tst.has_solution());
-
-    // tst.count_revealed = false;
-    // if (tst.has_solution())
-    // {
-    //     tst.count_revealed = true;
-    //     cnt += 3;
-    // }
-
-
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (q == p)
-            continue;
-        if (tst.vals[p].revealed && !tst.vals[p].bomb)
-        {
-            RegionType clue = tst.vals[p].clue;
-            tst.vals[p].clue.type = RegionType::NONE;
-            if (tst.has_solution())
-            {
-                tst.vals[p].clue = clue;
-                cnt++;
-                if (needed)
-                    needed->insert(p);
-            }
-        }
-    }
-
-    return cnt;
-}
-
-int Grid::solve_complexity(XYPos q, Grid& min_grid)
-{
-    Grid tst = *this;
-
-    int cnt = 0;
-
-    // tst.count_revealed = false;
-    // if (!tst.is_determinable(q))
-    // {
-    //     tst.count_revealed = true;
-    //     cnt += 3;
-    // }
-
-
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (q == p)
-            continue;
-        if (tst.vals[p].revealed && !tst.vals[p].bomb)
-        {
-            RegionType clue = tst.vals[p].clue;
-            tst.vals[p].clue.type = RegionType::NONE;
-            if (!tst.is_determinable(q))
-            {
-                tst.vals[p].clue = clue;
-                cnt++;
-            }
-        }
-    }
-
-    min_grid = tst;
-    return cnt;
-}
-
 bool Grid::is_determinable(XYPos q)
 {
-    Grid tst = *this;
-    tst.regions.clear();
-    while (tst.add_regions(-1)) {}
+    LocalGrid tst = *this;
+    tst->regions.clear();
+    while (tst->add_regions(-1)) {}
     add_new_regions();
 
-    return tst.is_determinable_using_regions(q);
-//    bool b = is_determinable_sat(q);
-//     if (a != b)
-//     {
-//         printf("%d %d : ", q.x, q.y);
-//         std::cout << to_string() << "\n";
-//     }
-//    assert(a == b);
-//    return a;
+    return tst->is_determinable_using_regions(q);
 }
 
 bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
@@ -1393,9 +1050,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
 
         for (XYPos p : tgt)
         {
-            Grid tst = *this;
-            tst.vals[p].revealed = false;
-            if (tst.is_solveable())
+            LocalGrid tst = *this;
+            tst->vals[p].revealed = false;
+            if (tst->is_solveable())
             {
                 vals[p].revealed = false;
             }
@@ -1420,9 +1077,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
 
         for (XYPos p : tgt)
         {
-            Grid tst = *this;
-            tst.get_clue(p).type = RegionType::NONE;
-            if (tst.is_solveable())
+            LocalGrid tst = *this;
+            tst->get_clue(p).type = RegionType::NONE;
+            if (tst->is_solveable())
             {
                 get_clue(p).type = RegionType::NONE;
                 continue;
@@ -1432,44 +1089,44 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if (rnd % 10 < 4)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::NOTEQUAL;
-                    tst.get_clue(p).value += 2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::NOTEQUAL;
+                    tst->get_clue(p).value += 2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 4 && (get_clue(p).value >= 3))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::NOTEQUAL;
-                    tst.get_clue(p).value -= 2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::NOTEQUAL;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 4 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::NOTEQUAL;
-                    tst.get_clue(p).value -= 1;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::NOTEQUAL;
+                    tst->get_clue(p).value -= 1;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 4)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::NOTEQUAL;
-                    tst.get_clue(p).value += 1;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::NOTEQUAL;
+                    tst->get_clue(p).value += 1;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1477,75 +1134,75 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if (rnd % 10 < 2 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR22;
-                    tst.get_clue(p).value -= 2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR22;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR22;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR22;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2 && (get_clue(p).value >= 4))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR22;
-                    tst.get_clue(p).value -= 4;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR22;
+                    tst->get_clue(p).value -= 4;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR222;
-                    tst.get_clue(p).value -= 2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR222;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2 && (get_clue(p).value >= 4))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR222;
-                    tst.get_clue(p).value -= 4;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR222;
+                    tst->get_clue(p).value -= 4;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR222;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR222;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
                 if (rnd % 10 < 2 && (get_clue(p).value >= 6))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR222;
-                    tst.get_clue(p).value -= 6;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR222;
+                    tst->get_clue(p).value -= 6;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1555,10 +1212,10 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if (rnd % 10 < 2)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR3;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR3;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1566,11 +1223,11 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if ((rnd % 10 < 2) && (get_clue(p).value >= 3))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR3;
-                    tst.get_clue(p).value -= 3;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR3;
+                    tst->get_clue(p).value -= 3;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1578,10 +1235,10 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if (rnd % 10 < 2)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1589,11 +1246,11 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if ((rnd % 10 < 2) && (get_clue(p).value >= 2))
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::XOR2;
-                    tst.get_clue(p).value -= 2;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::XOR2;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         continue;
                     }
                 }
@@ -1604,45 +1261,45 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
                 if (rnd % 10 < 5)
                 {
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::LESS;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::LESS;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         while (true)
                         {
                             tst = *this;
-                            tst.get_clue(p).type = RegionType::LESS;
-                            tst.get_clue(p).value++;
-                            if (!tst.is_solveable())
+                            tst->get_clue(p).type = RegionType::LESS;
+                            tst->get_clue(p).value++;
+                            if (!tst->is_solveable())
                                 break;
-                            if (tst.vals[p].clue.value > 19)
+                            if (tst->vals[p].clue.value > 19)
                             {
                                 assert(0);
                             }
-                            printf("tst.get_clue(p).value %d++ \n", tst.get_clue(p).value);
-                            if (tst.get_clue(p).value)
+                            printf("tst->get_clue(p).value %d++ \n", tst->get_clue(p).value);
+                            if (tst->get_clue(p).value)
                             {
                                 get_clue(p).type = RegionType::LESS;
-                                get_clue(p).value = tst.get_clue(p).value;
+                                get_clue(p).value = tst->get_clue(p).value;
                             }
                         }
                         continue;
                     }
                     tst = *this;
-                    tst.get_clue(p).type = RegionType::MORE;
-                    if (tst.is_solveable())
+                    tst->get_clue(p).type = RegionType::MORE;
+                    if (tst->is_solveable())
                     {
-                        get_clue(p) = tst.get_clue(p);
+                        get_clue(p) = tst->get_clue(p);
                         while (true)
                         {
                             tst = *this;
-                            tst.get_clue(p).type = RegionType::MORE;
-                            tst.get_clue(p).value--;
-                            if (!tst.is_solveable())
+                            tst->get_clue(p).type = RegionType::MORE;
+                            tst->get_clue(p).value--;
+                            if (!tst->is_solveable())
                                 break;
-                            printf("tst.get_clue(p).value %d-- \n", tst.get_clue(p).value);
+                            printf("tst->get_clue(p).value %d-- \n", tst->get_clue(p).value);
                             get_clue(p).type = RegionType::MORE;
-                            get_clue(p).value = tst.get_clue(p).value;
+                            get_clue(p).value = tst->get_clue(p).value;
                         }
                         continue;
                     }
@@ -1679,18 +1336,6 @@ void Grid::reveal(XYPos p)
         else
             ++it;
     }
-}
-
-void Grid::reveal_switch(XYPos q)
-{
-    reveal(q);
-    vals[q].bomb = !vals[q].bomb;
-    vals[q].clue.type = RegionType::NONE;
-    // if (vals[q].bomb)
-    //     count_dec++;
-    // else
-    //     count_dec--;
-//    printf("%d\n", count_dec);
 }
 
 std::string Grid::to_string()
@@ -1835,55 +1480,6 @@ bool Grid::add_regions(int level)
         if (add_region(elements, clue))
             return true;
     }
-
-    // for (int y = 0; y < size.y; y++)
-    // {
-    //     if (edges.count(XYPos(0,y)))
-    //     {
-    //         RegionType clue = edges[XYPos(0,y)];
-    //         if (clue.type == RegionType::NONE)
-    //             continue;
-    //         XYSet elements;
-    //         for (int x = 0; x < size.x; x++)
-    //         {
-    //             XYPos n = XYPos(x,y);
-    //             if (!get(n).revealed)
-    //             {
-    //                 elements.set(n);
-    //             }
-    //             else if (get(n).bomb)
-    //             {
-    //                 clue.value--;
-    //             }
-    //         }
-    //        if (add_region(elements, clue))
-    //            return true;
-    //     }
-    // }
-    // for (int x = 0; x < size.x; x++)
-    // {
-    //     if (edges.count(XYPos(1,x)))
-    //     {
-    //         RegionType clue = edges[XYPos(1,x)];
-    //         if (clue.type == RegionType::NONE)
-    //             continue;
-    //         XYSet elements;
-    //         for (int y = 0; y < size.y; y++)
-    //         {
-    //             XYPos n = XYPos(x,y);
-    //             if (!get(n).revealed)
-    //             {
-    //                 elements.set(n);
-    //             }
-    //             else if (get(n).bomb)
-    //             {
-    //                 clue.value--;
-    //             }
-    //         }
-    //         if (add_region(elements, clue))
-    //             return true;
-    //     }
-    // }
 
     XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
@@ -2170,9 +1766,283 @@ void Grid::add_one_new_region()
     regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
 
 }
+
 void Grid::clear_regions()
 {
     regions.clear();
     regions_to_add.clear();
     deleted_regions.clear();
+}
+
+std::string SquareGrid::to_string()
+{
+    return "A" + Grid::to_string();
+}
+
+XYSet SquareGrid::get_squares()
+{
+    XYSet rep;
+    FOR_XY(pos, XYPos(), size)
+        rep.set(pos);
+    for ( const auto &m_reg : merged )
+    {
+        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
+        {
+            if (pos == m_reg.first)
+                continue;
+            rep.clear(pos);
+        }
+    }
+
+    return rep;
+}
+
+XYSet SquareGrid::get_row(unsigned y)
+{
+    XYSet rep;
+    for (int x = 0; x < size.x; x++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+XYSet SquareGrid::get_column(unsigned x)
+{
+    XYSet rep;
+    for (int y = 0; y < size.y; y++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
+{
+    for (auto const& [pos, type] : edges)
+    {
+        if (pos.x == 0)
+            rep.push_back(EdgePos (type, XYPosFloat(1,0).angle(), (pos.y + 0.5) * grid_pitch.y));
+        if (pos.x == 1)
+            rep.push_back(EdgePos (type, XYPosFloat(0,1).angle(), -(pos.y + 0.5) * grid_pitch.y));
+    }
+}
+
+XYSet SquareGrid::get_neighbors(XYPos p)
+{
+    XYSet rep;
+    XYPos s = get_square_size(p);
+
+    for (int y = -1; y <= s.y; y++)
+    {
+        XYPos t;
+        t = p + XYPos(-1, y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        t = p + XYPos(s.x, y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        rep.set(p);
+    }
+    for (int x = 0; x < s.x; x++)
+    {
+        XYPos t;
+        t = p + XYPos(x, -1);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        t = p + XYPos(x, s.y);
+        if (t.inside(size))
+            rep.set(get_base_square(t));
+        rep.set(p);
+    }
+
+
+    return rep;
+
+}
+
+XYPos SquareGrid::get_grid_pitch(XYPos grid_size)
+{
+    int s = std::min(grid_size.x / size.x, grid_size.y / size.y);
+    s &= ~1;
+    return XYPos(s,s);
+}
+
+XYRect SquareGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
+{
+    return XYRect(pos * grid_pitch, grid_pitch);
+}
+
+XYRect SquareGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
+{
+    unsigned s = 3;
+    while (total > (s * s))
+        s++;
+    XYPos p = (XYPos((index / s + index % s) % s, index % s) * grid_pitch.x) / s;
+    return XYRect(pos * grid_pitch + p, XYPos(grid_pitch.x / s, grid_pitch.y / s));
+
+}
+
+void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+{
+    if (highlighted)
+    {
+        XYRect src(793, 250, 1, 1);
+        XYRect dst(pos * grid_pitch, grid_pitch);
+        cmds.push_back({src,dst});
+    }
+    XYPos s = get_square_size(pos);
+    if (s == XYPos(1,1))
+    {
+        XYRect src(64, 256, 192, 192);
+        XYRect dst(pos * grid_pitch, grid_pitch);
+        cmds.push_back({src,dst});
+    }
+    else
+    {
+        XYPos si(64, 256);
+        XYPos di(pos * grid_pitch);
+        {
+            XYPos ls = s - XYPos(1,1);
+            cmds.push_back(RenderCmd(XYRect(si + XYPos( 0,  0), XYPos(96, 96)), XYRect(di, grid_pitch / 2)));
+            cmds.push_back(RenderCmd(XYRect(si + XYPos(96,  0), XYPos(96, 96)), XYRect(di + XYPos(grid_pitch.x * ls.x + grid_pitch.x / 2, 0), grid_pitch / 2)));
+            cmds.push_back(RenderCmd(XYRect(si + XYPos( 0, 96), XYPos(96, 96)), XYRect(di + XYPos(0, grid_pitch.y * ls.y + grid_pitch.y / 2), grid_pitch / 2)));
+            cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(96, 96)), XYRect(di + XYPos(grid_pitch.x * ls.x + grid_pitch.x / 2, grid_pitch.y * ls.y + grid_pitch.y / 2), grid_pitch / 2)));
+            if (ls.x)
+            {
+                cmds.push_back(RenderCmd(XYRect(si + XYPos(96,  0), XYPos(1, 96)), XYRect(di + XYPos(grid_pitch.x / 2, 0), XYPos(ls.x * grid_pitch.x, grid_pitch.y / 2))));
+                cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(1, 96)), XYRect(di + XYPos(grid_pitch.x / 2, ls.y * grid_pitch.y + grid_pitch.x / 2), XYPos(ls.x * grid_pitch.x, grid_pitch.y / 2))));
+            }
+            if (ls.y)
+            {
+                cmds.push_back(RenderCmd(XYRect(si + XYPos(0,  96), XYPos(96, 1)), XYRect(di + XYPos(0, grid_pitch.x / 2), XYPos(grid_pitch.y / 2, ls.y * grid_pitch.y))));
+                cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(96, 1)), XYRect(di + XYPos(ls.x * grid_pitch.x + grid_pitch.x / 2, grid_pitch.x / 2), XYPos(grid_pitch.y / 2, ls.y * grid_pitch.y))));
+            }
+        }
+    }
+}
+
+std::string TriangleGrid::to_string()
+{
+    return "B" + Grid::to_string();
+}
+
+XYSet TriangleGrid::get_squares()
+{
+    XYSet rep;
+    FOR_XY(pos, XYPos(), size)
+        rep.set(pos);
+    for ( const auto &m_reg : merged )
+    {
+        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
+        {
+            if (pos == m_reg.first)
+                continue;
+            rep.clear(pos);
+        }
+    }
+
+    return rep;
+}
+
+XYSet TriangleGrid::get_row(unsigned y)
+{
+    XYSet rep;
+    for (int x = 0; x < size.x; x++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+XYSet TriangleGrid::get_column(unsigned x)
+{
+    XYSet rep;
+    for (int y = 0; y < size.y; y++)
+    {
+        XYPos p = get_base_square(XYPos(x,y));
+        rep.set(p);
+    }
+    return rep;
+}
+
+XYSet TriangleGrid::get_neighbors(XYPos pos)
+{
+    bool downwards = (pos.x ^ pos.y) & 1;
+    XYSet rep;
+
+    FOR_XY(offset, XYPos(-2,-1), XYPos(3,2))
+    {
+        if (offset == XYPos(0,0)) continue;
+        if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
+        if (offset == XYPos(2, downwards ? 1 : -1)) continue;
+        XYPos t = pos + offset;
+
+        if (t.inside(size))
+            rep.set(t);
+    }
+
+    return rep;
+}
+void TriangleGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
+{
+
+}
+
+XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)
+{
+    XYPosFloat gsize((size.x + 1.0) / 2, size.y * std::sqrt(3) / 2);
+    int s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
+    return XYPos(s / 2, std::sqrt(3) * s / 2);
+}
+
+XYRect TriangleGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
+{
+    bool downwards = (pos.x ^ pos.y) & 1;
+    XYPos border(grid_pitch.x / 2, grid_pitch.y / 6);
+    return XYRect(pos * grid_pitch + XYPos(border.x, downwards ? 0 : border.y * 2), XYPos((grid_pitch.x - border.x) * 2, grid_pitch.y - border.y * 2));
+}
+
+XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
+{
+    bool downwards = (pos.x ^ pos.y) & 1;
+    unsigned s = 3;
+    while (total > ((s * s + 1) / 2))
+        s++;
+    double bsize = double(grid_pitch.x * 2) / (std::sqrt(3) + s - 1);
+
+    XYPos gpos = XYPos(0,0);
+    while (index >= (s - gpos.y))
+    {
+        index -= s - gpos.y;
+        gpos.y++;
+    }
+    gpos.x = index;
+
+    XYPos p(bsize * std::sqrt(3) / 2 - (bsize / 2) + gpos.x * bsize + gpos.y * bsize / 2, gpos.y * std::sqrt(3) * bsize / 2);
+
+    if (downwards)
+        return XYRect(pos * grid_pitch + p, XYPos(bsize, bsize));
+    else
+        return XYRect(pos * grid_pitch + XYPos(p.x, grid_pitch.y - bsize - p.y), XYPos(bsize, bsize));
+}
+
+void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+{
+    bool downwards = (pos.x ^ pos.y) & 1;
+    if (highlighted)
+    {
+        XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
+        XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
+        cmds.push_back({src,dst});
+    }
+
+    {
+        XYRect src(64, downwards ? 1344 : 1152 , 192, 192);
+        XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
+        cmds.push_back({src,dst});
+    }
 }

@@ -88,6 +88,7 @@ public:
     bool constructed_rule_is_logical = false;
     bool constructed_rule_is_already_present = false;
 
+    GridRegion* mouse_hover_region = NULL;
     GridRegion *inspected_region = NULL;
     GridRegionCause inspected_rule;
     bool rule_gen_target_square_count = false;
@@ -96,6 +97,7 @@ public:
     int grid_size;
     XYPos panel_size;
     int square_size = 1;
+    XYPos grid_pitch;
     int button_size = 1;
     XYPos left_panel_offset;
     XYPos right_panel_offset;
@@ -117,7 +119,6 @@ public:
 
     bool auto_region = true;
     bool get_hint = false;
-    Grid clue_needs;
     std::set<XYPos> clue_solves;
 
     std::list<Grid*> levels;
@@ -152,8 +153,6 @@ public:
     GridRule rule_from_rule_gen_region();
     void reset_rule_gen_region();
     void update_constructed_rule();
-    unsigned taken_to_size(unsigned total);
-    XYPos taken_to_pos(unsigned count, unsigned total);
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_text_box(XYPos pos, std::string& s, bool left = false);

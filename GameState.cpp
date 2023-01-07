@@ -141,7 +141,7 @@ GameState::GameState(std::ifstream& loadfile)
 //    Mix_VolumeMusic(music_volume);
 //    music = Mix_LoadMUS("music.ogg");
 //    Mix_PlayMusic(music, -1);
-    grid = new  Grid(XYPos(1,1), 0);
+    grid = Grid::Load("ABBA!");
 //    grid->make_harder(true, true);
 
 //    grid->print();
@@ -397,7 +397,7 @@ void GameState::advance(int steps)
 
             std::string& s = global_level_sets[current_level_set_index]->levels[current_level_index];
             delete grid;
-            grid = new  Grid(s);
+            grid = Grid::Load(s);
             reset_rule_gen_region();
             current_level_is_temp = false;
         }
@@ -551,22 +551,6 @@ void GameState::update_constructed_rule()
     }
 }
 
-unsigned GameState::taken_to_size(unsigned total)
-{
-    unsigned size = 3;
-    while (total > (size * size))
-        size++;
-    return size;
-}
-
-XYPos GameState::taken_to_pos(unsigned count, unsigned total)
-{
-    int size = taken_to_size(total);
-
-    return (XYPos((count / size + count % size) % size, count % size) * square_size) / size + XYPos(square_size/(size*2), square_size/(size*2));
-
-}
-
 static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned col, unsigned fade)
 {
     uint8_t r = (type & 1) ? 127 : 255;
@@ -593,7 +577,8 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
     FOR_XY_SET(pos, region.elements)
     {
-        XYPos n = pos * square_size + taken_to_pos(taken[pos], total_taken[pos]);
+        XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+        XYPos n = d.pos + d.size / 2;
         elements.push_back(n);
         taken[pos]++;
     }
@@ -638,11 +623,11 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
 
             SDL_Rect src_rect = {160, 608, 1, 1};
-            SDL_Rect dst_rect = {grid_offset.x + pos.x, grid_offset.y + pos.y - (square_size / 32), int(dist), square_size / 16};
+            SDL_Rect dst_rect = {grid_offset.x + pos.x, grid_offset.y + pos.y - (grid_pitch.y / 32), int(dist), grid_pitch.y / 16};
 
             SDL_Point rot_center;
             rot_center.x = 0;
-            rot_center.y = square_size / 32;
+            rot_center.y = grid_pitch.y / 32;
 
             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
         }
@@ -669,17 +654,21 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
 {
     FOR_XY_SET(pos, region.elements)
     {
-        unsigned size = taken_to_size(total_taken[pos]);
-        XYPos n = pos * square_size + taken_to_pos(taken[pos], total_taken[pos]);
+        XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+        XYPos n = d.pos;
         taken[pos]++;
 
         set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
         SDL_Rect src_rect = {64, 512, 192, 192};
-        SDL_Rect dst_rect = {(int)(grid_offset.x + n.x - square_size / (size * 2)), (int)(grid_offset.y + n.y - square_size / (size * 2)), (int)(square_size / size), (int)(square_size / size)};
+        SDL_Rect dst_rect = {grid_offset.x + d.pos.x, grid_offset.y + d.pos.y, d.size.x, d.size.y};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
         SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-        render_region_type(region.type, XYPos(grid_offset.x + n.x - square_size / (size * 2), grid_offset.y + n.y - square_size / (size * 2)), square_size / size);
+        render_region_type(region.type, grid_offset + d.pos, d.size.x);
+        if (XYPosFloat(mouse - grid_offset - d.pos - d.size / 2).distance() <= (d.size.x / 2))
+        {
+            mouse_hover_region = &region;
+        }
     }
 
     SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
@@ -1013,13 +1002,18 @@ void GameState::render(bool saving)
         grid_offset = (window_size - XYPos(grid_size,grid_size)) / 2;
         left_panel_offset = grid_offset - XYPos(panel_size.x, 0);
         right_panel_offset = grid_offset + XYPos(grid_size, 0);
+        button_size = (grid_size * 7) / (18 * 5);
 
-        square_size = grid_size / (std::max(grid->size.x,grid->size.y) + row_col_clues);
+//        square_size = grid_size / (std::max(grid->size.x,grid->size.y) + row_col_clues);
         if (row_col_clues)
         {
-            grid_offset += XYPos(square_size,square_size);
+            int border = grid_size / 8;
+            grid_offset += XYPos(border, border);
+            grid_size -= border;
         }
-        button_size = (grid_size * 7) / (18 * 5);
+
+        grid_pitch = grid->get_grid_pitch(XYPos(grid_size, grid_size));
+        square_size = grid_pitch.x;
     }
 
     if (display_mode == DISPLAY_MODE_HELP)
@@ -1072,12 +1066,12 @@ void GameState::render(bool saving)
     int hover_rulemaker_region_base_index = -1;
     bool hover_rulemaker_region_base = false;
 
-    GridRegion* hover = NULL;
+    mouse_hover_region = NULL;
 
     if (right_panel_mode == RIGHT_MENU_REGION)
     {
         if ((mouse - (right_panel_offset + XYPos(0, 0))).inside(XYPos(button_size, button_size)))
-            hover = inspected_region;
+            mouse_hover_region = inspected_region;
         if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos(button_size, button_size)))
         {
             hover_rulemaker = true;
@@ -1101,7 +1095,7 @@ void GameState::render(bool saving)
         if (hover_rulemaker_region_base_index >= 0)
         {
             hover_rulemaker_region_base = true;
-            hover = rule_cause.regions[hover_rulemaker_region_base_index];
+            mouse_hover_region = rule_cause.regions[hover_rulemaker_region_base_index];
         }
 
         if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos(button_size*4, button_size * 6)))
@@ -1138,28 +1132,37 @@ void GameState::render(bool saving)
     XYSet grid_squares = grid->get_squares();
     FOR_XY_SET(pos, grid_squares)
     {
-        XYPos size = grid->get_square_size(pos);
-        if (hover_rulemaker)
-        {
-            if (hover_squares_highlight.get(pos))
-            {
-                SDL_Rect src_rect = {793, 250, 1, 1};
-                SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, size.x * square_size, size.y * square_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            }
-        }
-
         {
             if (clue_solves.count(pos))
                 SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
             if (filter_pos.get(pos))
                 SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
         }
-        render_box(grid_offset + pos * square_size, size * square_size, square_size / 8, 2);
+        std::vector<RenderCmd> cmds;
+        grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
+        for (RenderCmd& cmd : cmds)
+        {
+            SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
+            SDL_Rect dst_rect = {grid_offset.x + cmd.dst.pos.x, grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+
+        // if (hover_rulemaker)
+        // {
+        //     if (hover_squares_highlight.get(pos))
+        //     {
+        //         SDL_Rect src_rect = {793, 250, 1, 1};
+        //         SDL_Rect dst_rect = {grid_offset.x + sq_pos.pos.x, grid_offset.y + sq_pos.pos.y, sq_pos.size.x, sq_pos.size.y};
+        //         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        //     }
+        // }
+        //
+//        render_box(grid_offset + sq_pos.pos, sq_pos.size, grid_pitch.x / 8, 2);
 
         // SDL_Rect src_rect = {64, 256, 192, 192};
-        // SDL_Rect dst_rect = {grid_offset.x + pos.x * square_size, grid_offset.y + pos.y * square_size, square_size, square_size};
+        // SDL_Rect dst_rect = {grid_offset.x + sq_pos.pos.x, grid_offset.y + sq_pos.pos.y, sq_pos.size.x, sq_pos.size.y};
         // SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        //
         SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
     }
 
@@ -1186,12 +1189,12 @@ void GameState::render(bool saving)
             if (region.vis_level == vis_level)
             {
                 display_regions.push_back(&region);
-                if (&region == hover)
+                if (&region == mouse_hover_region)
                     has_hover = true;
             }
         }
-        if (hover && !has_hover)
-            display_regions.push_back(hover);
+        if (mouse_hover_region && !has_hover)
+            display_regions.push_back(mouse_hover_region);
     }
 
     for (GridRegion* region : display_regions)
@@ -1199,54 +1202,6 @@ void GameState::render(bool saving)
         FOR_XY_SET(pos, region->elements)
         {
             total_taken[pos]++;
-        }
-    }
-
-    if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
-    {
-        XYPos pos = mouse - grid_offset;
-        XYPos gpos = pos / square_size;
-        gpos = grid->get_base_square(gpos);
-        XYPos ipos = pos - gpos * square_size;
-        unsigned tot = total_taken[gpos];
-        unsigned size = taken_to_size(tot);
-
-        for (int i = 0; i < 1000; i++)
-        {
-            XYPos spos = taken_to_pos(i, tot);
-            if (XYPosFloat(ipos).distance(spos) < (double(square_size) / (size*2)))
-            {
-                int c = 0;
-                for (GridRegion* region : display_regions)
-                {
-                    if (region->elements.get(gpos))
-                    {
-                        if (c == i)
-                        {
-                            hover = region;
-                            break;
-                        }
-                        c++;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    for (GridRegion* region : display_regions)
-    {
-        if (!hover || (region == hover))
-        {
-            region->fade += std::min(10, 255 - int(region->fade));
-        }
-        else
-        {
-            region->fade -= std::min(10, int(region->fade - 100));
-            if (region->fade < 100)
-            {
-                region->fade += std::min(10, 100 - int(region->fade));
-            }
         }
     }
 
@@ -1266,39 +1221,76 @@ void GameState::render(bool saving)
         }
     }
 
+    for (GridRegion* region : display_regions)
+    {
+        if (!mouse_hover_region || (region == mouse_hover_region))
+        {
+            region->fade += std::min(10, 255 - int(region->fade));
+        }
+        else
+        {
+            region->fade -= std::min(10, int(region->fade - 100));
+            if (region->fade < 100)
+            {
+                region->fade += std::min(10, 100 - int(region->fade));
+            }
+        }
+    }
+
     FOR_XY_SET(pos, grid_squares)
     {
-        XYPos sq_size = grid->get_square_size(pos);
-        int icon_width = std::min(sq_size.x, sq_size.y);
+        XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
+        int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
         GridPlace place = grid->get(pos);
-        XYPos gpos = grid_offset + pos * square_size + (sq_size - XYPos(icon_width,icon_width)) * square_size / 2;
+        XYPos gpos = grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
 
         if (place.revealed)
         {
             if (place.bomb)
             {
                 SDL_Rect src_rect = {320, 192, 192, 192};
-                SDL_Rect dst_rect = {gpos.x, gpos.y, icon_width * square_size, icon_width * square_size};
+                SDL_Rect dst_rect = {gpos.x, gpos.y, icon_width, icon_width};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
             else
             {
-                render_region_type(place.clue, gpos, icon_width * square_size);
+                render_region_type(place.clue, gpos, icon_width);
             }
         }
     }
-    for (std::pair<const XYPos&, RegionType> p : grid->edges)
     {
-        if (p.first.x == 0)
+        std::vector<EdgePos> edges;
+        grid->get_edges(edges, grid_pitch);
+        for (EdgePos& edge : edges)
         {
-            render_region_type(p.second, grid_offset + XYPos(-1, p.first.y) * square_size, square_size);
-        }
-        if (p.first.x == 1)
-        {
-            render_region_type(p.second, grid_offset + XYPos(p.first.y, -1) * square_size, square_size);
-        }
-    }
+            int arrow_size = grid_size / 9;
+            int bubble_margin = arrow_size / 16;
 
+            double p = edge.pos / std::cos(edge.angle);
+            if (p >= 0 && p < grid_size)
+            {
+                XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
+                SDL_Rect src_rect = {1664, 192, 192, 192};
+                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                SDL_Point rot_center = {arrow_size, arrow_size};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(edge.angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(edge.angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                render_region_type(edge.type, grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
+            }
+            p = -edge.pos / std::sin(edge.angle);
+            if (p >= 0 && p < grid_size)
+            {
+                XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
+                SDL_Rect src_rect = {1664, 192, 192, 192};
+                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                SDL_Point rot_center = {arrow_size, arrow_size};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(edge.angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(edge.angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
+            }
+        }
+
+    }
     {
         SDL_Rect src_rect = {704, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
@@ -1824,7 +1816,7 @@ void GameState::render(bool saving)
                     SDL_Rect src_rect = {1088, 768, 192, 192};
                     SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y, button_size, button_size };
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    add_tooltip(dst_rect, "Rule already present");
+                    add_tooltip(dst_rect, "Rule Already Present");
                 }
                 else
 
@@ -1895,56 +1887,10 @@ void GameState::grid_click(XYPos pos, bool right)
     }
     else
     {
-        GridRegion* hover = NULL;
-        if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
-        {
-            XYPos gpos = pos / square_size;
-            gpos = grid->get_base_square(gpos);
-            XYPos ipos = pos - gpos * square_size;
-
-            unsigned tot = 0;
-            std::list<GridRegion*> display_regions;
-
-            for (GridRegion& region : grid->regions)
-            {
-                if (!filter_pos.none() && !region.elements.contains(filter_pos))
-                    continue;
-                if (region.vis_level == vis_level)
-                {
-                    display_regions.push_back(&region);
-                    if (region.elements.get(gpos))
-                        tot++;
-                }
-            }
-
-            unsigned size = taken_to_size(tot);
-
-            for (int i = 0; i < 1000; i++)
-            {
-                XYPos spos = taken_to_pos(i, tot);
-                if (XYPosFloat(ipos).distance(spos) < (double(square_size) / (size * 2)))
-                {
-                    int c = 0;
-                    for (GridRegion* region : display_regions)
-                    {
-                        if (region->elements.get(gpos))
-                        {
-                            if (c == i)
-                            {
-                                hover = region;
-                                break;
-                            }
-                            c++;
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        if (hover)
+        if (mouse_hover_region)
         {
             {
-                if (inspected_region == hover && right_panel_mode == RIGHT_MENU_REGION)
+                if (inspected_region == mouse_hover_region && right_panel_mode == RIGHT_MENU_REGION)
                 {
                     right_panel_mode = RIGHT_MENU_RULE_GEN;
                     if (constructed_rule.region_count < 4)
@@ -1952,11 +1898,11 @@ void GameState::grid_click(XYPos pos, bool right)
                         bool found = false;
                         for (int i = 0; i < constructed_rule.region_count; i++)
                         {
-                            if (rule_gen_region[i] == hover)
+                            if (rule_gen_region[i] == mouse_hover_region)
                                 found = true;
                         }
                         if (!found)
-                            rule_gen_region[constructed_rule.region_count] = hover;
+                            rule_gen_region[constructed_rule.region_count] = mouse_hover_region;
                         constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                         update_constructed_rule();
                     }
@@ -1964,12 +1910,12 @@ void GameState::grid_click(XYPos pos, bool right)
                 else
                 {
                     right_panel_mode = RIGHT_MENU_REGION;
-                    inspected_region = hover;
+                    inspected_region = mouse_hover_region;
                 }
 
                 // if (rule_gen_region_count < 3)
                 // {
-                //     rule_gen_region[rule_gen_region_count] = hover;
+                //     rule_gen_region[rule_gen_region_count] = mouse_hover_region;
                 //     rule_gen_region_count++;
                 //     update_constructed_rule();
                 // }
@@ -2368,7 +2314,7 @@ bool GameState::events()
                         clue_solves.clear();
                         reset_rule_gen_region();
                         delete grid;
-                        grid = new Grid(s);
+                        grid = Grid::Load(s);
                         SDL_free(s);
                         break;
                     }
@@ -2381,8 +2327,6 @@ bool GameState::events()
                     case SDL_SCANCODE_F2:
                     {
                         clue_solves.clear();
-                        //grid->find_easiest_move(clue_solves, clue_needs);
-                        //grid->find_easiest_move_using_regions(clue_solves);
                         XYSet grid_squares = grid->get_squares();
                         FOR_XY_SET(pos, grid_squares)
                         {
