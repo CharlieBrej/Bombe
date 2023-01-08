@@ -1,4 +1,5 @@
 #include "LevelSet.h"
+#include "Grid.h"
 #include "SaveState.h"
 #include <iostream>
 #include <fstream>
@@ -13,7 +14,10 @@ LevelSet::LevelSet(SaveObjectMap* omap)
     for (int i = 0; i < rlist->get_count(); i++)
     {
         std::string s = rlist->get_string(i);
-        levels.push_back(rlist->get_string(i));
+        Grid* grid = Grid::Load(s);
+        s = grid->to_string();
+        levels.push_back(s);
+        delete grid;
     }
 }
 

@@ -96,7 +96,6 @@ public:
 
     int grid_size;
     XYPos panel_size;
-    int square_size = 1;
     XYPos grid_pitch;
     int button_size = 1;
     XYPos left_panel_offset;

@@ -207,7 +207,7 @@ protected:
 
 public:
     virtual ~Grid(){};
-    void randomize(XYPos size_, int merged_count);
+    void randomize(XYPos size_, int merged_count, int row_percent);
     void from_string(std::string s);
 
     static Grid* Load(std::string s);
@@ -217,10 +217,11 @@ public:
     virtual std::string to_string();
     virtual Grid* dup() = 0;
     virtual XYSet get_squares() = 0;
-    virtual XYSet get_row(unsigned y) = 0;
-    virtual XYSet get_column(unsigned x) = 0;
+    virtual XYSet get_row(unsigned type, int index) = 0;
     virtual XYSet get_neighbors(XYPos p) = 0;
+    virtual void get_row_types(std::vector<XYPos>& rep) = 0;
     virtual void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch) = 0;
+    virtual XYPos get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch) = 0;
 
     virtual XYPos get_grid_pitch(XYPos grid_size) = 0;
     virtual XYRect get_square_pos(XYPos pos, XYPos grid_pitch) = 0;
@@ -237,7 +238,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
     bool has_solution(void);
-    void make_harder(bool plus_minus, bool x_y, bool misc, int row_col);
+    void make_harder(bool plus_minus, bool x_y, bool misc);
     void reveal(XYPos p);
     bool is_solved(void);
 
@@ -279,10 +280,12 @@ public:
 
     Grid* dup() {return new SquareGrid(*this);}
     XYSet get_squares();
-    XYSet get_row(unsigned y);
-    XYSet get_column(unsigned x);
+    XYSet get_row(unsigned type, int index);
     XYSet get_neighbors(XYPos p);
+    void get_row_types(std::vector<XYPos>& rep);
     void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
+    XYPos get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch);
+
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
@@ -298,10 +301,11 @@ public:
 
     Grid* dup() {return new TriangleGrid(*this);}
     XYSet get_squares();
-    XYSet get_row(unsigned y);
-    XYSet get_column(unsigned x);
+    XYSet get_row(unsigned type, int index);
     XYSet get_neighbors(XYPos p);
+    void get_row_types(std::vector<XYPos>& rep);
     void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
+    XYPos get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch);
 
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);

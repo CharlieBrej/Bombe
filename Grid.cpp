@@ -430,9 +430,10 @@ bool GridRule::is_legal()
     }
 }
 
-void Grid::randomize(XYPos size_, int merged_count)
+void Grid::randomize(XYPos size_, int merged_count, int row_percent)
 {
     size = size_;
+
     for (int i = 0; i < merged_count;)
     {
         XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
@@ -455,25 +456,43 @@ void Grid::randomize(XYPos size_, int merged_count)
         i++;
     }
 
-  XYSet grid_squares = get_squares();
-  FOR_XY_SET(p, grid_squares)
-  {
-    vals[p] = GridPlace((unsigned(rnd)%100) < 40, true);
-  }
-
-  FOR_XY_SET(p, grid_squares)
-  {
-    if (!vals[p].bomb)
+    XYSet grid_squares = get_squares();
+    FOR_XY_SET(p, grid_squares)
     {
-        int cnt = 0;
-        XYSet neigh = get_neighbors(p);
-        FOR_XY_SET(p, neigh)
-            cnt += get(p).bomb;
-
-        vals[p].clue.type = RegionType::EQUAL;
-        vals[p].clue.value = cnt;
+        vals[p] = GridPlace((unsigned(rnd)%100) < 40, true);
     }
-  }
+
+    FOR_XY_SET(p, grid_squares)
+    {
+        if (!vals[p].bomb)
+        {
+            int cnt = 0;
+            XYSet neigh = get_neighbors(p);
+            FOR_XY_SET(p, neigh)
+                cnt += get(p).bomb;
+
+            vals[p].clue.type = RegionType::EQUAL;
+            vals[p].clue.value = cnt;
+        }
+    }
+    std::vector<XYPos> row_types;
+    get_row_types(row_types);
+    for (int i = 0; i < row_types.size(); i++)
+    {
+        XYPos row_type = row_types[i];
+        for (int j = row_type.x; j < row_type.y; j++)
+        {
+            if (rnd % 100 < row_percent)
+            {
+                int c = 0;
+                XYSet grid_squares = get_row(i, j);
+                FOR_XY_SET(n, grid_squares)
+                    if (get(n).bomb)
+                        c++;
+                edges[XYPos(i, j)] = RegionType(RegionType::EQUAL, c);
+            }
+        }
+    }
 }
 
 Grid::Grid()
@@ -507,6 +526,22 @@ void Grid::from_string(std::string s)
         merged[mp] = ms;
     }
 
+    while (s[i] == '|')
+    {
+        i++;
+        XYPos mp;
+        RegionType t;
+        mp.x = s[i++] - '0';
+        mp.y = s[i++] - '0';
+        t.type = RegionType::Type(s[i++] - 'A');
+        t.value = s[i++] - '0';
+        if (t.type != RegionType::NONE)
+        {
+            edges[mp] = t;
+        }
+    }
+
+
     XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
@@ -532,33 +567,33 @@ void Grid::from_string(std::string s)
         }
     }
 
-    for (int x = 0; x < size.y; x++)
-    {
-        if (s.length() < i) return;
-        char c = s[i++];
-        RegionType t;
-        t.type = RegionType::Type(c - 'A');
-        if (s.length() < i) return;
-        c = s[i++];
-        t.value = c - '0';
-        if (t.type != RegionType::NONE)
-        {
-            edges[XYPos(0,x)] = t;
-        }
-    }
-
-    for (int x = 0; x < size.x; x++)
-    {
-        if (s.length() < i) return;
-        char c = s[i++];
-        RegionType t;
-        t.type = RegionType::Type(c - 'A');
-        if (s.length() < i) return;
-        c = s[i++];
-        t.value = c - '0';
-        if (t.type != RegionType::NONE)
-            edges[XYPos(1,x)] = t;
-    }
+    // for (int x = 0; x < size.y; x++)
+    // {
+    //     if (s.length() < i) return;
+    //     char c = s[i++];
+    //     RegionType t;
+    //     t.type = RegionType::Type(c - 'A');
+    //     if (s.length() < i) return;
+    //     c = s[i++];
+    //     t.value = c - '0';
+    //     if (t.type != RegionType::NONE)
+    //     {
+    //         edges[XYPos(0,x)] = t;
+    //     }
+    // }
+    //
+    // for (int x = 0; x < size.x; x++)
+    // {
+    //     if (s.length() < i) return;
+    //     char c = s[i++];
+    //     RegionType t;
+    //     t.type = RegionType::Type(c - 'A');
+    //     if (s.length() < i) return;
+    //     c = s[i++];
+    //     t.value = c - '0';
+    //     if (t.type != RegionType::NONE)
+    //         edges[XYPos(1,x)] = t;
+    // }
 }
 
 Grid* Grid::Load(std::string s)
@@ -582,9 +617,7 @@ GridPlace Grid::get(XYPos p)
 RegionType& Grid::get_clue(XYPos p)
 {
     if (p.x < 0)
-        return edges[XYPos(0, p.y)];
-    if (p.y < 0)
-        return edges[XYPos(1, p.x)];
+        return edges[XYPos(-1 - p.x, p.y)];
     assert (p.inside(size));
     return vals[p].clue;
 }
@@ -1008,34 +1041,9 @@ bool Grid::has_solution(void)
     }
 }
 
-void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
+void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
 {
 
-    XYPos p;
-    for (p.y = 0; p.y < size.y; p.y++)
-    {
-        if (rnd % 100 < row_col)
-        {
-            int c = 0;
-            XYSet grid_squares = get_row(p.y);
-            FOR_XY_SET(n, grid_squares)
-                if (get(n).bomb)
-                    c++;
-            edges[XYPos(0,p.y)] = RegionType(RegionType::EQUAL, c);
-        }
-    }
-    for (p.x = 0; p.x < size.x; p.x++)
-    {
-        if (rnd % 100 < row_col)
-        {
-            int c = 0;
-            XYSet grid_squares = get_column(p.x);
-            FOR_XY_SET(n, grid_squares)
-                if (get(n).bomb)
-                    c++;
-            edges[XYPos(1,p.x)] = RegionType(RegionType::EQUAL, c);
-        }
-    }
     XYSet grid_squares = get_squares();
 
     {
@@ -1066,23 +1074,26 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc, int row_col)
             if (!vals[p].bomb)
                 tgt.push_back(p);
         }
-        for (int i = 0; i < size.y; i++)
-            if (edges.count(XYPos(0, i)))
-                tgt.push_back(XYPos(-1, i));
-        for (int i = 0; i < size.x; i++)
-            if (edges.count(XYPos(1, i)))
-                tgt.push_back(XYPos(i, -1));
+
+        for (auto const& [pos, type] : edges)
+        {
+            tgt.push_back(XYPos(-1 - pos.x, pos.y));
+        }
+
 
         std::shuffle(tgt.begin(), tgt.end(), rnd.gen);
 
         for (XYPos p : tgt)
         {
-            LocalGrid tst = *this;
-            tst->get_clue(p).type = RegionType::NONE;
-            if (tst->is_solveable())
+            LocalGrid tst;
             {
-                get_clue(p).type = RegionType::NONE;
-                continue;
+                tst = *this;
+                tst->get_clue(p).type = RegionType::NONE;
+                if (tst->is_solveable())
+                {
+                    get_clue(p).type = RegionType::NONE;
+                    continue;
+                }
             }
             if (misc)
             {
@@ -1353,7 +1364,16 @@ std::string Grid::to_string()
         s += '0' + m_reg.second.x;
         s += '0' + m_reg.second.y;
     }
-//    s += 'A' + count_revealed;
+
+    for ( const auto &m_reg : edges )
+    {
+        s += '|';
+        s += '0' + m_reg.first.x;
+        s += '0' + m_reg.first.y;
+        s += 'A' + m_reg.second.type;
+        s += '0' + m_reg.second.value;
+    }
+
     XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
@@ -1375,24 +1395,6 @@ std::string Grid::to_string()
             s += c;
         }
     }
-    for (int i = 0; i < size.y; i++)
-    {
-        RegionType clue;
-        if (edges.count(XYPos(0, i)))
-            clue = edges[XYPos(0, i)];
-        s += 'A' + (char)(clue.type);
-        s += '0' + clue.value;
-
-    }
-    for (int i = 0; i < size.x; i++)
-    {
-        RegionType clue;
-        if (edges.count(XYPos(1, i)))
-            clue = edges[XYPos(1, i)];
-        s += 'A' + (char)(clue.type);
-        s += '0' + clue.value;
-    }
-
     return s;
 }
 
@@ -1460,11 +1462,7 @@ bool Grid::add_regions(int level)
         RegionType clue = edg.second;
         if (clue.type == RegionType::NONE)
             continue;
-        XYSet line;
-        if(e_pos.x)
-            line = get_column(e_pos.y);
-        else
-            line = get_row(e_pos.y);
+        XYSet line = get_row(e_pos.x, e_pos.y);
         XYSet elements;
         FOR_XY_SET(n, line)
         {
@@ -1797,24 +1795,24 @@ XYSet SquareGrid::get_squares()
     return rep;
 }
 
-XYSet SquareGrid::get_row(unsigned y)
+XYSet SquareGrid::get_row(unsigned type, int index)
 {
     XYSet rep;
-    for (int x = 0; x < size.x; x++)
+    if (type == 0)
     {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
+        for (int x = 0; x < size.x; x++)
+        {
+            XYPos p = get_base_square(XYPos(x, index));
+            rep.set(p);
+        }
     }
-    return rep;
-}
-
-XYSet SquareGrid::get_column(unsigned x)
-{
-    XYSet rep;
-    for (int y = 0; y < size.y; y++)
+    else
     {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
+        for (int y = 0; y < size.y; y++)
+        {
+            XYPos p = get_base_square(XYPos(index, y));
+            rep.set(p);
+        }
     }
     return rep;
 }
@@ -1828,6 +1826,14 @@ void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
         if (pos.x == 1)
             rep.push_back(EdgePos (type, XYPosFloat(0,1).angle(), -(pos.y + 0.5) * grid_pitch.y));
     }
+}
+
+XYPos SquareGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    XYPos rep(pos.x / grid_pitch.x, pos.y / grid_pitch.y);
+    if (rep.inside(size))
+        return rep;
+    return XYPos(-1,-1);
 }
 
 XYSet SquareGrid::get_neighbors(XYPos p)
@@ -1857,10 +1863,13 @@ XYSet SquareGrid::get_neighbors(XYPos p)
             rep.set(get_base_square(t));
         rep.set(p);
     }
-
-
     return rep;
+}
 
+void SquareGrid::get_row_types(std::vector<XYPos>& rep)
+{
+    rep.push_back(XYPos(0, size.y));
+    rep.push_back(XYPos(0, size.x));
 }
 
 XYPos SquareGrid::get_grid_pitch(XYPos grid_size)
@@ -1947,24 +1956,44 @@ XYSet TriangleGrid::get_squares()
     return rep;
 }
 
-XYSet TriangleGrid::get_row(unsigned y)
+XYSet TriangleGrid::get_row(unsigned type, int index)
 {
     XYSet rep;
-    for (int x = 0; x < size.x; x++)
+    if (type == 0)
     {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
+        for (int x = 0; x < size.x; x++)
+        {
+            XYPos p = get_base_square(XYPos(x, index));
+            rep.set(p);
+        }
     }
-    return rep;
-}
-
-XYSet TriangleGrid::get_column(unsigned x)
-{
-    XYSet rep;
-    for (int y = 0; y < size.y; y++)
+    else if (type == 1)
     {
-        XYPos p = get_base_square(XYPos(x,y));
-        rep.set(p);
+        for (int y = 0; y < size.y; y++)
+        {
+            int x = ((index - ((size.y - 1) / 2)) * 2) + y - 1;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+            x++;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+        }
+    }
+    else if (type == 2)
+    {
+        for (int y = 0; y < size.y; y++)
+        {
+            int x = (index * 2) - y;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+            x++;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+        }
+    }
+    else
+    {
+        assert(0);
     }
     return rep;
 }
@@ -1987,9 +2016,47 @@ XYSet TriangleGrid::get_neighbors(XYPos pos)
 
     return rep;
 }
+
+void TriangleGrid::get_row_types(std::vector<XYPos>& rep)
+{
+    rep.push_back(XYPos(0, size.y));
+    rep.push_back(XYPos(0, ((size.y - 1) / 2) + (size.x + 1) / 2 + 1));
+    rep.push_back(XYPos(0, (size.x + 1) / 2));
+}
+
 void TriangleGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 {
+    for (auto const& [pos, type] : edges)
+    {
+        if (pos.x == 0)
+            rep.push_back(EdgePos (type, XYPosFloat(1, 0).angle(), (pos.y + 0.5) * grid_pitch.y));
+        else if (pos.x == 1)
+        {
+            rep.push_back(EdgePos (type, XYPosFloat(1, std::sqrt(3)).angle(), (((size.y - 1) / 2) - pos.y)  * grid_pitch.y));
+        }
+        else if (pos.x == 2)
+        {
+            rep.push_back(EdgePos (type, XYPosFloat(-1, std::sqrt(3)).angle(), -(pos.y + 1)  * grid_pitch.y));
+        }
+        else
+            assert(0);
+    }
+}
 
+XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    int y = pos.y / grid_pitch.y;
+    int x = pos.x / grid_pitch.x;
+    int yi = pos.y % grid_pitch.y;
+    int xi = pos.x % grid_pitch.x;
+    if (!((x ^ y) & 1))
+        yi = grid_pitch.y - yi - 1;
+    xi = xi * std::sqrt(3);
+    if (yi > xi)
+        x--;
+    if (XYPos(x,y).inside(size))
+        return XYPos(x,y);
+    return XYPos(-1,-1);
 }
 
 XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)

@@ -1004,7 +1004,6 @@ void GameState::render(bool saving)
         right_panel_offset = grid_offset + XYPos(grid_size, 0);
         button_size = (grid_size * 7) / (18 * 5);
 
-//        square_size = grid_size / (std::max(grid->size.x,grid->size.y) + row_col_clues);
         if (row_col_clues)
         {
             int border = grid_size / 8;
@@ -1013,7 +1012,6 @@ void GameState::render(bool saving)
         }
 
         grid_pitch = grid->get_grid_pitch(XYPos(grid_size, grid_size));
-        square_size = grid_pitch.x;
     }
 
     if (display_mode == DISPLAY_MODE_HELP)
@@ -1172,8 +1170,7 @@ void GameState::render(bool saving)
     XYPos mouse_filter_pos(-1,-1);
     if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
     {
-        XYPos pos = mouse - grid_offset;
-        mouse_filter_pos = pos / square_size;
+        mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - grid_offset, grid_pitch);
         mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
     }
     int region_vis_counts[3] = {0,0,0};
@@ -1269,23 +1266,29 @@ void GameState::render(bool saving)
             double p = edge.pos / std::cos(edge.angle);
             if (p >= 0 && p < grid_size)
             {
+                double angle = edge.angle;
+                if (XYPosFloat(Angle(angle), 1).x < 0)
+                    angle += M_PI;
                 XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
                 SDL_Rect src_rect = {1664, 192, 192, 192};
                 SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
                 SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(edge.angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(edge.angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                 render_region_type(edge.type, grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
             }
             p = -edge.pos / std::sin(edge.angle);
             if (p >= 0 && p < grid_size)
             {
+                double angle = edge.angle;
+                if (XYPosFloat(Angle(angle), 1).y < 0)
+                    angle += M_PI;
                 XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
                 SDL_Rect src_rect = {1664, 192, 192, 192};
                 SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
                 SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(edge.angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(edge.angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                 render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
             }
         }
@@ -1881,9 +1884,10 @@ void GameState::grid_click(XYPos pos, bool right)
 
     if (mouse_mode == MOUSE_MODE_FILTER)
     {
-        XYPos gpos = pos / square_size;
+        XYPos gpos = grid->get_square_from_mouse_pos(pos, grid_pitch);
         gpos = grid->get_base_square(gpos);
-        filter_pos.flip(gpos);
+        if (gpos.x >= 0)
+            filter_pos.flip(gpos);
     }
     else
     {
