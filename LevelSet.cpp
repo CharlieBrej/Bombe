@@ -5,7 +5,7 @@
 #include <fstream>
 #include <algorithm>
 
-std::vector<LevelSet*> global_level_sets;
+std::vector<LevelSet*> global_level_sets[GLBAL_LEVEL_SETS];
 
 LevelSet::LevelSet(SaveObjectMap* omap)
 {
@@ -37,40 +37,52 @@ SaveObject* LevelSet::save()
 
 void LevelSet::init_global()
 {
-    if (!global_level_sets.empty())
+    if (!global_level_sets[1].empty())
         return;
     std::ifstream loadfile("levels.json");
     SaveObjectMap* omap = SaveObject::load(loadfile)->get_map();
-    SaveObjectList* rlist = omap->get_item("level_sets")->get_list();
-
+    SaveObjectList* llist = omap->get_item("level_sets")->get_list();
     delete_global();
-    for (int i = 0; i < rlist->get_count(); i++)
+
+    for (int j = 0; (j < llist->get_count()) && (j < GLBAL_LEVEL_SETS); j++)
     {
-        LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
-        global_level_sets.push_back(lset);
+        SaveObjectList* rlist = llist->get_item(j)->get_list();
+        for (int i = 0; i < rlist->get_count(); i++)
+        {
+            LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
+            global_level_sets[j].push_back(lset);
+        }
     }
     delete omap;
 }
 void LevelSet::delete_global()
 {
-    for (LevelSet* level_set : global_level_sets)
+    for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
     {
-        delete level_set;
+        for (LevelSet* level_set : global_level_sets[i])
+        {
+            delete level_set;
+        }
+        global_level_sets[i].clear();
     }
-    global_level_sets.clear();
 }
 
 void LevelSet::save_global()
 {
     SaveObjectMap* omap = new SaveObjectMap;
+    SaveObjectList* llist = new SaveObjectList;
 
-    SaveObjectList* rlist = new SaveObjectList;
-    for (LevelSet* level_set : global_level_sets)
+    for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
     {
-        rlist->add_item(level_set->save());
+        SaveObjectList* rlist = new SaveObjectList;
+        for (LevelSet* level_set : global_level_sets[i])
+        {
+            rlist->add_item(level_set->save());
+        }
+        llist->add_item(rlist);
     }
-    omap->add_item("level_sets", rlist);
 
+    omap->add_item("level_sets", llist);
     std::ofstream outfile ("levels.json");
     omap->save(outfile);
     delete omap;

@@ -1,8 +1,9 @@
 #pragma once
 #include "Misc.h"
 #include "SaveState.h"
-
 #include <vector>
+
+#define GLBAL_LEVEL_SETS 3
 
 class LevelSet
 {
@@ -18,4 +19,4 @@ public:
     static void delete_global();
 };
 
-extern std::vector<LevelSet*> global_level_sets;
+extern std::vector<LevelSet*> global_level_sets[GLBAL_LEVEL_SETS];
