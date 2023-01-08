@@ -133,7 +133,7 @@ public:
 
     std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS];
 
-    unsigned current_level_group_index = 2;
+    unsigned current_level_group_index = 1;
     unsigned current_level_set_index = 0;
     unsigned current_level_index = 0;
     bool current_level_is_temp = true;

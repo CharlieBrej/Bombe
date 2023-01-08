@@ -108,22 +108,22 @@ GameState::GameState(std::ifstream& loadfile)
             if (version >= 5)
             {
                 SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
-                for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
+                for (int k = 0; k < GLBAL_LEVEL_SETS; k++)
                 {
-                    SaveObjectList* plist = pplist->get_item(j)->get_list();
-                    for (int i = 0; i < plist->get_count() && i < level_progress[j].size(); i++)
+                    SaveObjectList* plist = pplist->get_item(k)->get_list();
+                    for (int i = 0; i < plist->get_count() && i < level_progress[k].size(); i++)
                     {
                         std::string s = plist->get_string(i);
-                        int lim = std::min(s.size(), level_progress[1][i].level_status.size());
+                        int lim = std::min(s.size(), level_progress[k][i].level_status.size());
                         for (int j = 0; j < lim; j++)
                         {
                             char c = s[j];
                             int stat = c - '0';
                             if (stat)
                                 completed_count++;
-                            level_progress[1][i].level_status[j] = stat;
+                            level_progress[k][i].level_status[j] = stat;
                             if (stat)
-                                level_progress[1][i].count_todo--;
+                                level_progress[k][i].count_todo--;
                         }
                     }
                 }
@@ -2023,6 +2023,17 @@ void GameState::left_panel_click(XYPos pos, bool right)
     }
     if ((pos - XYPos(button_size * 1, button_size * 1)).inside(XYPos(button_size,button_size)))
         display_mode = DISPLAY_MODE_LANGUAGE;
+    if (right && (pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
+    {
+        int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
+        if (x >= 0 && x < 3)
+        {
+            current_level_group_index = x;
+            current_level_set_index = 0;
+            current_level_index = 0;
+            skip_level = true;
+        }
+    }
 
     XYPos gpos = pos / button_size;
     gpos.y -= 6;
