@@ -864,182 +864,182 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 // static std::set<std::string> solution_cache;
 // static std::set<std::string> no_solution_cache;
 
-bool Grid::has_solution(void)
-{
-//    std::string str = to_string();
-
-//   if (solution_cache.count(str))
-//       return true;
-//   if (no_solution_cache.count(str))
-//       return false;
-    z3::context c;
-    z3::expr_vector vec(c);
-    std::map<XYPos, unsigned> vec_index;
-    XYSet grid_squares = get_squares();
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (!vals[p].revealed)
-        {
-            vec_index[p] = vec.size();
-            std::stringstream x_name;
-            x_name << (char)('A' + p.y)  << p.x;
-            vec.push_back(c.bool_const(x_name.str().c_str()));
-        }
-    }
-    z3::solver s(c);
-
-    int hidden = 0;
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (!vals[p].revealed)
-            hidden++;
-    }
-
-//     if (count_revealed) // && (hidden < 12))
+//bool Grid::has_solution(void)
+// {
+// //    std::string str = to_string();
+// 
+// //   if (solution_cache.count(str))
+// //       return true;
+// //   if (no_solution_cache.count(str))
+// //       return false;
+//     z3::context c;
+//     z3::expr_vector vec(c);
+//     std::map<XYPos, unsigned> vec_index;
+//     XYSet grid_squares = get_squares();
+//     FOR_XY_SET(p, grid_squares)
 //     {
-//         z3::expr_vector t(c);
-//         int cnt = 0;
-//         int cntn = 0;
-//         FOR_XY(p, XYPos(), size)
+//         if (!vals[p].revealed)
 //         {
-//             if (!vals[p].revealed)
-//             {
-//                 t.push_back(vec[vec_index[p]]);
-//                 if (vals[p].bomb)
-//                     cnt++;
-//                 else
-//                     cntn++;
-//
-//             }
-//         }
-//         cnt-=count_dec;
-//         if (cnt < 0)
-//         {
-// //            no_solution_cache.insert(str);
-// //            printf("cnt < 0\n");
-//             return false;
-//         }
-// //        printf("cnt: %d %d\n", cnt, cntn);
-//
-//         if (t.size() == 0)
-//         {
-// //            no_solution_cache.insert(str);
-// //            printf("t.size() == 0\n");
-//             return false;
-//         }
-//         else
-//         {
-//             s.add(atleast(t, cnt));
-//             s.add(atmost(t, cnt));
+//             vec_index[p] = vec.size();
+//             std::stringstream x_name;
+//             x_name << (char)('A' + p.y)  << p.x;
+//             vec.push_back(c.bool_const(x_name.str().c_str()));
 //         }
 //     }
-
-    FOR_XY_SET(p, grid_squares)
-    {
-        if (vals[p].revealed && !vals[p].bomb)
-        {
-            RegionType clue = vals[p].clue;
-            if (clue.type  == RegionType::NONE)
-                continue;
-            int cnt = clue.value;
-            z3::expr_vector t(c);
-            FOR_XY(offset, XYPos(-1,-1), XYPos(2,2))
-            {
-                XYPos n = p + offset;
-                if (!get(n).revealed)
-                {
-                    t.push_back(vec[vec_index[n]]);
-                }
-                else if (get(n).bomb)
-                {
-                    if (cnt == 0)
-                    {
-                        if (clue.type == RegionType::XOR2)
-                            continue;
-                        if (clue.type == RegionType::XOR3)
-                            continue;
-                        if (clue.type == RegionType::MORE)
-                            continue;
-//                        no_solution_cache.insert(str);
-//            	        printf("cnt < 0\n");
-                        return false;
-                    }
-                    cnt--;
-                }
-            }
-
-
-            if (t.size())
-            {
-                if (clue.type == RegionType::LESS)
-                {
-                    s.add(atmost(t, cnt));
-                }
-                if (clue.type == RegionType::MORE)
-                {
-                    s.add(atleast(t, cnt));
-                }
-                if (clue.type == RegionType::EQUAL)
-                {
-                    s.add(atleast(t, cnt));
-                    s.add(atmost(t, cnt));
-                }
-                if (clue.type != RegionType::XOR2)
-                    if (cnt >= 0)
-                    {
-                        s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 2) && atmost(t, cnt + 2)));
-                    }
-
-                    if (cnt >= -2)
-                    {
-                        s.add(atleast(t, cnt + 2));
-                        s.add(atmost(t, cnt + 2));
-                    }
-                    if (clue.type != RegionType::XOR3)
-                        if (cnt >= 0)
-                        {
-                            s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 3) && atmost(t, cnt + 3)));
-                        }
-
-                        if (cnt >= -3)
-                        {
-                            s.add(atleast(t, cnt + 3));
-                            s.add(atmost(t, cnt + 3));
-                        }
-
-//                s.add(sum(t) == cnt);
-            }
-            else
-            {
-                if (cnt && ((clue.type == RegionType::MORE) || (clue.type == RegionType::EQUAL)))
-                {
-//                    no_solution_cache.insert(str);
-//            	    printf("cnt but all taken\n");
-                    return false;
-                }
-                if (cnt != 0 && cnt != -2 && (clue.type == RegionType::XOR2))
-                {
-                    return false;
-                }
-                if (cnt != 0 && cnt != -3 && (clue.type == RegionType::XOR3))
-                {
-                    return false;
-                }
-            }
-        }
-    }
-//    printf("pos:%s\n", (s.check() == z3::sat) ? "sat" : "unsat");
-    if (s.check() == z3::sat)
-    {
-//        solution_cache.insert(str);
-        return true;
-    }
-    else
-    {
-//        no_solution_cache.insert(str);
-        return false;
-    }
-}
+//     z3::solver s(c);
+// 
+//     int hidden = 0;
+//     FOR_XY_SET(p, grid_squares)
+//     {
+//         if (!vals[p].revealed)
+//             hidden++;
+//     }
+// 
+// //     if (count_revealed) // && (hidden < 12))
+// //     {
+// //         z3::expr_vector t(c);
+// //         int cnt = 0;
+// //         int cntn = 0;
+// //         FOR_XY(p, XYPos(), size)
+// //         {
+// //             if (!vals[p].revealed)
+// //             {
+// //                 t.push_back(vec[vec_index[p]]);
+// //                 if (vals[p].bomb)
+// //                     cnt++;
+// //                 else
+// //                     cntn++;
+// //
+// //             }
+// //         }
+// //         cnt-=count_dec;
+// //         if (cnt < 0)
+// //         {
+// // //            no_solution_cache.insert(str);
+// // //            printf("cnt < 0\n");
+// //             return false;
+// //         }
+// // //        printf("cnt: %d %d\n", cnt, cntn);
+// //
+// //         if (t.size() == 0)
+// //         {
+// // //            no_solution_cache.insert(str);
+// // //            printf("t.size() == 0\n");
+// //             return false;
+// //         }
+// //         else
+// //         {
+// //             s.add(atleast(t, cnt));
+// //             s.add(atmost(t, cnt));
+// //         }
+// //     }
+// 
+//     FOR_XY_SET(p, grid_squares)
+//     {
+//         if (vals[p].revealed && !vals[p].bomb)
+//         {
+//             RegionType clue = vals[p].clue;
+//             if (clue.type  == RegionType::NONE)
+//                 continue;
+//             int cnt = clue.value;
+//             z3::expr_vector t(c);
+//             FOR_XY(offset, XYPos(-1,-1), XYPos(2,2))
+//             {
+//                 XYPos n = p + offset;
+//                 if (!get(n).revealed)
+//                 {
+//                     t.push_back(vec[vec_index[n]]);
+//                 }
+//                 else if (get(n).bomb)
+//                 {
+//                     if (cnt == 0)
+//                     {
+//                         if (clue.type == RegionType::XOR2)
+//                             continue;
+//                         if (clue.type == RegionType::XOR3)
+//                             continue;
+//                         if (clue.type == RegionType::MORE)
+//                             continue;
+// //                        no_solution_cache.insert(str);
+// //            	        printf("cnt < 0\n");
+//                         return false;
+//                     }
+//                     cnt--;
+//                 }
+//             }
+// 
+// 
+//             if (t.size())
+//             {
+//                 if (clue.type == RegionType::LESS)
+//                 {
+//                     s.add(atmost(t, cnt));
+//                 }
+//                 if (clue.type == RegionType::MORE)
+//                 {
+//                     s.add(atleast(t, cnt));
+//                 }
+//                 if (clue.type == RegionType::EQUAL)
+//                 {
+//                     s.add(atleast(t, cnt));
+//                     s.add(atmost(t, cnt));
+//                 }
+//                 if (clue.type != RegionType::XOR2)
+//                     if (cnt >= 0)
+//                     {
+//                         s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 2) && atmost(t, cnt + 2)));
+//                     }
+// 
+//                     if (cnt >= -2)
+//                     {
+//                         s.add(atleast(t, cnt + 2));
+//                         s.add(atmost(t, cnt + 2));
+//                     }
+//                     if (clue.type != RegionType::XOR3)
+//                         if (cnt >= 0)
+//                         {
+//                             s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 3) && atmost(t, cnt + 3)));
+//                         }
+// 
+//                         if (cnt >= -3)
+//                         {
+//                             s.add(atleast(t, cnt + 3));
+//                             s.add(atmost(t, cnt + 3));
+//                         }
+// 
+// //                s.add(sum(t) == cnt);
+//             }
+//             else
+//             {
+//                 if (cnt && ((clue.type == RegionType::MORE) || (clue.type == RegionType::EQUAL)))
+//                 {
+// //                    no_solution_cache.insert(str);
+// //            	    printf("cnt but all taken\n");
+//                     return false;
+//                 }
+//                 if (cnt != 0 && cnt != -2 && (clue.type == RegionType::XOR2))
+//                 {
+//                     return false;
+//                 }
+//                 if (cnt != 0 && cnt != -3 && (clue.type == RegionType::XOR3))
+//                 {
+//                     return false;
+//                 }
+//             }
+//         }
+//     }
+// //    printf("pos:%s\n", (s.check() == z3::sat) ? "sat" : "unsat");
+//     if (s.check() == z3::sat)
+//     {
+// //        solution_cache.insert(str);
+//         return true;
+//     }
+//     else
+//     {
+// //        no_solution_cache.insert(str);
+//         return false;
+//     }
+// }
 
 void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
 {

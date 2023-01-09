@@ -1,10 +1,10 @@
 #include "Grid.h"
 #include "LevelSet.h"
 
-int main( int argc, char* argv[] )
-{
-    LevelSet::init_global();
+pthread_mutex_t glob_mutex;
 
+void* exec(void* dummy)
+{
     int params[][9] = {
       // cnt shp   x  y  mrg +- x/y msc rows
        {   0, 0,   3, 3, 0,  1, 0,  0, 0},
@@ -77,8 +77,10 @@ int main( int argc, char* argv[] )
        { 200, 2,  11, 7, 0,  1, 1,  1, 50},
 
        {  -1, -1,  3, 3, 0,  0, 0,  0, 0}
-   };
+    };
     int i;
+    pthread_mutex_lock(&glob_mutex);
+
 
 
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
@@ -88,10 +90,11 @@ int main( int argc, char* argv[] )
         {
             if (params[i][1] != j)
                 continue;
-            if (global_level_sets[j].size() <= i)
+            if (global_level_sets[j].size() <= cnt)
                 global_level_sets[j].push_back(new LevelSet());
             while (global_level_sets[j][cnt]->levels.size() < params[i][0])
             {
+                pthread_mutex_unlock(&glob_mutex);
                 printf("%d of %d\n", global_level_sets[j][cnt]->levels.size(), params[i][0]);
                 Grid* g;
                 if (j == 0)
@@ -106,9 +109,11 @@ int main( int argc, char* argv[] )
 
                 g->make_harder(params[i][5], params[i][6], params[i][7]);
                 std::string s = g->to_string();
+                pthread_mutex_lock(&glob_mutex);
+
                 std::vector<std::string> &levels = global_level_sets[j][cnt]->levels;
                 if(std::find(levels.begin(), levels.end(), s) == levels.end())
-                    global_level_sets[j][cnt]->levels.push_back(s);
+                    levels.push_back(s);
                 delete g;
                 LevelSet::save_global();
                 printf("got\n");
@@ -121,5 +126,21 @@ int main( int argc, char* argv[] )
     }
     LevelSet::save_global();
 
+    pthread_mutex_unlock(&glob_mutex);
+    return NULL;
+}
+
+
+int main( int argc, char* argv[] )
+{
+    int TNUM = 8;
+    pthread_t thread[TNUM];
+    void* dummy;
+
+    LevelSet::init_global();
+    for (int i = 0; i < TNUM; i++)
+        pthread_create(&thread[i], NULL, exec, NULL);
+    for (int i = 0; i < TNUM; i++)
+        pthread_join(thread[i], &dummy);
     return 0;
 }

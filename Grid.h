@@ -11,7 +11,7 @@ void grid_set_rnd(int a = 0);
 
 class XYSet
 {
-    static const unsigned WIDTH = 10;
+    static const unsigned WIDTH = 12;
     static const unsigned SIZE = WIDTH*WIDTH;
     std::bitset <SIZE> d;
 public:
@@ -237,7 +237,7 @@ public:
 
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
-    bool has_solution(void);
+//    bool has_solution(void);
     void make_harder(bool plus_minus, bool x_y, bool misc);
     void reveal(XYPos p);
     bool is_solved(void);

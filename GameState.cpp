@@ -76,6 +76,10 @@ GameState::GameState(std::ifstream& loadfile)
                 throw(std::runtime_error("Bad Version"));
             if (omap->has_key("language"))
                 language = omap->get_string("language");
+            if (omap->has_key("level_group_index"))
+                current_level_group_index = omap->get_num("level_group_index");
+            if (omap->has_key("level_set_index"))
+                current_level_set_index = omap->get_num("level_set_index");
 
 
             SaveObjectList* rlist = omap->get_item("rules")->get_list();
@@ -210,6 +214,8 @@ SaveObject* GameState::save(bool lite)
     }
     omap->add_item("level_progress", pplist);
     omap->add_string("language", language);
+    omap->add_num("level_group_index", current_level_group_index);
+    omap->add_num("level_set_index", current_level_set_index);
     return omap;
 }
 
@@ -1029,7 +1035,7 @@ void GameState::render(bool saving)
     bool row_col_clues = !grid->edges.empty();
     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
     SDL_RenderClear(sdl_renderer);
-
+    int edge_clue_border = 0;
     {
         if (window_size.x * 9 > window_size.y * 16)
             grid_size = window_size.y;
@@ -1044,9 +1050,9 @@ void GameState::render(bool saving)
 
         if (row_col_clues)
         {
-            int border = grid_size / 8;
-            grid_offset += XYPos(border, border);
-            grid_size -= border;
+            edge_clue_border = grid_size / 8;
+            grid_offset += XYPos(edge_clue_border, edge_clue_border);
+            grid_size -= edge_clue_border * 2;
         }
 
         grid_pitch = grid->get_grid_pitch(XYPos(grid_size, grid_size));
@@ -1298,7 +1304,7 @@ void GameState::render(bool saving)
         grid->get_edges(edges, grid_pitch);
         for (EdgePos& edge : edges)
         {
-            int arrow_size = grid_size / 9;
+            int arrow_size = edge_clue_border * 82 / 100;
             int bubble_margin = arrow_size / 16;
 
             double p = edge.pos / std::cos(edge.angle);
@@ -1329,9 +1335,53 @@ void GameState::render(bool saving)
                 XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                 render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
             }
-        }
 
+            p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * grid_size;
+            if (p >= 0 && p < grid_size)
+            {
+                double angle = edge.angle;
+                if (XYPosFloat(Angle(angle), 1).x > 0)
+                    angle += M_PI;
+                XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
+                SDL_Rect src_rect = {1664, 192, 192, 192};
+                SDL_Rect dst_rect = {grid_offset.x + grid_size + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                SDL_Point rot_center = {arrow_size, arrow_size};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                render_region_type(edge.type, grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
+            }
+
+            p = -edge.pos / std::sin(edge.angle) + grid_size / std::tan(edge.angle);
+            if (p >= 0 && p < grid_size)
+            {
+                double angle = edge.angle;
+                if (XYPosFloat(Angle(angle), 1).y > 0)
+                    angle += M_PI;
+                XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
+                SDL_Rect src_rect = {1664, 192, 192, 192};
+                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + grid_size + gpos.y, arrow_size, arrow_size};
+                SDL_Point rot_center = {arrow_size, arrow_size};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin), arrow_size - bubble_margin * 2);
+            }
+
+        }
     }
+
+    {
+        SDL_Rect src_rect = {448, 448, 1, 1};
+        SDL_Rect dst_rect = {0, 0, left_panel_offset.x + panel_size.x, window_size.y};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {right_panel_offset.x, 0, window_size.x - right_panel_offset.x, window_size.y};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {left_panel_offset.x + panel_size.x, 0, right_panel_offset.x - (left_panel_offset.x + panel_size.x), right_panel_offset.y};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {left_panel_offset.x + panel_size.x, right_panel_offset.y + panel_size.y, right_panel_offset.x - (left_panel_offset.x + panel_size.x), window_size.y - (right_panel_offset.y + panel_size.y)};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+    }
+
+
     {
         SDL_Rect src_rect = {704, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
@@ -1437,6 +1487,28 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Trash");
     }
 
+    for (int i = 0; i < 3; i++)
+    {
+        SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+    }
+
+    for (int i = 0; i < 5; i++)
+    {
+        SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+    }
+
+    {
+        render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+        SDL_Rect src_rect = {512, 768, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Trash");
+    }
+
 
     XYPos p = XYPos(0,0);
     for (int i = 0; i < level_progress[current_level_group_index].size(); i++)
@@ -1445,8 +1517,16 @@ void GameState::render(bool saving)
         if (i == current_level_set_index)
             render_box(pos, XYPos(button_size, button_size), button_size/4);
         int c = level_progress[current_level_group_index][i].count_todo;
-        if (c)
+        if (!global_level_sets[current_level_group_index][i]->levels.size())
+        {
+            SDL_Rect src_rect = {1088, 192, 192, 192};
+            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        else if (c)
+        {
             render_number(level_progress[current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
+        }
         else
         {
             SDL_Rect src_rect = {512, 960, 192, 192};
@@ -2023,7 +2103,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
     }
     if ((pos - XYPos(button_size * 1, button_size * 1)).inside(XYPos(button_size,button_size)))
         display_mode = DISPLAY_MODE_LANGUAGE;
-    if (right && (pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
+    if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
         if (x >= 0 && x < 3)
