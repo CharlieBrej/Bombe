@@ -665,13 +665,14 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             XYPos last = elements[best_con.y];
             double dist = XYPosFloat(pos).distance(XYPosFloat(last));
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
+            int line_thickness = (grid_size / grid->size.y) / 32;
 
             SDL_Rect src_rect = {160, 608, 1, 1};
-            SDL_Rect dst_rect = {grid_offset.x + pos.x, grid_offset.y + pos.y - (grid_pitch.y / 32), int(dist), grid_pitch.y / 16};
+            SDL_Rect dst_rect = {grid_offset.x + pos.x, grid_offset.y + pos.y - line_thickness, int(dist), line_thickness * 2};
 
             SDL_Point rot_center;
             rot_center.x = 0;
-            rot_center.y = grid_pitch.y / 32;
+            rot_center.y = line_thickness;
 
             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
         }

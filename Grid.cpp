@@ -604,6 +604,8 @@ Grid* Grid::Load(std::string s)
         return new SquareGrid(s.substr (1, std::string::npos));
     if (a == 1)
         return new TriangleGrid(s.substr (1, std::string::npos));
+    if (a == 2)
+        return new HexagonGrid(s.substr (1, std::string::npos));
     assert(0);
 }
 
@@ -867,7 +869,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //bool Grid::has_solution(void)
 // {
 // //    std::string str = to_string();
-// 
+//
 // //   if (solution_cache.count(str))
 // //       return true;
 // //   if (no_solution_cache.count(str))
@@ -887,14 +889,14 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //         }
 //     }
 //     z3::solver s(c);
-// 
+//
 //     int hidden = 0;
 //     FOR_XY_SET(p, grid_squares)
 //     {
 //         if (!vals[p].revealed)
 //             hidden++;
 //     }
-// 
+//
 // //     if (count_revealed) // && (hidden < 12))
 // //     {
 // //         z3::expr_vector t(c);
@@ -933,7 +935,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 // //             s.add(atmost(t, cnt));
 // //         }
 // //     }
-// 
+//
 //     FOR_XY_SET(p, grid_squares)
 //     {
 //         if (vals[p].revealed && !vals[p].bomb)
@@ -967,8 +969,8 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //                     cnt--;
 //                 }
 //             }
-// 
-// 
+//
+//
 //             if (t.size())
 //             {
 //                 if (clue.type == RegionType::LESS)
@@ -989,7 +991,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //                     {
 //                         s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 2) && atmost(t, cnt + 2)));
 //                     }
-// 
+//
 //                     if (cnt >= -2)
 //                     {
 //                         s.add(atleast(t, cnt + 2));
@@ -1000,13 +1002,13 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //                         {
 //                             s.add((atmost(t, cnt) && atmost(t, cnt)) || (atmost(t, cnt + 3) && atmost(t, cnt + 3)));
 //                         }
-// 
+//
 //                         if (cnt >= -3)
 //                         {
 //                             s.add(atleast(t, cnt + 3));
 //                             s.add(atmost(t, cnt + 3));
 //                         }
-// 
+//
 // //                s.add(sum(t) == cnt);
 //             }
 //             else
@@ -1943,16 +1945,6 @@ XYSet TriangleGrid::get_squares()
     XYSet rep;
     FOR_XY(pos, XYPos(), size)
         rep.set(pos);
-    for ( const auto &m_reg : merged )
-    {
-        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
-        {
-            if (pos == m_reg.first)
-                continue;
-            rep.clear(pos);
-        }
-    }
-
     return rep;
 }
 
@@ -2110,6 +2102,175 @@ void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<Render
     {
         XYRect src(64, downwards ? 1344 : 1152 , 192, 192);
         XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
+        cmds.push_back({src,dst});
+    }
+}
+
+std::string HexagonGrid::to_string()
+{
+    return "C" + Grid::to_string();
+}
+
+XYSet HexagonGrid::get_squares()
+{
+    XYSet rep;
+    FOR_XY(pos, XYPos(), size)
+        rep.set(pos);
+    return rep;
+}
+
+XYSet HexagonGrid::get_row(unsigned type, int index)
+{
+    XYSet rep;
+    if (type == 0)
+    {
+        for (int y = 0; y < size.y; y++)
+        {
+            int x = (index + y - size.y) * 2;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+            x++;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+        }
+    }
+    else if (type == 1)
+    {
+        for (int y = 0; y < size.y; y++)
+        {
+            int x = index;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+        }
+    }
+    else if (type == 2)
+    {
+        for (int y = 0; y < size.y; y++)
+        {
+            int x = (index - y) * 2;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+            x--;
+            if (x >= 0 && x < size.x)
+                rep.set(get_base_square(XYPos(x, y)));
+        }
+    }
+    else
+    {
+        assert(0);
+    }
+    return rep;
+}
+
+XYSet HexagonGrid::get_neighbors(XYPos pos)
+{
+    bool downstep = pos.x & 1;
+    XYSet rep;
+    FOR_XY(offset, XYPos(-1,-1), XYPos(2,2))
+    {
+        if (downstep && offset.y == -1 && offset.x) continue;
+        if (!downstep && offset.y == 1 && offset.x) continue;
+        XYPos t = pos + offset;
+        if (t.inside(size))
+            rep.set(t);
+    }
+    return rep;
+}
+
+void HexagonGrid::get_row_types(std::vector<XYPos>& rep)
+{
+    rep.push_back(XYPos(0, (size.x - 1) / 2 + size.y));
+    rep.push_back(XYPos(0, size.x));
+    rep.push_back(XYPos(0, size.x / 2 + size.y));
+}
+
+void HexagonGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
+{
+    for (auto const& [pos, type] : edges)
+    {
+        if (pos.x == 0)
+        {
+            rep.push_back(EdgePos (type, XYPosFloat(1.5, std::sqrt(3)/2).angle(), -((pos.y - size.y) * 3 - 0.5) * grid_pitch.x));
+        }
+        else if (pos.x == 1)
+        {
+            rep.push_back(EdgePos (type, XYPosFloat(0, 1).angle(), -(2 + pos.y * 3) * grid_pitch.x));
+        }
+        else if (pos.x == 2)
+        {
+            rep.push_back(EdgePos (type, XYPosFloat(-1.5, std::sqrt(3)/2).angle(), -(std::sqrt(7) + pos.y * 3) * grid_pitch.x));
+        }
+        else
+            assert(0);
+    }
+}
+
+XYPos HexagonGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    assert(0);
+}
+
+XYPos HexagonGrid::get_grid_pitch(XYPos grid_size)
+{
+    XYPosFloat gsize(size.x * 3 + 1, (size.y * 2 + 1) * std::sqrt(3));
+    int s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
+    return XYPos(s, s * std::sqrt(3));
+
+    assert(0);
+}
+
+XYRect HexagonGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
+{
+    int downstep = pos.x & 1;
+    XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
+    return dst;
+}
+
+XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
+{
+    int downstep = pos.x & 1;
+    unsigned s = 2;
+    while (total > (1 + 3 * (s * (s - 1))))
+        s++;
+
+    double bsize = double(grid_pitch.x * 2) / (s - 1 + 1 / std::sqrt(3));
+
+    XYPos gpos = XYPos(0,0);
+    while (true)
+    {
+        int w = s + gpos.y;
+        int ofst = 0;
+        if (gpos.y >= s)
+            ofst = (gpos.y - s + 1);
+
+        if (index < (w - ofst))
+        {
+            gpos.x = index + ofst;
+            break;
+        }
+        index -= w - ofst;
+        gpos.y++;
+    }
+
+    XYPos p(grid_pitch.x  + gpos.x * bsize - gpos.y * bsize / 2 - bsize / 2 + bsize / (std::sqrt(3) * 2), gpos.y * std::sqrt(3) * bsize / 2);
+    XYPos ppos = (pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch;
+
+    return XYRect(ppos + p, XYPos(bsize, bsize));
+}
+
+void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+{
+    int downstep = pos.x & 1;
+    // if (highlighted)
+    // {
+    //     XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
+    //     XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
+    //     cmds.push_back({src,dst});
+    // }
+
+    {
+        XYRect src(64, 1568, 384, 384);
+        XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
         cmds.push_back({src,dst});
     }
 }

@@ -313,3 +313,24 @@ public:
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
     std::string to_string();
 };
+
+class HexagonGrid : public Grid
+{
+public:
+    HexagonGrid() {}
+    HexagonGrid(std::string s) {from_string(s);}
+
+    Grid* dup() {return new HexagonGrid(*this);}
+    XYSet get_squares();
+    XYSet get_row(unsigned type, int index);
+    XYSet get_neighbors(XYPos p);
+    void get_row_types(std::vector<XYPos>& rep);
+    void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
+    XYPos get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch);
+
+    XYPos get_grid_pitch(XYPos grid_size);
+    XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    std::string to_string();
+};

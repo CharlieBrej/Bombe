@@ -73,6 +73,8 @@ static std::string parse_string(std::istream& f)
     assert_exp('\"');
     while ((c = f.get()) != '\"')
     {
+        if (c < 0)
+            throw(std::runtime_error("Parse Error"));
         if (c == '\\')
         {
             c = f.get();
