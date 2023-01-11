@@ -2207,7 +2207,33 @@ void HexagonGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 
 XYPos HexagonGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
-    assert(0);
+    pos += XYPos(6 * grid_pitch.x, 2 * grid_pitch.y);
+    XYPos rep;
+    int x = pos.x / grid_pitch.x;
+    rep.x = x / 3;
+    int y = pos.y / grid_pitch.y - (rep.x & 1);
+    rep.y = y / 2;
+    if ((x % 3) == 0)
+    {
+        bool lower = y & 1;
+        if (lower)
+            y = pos.y % grid_pitch.y;
+        else
+            y = grid_pitch.y - pos.y % grid_pitch.y - 1;
+        x = pos.x % grid_pitch.x;
+        if (y * grid_pitch.x > x * grid_pitch.y)
+        {
+            if (!lower)
+                rep.y--;
+            if (rep.x & 1)
+                rep.y++;
+            rep.x--;
+        }
+    }
+    rep -= XYPos(2, 1);
+    if (rep.inside(size))
+        return rep;
+    return XYPos(-1,-1);
 }
 
 XYPos HexagonGrid::get_grid_pitch(XYPos grid_size)
@@ -2215,8 +2241,6 @@ XYPos HexagonGrid::get_grid_pitch(XYPos grid_size)
     XYPosFloat gsize(size.x * 3 + 1, (size.y * 2 + 1) * std::sqrt(3));
     int s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
     return XYPos(s, s * std::sqrt(3));
-
-    assert(0);
 }
 
 XYRect HexagonGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
@@ -2243,12 +2267,12 @@ XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, 
         if (gpos.y >= s)
             ofst = (gpos.y - s + 1);
 
-        if (index < (w - ofst))
+        if (index < (w - ofst * 2))
         {
             gpos.x = index + ofst;
             break;
         }
-        index -= w - ofst;
+        index -= w - ofst * 2;
         gpos.y++;
     }
 
