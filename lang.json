@@ -34,7 +34,7 @@
         "tutorial":
         [
             [
-                {"x": 100,  "y": 750,           "text":"Numbers state how many bombs\nare in the 8 neighbouring squares"},
+                {"x": 100,  "y": 750,           "text":"Numbers state how many bombs\nare in the neighbouring squares"},
                 {"x": 940,  "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"},
             ],
             [

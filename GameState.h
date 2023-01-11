@@ -143,6 +143,7 @@ public:
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
     ~GameState();
+    bool level_is_accessible(unsigned set);
     void post_to_server(SaveObject* send, bool sync);
     void fetch_from_server(SaveObject* send, ServerResp* resp);
     void save_to_server(bool sync);

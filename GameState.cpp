@@ -45,7 +45,6 @@ static void DisplayWebsite(const char* url)
 
 }
 
-
 GameState::GameState(std::ifstream& loadfile)
 {
     LevelSet::init_global();
@@ -239,6 +238,19 @@ GameState::~GameState()
     SDL_DestroyRenderer(sdl_renderer);
     SDL_DestroyWindow(sdl_window);
     LevelSet::delete_global();
+}
+
+bool GameState::level_is_accessible(unsigned set)
+{
+    if (IS_DEMO && set > 5 && (set % 5))
+        return false;
+    if (set == 0)
+        return true;
+    if (set >= 5 && level_progress[current_level_group_index][set - 5].count_todo < 50)
+        return true;
+    if ((set % 5 >= 1) && level_progress[current_level_group_index][set - 1].count_todo < 50)
+        return true;
+    return false;
 }
 
 class ServerComms
@@ -1510,7 +1522,6 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Trash");
     }
 
-
     XYPos p = XYPos(0,0);
     for (int i = 0; i < level_progress[current_level_group_index].size(); i++)
     {
@@ -1518,7 +1529,7 @@ void GameState::render(bool saving)
         if (i == current_level_set_index)
             render_box(pos, XYPos(button_size, button_size), button_size/4);
         int c = level_progress[current_level_group_index][i].count_todo;
-        if (!global_level_sets[current_level_group_index][i]->levels.size())
+        if (!global_level_sets[current_level_group_index][i]->levels.size() || !level_is_accessible(i))
         {
             SDL_Rect src_rect = {1088, 192, 192, 192};
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
@@ -2122,7 +2133,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
 
     if ((idx >= 0) && (idx < level_progress[current_level_group_index].size()))
     {
-        if (level_progress[current_level_group_index][idx].level_status.size())
+        if (level_progress[current_level_group_index][idx].level_status.size() && level_is_accessible(idx))
         {
             current_level_set_index = idx;
             current_level_index = 0;
