@@ -1698,8 +1698,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                 {
                     for (GridRegion& r3 : regions)
                     {
-                        if (rule.stale && r1.stale && r2.stale && r3.stale && !force)
-                            continue;
                         if (r3.type != rule.region_type[2])
                             continue;
                         if ((r3 == r1) || (r3 == r2))
@@ -1708,6 +1706,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                             continue;
                         if(rule.region_count == 3)
                         {
+                            if (rule.stale && r1.stale && r2.stale && r3.stale && !force)
+                                continue;
                             unsigned connected = 1;
                             find_connected(&r1, connected, &r1, &r2, &r3, NULL);
                             if (connected != 0x7)
@@ -1723,8 +1723,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                         {
                             for (GridRegion& r4 : regions)
                             {
-                                if (rule.stale && r1.stale && r2.stale && r3.stale && r4.stale && !force)
-                                    continue;
                                 if (r4.type != rule.region_type[3])
                                     continue;
                                 if ((r4 == r1) || (r4 == r2) || (r4 == r3))
@@ -1733,6 +1731,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                                     continue;
                                 assert (rule.region_count == 4);
                                 {
+                                    if (rule.stale && r1.stale && r2.stale && r3.stale && r4.stale && !force)
+                                        continue;
                                     unsigned connected = 1;
                                     find_connected(&r1, connected, &r1, &r2, &r3, &r4);
                                     if (connected != 0xF)
