@@ -2069,7 +2069,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
 {
     bool downwards = (pos.x ^ pos.y) & 1;
     unsigned s = 3;
-    while (total > ((s * s + 1) / 2))
+    while (total > ((s * (s + 1)) / 2))
         s++;
     double bsize = double(grid_pitch.x * 2) / (std::sqrt(3) + s - 1);
 
