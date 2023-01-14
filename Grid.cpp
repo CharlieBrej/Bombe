@@ -2285,12 +2285,12 @@ XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, 
 void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
 {
     int downstep = pos.x & 1;
-    // if (highlighted)
-    // {
-    //     XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
-    //     XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
-    //     cmds.push_back({src,dst});
-    // }
+    if (highlighted)
+    {
+        XYRect src(64, 1984 , 384, 384);
+        XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
+        cmds.push_back({src,dst});
+    }
 
     {
         XYRect src(64, 1568, 384, 384);

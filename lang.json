@@ -1,6 +1,7 @@
 {
     "English":
     {
+        "font" : "font-en.ttf",
         "translate":
         {
             "Add to Rule Generator" :       "Add to Rule Generator",
@@ -29,13 +30,13 @@
             "Show Visibility Rule" :        "Show Visibility Rule",
             "Skip Level" :                  "Skip Level",
             "Trash" :                       "Trash",
-            "Visible" :                     "Visible",
+            "Visible" :                     "Visible"
         },
         "tutorial":
         [
             [
                 {"x": 100,  "y": 750,           "text":"Numbers state how many bombs\nare in the neighbouring squares"},
-                {"x": 940,  "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"},
+                {"x": 940,  "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"}
             ],
             [
                 {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Generator"},
@@ -46,12 +47,12 @@
 
                 {"x":370,   "y": 950,           "text":"Mark as all Bombs"},
                 {"x":1200,  "y": 950,           "text":"Mark as all Clear"},
-                {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"},
+                {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"}
             ],
             [
                 {"x": 150,  "y": 500,           "text":"Number of squares\ncan be set to\n\"Don't Care\""},
                 {"x": 640,  "y": 500,           "text":"Up to 4 regions\ncan be added to the\nRule Generator"},
-                {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new Regions"},
+                {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new Regions"}
             ],
             [
                 {"x": 240,  "y": 60,            "text":"Exactly 6"},
@@ -65,8 +66,221 @@
                 {"x":1050,  "y": 100,           "text":"Normal visible"},
                 {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
                 {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
-                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"},
-            ],
+                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
+            ]
         ]
     },
+    "繁體中文":
+    {
+        "font" : "font-tc.otf",
+        "translate":
+        {
+            "Add to Rule Generator" :       "添加到規則生成器",
+            "Auto Region" :                 "汽車區",
+            "Bomb" :                        "炸彈",
+            "Cancel" :                      "取消",
+            "Clear" :                       "清除",
+            "Clear Filter" :                "清除過濾器",
+            "Don't Care" :                  "不在乎",
+            "Duplicate Rule" :              "重複規則",
+            "Edit Rule" :                   "編輯規則",
+            "Filter" :                      "篩選",
+            "Full Screen" :                 "全屏",
+            "Go to Rule Constructor" :      "轉到規則構造器",
+            "Help" :                        "幫助",
+            "Hidden" :                      "隱",
+            "Hint" :                        "暗示",
+            "Illogical" :                   "不合邏輯",
+            "OK" :                          "好的",
+            "Refresh Regions" :             "刷新區域",
+            "Remove Rule" :                 "刪除規則",
+            "Rule already present" :        "規則已經存在",
+            "Rules" :                       "規則",
+            "Select Language" :             "選擇語言",
+            "Show Creation Rule" :          "顯示創建規則",
+            "Show Visibility Rule" :        "顯示可見性規則",
+            "Skip Level" :                  "跳過級別",
+            "Trash" :                       "垃圾",
+            "Visible" :                     "可見的"
+        },
+        "tutorial":
+        [
+            [
+                {"x": 100,  "y": 750,           "text":"數字表示相鄰方塊\n中有多少炸彈"},
+                {"x": 940,  "y": 750,           "text":"區域顯示還有多少\n未發現的炸彈"}
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"雙擊區域進入規則生成器"},
+                {"x":1050,  "y": 100, "left":1, "text":"區域類型"},
+                {"x":1050,  "y": 530, "left":1, "text":"方塊數"},
+                {"x":1240,  "y": 560,           "text":"採取行動"},
+                {"x":800,   "y": 630,           "text":"規則說：\n有 3 個炸彈和 3 個方塊\n的區域必須全是炸彈"},
+
+                {"x":370,   "y": 950,           "text":"標記為所有炸彈"},
+                {"x":1200,  "y": 950,           "text":"標記為全部清除"},
+                {"x":1450,  "y": 250,           "text":"單擊確定後,\n規則將\n自動應用"}
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"方塊數\n可以設置為\n\"不關心\""},
+                {"x": 640,  "y": 500,           "text":"最多 4 個區域\n可以添加到\n規則生成器"},
+                {"x": 1200, "y": 500,           "text":"規則可用於\n創建新區域"}
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"恰好 6"},
+                {"x": 240,  "y": 200,           "text":"2個或更多"},
+                {"x": 240,  "y": 340,           "text":"5 或更少"},
+                {"x": 240,  "y": 480,           "text":"除 4 以外的任何數字"},
+                {"x": 240,  "y": 620,           "text":"4 或 6"},
+                {"x": 240,  "y": 760,           "text":"3、5 或 7"},
+                {"x": 240,  "y": 900,           "text":"2、4、6 或 8"},
+
+                {"x":1050,  "y": 100,           "text":"正常可見"},
+                {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
+                {"x":1050,  "y": 490,           "text":"垃圾,被規則忽略"},
+                {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
+            ]
+        ]
+    },
+    "简体中文":
+    {
+        "font" : "font-sc.otf",
+        "translate":
+        {
+            "Add to Rule Generator" :       "添加到规则生成器",
+            "Auto Region" :                 "汽车区",
+            "Bomb" :                        "炸弹",
+            "Cancel" :                      "取消",
+            "Clear" :                       "清除",
+            "Clear Filter" :                "清除过滤器",
+            "Don't Care" :                  "不在乎",
+            "Duplicate Rule" :              "重复规则",
+            "Edit Rule" :                   "编辑规则",
+            "Filter" :                      "筛选",
+            "Full Screen" :                 "全屏",
+            "Go to Rule Constructor" :      "转到规则构造器",
+            "Help" :                        "帮助",
+            "Hidden" :                      "隐",
+            "Hint" :                        "暗示",
+            "Illogical" :                   "不合逻辑",
+            "OK" :                          "好的",
+            "Refresh Regions" :             "刷新区域",
+            "Remove Rule" :                 "删除规则",
+            "Rule already present" :        "规则已经存在",
+            "Rules" :                       "规则",
+            "Select Language" :             "选择语言",
+            "Show Creation Rule" :          "显示创建规则",
+            "Show Visibility Rule" :        "显示可见性规则",
+            "Skip Level" :                  "跳过级别",
+            "Trash" :                       "垃圾",
+            "Visible" :                     "可见的"
+        },
+        "tutorial":
+        [
+            [
+                {"x": 100,  "y": 750,           "text":"数字表示相邻方块\n中有多少炸弹"},
+                {"x": 940,  "y": 750,           "text":"区域显示还有多少\n未发现的炸弹"}
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"双击区域进入规则生成器"},
+                {"x":1050,  "y": 100, "left":1, "text":"区域类型"},
+                {"x":1050,  "y": 530, "left":1, "text":"方块数"},
+                {"x":1240,  "y": 560,           "text":"采取行动"},
+                {"x":800,   "y": 630,           "text":"规则说：\n有 3 个炸弹和 3 个方块\n的区域必须全是炸弹"},
+
+                {"x":370,   "y": 950,           "text":"标记为所有炸弹"},
+                {"x":1200,  "y": 950,           "text":"标记为全部清除"},
+                {"x":1450,  "y": 250,           "text":"单击确定后,\n规则将\n自动应用"}
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"方块数\n可以设置为\n\"不关心\""},
+                {"x": 640,  "y": 500,           "text":"最多 4 个区域\n可以添加到\n规则生成器"},
+                {"x": 1200, "y": 500,           "text":"规则可用于\n创建新区域"}
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"恰好 6"},
+                {"x": 240,  "y": 200,           "text":"2个或更多"},
+                {"x": 240,  "y": 340,           "text":"5 或更少"},
+                {"x": 240,  "y": 480,           "text":"除 4 以外的任何数字"},
+                {"x": 240,  "y": 620,           "text":"4 或 6"},
+                {"x": 240,  "y": 760,           "text":"3、5 或 7"},
+                {"x": 240,  "y": 900,           "text":"2、4、6 或 8"},
+
+                {"x":1050,  "y": 100,           "text":"正常可见"},
+                {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
+                {"x":1050,  "y": 490,           "text":"垃圾,被规则忽略"},
+                {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
+            ]
+        ]
+    },
+    "日本語":
+    {
+        "font" : "font-jp.otf",
+        "translate":
+        {
+	        "Add to Rule Generator":        "ルールジェネレーターに追加",
+		    "Auto Region":                  "オートリージョン",     
+		    "Bomb":                         "爆弾",             
+		    "Cancel":                       "キャンセル",     
+		    "Clear":                        "クリア",          
+		    "Clear Filter":                 "フィルターをクリア",     
+		    "Don't Care":                   "どうでもいい",     
+		    "Duplicate Rule":               "ルールの重複",     
+		    "Edit Rule":                    "ルールを編集",     
+		    "Filter":                       "フィルター",     
+		    "Full Screen":                  "全画面表示",     
+		    "Go to Rule Constructor":       "ルールコンストラクターに移動",     
+		    "Help":                         "ヘルプ",          
+		    "Hidden":                       "隠れた",          
+		    "Hint":                         "ヒント",          
+		    "Illogical":                    "非論理的",       
+		    "OK":                           "わかった",       
+		    "Refresh Regions":              "地域をリフレッシュ",     
+		    "Remove Rule":                  "ルールを削除",     
+		    "Rule already present":         "ルールは既に存在します",     
+		    "Rules":                        "ルール",          
+		    "Select Language":              "言語を選択する",     
+		    "Show Creation Rule":           "作成ルールを表示",     
+		    "Show Visibility Rule":         "表示ルールを表示",     
+		    "Skip Level":                   "レベルをスキップ",     
+		    "Trash":                        "ごみ",             
+		    "Visible":                      "見える"           
+        },
+        "tutorial":
+        [
+            [
+                {"x": 100,  "y": 750,           "text":"数字は隣接するマスに\nいくつの爆弾があるかを示しています"},
+                {"x": 940,  "y": 750,           "text":"リージョンは\n未発見の爆弾がいくつ残っているかを示します"}
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"領域をダブルクリックすると、\nit ルール ジェネレーターに入ります"},
+                {"x":1050,  "y": 100, "left":1, "text":"リージョンタイプ"},
+                {"x":1050,  "y": 530, "left":1, "text":"正方形の数"},
+                {"x":1240,  "y": 560,           "text":"取るべき行動"},
+                {"x":800,   "y": 630,           "text":"ルールによると:\n3 つの爆弾と\n3 つの正方形がある領域はすべて爆弾でなければなりません"},
+
+                {"x":370,   "y": 950,           "text":"すべての爆弾としてマーク"},
+                {"x":1200,  "y": 950,           "text":"すべてクリアとしてマーク"},
+                {"x":1450,  "y": 250,           "text":"[OK] をクリックすると、\nルールが\n自動的に適用されます"}
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"正方形の数は\n\n\"Don't Care\"に設定できます"},
+                {"x": 640,  "y": 500,           "text":"Rule Generator には\n最大 4 つの領域を\n追加できます"},
+                {"x": 1200, "y": 500,           "text":"ルールを使用して\n新しいリージョンを作成できます"}
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"ちょうど6"},
+                {"x": 240,  "y": 200,           "text":"2つ以上"},
+                {"x": 240,  "y": 340,           "text":"5 以下"},
+                {"x": 240,  "y": 480,           "text":"4 以外の任意の数"},
+                {"x": 240,  "y": 620,           "text":"4 または 6 のいずれか"},
+                {"x": 240,  "y": 760,           "text":"3、5、または 7 のいずれか"},
+                {"x": 240,  "y": 900,           "text":"2、4、6、または 8 のいずれか"},
+
+                {"x":1050,  "y": 100,           "text":"通常表示"},
+                {"x":1050,  "y": 290,           "text":"非表示ですが、まだルールで使用されています"},
+                {"x":1050,  "y": 490,           "text":"ゴミ箱、ルールで無視"},
+                {"x":1050,  "y": 700,           "text":"ルールを使用して\n領域の可視性を変更できます"}
+            ]
+        ]
+    }
 }

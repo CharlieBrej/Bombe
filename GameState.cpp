@@ -139,6 +139,7 @@ GameState::GameState(std::ifstream& loadfile)
     catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << "\n";
+        display_mode = DISPLAY_MODE_LANGUAGE;
     }
 
     if (!load_was_good)
@@ -162,7 +163,17 @@ GameState::GameState(std::ifstream& loadfile)
 	    SDL_FreeSurface(icon_surface);
     }
 
-    font = TTF_OpenFont("font.ttf", 32);
+
+    for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
+    {
+        std::string s = it->first;
+        std::string filename = lang_data->get_item(s)->get_map()->get_string("font");
+        fonts[filename] = TTF_OpenFont(filename.c_str(), 32);
+    }
+    set_language(language);
+
+
+//    font = TTF_OpenFont("font-en.ttf", 32);
 
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
     Mix_AllocateChannels(32);
@@ -579,6 +590,15 @@ void GameState::advance(int steps)
 
 void GameState::audio()
 {
+}
+
+void GameState::set_language(std::string lang)
+{
+    language = lang;
+    if (!lang_data->has_key(language))
+        language = "English";
+    std::string filename = lang_data->get_item(language)->get_map()->get_string("font");
+    font = fonts[filename];
 }
 
 void GameState::reset_rule_gen_region()
@@ -1987,15 +2007,18 @@ void GameState::render(bool saving)
     {
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 10 * button_size), button_size/4, 1);
         int index = 0;
+        std::string orig_lang = language;
         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
         {
             std::string s = it->first;
-            if (s == language)
+            set_language(s);
+            if (s == orig_lang)
                 SDL_SetTextureColorMod(sdl_texture, 0,255, 0);
             render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * (2 + index)), s);
             SDL_SetTextureColorMod(sdl_texture, 255,255, 255);
             index++;
         }
+        set_language(orig_lang);
     }
     else
     {
@@ -2568,7 +2591,7 @@ bool GameState::events()
                         {
                             if (index == p.y)
                             {
-                                language = it->first;
+                                set_language(it->first);
                             }
                             index++;
                         }

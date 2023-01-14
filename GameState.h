@@ -30,7 +30,8 @@ public:
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
-    TTF_Font *font;
+    std::map<std::string, TTF_Font*> fonts;
+    TTF_Font *font = NULL;
     SaveObjectMap* lang_data;
 
     static const int tut_texture_count = 4;
@@ -151,6 +152,7 @@ public:
 
     void advance(int steps);
     void audio();
+    void set_language(std::string lang);
 
     GridRule rule_from_rule_gen_region();
     void reset_rule_gen_region();

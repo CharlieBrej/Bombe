@@ -33,7 +33,7 @@ SaveObject* SaveObject::load(std::string& input)
 
 SaveObject* SaveObject::load(std::istream& f)
 {
-    skip_whitespace(f);    
+    skip_whitespace(f);
     char c = f.peek();
     if (c == '{')
         return new SaveObjectMap(f);
@@ -73,15 +73,13 @@ static std::string parse_string(std::istream& f)
     assert_exp('\"');
     while ((c = f.get()) != '\"')
     {
-        if (c < 0)
-            throw(std::runtime_error("Parse Error"));
         if (c == '\\')
         {
             c = f.get();
             if (c == 'n')
                 c = '\n';
         }
-        
+
         str.push_back(c);
     }
     return str;
@@ -120,11 +118,11 @@ SaveObjectMap::SaveObjectMap(std::istream& f)
     char c;
     while (true)
     {
-        skip_whitespace(f);    
+        skip_whitespace(f);
         if (f.peek() == '}')
             break;
         std::string key = parse_string(f);
-        skip_whitespace(f);    
+        skip_whitespace(f);
         assert_exp(':');
         SaveObject* obj = SaveObject::load(f);
         add_item(key, obj);
@@ -257,12 +255,12 @@ SaveObjectList::SaveObjectList(std::istream& f)
     char c;
     while (true)
     {
-        skip_whitespace(f);    
+        skip_whitespace(f);
         if (f.peek() == ']')
             break;
         SaveObject* obj = SaveObject::load(f);
         add_item(obj);
-        skip_whitespace(f);    
+        skip_whitespace(f);
         if (f.peek() == ']')
             break;
         assert_exp(',');
