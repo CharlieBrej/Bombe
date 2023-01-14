@@ -46,12 +46,8 @@ public:
     Grid *grid;
     std::list<GridRule> rules;
 
-    enum {
-        DISPLAY_MODE_NORMAL,
-        DISPLAY_MODE_HELP,
-        DISPLAY_MODE_LANGUAGE
-
-    } display_mode = DISPLAY_MODE_NORMAL;
+    bool display_help = false;
+    bool display_language_chooser = false;
 
 
     XYPos mouse;

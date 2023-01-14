@@ -139,12 +139,12 @@ GameState::GameState(std::ifstream& loadfile)
     catch (const std::runtime_error& error)
     {
         std::cerr << error.what() << "\n";
-        display_mode = DISPLAY_MODE_LANGUAGE;
     }
 
     if (!load_was_good)
     {
-        display_mode = DISPLAY_MODE_HELP;
+        display_help = true;
+        display_language_chooser = true;
     }
 
     sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
@@ -1091,47 +1091,6 @@ void GameState::render(bool saving)
         grid_pitch = grid->get_grid_pitch(XYPos(grid_size, grid_size));
     }
 
-    if (display_mode == DISPLAY_MODE_HELP)
-    {
-        int sq_size = std::min(window_size.y / 9, window_size.x / 16);
-        XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
-        XYPos help_image_offset = (window_size - help_image_size) / 2;
-
-        {
-            SDL_Rect src_rect = {0, 0, 1920, 1080};
-            SDL_Rect dst_rect = {help_image_offset.x, help_image_offset.y, help_image_size.x, help_image_size.y};
-            SDL_RenderCopy(sdl_renderer, tutorial_texture[tutorial_index], &src_rect, &dst_rect);
-            SaveObjectMap* lang = lang_data->get_item(language)->get_map();
-            SaveObjectList* tutorial = lang->get_item("tutorial")->get_list();
-            SaveObjectList* tutorial_page = tutorial->get_item(tutorial_index)->get_list();
-            for (int i = 0; i < tutorial_page->get_count(); i++)
-            {
-                SaveObjectMap* text_box = tutorial_page->get_item(i)->get_map();
-                XYPos p;
-                p.x = text_box->get_num("x");
-                p.y = text_box->get_num("y");
-                std::string text = text_box->get_string("text");
-                bool left = text_box->has_key("left");
-                p.x = p.x * help_image_size.x / 1920;
-                p.y = p.y * help_image_size.y / 1080;
-                render_text_box(help_image_offset + p, text, left);
-            }
-        }
-        {
-            SDL_Rect src_rect = {704, 1344, 192*3, 192};
-            SDL_Rect dst_rect = {help_image_offset.x + help_image_size.x - sq_size * 3, help_image_offset.y + help_image_size.y - sq_size, sq_size * 3, sq_size};
-            if (tutorial_index)
-                src_rect.y += 192;
-            if (tutorial_index >= (tut_texture_count - 1))
-                src_rect.y += 192;
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-
-
-        SDL_RenderPresent(sdl_renderer);
-        return;
-    }
-
     tooltip_string = "";
     bool hover_rulemaker = false;
     XYSet hover_squares_highlight;
@@ -2003,7 +1962,43 @@ void GameState::render(bool saving)
             }
         }
     }
-    if (display_mode == DISPLAY_MODE_LANGUAGE)
+    if (display_help)
+    {
+        int sq_size = std::min(window_size.y / 9, window_size.x / 16);
+        XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
+        XYPos help_image_offset = (window_size - help_image_size) / 2;
+
+        {
+            SDL_Rect src_rect = {0, 0, 1920, 1080};
+            SDL_Rect dst_rect = {help_image_offset.x, help_image_offset.y, help_image_size.x, help_image_size.y};
+            SDL_RenderCopy(sdl_renderer, tutorial_texture[tutorial_index], &src_rect, &dst_rect);
+            SaveObjectMap* lang = lang_data->get_item(language)->get_map();
+            SaveObjectList* tutorial = lang->get_item("tutorial")->get_list();
+            SaveObjectList* tutorial_page = tutorial->get_item(tutorial_index)->get_list();
+            for (int i = 0; i < tutorial_page->get_count(); i++)
+            {
+                SaveObjectMap* text_box = tutorial_page->get_item(i)->get_map();
+                XYPos p;
+                p.x = text_box->get_num("x");
+                p.y = text_box->get_num("y");
+                std::string text = text_box->get_string("text");
+                bool left = text_box->has_key("left");
+                p.x = p.x * help_image_size.x / 1920;
+                p.y = p.y * help_image_size.y / 1080;
+                render_text_box(help_image_offset + p, text, left);
+            }
+        }
+        {
+            SDL_Rect src_rect = {704, 1344, 192*3, 192};
+            SDL_Rect dst_rect = {help_image_offset.x + help_image_size.x - sq_size * 3, help_image_offset.y + help_image_size.y - sq_size, sq_size * 3, sq_size};
+            if (tutorial_index)
+                src_rect.y += 192;
+            if (tutorial_index >= (tut_texture_count - 1))
+                src_rect.y += 192;
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+    }
+    if (display_language_chooser)
     {
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 10 * button_size), button_size/4, 1);
         int index = 0;
@@ -2105,7 +2100,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
 
 
     if ((pos - XYPos(button_size * 0, button_size * 0)).inside(XYPos(button_size,button_size)))
-        display_mode = DISPLAY_MODE_HELP;
+        display_help = true;
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
@@ -2137,7 +2132,7 @@ void GameState::left_panel_click(XYPos pos, bool right)
         SDL_SetWindowInputFocus(sdl_window);
     }
     if ((pos - XYPos(button_size * 1, button_size * 1)).inside(XYPos(button_size,button_size)))
-        display_mode = DISPLAY_MODE_LANGUAGE;
+        display_language_chooser = true;
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
@@ -2448,13 +2443,14 @@ bool GameState::events()
                 break;
             case SDL_KEYDOWN:
             {
-                if (display_mode == DISPLAY_MODE_HELP || display_mode == DISPLAY_MODE_LANGUAGE)
+                if (display_help || display_language_chooser)
                 {
                     switch (e.key.keysym.scancode)
                     {
                         case SDL_SCANCODE_F1:
                         case SDL_SCANCODE_ESCAPE:
-                            display_mode = DISPLAY_MODE_NORMAL;
+                            display_help = false;
+                            display_language_chooser = false;
                             break;
                         case SDL_SCANCODE_F11:
                         {
@@ -2490,7 +2486,7 @@ bool GameState::events()
                     //     quit = true;
                     //     break;
                     case SDL_SCANCODE_F1:
-                        display_mode = DISPLAY_MODE_HELP;
+                        display_help = true;
                         break;
                     case SDL_SCANCODE_F2:
                     {
@@ -2562,25 +2558,7 @@ bool GameState::events()
                 mouse.y = e.button.y;
                 bool right = (e.button.button != SDL_BUTTON_LEFT);
 
-                if (display_mode == DISPLAY_MODE_HELP)
-                {
-                    XYPos window_size;
-                    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
-
-                    int sq_size = std::min(window_size.y / 9, window_size.x / 16);
-                    XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
-                    XYPos help_image_offset = (window_size - help_image_size) / 2;
-                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 3, sq_size)).inside(XYPos(sq_size, sq_size)))
-                        if (tutorial_index)
-                            tutorial_index--;
-                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 2, sq_size)).inside(XYPos(sq_size, sq_size)))
-                        display_mode = DISPLAY_MODE_NORMAL;
-                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 1, sq_size)).inside(XYPos(sq_size, sq_size)))
-                        if (tutorial_index < (tut_texture_count - 1))
-                            tutorial_index++;
-                    break;
-                }
-                if (display_mode == DISPLAY_MODE_LANGUAGE)
+                if (display_language_chooser)
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
@@ -2595,8 +2573,26 @@ bool GameState::events()
                             }
                             index++;
                         }
-                        display_mode = DISPLAY_MODE_NORMAL;
+                        display_language_chooser = false;
                     }
+                    break;
+                }
+                if (display_help)
+                {
+                    XYPos window_size;
+                    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+
+                    int sq_size = std::min(window_size.y / 9, window_size.x / 16);
+                    XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
+                    XYPos help_image_offset = (window_size - help_image_size) / 2;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 3, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        if (tutorial_index)
+                            tutorial_index--;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 2, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        display_help = false;
+                    if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 1, sq_size)).inside(XYPos(sq_size, sq_size)))
+                        if (tutorial_index < (tut_texture_count - 1))
+                            tutorial_index++;
                     break;
                 }
 
