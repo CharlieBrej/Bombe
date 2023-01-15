@@ -189,6 +189,11 @@ struct EdgePos
     double angle;
     double pos;
     EdgePos (RegionType type_, double angle_, double pos_): type(type_),angle(angle_),pos(pos_){}
+    EdgePos (){}
+    bool operator==(const EdgePos& other) const
+    {
+        return (type == other.type) && (angle == other.angle) && (pos == other.pos);
+    }
 };
 
 class Grid

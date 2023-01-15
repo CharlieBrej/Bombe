@@ -46,6 +46,7 @@ public:
     Grid *grid;
     std::list<GridRule> rules;
 
+    bool display_menu = false;
     bool display_help = false;
     bool display_language_chooser = false;
 
@@ -99,6 +100,14 @@ public:
     XYPos left_panel_offset;
     XYPos right_panel_offset;
     XYPos grid_offset;
+    int grid_zoom = 0;
+    bool grid_dragging = false;
+    XYPos grid_dragging_last_pos;
+    XYPos scaled_grid_offset;
+    int scaled_grid_size;
+
+    EdgePos best_edge_pos;
+
     bool full_screen = false;
     std::string tooltip_string = "";
 
@@ -113,6 +122,8 @@ public:
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     GridVisLevel vis_mode = GRID_VIS_LEVEL_HIDE;
     bool xor_is_3 = false;
+
+    bool show_row_clues = true;
 
     bool auto_region = true;
     bool get_hint = false;
@@ -156,6 +167,7 @@ public:
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_text_box(XYPos pos, std::string& s, bool left = false);
+    std::string translate(std::string s);
     void render_tooltip();
     void add_tooltip(SDL_Rect& dst_rect, const char* text);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);

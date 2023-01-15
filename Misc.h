@@ -59,7 +59,7 @@ public:
         dir(Direction(in & 0x3)),
         flp((in >> 2)& 0x1)
     {}
-    
+
     Direction get_n()
     {
         return get_dir(DIRECTION_N);
@@ -136,7 +136,7 @@ public:
     DirFlip flip(Direction around)
     {
         return flip(around == DIRECTION_E || around == DIRECTION_W);
-            
+
     }
 
     XYPos trans(XYPos pos, int size);
@@ -171,7 +171,7 @@ class XYPos
 public:
     int x;
     int y;
-    
+
     XYPos():
         x(0),
         y(0)
@@ -214,7 +214,7 @@ public:
 //     {
 //         return x || y;
 //     }
-// 
+//
     bool operator==(const XYPos& other) const
     {
         return (x == other.x) && (y == other.y);
@@ -361,7 +361,7 @@ public:
             dif += M_PI * 2;
         return Angle(dif - M_PI);
     }
-    
+
     Angle abs() const
     {
         return Angle(fabs(angle));
@@ -473,7 +473,7 @@ public:
 
     double distance(const XYPosFloat& other) const
     {
-        return sqrt((x - other.x)*(x - other.x) + 
+        return sqrt((x - other.x)*(x - other.x) +
                     (y - other.y)*(y - other.y));
     }
 
@@ -537,7 +537,7 @@ inline unsigned popcount(unsigned in)
         count += in & 1;
         in >>= 1;
     }
-    return count;   
+    return count;
 }
 
 inline bool is_leading_utf8_byte(char c)
