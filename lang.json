@@ -38,15 +38,15 @@
         "tutorial":
         [
             [
-                {"x": 100,  "y": 750,           "text":"Numbers state how many bombs\nare in the neighbouring squares"},
-                {"x": 940,  "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"}
+                {"x": 50,   "y": 600,           "text":"Numbers state how\nmany bombs are in\nneighbouring cells"},
+                {"x": 1100, "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"}
             ],
             [
                 {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Generator"},
                 {"x":1050,  "y": 100, "left":1, "text":"Region type"},
-                {"x":1050,  "y": 530, "left":1, "text":"Number of squares"},
+                {"x":1050,  "y": 530, "left":1, "text":"Number of cells"},
                 {"x":1240,  "y": 560,           "text":"Action to take"},
-                {"x":800,   "y": 630,           "text":"Rule says:\nA region with 3 bombs and\n3 squares must be all bombs"},
+                {"x":800,   "y": 630,           "text":"Rule says:\nA region with 3 bombs and\n3 cells must be all bombs"},
 
                 {"x":370,   "y": 950,           "text":"Mark as all Bombs"},
                 {"x":1200,  "y": 950,           "text":"Mark as all Clear"},
@@ -112,8 +112,8 @@
         "tutorial":
         [
             [
-                {"x": 100,  "y": 750,           "text":"數字表示相鄰方塊\n中有多少炸彈"},
-                {"x": 940,  "y": 750,           "text":"區域顯示還有多少\n炸彈未發現"}
+                {"x": 50,   "y": 600,           "text":"數字表示相鄰方塊\n中有多少炸彈"},
+                {"x": 1100, "y": 750,           "text":"區域顯示還有多少\n炸彈未發現"}
             ],
             [
                 {"x": 100,  "y": 650,           "text":"雙擊區域進入規則生成器"},
@@ -186,8 +186,8 @@
         "tutorial":
         [
             [
-                {"x": 100,  "y": 750,           "text":"数字表示相邻方块\n中有多少炸弹"},
-                {"x": 940,  "y": 750,           "text":"区域显示还有多少\n未发现的炸弹"}
+                {"x": 50,   "y": 600,           "text":"数字表示相邻方块\n中有多少炸弹"},
+                {"x": 1100, "y": 750,           "text":"区域显示还有多少\n未发现的炸弹"}
             ],
             [
                 {"x": 100,  "y": 650,           "text":"双击区域进入规则生成器"},
@@ -260,8 +260,8 @@
         "tutorial":
         [
             [
-                {"x": 100,  "y": 750,           "text":"数字は隣接するマスに\nいくつの爆弾があるかを示しています"},
-                {"x": 940,  "y": 750,           "text":"リージョンは\n未発見の爆弾がいくつ残っているかを示します"}
+                {"x": 50,   "y": 600,           "text":"数字は隣接するマスに\nいくつの爆弾があるかを示しています"},
+                {"x": 1100, "y": 750,           "text":"リージョンは\n未発見の爆弾がいくつ残っているかを示します"}
             ],
             [
                 {"x": 100,  "y": 650,           "text":"領域をダブルクリックすると、\nit ルール ジェネレーターに入ります"},
