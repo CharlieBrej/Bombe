@@ -4,7 +4,7 @@
         "font" : "font-en.ttf",
         "translate":
         {
-            "Add to Rule Generator" :       "Add to Rule Generator",
+            "Add to Rule Constructor" :     "Add to Rule Constructor",
             "Auto Region" :                 "Auto Region",
             "Bomb" :                        "Bomb",
             "Cancel" :                      "Cancel",
@@ -24,8 +24,12 @@
             "OK" :                          "OK",
             "Quit" :                        "Quit",
             "Refresh Regions" :             "Refresh Regions",
+            "Region Inspector" :            "Region Inspector",
             "Remove Rule" :                 "Remove Rule",
+            "Reset Game" :                  "Reset Game",
             "Rule already present" :        "Rule already present",
+            "Rule Constructor" :            "Rule Constructor",
+            "Rule Inspector" :              "Rule Inspector",
             "Rules" :                       "Rules",
             "Select Language" :             "Select Language",
             "Show Creation Rule" :          "Show Creation Rule",
@@ -42,7 +46,7 @@
                 {"x": 1100, "y": 750,           "text":"Regions show how many\nundiscovered bombs remain"}
             ],
             [
-                {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Generator"},
+                {"x": 100,  "y": 650,           "text":"Double clicking a region enters\nit into the Rule Constructor"},
                 {"x":1050,  "y": 100, "left":1, "text":"Region type"},
                 {"x":1050,  "y": 530, "left":1, "text":"Number of cells"},
                 {"x":1240,  "y": 560,           "text":"Action to take"},
@@ -53,8 +57,14 @@
                 {"x":1450,  "y": 250,           "text":"Once you click OK, the\nrule will be applied\nautomatically"}
             ],
             [
-                {"x": 150,  "y": 500,           "text":"Number of squares\ncan be set to\n\"Don't Care\""},
-                {"x": 640,  "y": 500,           "text":"Up to 4 regions\ncan be added to the\nRule Generator"},
+                {"x": 200,  "y": 800,           "text":"Double click on a region"},
+                {"x":1200,  "y": 200,           "text":"Enter number of cells"},
+                {"x":1200,  "y": 500,           "text":"Enter action to perform"},
+                {"x":1300,  "y": 800,           "text":"Click OK"},
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"Number of cells\ncan be set to\n\"Don't Care\""},
+                {"x": 640,  "y": 500,           "text":"Up to 4 regions\ncan be added to the\nRule Constructor"},
                 {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new Regions"}
             ],
             [
@@ -78,7 +88,7 @@
         "font" : "font-tc.otf",
         "translate":
         {
-            "Add to Rule Generator" :       "添加到規則生成器",
+            "Add to Rule Constructor" :     "添加到規則生成器",
             "Auto Region" :                 "自動區域生成",
             "Bomb" :                        "炸彈",
             "Cancel" :                      "取消",
@@ -98,8 +108,12 @@
             "OK" :                          "OK",
             "Quit" :                        "Quit",
             "Refresh Regions" :             "刷新區域",
+            "Region Inspector" :            "Region Inspector",
             "Remove Rule" :                 "刪除規則",
+            "Reset Game" :                  "Reset Game",
             "Rule already present" :        "規則已經存在",
+            "Rule Constructor" :            "Rule Constructor",
+            "Rule Inspector" :              "Rule Inspector",
             "Rules" :                       "規則",
             "Select Language" :             "選擇語言",
             "Show Creation Rule" :          "顯示規則來源",
@@ -127,6 +141,12 @@
                 {"x":1450,  "y": 250,           "text":"單擊OK後,\n規則將自動\n套用"}
             ],
             [
+                {"x": 200,  "y": 800,           "text":"Double click on a region"},
+                {"x":1200,  "y": 200,           "text":"Enter number of cells"},
+                {"x":1200,  "y": 500,           "text":"Enter action to perform"},
+                {"x":1300,  "y": 800,           "text":"Click OK"},
+            ],
+            [
                 {"x": 150,  "y": 500,           "text":"方塊數\n可以設置為\n任意數值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 個區域\n添加到規則生成器"},
                 {"x": 1200, "y": 500,           "text":"規則可用於\n生成新的區域"}
@@ -152,7 +172,7 @@
         "font" : "font-sc.otf",
         "translate":
         {
-            "Add to Rule Generator" :       "添加到规则生成器",
+            "Add to Rule Constructor" :     "添加到规则生成器",
             "Auto Region" :                 "自动区域生成",
             "Bomb" :                        "炸弹",
             "Cancel" :                      "取消",
@@ -172,8 +192,12 @@
             "OK" :                          "OK",
             "Quit" :                        "Quit",
             "Refresh Regions" :             "刷新区域",
+            "Region Inspector" :            "Region Inspector",
             "Remove Rule" :                 "删除规则",
+            "Reset Game" :                  "Reset Game",
             "Rule already present" :        "规则已经存在",
+            "Rule Constructor" :            "Rule Constructor",
+            "Rule Inspector" :              "Rule Inspector",
             "Rules" :                       "规则",
             "Select Language" :             "选择语言",
             "Show Creation Rule" :          "显示规则来源",
@@ -201,6 +225,12 @@
                 {"x":1450,  "y": 250,           "text":"单击OK后,\n规则将\n自动应用"}
             ],
             [
+                {"x": 200,  "y": 800,           "text":"Double click on a region"},
+                {"x":1200,  "y": 200,           "text":"Enter number of cells"},
+                {"x":1200,  "y": 500,           "text":"Enter action to perform"},
+                {"x":1300,  "y": 800,           "text":"Click OK"},
+            ],
+            [
                 {"x": 150,  "y": 500,           "text":"方块数\n可以设置为\n任意数值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 个区域\n添加到规则生成器"},
                 {"x": 1200, "y": 500,           "text":"规则可用于\n生成新的区域"}
@@ -226,7 +256,7 @@
         "font" : "font-jp.otf",
         "translate":
         {
-	        "Add to Rule Generator":        "ルールジェネレーターに追加",
+	        "Add to Rule Constructor":      "ルールジェネレーターに追加",
 		    "Auto Region":                  "オートリージョン",
 		    "Bomb":                         "爆弾",
 		    "Cancel":                       "キャンセル",
@@ -246,8 +276,12 @@
 		    "OK":                           "わかった",
             "Quit" :                        "Quit",
 		    "Refresh Regions":              "地域をリフレッシュ",
+            "Region Inspector" :            "Region Inspector",
 		    "Remove Rule":                  "ルールを削除",
+            "Reset Game" :                  "Reset Game",
 		    "Rule already present":         "ルールは既に存在します",
+            "Rule Constructor" :            "Rule Constructor",
+            "Rule Inspector" :              "Rule Inspector",
 		    "Rules":                        "ルール",
 		    "Select Language":              "言語を選択する",
 		    "Show Creation Rule":           "作成ルールを表示",
@@ -275,8 +309,14 @@
                 {"x":1450,  "y": 250,           "text":"[OK] をクリックすると、\nルールが\n自動的に適用されます"}
             ],
             [
+                {"x": 200,  "y": 800,           "text":"Double click on a region"},
+                {"x":1200,  "y": 200,           "text":"Enter number of cells"},
+                {"x":1200,  "y": 500,           "text":"Enter action to perform"},
+                {"x":1300,  "y": 800,           "text":"Click OK"},
+            ],
+            [
                 {"x": 150,  "y": 500,           "text":"正方形の数は\n\n\"Don't Care\"に設定できます"},
-                {"x": 640,  "y": 500,           "text":"Rule Generator には\n最大 4 つの領域を\n追加できます"},
+                {"x": 640,  "y": 500,           "text":"Rule Constructor には\n最大 4 つの領域を\n追加できます"},
                 {"x": 1200, "y": 500,           "text":"ルールを使用して\n新しいリージョンを作成できます"}
             ],
             [

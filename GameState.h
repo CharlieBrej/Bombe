@@ -34,7 +34,7 @@ public:
     TTF_Font *font = NULL;
     SaveObjectMap* lang_data;
 
-    static const int tut_texture_count = 4;
+    static const int tut_texture_count = 5;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
 
     std::string steam_session_string;
@@ -49,6 +49,7 @@ public:
     bool display_menu = false;
     bool display_help = false;
     bool display_language_chooser = false;
+    bool display_reset_confirm = false;
 
 
     XYPos mouse;
@@ -176,9 +177,9 @@ public:
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);
-    void grid_click(XYPos pos, bool right);
-    void left_panel_click(XYPos pos, bool right);
-    void right_panel_click(XYPos pos, bool right);
+    void grid_click(XYPos pos, int clicks);
+    void left_panel_click(XYPos pos, int clicks);
+    void right_panel_click(XYPos pos, int clicks);
 
     bool events();
 };
