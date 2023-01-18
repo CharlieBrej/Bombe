@@ -2434,7 +2434,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         }
         if (region_type.type == RegionType::VISIBILITY && region_type.value > 2)
             region_type = RegionType(RegionType::VISIBILITY, 0);
-        if ((pos - XYPos(0, button_size)).inside(XYPos(button_size * 4, button_size * 6)))
+        if ((pos - XYPos(0, button_size * 2)).inside(XYPos(button_size * 4, button_size * 4)))
         {
             XYPos gpos = pos / button_size;
 
