@@ -491,12 +491,6 @@ void GameState::advance(int steps)
         get_hint = false;
     steps_had += steps;
 
-    if (speed_dial == 0)
-    {
-        steps_had = 0;
-        return;
-    }
-
     if (get_hint)
     {
         if (steps_had < 250)
@@ -534,6 +528,13 @@ void GameState::advance(int steps)
             }
         }
     }
+
+    if (speed_dial == 0)
+    {
+        steps_had = 0;
+        return;
+    }
+
     unsigned oldtime = SDL_GetTicks();
 
     while (true)
@@ -568,15 +569,6 @@ void GameState::advance(int steps)
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
                 {
                     hit = true;
-                    for (GridRegion& r : grid->regions)
-                    {
-                        if (r.vis_level != GRID_VIS_LEVEL_SHOW)
-                        {
-                            r.vis_level = GRID_VIS_LEVEL_SHOW;
-                            r.stale = false;
-                        }
-                    }
-                    break;
                 }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
                 {
@@ -590,6 +582,14 @@ void GameState::advance(int steps)
             }
             if (hit)
             {
+                for (GridRegion& r : grid->regions)
+                {
+                    if (r.vis_level != GRID_VIS_LEVEL_SHOW)
+                    {
+                        r.vis_level = GRID_VIS_LEVEL_SHOW;
+                        r.stale = false;
+                    }
+                }
                 grid->add_one_new_region();
             }
             else
