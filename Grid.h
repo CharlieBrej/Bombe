@@ -260,7 +260,7 @@ public:
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void add_new_regions();
-    void add_one_new_region();
+    bool add_one_new_region();
     void clear_regions();
 };
 

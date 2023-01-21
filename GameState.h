@@ -51,6 +51,8 @@ public:
     bool display_language_chooser = false;
     bool display_reset_confirm = false;
 
+    bool dragging_speed = false;
+    double speed_dial = 0.25;
 
     XYPos mouse;
     enum {
@@ -114,7 +116,7 @@ public:
 
     bool skip_level = false;
     int cooldown = 0;
-    int completed_count = 0;
+    double steps_had = 0;
 
     unsigned server_timeout = 0;
 

@@ -81,6 +81,8 @@ GameState::GameState(std::ifstream& loadfile)
                 current_level_set_index = omap->get_num("level_set_index");
             if (omap->has_key("show_row_clues"))
                 show_row_clues = omap->get_num("show_row_clues");
+            if (omap->has_key("speed_dial"))
+                speed_dial = double(omap->get_num("speed_dial")) / 1000;
 
 
             SaveObjectList* rlist = omap->get_item("rules")->get_list();
@@ -102,8 +104,6 @@ GameState::GameState(std::ifstream& loadfile)
                     {
                         char c = s[j];
                         int stat = c - '0';
-                        if (stat)
-                            completed_count++;
                         level_progress[1][i].level_status[j] = stat;
                         if (stat)
                             level_progress[1][i].count_todo--;
@@ -126,8 +126,6 @@ GameState::GameState(std::ifstream& loadfile)
                         {
                             char c = s[j];
                             int stat = c - '0';
-                            if (stat)
-                                completed_count++;
                             level_progress[k][i].level_status[j] = stat;
                             if (stat)
                                 level_progress[k][i].count_todo--;
@@ -232,6 +230,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("level_group_index", current_level_group_index);
     omap->add_num("level_set_index", current_level_set_index);
     omap->add_num("show_row_clues", show_row_clues);
+    omap->add_num("speed_dial", speed_dial * 1000);
     return omap;
 }
 
@@ -263,9 +262,9 @@ bool GameState::level_is_accessible(unsigned set)
         return false;
     if (set == 0)
         return true;
-    if (set >= 5 && level_progress[current_level_group_index][set - 5].count_todo < 50)
+    if (set >= 5 && level_progress[current_level_group_index][set - 5].count_todo < 150)
         return true;
-    if ((set % 5 >= 1) && level_progress[current_level_group_index][set - 1].count_todo < 50)
+    if ((set % 5 >= 1) && level_progress[current_level_group_index][set - 1].count_todo < 150)
         return true;
     return false;
 }
@@ -445,12 +444,11 @@ void GameState::advance(int steps)
     if (grid->is_solved() || skip_level)
     {
         clue_solves.clear();
-        if (grid->is_solved() && !current_level_is_temp)
+        if (!skip_level && !current_level_is_temp)
         {
             bool o = level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index];
             if (!o)
             {
-                completed_count++;
                 level_progress[current_level_group_index][current_level_set_index].count_todo--;
                 level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             }
@@ -477,85 +475,92 @@ void GameState::advance(int steps)
         }
     }
 
+    for (GridRule& rule : rules)
+    {
+        if (rule.deleted || rule.stale)
+            continue;
+        if (rule.apply_region_type.type == RegionType::VISIBILITY)
+        {
+            Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
+            if (resp == Grid::APPLY_RULE_RESP_NONE)
+                rule.stale = true;
+        }
+    }
+
     if(clue_solves.empty())
         get_hint = false;
-    while (steps)
-    {
-        bool done_summit = false;
-        if (cooldown)
-        {
-            if (steps < cooldown)
-            {
-                cooldown -= steps;
-                return;
-            }
-            cooldown = 0;
-        }
+    steps_had += steps;
 
-        if (get_hint)
+    if (speed_dial == 0)
+    {
+        steps_had = 0;
+        return;
+    }
+
+    if (get_hint)
+    {
+        if (steps_had < 250)
+            return;
+        steps_had -= 250;
+        get_hint = false;
+        for (GridRegion& r : grid->regions)
+        {
+            if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
+            {
+                get_hint = true;
+                r.visibility_force = GridRegion::VIS_FORCE_HINT;
+                r.vis_level = GRID_VIS_LEVEL_HIDE;
+
+                for (const XYPos& pos : clue_solves)
+                {
+                    if (!grid->is_determinable_using_regions(pos, true))
+                    {
+                        r.vis_level = GRID_VIS_LEVEL_SHOW;
+                        break;
+                    }
+                }
+                if (r.vis_level == GRID_VIS_LEVEL_HIDE)
+                {
+                    return;
+                }
+            }
+        }
+        if (!get_hint)
         {
             for (GridRegion& r : grid->regions)
             {
-                if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
-                {
-                    r.visibility_force = GridRegion::VIS_FORCE_HINT;
-                    r.vis_level = GRID_VIS_LEVEL_HIDE;
-
-                    for (const XYPos& pos : clue_solves)
-                    {
-                        if (!grid->is_determinable_using_regions(pos, true))
-                        {
-                            r.vis_level = GRID_VIS_LEVEL_SHOW;
-                            break;
-                        }
-                    }
-                    if (r.vis_level == GRID_VIS_LEVEL_HIDE)
-                    {
-                        cooldown = 300;
-                        return;
-                    }
-                }
+                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
             }
-            if (cooldown)
-                continue;
         }
+    }
+    unsigned oldtime = SDL_GetTicks();
 
-        if (auto_region)
+    while (true)
+    {
+        unsigned diff = SDL_GetTicks() - oldtime;
+        if (diff > 20)
         {
-            bool hit = false;
-            bool check_vis = false;
-            while (grid->add_regions(-1)) {check_vis = true;  last_active_was_hit = true; break;}
+            steps_had = 0;
+            return;
+        }
+        double steps_needed = 1 * std::pow(100, ((1 - speed_dial) * 2));
+        if (steps_had < steps_needed)
+            return;
+        steps_had -= steps_needed;
 
-            if (!last_active_was_hit)
+        bool hit = false;
+        hit = grid->add_regions(-1);
+        if (!hit)
+            hit = grid->add_one_new_region();
+
+        if (!hit)
+        {
+            for (GridRule& rule : rules)
             {
-                grid->add_one_new_region();
-                check_vis = true;
-                last_active_was_hit = true;
-            }
-            if (check_vis)
-            {
-                for (std::list<GridRule>::iterator it=rules.begin(); it != rules.end(); ++it)
-                {
-                    GridRule& rule = *it;
-                    if (rule.deleted)
-                        continue;
-                    if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                    {
-                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-                        if (resp == Grid::APPLY_RULE_RESP_NONE)
-                            rule.stale = true;
-                    }
-                }
-                cooldown = 50000 / (completed_count + 50);
-                continue;
-            }
-            last_active_was_hit = false;
-            for (std::list<GridRule>::iterator it=rules.begin(); it != rules.end(); ++it)
-            {
-                GridRule& rule = *it;
                 if (rule.deleted)
                     continue;
-                if (hit) break;
+    //                if (hit) break;
                 if (rule.apply_region_type.type == RegionType::VISIBILITY)
                     continue;
 
@@ -563,13 +568,18 @@ void GameState::advance(int steps)
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
                 {
                     hit = true;
-                    last_active_was_hit = true;
-                    clue_solves.clear();
+                    for (GridRegion& r : grid->regions)
+                    {
+                        if (r.vis_level != GRID_VIS_LEVEL_SHOW)
+                        {
+                            r.vis_level = GRID_VIS_LEVEL_SHOW;
+                            r.stale = false;
+                        }
+                    }
                     break;
                 }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
                 {
-//                    rules.erase(it);
                     assert(0);
                     break;
                 }
@@ -580,18 +590,34 @@ void GameState::advance(int steps)
             }
             if (hit)
             {
-                done_summit = true;
-                continue;
+                grid->add_one_new_region();
             }
             else
             {
+                steps_had = 0;
                 for (GridRegion& r : grid->regions)
                 {
                     r.stale = true;
                 }
+                return;
             }
         }
-        break;
+
+        if (hit)
+        {
+            clue_solves.clear();
+            for (GridRule& rule : rules)
+            {
+                if (rule.deleted)
+                    continue;
+                if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                {
+                    Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
+                    if (resp == Grid::APPLY_RULE_RESP_NONE)
+                        rule.stale = true;
+                }
+            }
+        }
     }
 }
 
@@ -1421,24 +1447,22 @@ void GameState::render(bool saving)
 
 
     {
-        SDL_Rect src_rect = {704, 960, 192, 192};
+        SDL_Rect src_rect = {1280, 1536, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Main Menu");
+    }
+    {
+        SDL_Rect src_rect = {704, 960, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Help");
     }
     {
         SDL_Rect src_rect = {1472, 960, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Hint");
-    }
-    {
-        SDL_Rect src_rect = {704 + 192, 960, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
-        if (auto_region)
-            src_rect = {1280, 768, 192, 192};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Auto Region");
     }
     {
         SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
@@ -1453,10 +1477,14 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Refresh Regions");
     }
     {
-        SDL_Rect src_rect = {1280, 1536, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size, button_size};
+        SDL_Rect src_rect = {704, 1920, 576, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size * 3, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Main Menu");
+        add_tooltip(dst_rect, "Speed");
+
+        src_rect = {1280, 1920, 64, 192};
+        dst_rect = {left_panel_offset.x + int(speed_dial * 2.6666 * button_size), left_panel_offset.y + button_size * 1, button_size / 3, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
 
     if (!filter_pos.empty())
@@ -2219,8 +2247,10 @@ void GameState::left_panel_click(XYPos pos, int clicks)
 
 
     if ((pos - XYPos(button_size * 0, button_size * 0)).inside(XYPos(button_size,button_size)))
-        display_help = true;
+        display_menu = true;
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
+        display_help = true;
+    if ((pos - XYPos(button_size * 2, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
         XYSet grid_squares = grid->get_squares();
@@ -2232,8 +2262,6 @@ void GameState::left_panel_click(XYPos pos, int clicks)
         get_hint = true;
 
     }
-    if ((pos - XYPos(button_size * 2, button_size * 0)).inside(XYPos(button_size,button_size)))
-        auto_region = !auto_region;
     if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
         skip_level = true;
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
@@ -2242,8 +2270,12 @@ void GameState::left_panel_click(XYPos pos, int clicks)
         grid->clear_regions();
         reset_rule_gen_region();
     }
-    if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size,button_size)))
-        display_menu = true;
+    if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size * 3, button_size)))
+    {
+        dragging_speed = true;
+        double p = double(mouse.x - left_panel_offset.x - (button_size / 6)) / (button_size * 2.6666);
+        speed_dial = std::clamp(p, 0.0, 1.0);
+    }
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
@@ -2575,6 +2607,7 @@ bool GameState::events()
                         delete grid;
                         grid = Grid::Load(s);
                         SDL_free(s);
+                        current_level_is_temp = true;
                         break;
                     }
                     case SDL_SCANCODE_ESCAPE:
@@ -2597,15 +2630,10 @@ bool GameState::events()
                     }
                     case SDL_SCANCODE_F3:
                     {
-                        auto_region = !auto_region;
-                        break;
-                    }
-                    case SDL_SCANCODE_F4:
-                    {
                         skip_level = true;
                         break;
                     }
-                    case SDL_SCANCODE_F5:
+                    case SDL_SCANCODE_F4:
                     {
                         clue_solves.clear();
                         grid->clear_regions();
@@ -2644,11 +2672,17 @@ bool GameState::events()
                     scaled_grid_offset += (mouse - grid_dragging_last_pos);
                     grid_dragging_last_pos = mouse;
                 }
+                if (dragging_speed)
+                {
+                    double p = double(mouse.x - left_panel_offset.x - (button_size / 6)) / (button_size * 2.6666);
+                    speed_dial = std::clamp(p, 0.0, 1.0);
+                }
                 break;
             }
             case SDL_MOUSEBUTTONUP:
             {
                 grid_dragging = false;
+                dragging_speed = false;
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
                 break;
@@ -2694,7 +2728,6 @@ bool GameState::events()
                             current_level_index = 0;
                             skip_level = true;
                             rules.clear();
-                            completed_count = 0;
                             for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
                             {
                                 level_progress[j].resize(global_level_sets[j].size());

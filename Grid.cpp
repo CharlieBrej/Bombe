@@ -1760,11 +1760,14 @@ void Grid::add_new_regions()
 
 }
 
-void Grid::add_one_new_region()
+bool Grid::add_one_new_region()
 {
     if (!regions_to_add.empty())
-    regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
-
+    {
+        regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
+        return true;
+    }
+    return false;
 }
 
 void Grid::clear_regions()
