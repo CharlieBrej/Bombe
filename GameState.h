@@ -50,6 +50,8 @@ public:
     bool display_help = false;
     bool display_language_chooser = false;
     bool display_reset_confirm = false;
+    bool display_reset_confirm_levels_only = false;
+    bool display_rules = false;
 
     bool dragging_speed = false;
     double speed_dial = 0.25;
@@ -70,6 +72,10 @@ public:
         right_panel_mode = RIGHT_MENU_NONE;
 
     int tutorial_index = 0;
+    int rules_list_offset = 0;
+    bool display_rules_click = false;
+    XYPos display_rules_click_pos;
+    bool display_rules_click_drag = false;
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;

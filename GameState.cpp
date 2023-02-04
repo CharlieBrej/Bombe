@@ -497,8 +497,17 @@ void GameState::advance(int steps)
             return;
         steps_had -= 250;
         get_hint = false;
+        std::vector<GridRegion*> my_regions;
         for (GridRegion& r : grid->regions)
+            my_regions.push_back(&r);
+
+        std::random_device rd;
+        std::mt19937 rnd_gen(rd());
+        std::shuffle(my_regions.begin(), my_regions.end(), rnd_gen);
+
+        for (GridRegion* r_ptr : my_regions)
         {
+            GridRegion& r = *r_ptr;
             if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
             {
                 get_hint = true;
@@ -1194,7 +1203,7 @@ void GameState::render(bool saving)
             y ^= y >> 1;
 
             hover_rulemaker_bits = x + y * 4;
-            if (hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << rule_cause.rule->region_count))
+            if (rule_cause.regions[0] && hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << rule_cause.rule->region_count))
             {
                 hover_rulemaker = true;
                 hover_squares_highlight = ~hover_squares_highlight;
@@ -1206,243 +1215,349 @@ void GameState::render(bool saving)
         }
     }
 
-    XYSet grid_squares = grid->get_squares();
-    FOR_XY_SET(pos, grid_squares)
+    if (display_rules)
     {
+        int row_count = 16;
+        int cell_width = grid_size / 7.5;
+        int cell_height = (grid_size - cell_width) / row_count;
         {
-            if (clue_solves.count(pos))
-                SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
-            if (filter_pos.get(pos))
-                SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
-        }
-        std::vector<RenderCmd> cmds;
-        grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
-        for (RenderCmd& cmd : cmds)
-        {
-            SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
-            SDL_Rect dst_rect = {scaled_grid_offset.x + cmd.dst.pos.x, scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
+            SDL_Rect src_rect = {704, 2144, 192*3, 192};
+            SDL_Rect dst_rect = {grid_offset.x, grid_offset.y, cell_width * 3, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
-    }
 
-    std::map<XYPos, int> total_taken;
-    std::list<GridRegion*> display_regions;
-
-    XYPos mouse_filter_pos(-1,-1);
-    if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
-    {
-        mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - scaled_grid_offset, grid_pitch);
-        mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
-    }
-    int region_vis_counts[3] = {0,0,0};
-    {
-        bool has_hover = false;
-        for (GridRegion& region : grid->regions)
+        struct RuleDiplay
         {
-            region_vis_counts[int(region.vis_level)]++;
-            if (!filter_pos.none() && !region.elements.contains(filter_pos))
+            unsigned index;
+            GridRule* rule;
+        };
+        std::vector<RuleDiplay> rules_list;
+        unsigned i = 0;
+        for (GridRule& r : rules)
+        {
+            if (r.deleted)
                 continue;
-            if (mouse_filter_pos.x >= 0 && !filter_pos.empty() && !region.elements.contains(mouse_filter_pos))
-                continue;
-            if (region.vis_level == vis_level)
+            rules_list.push_back(RuleDiplay{i, &r});
+            i++;
+        }
+
+        for (int rule_index = 0; rule_index < row_count; rule_index++)
+        {
+            RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
+            GridRule& rule = *rd.rule;
+            if (&rule == inspected_rule.rule)
             {
-                display_regions.push_back(&region);
-                if (&region == mouse_hover_region)
-                    has_hover = true;
+                render_box(grid_offset + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
             }
-        }
-        if (mouse_hover_region && !has_hover)
-            display_regions.push_back(mouse_hover_region);
-    }
 
-    for (GridRegion* region : display_regions)
-    {
-        FOR_XY_SET(pos, region->elements)
-        {
-            total_taken[pos]++;
-        }
-    }
-
-    {
-        std::map<XYPos, int> taken;
-
-        for (GridRegion* region : display_regions)
-        {
-            render_region_bg(*region, taken, total_taken);
-        }
-    }
-    {
-        std::map<XYPos, int> taken;
-        for (GridRegion* region : display_regions)
-        {
-            render_region_fg(*region, taken, total_taken);
-        }
-    }
-
-    for (GridRegion* region : display_regions)
-    {
-        if (!mouse_hover_region || (region == mouse_hover_region))
-        {
-            region->fade += std::min(10, 255 - int(region->fade));
-        }
-        else
-        {
-            region->fade -= std::min(10, int(region->fade - 100));
-            if (region->fade < 100)
+            render_number(rd.index, grid_offset + XYPos(0 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            if (rule.apply_region_type.type >= RegionType::Type::SET)
+                render_region_type(rule.apply_region_type, grid_offset + XYPos(1 * cell_width + (cell_width - cell_height) / 2, cell_width + rule_index * cell_height), cell_height);
+            else
+                render_region_bubble(rule.apply_region_type, 0, grid_offset + XYPos(1 * cell_width + (cell_width - cell_height) / 2, cell_width + rule_index * cell_height), cell_height);
+           
+            render_number(rule.region_count, grid_offset + XYPos(2 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            for (int i = 0; i <rule.region_count; i++)
             {
-                region->fade += std::min(10, 100 - int(region->fade));
+                render_region_bubble(rule.region_type[i], 0, grid_offset + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
-        }
-    }
 
-    FOR_XY_SET(pos, grid_squares)
-    {
-        XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
-        int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
-        GridPlace place = grid->get(pos);
-        XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
+            render_number(rule.used_count, grid_offset + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(rule.clear_count, grid_offset + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
 
-        if (place.revealed)
-        {
-            if (place.bomb)
+
+            if (display_rules_click && ((display_rules_click_pos - grid_offset - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
-                SDL_Rect src_rect = {320, 192, 192, 192};
-                SDL_Rect dst_rect = {gpos.x, gpos.y, icon_width, icon_width};
+                right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                inspected_rule = GridRegionCause(&rule, NULL, NULL, NULL, NULL);
+            }
+                
+
+        }
+        {
+            SDL_Rect src_rect = {1664, 1344, 64, 64};
+            SDL_Rect dst_rect = {grid_offset.x + cell_width * 7, grid_offset.y + cell_width * 1, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset--;
+        }
+        {
+            SDL_Rect src_rect = {1664, 1408, 64, 64};
+            SDL_Rect dst_rect = {grid_offset.x + cell_width * 7, grid_offset.y + cell_width * 7, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset++;
+        }
+
+        if (rules_list_offset + row_count > rules_list.size())
+            rules_list_offset = rules_list.size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+
+        {
+            int full_size = cell_width * 5.5;
+            int all_count = rules_list.size();
+            int box_height = full_size;
+            int box_pos = 0;
+
+            if (all_count > row_count)
+            {
+                box_height = (row_count * full_size) / all_count;
+                box_height = std::max(cell_width / 4, box_height);
+                box_pos = (rules_list_offset * (full_size - box_height)) / (all_count - row_count);
+                if (display_rules_click_drag && ((display_rules_click_pos - grid_offset - XYPos(cell_width * 7, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 5.5))))
+                {
+                    int p = mouse.y - grid_offset.y - cell_width * 1.5 - box_height / 2;
+                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    rules_list_offset = p;
+                }
+            }
+
+            render_box(grid_offset + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
+        }
+
+        if (rules_list_offset + row_count > (int)rules_list.size())
+            rules_list_offset = rules_list.size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+        display_rules_click = false;
+    }
+    else
+    {
+        XYSet grid_squares = grid->get_squares();
+        FOR_XY_SET(pos, grid_squares)
+        {
+            {
+                if (clue_solves.count(pos))
+                    SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
+                if (filter_pos.get(pos))
+                    SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
+            }
+            std::vector<RenderCmd> cmds;
+            grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
+            for (RenderCmd& cmd : cmds)
+            {
+                SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
+                SDL_Rect dst_rect = {scaled_grid_offset.x + cmd.dst.pos.x, scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+        }
+
+        std::map<XYPos, int> total_taken;
+        std::list<GridRegion*> display_regions;
+
+        XYPos mouse_filter_pos(-1,-1);
+        if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
+        {
+            mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - scaled_grid_offset, grid_pitch);
+            mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
+        }
+        {
+            bool has_hover = false;
+            for (GridRegion& region : grid->regions)
+            {
+                if (!filter_pos.none() && !region.elements.contains(filter_pos))
+                    continue;
+                if (mouse_filter_pos.x >= 0 && !filter_pos.empty() && !region.elements.contains(mouse_filter_pos))
+                    continue;
+                if (region.vis_level == vis_level)
+                {
+                    display_regions.push_back(&region);
+                    if (&region == mouse_hover_region)
+                        has_hover = true;
+                }
+            }
+            if (mouse_hover_region && !has_hover)
+                display_regions.push_back(mouse_hover_region);
+        }
+
+        for (GridRegion* region : display_regions)
+        {
+            FOR_XY_SET(pos, region->elements)
+            {
+                total_taken[pos]++;
+            }
+        }
+
+        {
+            std::map<XYPos, int> taken;
+
+            for (GridRegion* region : display_regions)
+            {
+                render_region_bg(*region, taken, total_taken);
+            }
+        }
+        {
+            std::map<XYPos, int> taken;
+            for (GridRegion* region : display_regions)
+            {
+                render_region_fg(*region, taken, total_taken);
+            }
+        }
+
+        for (GridRegion* region : display_regions)
+        {
+            if (!mouse_hover_region || (region == mouse_hover_region))
+            {
+                region->fade += std::min(10, 255 - int(region->fade));
             }
             else
             {
-                render_region_type(place.clue, gpos, icon_width);
+                region->fade -= std::min(10, int(region->fade - 100));
+                if (region->fade < 100)
+                {
+                    region->fade += std::min(10, 100 - int(region->fade));
+                }
             }
         }
-    }
-    if (row_col_clues){
-        std::vector<EdgePos> edges;
-        grid->get_edges(edges, grid_pitch);
+
+        FOR_XY_SET(pos, grid_squares)
+        {
+            XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
+            int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
+            GridPlace place = grid->get(pos);
+            XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
+
+            if (place.revealed)
+            {
+                if (place.bomb)
+                {
+                    SDL_Rect src_rect = {320, 192, 192, 192};
+                    SDL_Rect dst_rect = {gpos.x, gpos.y, icon_width, icon_width};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
+                else
+                {
+                    render_region_type(place.clue, gpos, icon_width);
+                }
+            }
+        }
+        if (row_col_clues){
+            std::vector<EdgePos> edges;
+            grid->get_edges(edges, grid_pitch);
+            {
+                SDL_Rect src_rect = {448, 448, 1, 1};
+                SDL_Rect dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, edge_clue_border, panel_size.y};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect = {right_panel_offset.x - edge_clue_border, right_panel_offset.y, edge_clue_border, panel_size.y};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y + panel_size.y - edge_clue_border, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+            }
+            double best_distance = 1000000000;
+            for (EdgePos& edge : edges)
+            {
+                if (edge == best_edge_pos)
+                {
+                    edges.push_back(best_edge_pos);
+                    break;
+                }
+            }
+
+            for (EdgePos& edge : edges)
+            {
+                int arrow_size = edge_clue_border * 82 / 100;
+                int bubble_margin = arrow_size / 16;
+                XYPos epos = grid_offset - scaled_grid_offset;
+
+                double p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (epos.x) - epos.y;
+                if (p >= 0 && p < grid_size)
+                {
+                    double angle = edge.angle;
+                    if (XYPosFloat(Angle(angle), 1).x < 0)
+                        angle += M_PI;
+                    XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
+                    SDL_Rect src_rect = {1664, 192, 192, 192};
+                    SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                    SDL_Point rot_center = {arrow_size, arrow_size};
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                    XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                    render_region_type(edge.type, grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
+                    double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < best_distance)
+                    {
+                        best_distance = distance;
+                        best_edge_pos = edge;
+                    }
+                }
+                p = -edge.pos / std::sin(edge.angle) + (epos.y) / std::tan(edge.angle) - epos.x;
+                if (p >= 0 && p < grid_size)
+                {
+                    double angle = edge.angle;
+                    if (XYPosFloat(Angle(angle), 1).y < 0)
+                        angle += M_PI;
+                    XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
+                    SDL_Rect src_rect = {1664, 192, 192, 192};
+                    SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                    SDL_Point rot_center = {arrow_size, arrow_size};
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                    XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                    render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
+                    double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < best_distance)
+                    {
+                        best_distance = distance;
+                        best_edge_pos = edge;
+                    }
+                }
+
+                p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (grid_size + epos.x) - epos.y;
+                if (p >= 0 && p < grid_size)
+                {
+                    double angle = edge.angle;
+                    if (XYPosFloat(Angle(angle), 1).x > 0)
+                        angle += M_PI;
+                    XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
+                    SDL_Rect src_rect = {1664, 192, 192, 192};
+                    SDL_Rect dst_rect = {grid_offset.x + grid_size + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
+                    SDL_Point rot_center = {arrow_size, arrow_size};
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                    XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                    render_region_type(edge.type, grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
+                    double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < best_distance)
+                    {
+                        best_distance = distance;
+                        best_edge_pos = edge;
+                    }
+                }
+
+                p = -edge.pos / std::sin(edge.angle) + (grid_size + epos.y) / std::tan(edge.angle) - epos.x;
+                if (p >= 0 && p < grid_size)
+                {
+                    double angle = edge.angle;
+                    if (XYPosFloat(Angle(angle), 1).y > 0)
+                        angle += M_PI;
+                    XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
+                    SDL_Rect src_rect = {1664, 192, 192, 192};
+                    SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + grid_size + gpos.y, arrow_size, arrow_size};
+                    SDL_Point rot_center = {arrow_size, arrow_size};
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                    XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                    render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin), arrow_size - bubble_margin * 2);
+                    double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < best_distance)
+                    {
+                        best_distance = distance;
+                        best_edge_pos = edge;
+                    }
+                }
+            }
+        }
+
         {
             SDL_Rect src_rect = {448, 448, 1, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, edge_clue_border, panel_size.y};
+            SDL_Rect dst_rect = {0, 0, left_panel_offset.x + panel_size.x, window_size.y};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
+            dst_rect = {right_panel_offset.x, 0, window_size.x - right_panel_offset.x, window_size.y};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect = {right_panel_offset.x - edge_clue_border, right_panel_offset.y, edge_clue_border, panel_size.y};
+            dst_rect = {left_panel_offset.x + panel_size.x, 0, right_panel_offset.x - (left_panel_offset.x + panel_size.x), right_panel_offset.y};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y + panel_size.y - edge_clue_border, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
+            dst_rect = {left_panel_offset.x + panel_size.x, right_panel_offset.y + panel_size.y, right_panel_offset.x - (left_panel_offset.x + panel_size.x), window_size.y - (right_panel_offset.y + panel_size.y)};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-
         }
-        double best_distance = 1000000000;
-        for (EdgePos& edge : edges)
-        {
-            if (edge == best_edge_pos)
-            {
-                edges.push_back(best_edge_pos);
-                break;
-            }
-        }
-
-        for (EdgePos& edge : edges)
-        {
-            int arrow_size = edge_clue_border * 82 / 100;
-            int bubble_margin = arrow_size / 16;
-            XYPos epos = grid_offset - scaled_grid_offset;
-
-            double p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (epos.x) - epos.y;
-            if (p >= 0 && p < grid_size)
-            {
-                double angle = edge.angle;
-                if (XYPosFloat(Angle(angle), 1).x < 0)
-                    angle += M_PI;
-                XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
-                SDL_Rect src_rect = {1664, 192, 192, 192};
-                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
-                SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
-                render_region_type(edge.type, grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
-                double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
-                if (distance < best_distance)
-                {
-                    best_distance = distance;
-                    best_edge_pos = edge;
-                }
-            }
-            p = -edge.pos / std::sin(edge.angle) + (epos.y) / std::tan(edge.angle) - epos.x;
-            if (p >= 0 && p < grid_size)
-            {
-                double angle = edge.angle;
-                if (XYPosFloat(Angle(angle), 1).y < 0)
-                    angle += M_PI;
-                XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
-                SDL_Rect src_rect = {1664, 192, 192, 192};
-                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
-                SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
-                render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
-                double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
-                if (distance < best_distance)
-                {
-                    best_distance = distance;
-                    best_edge_pos = edge;
-                }
-            }
-
-            p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (grid_size + epos.x) - epos.y;
-            if (p >= 0 && p < grid_size)
-            {
-                double angle = edge.angle;
-                if (XYPosFloat(Angle(angle), 1).x > 0)
-                    angle += M_PI;
-                XYPos gpos = XYPos(-arrow_size, -arrow_size + p);
-                SDL_Rect src_rect = {1664, 192, 192, 192};
-                SDL_Rect dst_rect = {grid_offset.x + grid_size + gpos.x, grid_offset.y + gpos.y, arrow_size, arrow_size};
-                SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
-                render_region_type(edge.type, grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
-                double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
-                if (distance < best_distance)
-                {
-                    best_distance = distance;
-                    best_edge_pos = edge;
-                }
-            }
-
-            p = -edge.pos / std::sin(edge.angle) + (grid_size + epos.y) / std::tan(edge.angle) - epos.x;
-            if (p >= 0 && p < grid_size)
-            {
-                double angle = edge.angle;
-                if (XYPosFloat(Angle(angle), 1).y > 0)
-                    angle += M_PI;
-                XYPos gpos = XYPos(-arrow_size + p, -arrow_size);
-                SDL_Rect src_rect = {1664, 192, 192, 192};
-                SDL_Rect dst_rect = {grid_offset.x + gpos.x, grid_offset.y + grid_size + gpos.y, arrow_size, arrow_size};
-                SDL_Point rot_center = {arrow_size, arrow_size};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
-                XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
-                render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin), arrow_size - bubble_margin * 2);
-                double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
-                if (distance < best_distance)
-                {
-                    best_distance = distance;
-                    best_edge_pos = edge;
-                }
-            }
-        }
-    }
-
-    {
-        SDL_Rect src_rect = {448, 448, 1, 1};
-        SDL_Rect dst_rect = {0, 0, left_panel_offset.x + panel_size.x, window_size.y};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        dst_rect = {right_panel_offset.x, 0, window_size.x - right_panel_offset.x, window_size.y};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        dst_rect = {left_panel_offset.x + panel_size.x, 0, right_panel_offset.x - (left_panel_offset.x + panel_size.x), right_panel_offset.y};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        dst_rect = {left_panel_offset.x + panel_size.x, right_panel_offset.y + panel_size.y, right_panel_offset.x - (left_panel_offset.x + panel_size.x), window_size.y - (right_panel_offset.y + panel_size.y)};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
 
 
@@ -1510,6 +1625,8 @@ void GameState::render(bool saving)
         }
     }
     {
+        if (display_rules)
+            render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size), button_size/4);
         SDL_Rect src_rect = {1536, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1519,6 +1636,9 @@ void GameState::render(bool saving)
     }
 
 
+    int region_vis_counts[3] = {0,0,0};
+    for (GridRegion& region : grid->regions)
+        region_vis_counts[int(region.vis_level)]++;
     {
         if (vis_level == GRID_VIS_LEVEL_SHOW)
            render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size), button_size/4);
@@ -1796,7 +1916,7 @@ void GameState::render(bool saving)
             if (rule.region_count >= 3) siz.y = 3;
             if (rule.region_count >= 4) siz.y = 5;
 
-            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? rule_gen_region[0]->colour : 0;
+            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[0]) ? rule_gen_region[0]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[0].value, colour, 255);
             render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
             render_region_bubble(rule.region_type[0], colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3);
@@ -1808,7 +1928,7 @@ void GameState::render(bool saving)
             if (rule.region_count >= 3) siz.y = 3;
             if (rule.region_count >= 4) siz.y = 5;
 
-            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? rule_gen_region[1]->colour : 0;
+            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[1]) ? rule_gen_region[1]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[1].value, colour, 255);
             render_box(right_panel_offset + XYPos(1 * button_size, 1 * button_size + button_size / 12), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
             render_region_bubble(rule.region_type[1], colour, right_panel_offset + XYPos(2 * button_size + button_size / 3, 1 * button_size +button_size / 12), button_size * 2 / 3);
@@ -1819,7 +1939,7 @@ void GameState::render(bool saving)
         {
             XYPos siz = XYPos(5,1);
             if (rule.region_count >= 4) siz.y = 2;
-            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? rule_gen_region[2]->colour : 0;
+            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[2]) ? rule_gen_region[2]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[2].value, colour, 255);
             render_box(right_panel_offset + XYPos(0 * button_size, 3 * button_size), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
             render_region_bubble(rule.region_type[2], colour, right_panel_offset + XYPos(4 * button_size + button_size / 3, 3 * button_size), button_size * 2 / 3);
@@ -1827,7 +1947,7 @@ void GameState::render(bool saving)
 
         if (rule.region_count >= 4)
         {
-            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? rule_gen_region[3]->colour : 0;
+            unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[3]) ? rule_gen_region[3]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[3].value, colour, 255);
             render_box(right_panel_offset + XYPos(button_size / 12, 4 * button_size), XYPos(5 * button_size, 2 * button_size), button_size / 2);
             render_region_bubble(rule.region_type[3], colour, right_panel_offset + XYPos(button_size / 12 + 4 * button_size + button_size / 3, 5 * button_size + button_size / 3), button_size * 2 / 3);
@@ -2024,7 +2144,9 @@ void GameState::render(bool saving)
                 render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
             }
             {
-                SDL_Rect src_rect = { inspected_rule.rule->deleted ? 1280 + 192 : 1280, 768, 192, 192};
+                SDL_Rect src_rect = {1664, 960, 192, 192};
+                if (inspected_rule.rule->deleted)
+                    src_rect = {1280, 768, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Remove Rule");
@@ -2046,9 +2168,9 @@ void GameState::render(bool saving)
     if (display_help)
     {
         tooltip_string = "";
-        int sq_size = std::min(window_size.y / 9, window_size.x / 16);
-        XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
-        XYPos help_image_offset = (window_size - help_image_size) / 2;
+        int sq_size = panel_size.y / 9;
+        XYPos help_image_size = XYPos(right_panel_offset.x + panel_size.x - left_panel_offset.x, panel_size.y);
+        XYPos help_image_offset = left_panel_offset;
 
         {
             SDL_Rect src_rect = {0, 0, 1920, 1080};
@@ -2085,7 +2207,7 @@ void GameState::render(bool saving)
         tooltip_string = "";
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
         {
-            SDL_Rect src_rect = {1472, 1152, 192, 192};
+            SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             std::string t = translate("Full Screen");
@@ -2104,6 +2226,13 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             std::string t = translate("Show Row Clues");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.2 * button_size), t);
+        }
+        {
+            SDL_Rect src_rect = {1664, 960, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            std::string t = translate("Reset Levels");
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
         }
         {
             SDL_Rect src_rect = {1664, 960, 192, 192};
@@ -2131,7 +2260,7 @@ void GameState::render(bool saving)
         tooltip_string = "";
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
         {
-            std::string t = translate("Reset Game");
+            std::string t = display_reset_confirm_levels_only ? translate("Reset Levels") : translate("Reset Game");
             render_text_box(left_panel_offset + XYPos(4 * button_size, 3 * button_size), t);
             {
                 SDL_Rect src_rect = {704, 384, 192, 192};
@@ -2177,7 +2306,13 @@ void GameState::grid_click(XYPos pos, int clicks)
     grid_dragging = true;
     grid_dragging_last_pos = mouse;
 
-    if (mouse_mode == MOUSE_MODE_FILTER)
+    if (display_rules)
+    {
+        display_rules_click = true;
+        display_rules_click_drag = true;
+        display_rules_click_pos = mouse;
+    }
+    else if (mouse_mode == MOUSE_MODE_FILTER)
     {
         XYPos gpos = grid->get_square_from_mouse_pos(pos - scaled_grid_offset, grid_pitch);
         gpos = grid->get_base_square(gpos);
@@ -2276,7 +2411,10 @@ void GameState::left_panel_click(XYPos pos, int clicks)
         double p = double(mouse.x - left_panel_offset.x - (button_size / 6)) / (button_size * 2.6666);
         speed_dial = std::clamp(p, 0.0, 1.0);
     }
-    if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3,button_size)))
+    if ((pos - XYPos(button_size * 0, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
+        display_rules = !display_rules;
+
+    if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3, button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
         if (x >= 0 && x < 3)
@@ -2373,6 +2511,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             inspected_rule.rule->deleted = !inspected_rule.rule->deleted;
             inspected_rule.rule->stale = false;
+            right_panel_mode = RIGHT_MENU_NONE;
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
@@ -2429,7 +2568,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                 }
                 update_constructed_rule();
             }
-            else
+            else if (rule_cause.regions[region_index])
             {
                 right_panel_mode = RIGHT_MENU_REGION;
                 inspected_region = rule_cause.regions[region_index];
@@ -2681,6 +2820,7 @@ bool GameState::events()
             }
             case SDL_MOUSEBUTTONUP:
             {
+                display_rules_click_drag = false;
                 grid_dragging = false;
                 dragging_speed = false;
                 mouse.x = e.button.x;
@@ -2727,7 +2867,8 @@ bool GameState::events()
                             current_level_set_index = 0;
                             current_level_index = 0;
                             skip_level = true;
-                            rules.clear();
+                            if (!display_reset_confirm_levels_only)
+                                rules.clear();
                             for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
                             {
                                 level_progress[j].resize(global_level_sets[j].size());
@@ -2764,8 +2905,16 @@ bool GameState::events()
                             display_language_chooser = true;
                         if (p.y == 2)
                             show_row_clues = !show_row_clues;
-                        if (p.y == 5)
+                        if (p.y == 4)
+                        {
                             display_reset_confirm = true;
+                            display_reset_confirm_levels_only = true;
+                        }
+                        if (p.y == 5)
+                        {
+                            display_reset_confirm = true;
+                            display_reset_confirm_levels_only = false;
+                        }
                         if (p.y == 6)
                             quit = true;
                         if (p.y == 7 && p.x == 7)

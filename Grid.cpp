@@ -171,8 +171,11 @@ GridRule::GridRule(SaveObject* sobj, int version)
             else
                 square_counts[i] = RegionType(RegionType::EQUAL, v2);
         }
-
     }
+    if (omap->has_key("used_count"))
+        used_count = omap->get_num("used_count");
+    if (omap->has_key("clear_count"))
+        clear_count = omap->get_num("clear_count");
 }
 
 SaveObject* GridRule::save()
@@ -191,6 +194,9 @@ SaveObject* GridRule::save()
     for (int i = 0; i < (1<<region_count); i++)
         square_counts_list->add_num(square_counts[i].as_int());
     omap->add_item("square_counts", square_counts_list);
+    omap->add_num("used_count", used_count);
+    omap->add_num("clear_count", clear_count);
+
 
     return omap;
 }
@@ -1508,6 +1514,18 @@ bool Grid::add_regions(int level)
     return false;
 }
 
+static void add_clear_count(GridRegion* region, int count)
+{
+    if (!region)
+        return;
+    if (region->gen_cause.rule)
+    {
+        region->gen_cause.rule->clear_count += count;
+        for (int i = 0; i < 4; i++)
+            add_clear_count(region->gen_cause.regions[i], count);
+    }
+}
+
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     if (rule.deleted)
@@ -1583,8 +1601,18 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
                 return APPLY_RULE_RESP_ERROR;
             }
         }
+        int c = 0;
         FOR_XY_SET(pos, to_reveal)
+        {
             reveal(pos);
+            c++;
+        }
+        rule.used_count++;
+        rule.clear_count += c;
+        add_clear_count(r1, c);
+        add_clear_count(r2, c);
+        add_clear_count(r3, c);
+        add_clear_count(r4, c);
         return APPLY_RULE_RESP_HIT;
     }
     else
@@ -1600,6 +1628,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         if (!found)
         {
             regions_to_add.push_back(reg);
+            rule.used_count++;
             return APPLY_RULE_RESP_HIT;
         }
         else

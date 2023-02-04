@@ -163,6 +163,8 @@ public:
     uint16_t apply_region_bitmap = 0;
     bool stale = false;
     bool deleted = false;
+    unsigned used_count = 0;
+    unsigned clear_count = 0;
 
 
     GridRule(){};
