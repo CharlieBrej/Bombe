@@ -77,6 +77,7 @@ public:
 
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
+    bool operator<(const RegionType& other) const { return (type < other.type) || (type == other.type) && (value < other.value); }
     unsigned as_int() const { return (int(type) << 8 | value); }
 
     template<class RESP, class IN> RESP apply_rule(IN in);

@@ -76,6 +76,10 @@ public:
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
+    int display_rules_sort_col = 0;
+    bool display_rules_sort_dir = false;
+
+
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
