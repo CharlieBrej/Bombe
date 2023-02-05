@@ -77,7 +77,7 @@ public:
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
     int display_rules_sort_col = 0;
-    bool display_rules_sort_dir = false;
+    bool display_rules_sort_dir = true;
 
 
 

@@ -1257,12 +1257,20 @@ void GameState::render(bool saving)
                 col_click = 5;
         }
         {
-            SDL_Rect src_rect = {704 + 1 * 192, 2336, 192, 192};
+            SDL_Rect src_rect = {512, 192, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Cells Cleared");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                 col_click = 6;
+        }
+        {
+            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 192};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Close");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                display_rules = false;
         }
         if (col_click >= 0)
         {
@@ -1324,6 +1332,8 @@ void GameState::render(bool saving)
 
         for (int rule_index = 0; rule_index < row_count; rule_index++)
         {
+            if (rule_index + rules_list_offset >= rules_list.size())
+                break;
             RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
             GridRule& rule = *rd.rule;
             if (&rule == inspected_rule.rule)
@@ -3039,6 +3049,11 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
+                if (display_rules)
+                {
+                    rules_list_offset -= e.wheel.y;
+                    break;
+                }
                 grid_zoom += e.wheel.y;
                 grid_zoom = std::clamp(grid_zoom, 0, 20);
                 int new_scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
