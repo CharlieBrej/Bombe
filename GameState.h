@@ -27,11 +27,13 @@ struct ServerResp
 class GameState
 {
 public:
+    static const int game_version = 7;
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
     std::map<std::string, TTF_Font*> fonts;
     TTF_Font *font = NULL;
+    TTF_Font *score_font = NULL;
     SaveObjectMap* lang_data;
 
     static const int tut_texture_count = 5;
@@ -41,6 +43,7 @@ public:
     bool achievement[10] = {};
     std::string steam_username = "dummy";
     uint64_t steam_id = 0;
+    std::set<uint64_t> steam_friends;
     std::string language = "English";
 
     Grid *grid;
@@ -52,6 +55,7 @@ public:
     bool display_reset_confirm = false;
     bool display_reset_confirm_levels_only = false;
     bool display_rules = false;
+    bool display_scores = false;
 
     bool dragging_speed = false;
     double speed_dial = 0.25;
@@ -73,6 +77,7 @@ public:
 
     int tutorial_index = 0;
     int rules_list_offset = 0;
+    int scores_list_offset = 0;
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
@@ -143,7 +148,7 @@ public:
     std::set<XYPos> clue_solves;
 
     std::list<Grid*> levels;
-    SDL_mutex *levels_mutex;
+    ServerResp scores_from_server;
 
     class LevelProgress
     {
@@ -153,6 +158,18 @@ public:
     };
 
     std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS];
+    class PlayerScore
+    {
+    public:
+        unsigned pos = 0;
+        std::string name;
+        unsigned score;
+        PlayerScore(unsigned pos_, std::string name_, unsigned score_):
+            pos(pos_), name(name_), score(score_)
+        {}
+    };
+
+    std::vector<PlayerScore> score_tables[GLBAL_LEVEL_SETS];
 
     unsigned current_level_group_index = 1;
     unsigned current_level_set_index = 0;
@@ -160,14 +177,14 @@ public:
     bool current_level_is_temp = true;
 
 
-    GameState(std::ifstream& loadfile);
+    GameState(std::string& lost_data, bool json);
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
     ~GameState();
     bool level_is_accessible(unsigned set);
     void post_to_server(SaveObject* send, bool sync);
     void fetch_from_server(SaveObject* send, ServerResp* resp);
-    void save_to_server(bool sync);
+    void fetch_scores();
     SDL_Texture* loadTexture(const char* filename);
 
     void advance(int steps);
@@ -192,6 +209,6 @@ public:
     void grid_click(XYPos pos, int clicks);
     void left_panel_click(XYPos pos, int clicks);
     void right_panel_click(XYPos pos, int clicks);
-
     bool events();
+    void deal_with_scores();
 };

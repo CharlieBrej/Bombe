@@ -10,6 +10,7 @@
 
 #include "Grid.h"
 #include "GameState.h"
+#include "Compress.h"
 
 #ifdef _WIN32
     #include <filesystem>
@@ -128,7 +129,21 @@ void mainloop()
 #else
         std::ifstream loadfile(save_filename.c_str());
 #endif
-        game_state = new GameState(loadfile);
+        std::stringstream str_stream;
+        str_stream << loadfile.rdbuf();
+        std::string str = str_stream.str();
+        bool json = true;
+        try
+        {
+            str = decompress_string(str);
+            json = false;
+        }
+        catch (const std::runtime_error& error)
+        {
+            std::cerr << error.what() << "\n";
+        }
+
+        game_state = new GameState(str, json);
     }
 #ifdef STEAM
     SteamGameManager steam_manager;
@@ -139,10 +154,11 @@ void mainloop()
     for (int i = 0; i < friend_count; ++i)
     {
 	    CSteamID friend_id = SteamFriends()->GetFriendByIndex(i, k_EFriendFlagImmediate);
-        // game_state->add_friend(friend_id.ConvertToUint64());
+        game_state->steam_friends.insert(friend_id.ConvertToUint64());
     }
 #else
     game_state->steam_session_string = "dummy";
+    game_state->steam_id = SECRET_ID;
 #endif
 
     int save_time = 0;
@@ -158,10 +174,10 @@ void mainloop()
         steam_manager.update_achievements(game_state);
         SteamAPI_RunCallbacks();
 #endif
-        if (save_time > 1000 * 60)
+        if (save_time < 0)
         {
             game_state->render(true);
-            game_state->save_to_server(false);
+            game_state->fetch_scores();
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
             save_index = (save_index + 1) % 10;
@@ -173,9 +189,11 @@ void mainloop()
             std::ofstream outfile1 (save_filename.c_str());
             std::ofstream outfile2 (my_save_filename.c_str());
 #endif
-            omap->save(outfile1);
-            omap->save(outfile2);
-            save_time = 0;
+            std::string out_data = compress_string(omap->to_string());
+            outfile1 << out_data;
+            outfile2 << out_data;
+            delete omap;
+            save_time = 1000 * 60;
         }
         else
         {
@@ -186,7 +204,7 @@ void mainloop()
         unsigned diff = newtime - oldtime;
         if (diff > 100)
             diff = 100;
-        save_time += diff;
+        save_time -= diff;
         game_state->advance(diff);
         oldtime = newtime;
 	}
@@ -198,10 +216,10 @@ void mainloop()
 #else
         std::ofstream outfile1 (save_filename.c_str());
 #endif
-        omap->save(outfile1);
+        std::string out_data = compress_string(omap->to_string());
+        outfile1 << out_data;
         delete omap;
     }
-    game_state->save_to_server(true);
     delete game_state;
 }
 

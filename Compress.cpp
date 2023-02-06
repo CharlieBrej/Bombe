@@ -609,8 +609,10 @@ static const unsigned char dictionary[dictionary_len] = {
   0x65, 0x22, 0x3a, 0x32, 0x35, 0x36, 0x30, 0x30, 0x2c, 0x22, 0x72, 0x65,
   0x67, 0x69, 0x6f, 0x6e, 0x5f
 };
-std::string compress_string_zstd(const std::string& str)
+std::string compress_string_zstd(const std::string& str, int level)
 {
+    if (level < 0)
+        level = ZSTD_maxCLevel();
     size_t buf_size = ZSTD_compressBound(str.size());
     char* buf = (char*) malloc(buf_size);
     
@@ -659,7 +661,7 @@ std::string decompress_string(const std::string& str)
     return decompress_string_zstd(str);
 }
 
-std::string compress_string(const std::string& str)
+std::string compress_string(const std::string& str, int level)
 {
-    return compress_string_zstd(str);
+    return compress_string_zstd(str, level);
 }

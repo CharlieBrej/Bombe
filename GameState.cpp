@@ -45,7 +45,7 @@ static void DisplayWebsite(const char* url)
 
 }
 
-GameState::GameState(std::ifstream& loadfile)
+GameState::GameState(std::string& load_data, bool json)
 {
     LevelSet::init_global();
     bool load_was_good = false;
@@ -66,11 +66,13 @@ GameState::GameState(std::ifstream& loadfile)
 
     try
     {
-        if (!loadfile.fail() && !loadfile.eof())
+        if (!load_data.empty())
         {
             SaveObjectMap* omap;
-            omap = SaveObject::load(loadfile)->get_map();
+            omap = SaveObject::load(load_data)->get_map();
             int version = omap->get_num("version");
+            if (json && version > 6) 
+                version = 6;
             if (version < 2)
                 throw(std::runtime_error("Bad Version"));
             if (omap->has_key("language"))
@@ -171,15 +173,16 @@ GameState::GameState(std::ifstream& loadfile)
     {
         std::string s = it->first;
         std::string filename = lang_data->get_item(s)->get_map()->get_string("font");
-        fonts[filename] = TTF_OpenFont(filename.c_str(), 32);
+        fonts[filename] = TTF_OpenFont(filename.c_str(), 64);
     }
     set_language(language);
+    score_font = TTF_OpenFont("font-fixed.ttf", 19*4);
 
 
 //    font = TTF_OpenFont("font-en.ttf", 32);
 
-    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
-    Mix_AllocateChannels(32);
+//    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
+//    Mix_AllocateChannels(32);
 
 //    Mix_VolumeMusic(music_volume);
 //    music = Mix_LoadMUS("music.ogg");
@@ -199,7 +202,7 @@ GameState::GameState(std::ifstream& loadfile)
 SaveObject* GameState::save(bool lite)
 {
     SaveObjectMap* omap = new SaveObjectMap;
-    omap->add_num("version", 6);
+    omap->add_num("version", game_version);
 
     SaveObjectList* rlist = new SaveObjectList;
     for (GridRule& rule : rules)
@@ -246,7 +249,10 @@ GameState::~GameState()
 {
 //    Mix_FreeMusic(music);
     delete lang_data;
-    TTF_CloseFont(font);
+    for (const auto& [key, value] : fonts)
+        TTF_CloseFont(value);
+    fonts.clear();
+    TTF_CloseFont(score_font);
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -287,7 +293,7 @@ static int fetch_from_server_thread(void *ptr)
     TCPsocket tcpsock;
     ServerComms* comms = (ServerComms*)ptr;
     if (SDLNet_ResolveHost(&ip, "brej.org", 42071) == -1)
-//    if (SDLNet_ResolveHost(&ip, "127.0.0.1", 42070) == -1)
+//    if (SDLNet_ResolveHost(&ip, "127.0.0.1", 42071) == -1)
     {
         printf("SDLNet_ResolveHost: %s\n", SDLNet_GetError());
         if (comms->resp)
@@ -349,7 +355,6 @@ static int fetch_from_server_thread(void *ptr)
             std::istringstream decomp_stream(decomp);
             comms->resp->resp = SaveObject::load(decomp_stream);
         }
-
     }
     catch (const std::runtime_error& error)
     {
@@ -393,37 +398,41 @@ void GameState::fetch_from_server(SaveObject* send, ServerResp* resp)
     SDL_Thread *thread = SDL_CreateThread(fetch_from_server_thread, "FetchFromServer", (void *)new ServerComms(send, resp));
 }
 
-void GameState::save_to_server(bool sync)
+void GameState::fetch_scores()
 {
+    if (scores_from_server.working || scores_from_server.done)
+        return;
     if (steam_session_string.empty())
         return;
     SaveObjectMap* omap = new SaveObjectMap;
-    omap->add_string("command", "save");
+    omap->add_string("command", "scores");
     omap->add_num("steam_id", steam_id);
     omap->add_string("steam_username", steam_username);
     omap->add_string("steam_session", steam_session_string);
     omap->add_num("demo", IS_DEMO);
     omap->add_num("playtest", IS_PLAYTEST);
+    omap->add_num("version", game_version);
     SaveObjectList* plist = new SaveObjectList;
 
     SaveObjectList* pplist = new SaveObjectList;
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        SaveObjectList* plist = new SaveObjectList;
-        for (LevelProgress& prog : level_progress[j])
+        int count = 0;
+        for (int i = 0; i < level_progress[j].size(); i++)
         {
-            std::string sstr;
-            for (bool stat : prog.level_status)
-            {
-                char c = '0' + stat;
-                sstr += c;
-            }
-            plist->add_item(new SaveObjectString(sstr));
+            LevelProgress& prog = level_progress[j][i];
+            for (bool b : prog.level_status)
+                if (b)
+                    count++;
         }
-        pplist->add_item(plist);
+        pplist->add_num(count);
     }
-    omap->add_item("level_progress", pplist);
-    post_to_server(omap, sync);
+    omap->add_item("scores", pplist);
+    SaveObjectList* slist = new SaveObjectList;
+    for (uint64_t f : steam_friends)
+        slist->add_num(f);
+    omap->add_item("friends", slist);
+    fetch_from_server(omap, &scores_from_server);
 }
 
 SDL_Texture* GameState::loadTexture(const char* filename)
@@ -438,8 +447,9 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 
 void GameState::advance(int steps)
 {
+    deal_with_scores();
     if (server_timeout)
-        server_timeout--;
+        server_timeout-=steps;
 
     if (grid->is_solved() || skip_level)
     {
@@ -457,7 +467,8 @@ void GameState::advance(int steps)
 
         if (level_progress[current_level_group_index][current_level_set_index].count_todo)
         {
-            if (!current_level_is_temp || level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
+            if (!current_level_is_temp || level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index])
+            {
                 do
                 {
                     current_level_index++;
@@ -465,6 +476,7 @@ void GameState::advance(int steps)
                         current_level_index = 0;
                 }
                 while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
+            }
 
             std::string& s = global_level_sets[current_level_group_index][current_level_set_index]->levels[current_level_index];
             delete grid;
@@ -816,8 +828,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left)
         textures.push_back(new_texture);
         SDL_Rect txt_rect;
         SDL_GetClipRect(text_surface, &txt_rect);
-        text_box_size.x = std::max(text_box_size.x, txt_rect.w * button_size / 64);
-        text_box_size.y += txt_rect.h * button_size / 64;
+        text_box_size.x = std::max(text_box_size.x, txt_rect.w * button_size / 128);
+        text_box_size.y += txt_rect.h * button_size / 128;
         if (eol == std::string::npos)
             break;
         start = eol + 1;
@@ -841,8 +853,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left)
         SDL_Rect txt_rect;
         SDL_GetClipRect(text_surfaces[i], &txt_rect);
         SDL_Rect dst_rect;
-        dst_rect.w = txt_rect.w * button_size / 64;
-        dst_rect.h = txt_rect.h * button_size / 64;
+        dst_rect.w = txt_rect.w * button_size / 128;
+        dst_rect.h = txt_rect.h * button_size / 128;
         dst_rect.x = txt_pos.x;
         dst_rect.y = txt_pos.y;
         SDL_RenderCopy(sdl_renderer, textures[i], &txt_rect, &dst_rect);
@@ -1215,7 +1227,99 @@ void GameState::render(bool saving)
         }
     }
 
-    if (display_rules)
+    if (display_scores)
+    {
+        int row_count = 16;
+        int rules_list_size = panel_size.y;
+        int cell_width = rules_list_size / 7.5;
+        int cell_height = (rules_list_size - cell_width) / row_count;
+        XYPos list_pos = left_panel_offset + XYPos(panel_size.x, 0);
+        {
+            SDL_Rect src_rect = {704 + 0 * 192, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 0 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Position");
+        }
+        {
+            SDL_Rect src_rect = {896, 2336, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Player Name");
+        }
+        {
+            SDL_Rect src_rect = {512, 960, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Score");
+        }
+
+        for (int score_index = 0; score_index < row_count; score_index++)
+        {
+            if (score_index + scores_list_offset >= score_tables[current_level_group_index].size())
+                break;
+            PlayerScore& s = score_tables[current_level_group_index][score_index + scores_list_offset];
+
+            render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+
+            {
+                SDL_Color color = {0xFF, 0xFF, 0xFF};
+                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, s.name.c_str(), color);
+                SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
+                SDL_Rect src_rect;
+                SDL_GetClipRect(text_surface, &src_rect);
+                int width = (src_rect.w * cell_height) / src_rect.h;
+                SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y + cell_width + score_index * cell_height, width, cell_height};
+                SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
+            }
+            render_number(s.score, list_pos + XYPos(6 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+        }
+        {
+            SDL_Rect src_rect = {1664, 1344, 64, 64};
+            SDL_Rect dst_rect = {list_pos.x + cell_width * 7, list_pos.y + cell_width * 1, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset--;
+        }
+        {
+            SDL_Rect src_rect = {1664, 1408, 64, 64};
+            SDL_Rect dst_rect = {list_pos.x + cell_width * 7, list_pos.y + cell_width * 7, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset++;
+        }
+
+        if (rules_list_offset + row_count > score_tables[current_level_group_index].size())
+            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+
+        {
+            int full_size = cell_width * 5.5;
+            int all_count = score_tables[current_level_group_index].size();
+            int box_height = full_size;
+            int box_pos = 0;
+
+            if (all_count > row_count)
+            {
+                box_height = (row_count * full_size) / all_count;
+                box_height = std::max(cell_width / 4, box_height);
+                box_pos = (rules_list_offset * (full_size - box_height)) / (all_count - row_count);
+                if (display_rules_click_drag && ((display_rules_click_pos - list_pos - XYPos(cell_width * 7, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 5.5))))
+                {
+                    int p = mouse.y - list_pos.y - cell_width * 1.5 - box_height / 2;
+                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    rules_list_offset = p;
+                }
+            }
+
+            render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
+        }
+        if (rules_list_offset + row_count > (int)score_tables[current_level_group_index].size())
+            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+        display_rules_click = false;
+
+    }
+    else if (display_rules)
     {
         int row_count = 16;
         int rules_list_size = panel_size.y;
@@ -1324,7 +1428,7 @@ void GameState::render(bool saving)
             i++;
         }
 
-        std::sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir));
 
         if (rules_list_offset + row_count > rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
@@ -1712,7 +1816,6 @@ void GameState::render(bool saving)
         if (s)
         {
             render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 6), XYPos(button_size/2, button_size/4));
-
         }
     }
     {
@@ -1721,9 +1824,29 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {1536, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect.w *= 2;
         add_tooltip(dst_rect, "Rules");
         int rule_count = rules.size();
         render_number(rule_count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+    }
+
+    {
+        if (display_scores)
+            render_box(left_panel_offset + XYPos(button_size * 0, button_size * 4), XYPos(button_size * 2, button_size), button_size/4);
+        SDL_Rect src_rect = {1728, 384, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect.w *= 2;
+        add_tooltip(dst_rect, "Scores");
+        int count = 0;
+        for (int i = 0; i < level_progress[current_level_group_index].size(); i++)
+        {
+            LevelProgress& prog = level_progress[current_level_group_index][i];
+            for (bool b : prog.level_status)
+                if (b)
+                    count++;
+        }
+        render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
 
 
@@ -2234,10 +2357,9 @@ void GameState::render(bool saving)
                 std::string t = translate("Rule Inspector");
                 render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
             }
+            if (inspected_rule.rule->deleted)
             {
                 SDL_Rect src_rect = {1664, 960, 192, 192};
-                if (inspected_rule.rule->deleted)
-                    src_rect = {1280, 768, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Remove Rule");
@@ -2397,7 +2519,10 @@ void GameState::grid_click(XYPos pos, int clicks)
     grid_dragging = true;
     grid_dragging_last_pos = mouse;
 
-    if (display_rules)
+    if (display_scores)
+    {
+    }
+    else if (display_rules)
     {
         display_rules_click = true;
         display_rules_click_drag = true;
@@ -2503,7 +2628,15 @@ void GameState::left_panel_click(XYPos pos, int clicks)
         speed_dial = std::clamp(p, 0.0, 1.0);
     }
     if ((pos - XYPos(button_size * 0, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
+    {
         display_rules = !display_rules;
+        if (display_rules) display_scores = false;
+    }
+    if ((pos - XYPos(button_size * 0, button_size * 4)).inside(XYPos(button_size * 2, button_size)))
+    {
+        display_scores = !display_scores;
+        if (display_scores) display_rules = false;
+    }
 
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * 3, button_size)))
     {
@@ -2598,10 +2731,9 @@ void GameState::right_panel_click(XYPos pos, int clicks)
 
     if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
     {
-        if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)))
+        if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)) && !inspected_rule.rule->deleted)
         {
-            inspected_rule.rule->deleted = !inspected_rule.rule->deleted;
-            inspected_rule.rule->stale = false;
+            inspected_rule.rule->deleted = true;
             right_panel_mode = RIGHT_MENU_NONE;
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
@@ -2960,6 +3092,14 @@ bool GameState::events()
                             skip_level = true;
                             if (!display_reset_confirm_levels_only)
                                 rules.clear();
+                            else
+                            {
+                                for (GridRule& rule : rules)
+                                {
+                                    rule.used_count = 0;
+                                    rule.clear_count = 0;
+                                }
+                            }
                             for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
                             {
                                 level_progress[j].resize(global_level_sets[j].size());
@@ -3075,4 +3215,40 @@ bool GameState::events()
         }
     }
     return quit;
+}
+
+void GameState::deal_with_scores()
+{
+    if (scores_from_server.done)
+    {
+        scores_from_server.done = false;
+        if (!scores_from_server.error)
+        {
+            try 
+            {
+                SaveObjectMap* omap = scores_from_server.resp->get_map();
+                std::cout << omap->to_string() << "\n";
+                SaveObjectList* lvls = omap->get_item("scores")->get_list();
+                for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
+                {
+                    SaveObjectList* scores = lvls->get_item(i)->get_list();
+                    score_tables[i].clear();
+                    for (int j = 0; j < scores->get_count(); j++)
+                    {
+                        SaveObjectMap* score = scores->get_item(j)->get_map();
+                        score_tables[i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score"))));
+                    }
+                }
+            }
+            catch (const std::runtime_error& error)
+            {
+                std::cerr << error.what() << "\n";
+            }
+            if (scores_from_server.resp)
+                delete scores_from_server.resp;
+            scores_from_server.resp = NULL;
+        }
+        else
+            server_timeout = 1000;
+    }
 }

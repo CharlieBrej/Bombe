@@ -23,11 +23,67 @@
 
 bool power_down = false;
 
+typedef int64_t Score;
+
+class ScoreTable
+{
+public:
+    std::multimap<Score, uint64_t> sorted_scores;
+    std::map<uint64_t, Score> user_score;
+    
+    ~ScoreTable()
+    {
+   
+    }
+    SaveObject* save()
+    {
+        SaveObjectList* score_list = new SaveObjectList;
+        for(auto const &score : sorted_scores)
+        {
+            SaveObjectMap* score_map = new SaveObjectMap;
+            score_map->add_num("id", score.second);
+            score_map->add_num("score", score.first);
+            score_list->add_item(score_map);
+        }
+        return score_list;
+    }
+    void load(SaveObject* sobj)
+    {
+        SaveObjectList* score_list = sobj->get_list();
+        for (unsigned i = 0; i < score_list->get_count(); i++)
+        {
+            SaveObjectMap* omap = score_list->get_item(i)->get_map();
+            add_score(omap->get_num("id"), omap->get_num("score"));
+        }
+    }
+
+    void add_score(uint64_t steam_id, Score score)
+    {
+        if ((user_score.count(steam_id)) && (score <= user_score[steam_id]))
+            return;
+
+        for (auto it = sorted_scores.begin(); it != sorted_scores.end(); )
+        {
+           if (it->second == steam_id)
+                it = sorted_scores.erase(it);
+           else
+               ++it;
+        }
+        user_score.erase(steam_id);
+        sorted_scores.insert({score, steam_id});
+        user_score[steam_id] = score;
+    }
+};
+
+
 class Database
 {
 public:
+    static const int LEVEL_TYPES = 3;
     std::map<uint64_t, std::string> players;
+    ScoreTable scores[LEVEL_TYPES];
     std::map<std::string, uint64_t> steam_sessions;
+
 
     void update_name(uint64_t steam_id, std::string& steam_username)
     {
@@ -51,6 +107,11 @@ public:
             omap->get_string("steam_username", name);
             update_name(id, name);
         }
+        SaveObjectList* score_list = omap->get_item("scores")->get_list();
+        for (int i = 0; i < LEVEL_TYPES; i++)
+        {
+            scores[i].load(score_list->get_item(i));
+        }
     }
 
     SaveObject* save(bool lite)
@@ -67,9 +128,38 @@ public:
             player_list->add_item(player_map);
         }
         omap->add_item("players", player_list);
-        omap->add_num("version", 0);
+
+        SaveObjectList* score_list = new SaveObjectList;
+        for (int i = 0; i < LEVEL_TYPES; i++)
+        {
+            score_list->add_item(scores[i].save());
+        }
+        omap->add_item("scores", score_list);
         return omap;
     }
+    SaveObject* get_scores(uint64_t user_id)
+    {
+        SaveObjectMap* resp = new SaveObjectMap();
+        SaveObjectList* top_list = new SaveObjectList();
+        for (int i = 0; i < LEVEL_TYPES; i++)
+        {
+            SaveObjectList* score_list = new SaveObjectList();
+            int pos = 0;
+            for (std::multimap<Score, uint64_t>::reverse_iterator rit = scores[i].sorted_scores.rbegin(); rit != scores[i].sorted_scores.rend(); rit++)
+            {
+                pos++;
+                SaveObjectMap* score_map = new SaveObjectMap();
+                score_map->add_num("pos", pos);
+                score_map->add_string("name", players[rit->second]);
+                score_map->add_num("score", rit->first);
+                score_list->add_item(score_map);
+            }
+            top_list->add_item(score_list);
+        }
+        resp->add_item("scores", top_list);
+        return resp;
+    }
+
 };
 
 static size_t curl_write_data(void *ptr, size_t size, size_t nmemb, void *usr)
@@ -127,6 +217,11 @@ public:
                 break;
             }
             outbuf.erase(0, num_bytes_received);
+            if (num_bytes_received && outbuf.empty())
+            {
+                close();
+                return;
+            }
         }
         while (true)
         {
@@ -147,9 +242,10 @@ public:
                     std::string decomp = decompress_string(inbuf);
                     std::istringstream decomp_stream(decomp);
                     SaveObjectMap* omap = SaveObject::load(decomp_stream)->get_map();
+                    uint64_t steam_id = omap->get_num("steam_id");
                     inbuf.erase(0, length);
                     length = -1;
-                    if (omap->get_num("steam_id") != SECRET_ID)
+                    if (steam_id != SECRET_ID)
                     {
                         std::string steam_session;
                         omap->get_string("steam_session", steam_session);
@@ -180,12 +276,12 @@ public:
                             res = curl_easy_perform(curl);
                             if(res != CURLE_OK)
                             {
-                                fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+                                printf("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
                                 close();
                                 break;
                             }
                             curl_easy_cleanup(curl);
-                            std::cout << response << "\n";
+                            std::cout << steam_id  << " " << response << "\n";
 
                             db.steam_sessions[steam_session] = 0;
 
@@ -194,10 +290,10 @@ public:
                             db.steam_sessions[steam_session] = server_steam_id;
                         }
                         
-                        if ((omap->get_num("steam_id") == 0) ||
-                            (db.steam_sessions[steam_session] != omap->get_num("steam_id")))
+                        if ((steam_id == 0) ||
+                            (db.steam_sessions[steam_session] != steam_id))
                         {
-                            std::cout << "failed\n";
+                            std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
                             omap->save(std::cout);
                             close();
                             break;
@@ -206,16 +302,39 @@ public:
                     
                     std::string command;
                     omap->get_string("command", command);
-                    if (command == "save")
+                    if (command == "save") 
                     {
                         std::string steam_username;
                         omap->get_string("steam_username", steam_username);
-                        db.update_name(omap->get_num("steam_id"), steam_username);
-                        printf("save: %s %lld\n", steam_username.c_str(), omap->get_num("steam_id"));
+                        db.update_name(steam_id, steam_username);
+                        printf("save: %s %lld\n", steam_username.c_str(), steam_id);
                         omap->save(std::cout);
                         std::cout << "\n";
                         
                         close();
+                    }
+                    else if (command == "scores")
+                    {
+                        std::string steam_username;
+                        omap->get_string("steam_username", steam_username);
+                        db.update_name(steam_id, steam_username);
+                        printf("scores: %s %lld\n", steam_username.c_str(), steam_id);
+                        omap->save(std::cout);
+                        std::cout << "\n";
+
+                        SaveObjectList* progress_list = omap->get_item("scores")->get_list();
+                        for (int lset = 0; lset < progress_list->get_count(); lset++)
+                        {
+                            Score s = progress_list->get_num(lset);
+                            db.scores[lset].add_score(steam_id, s);
+                        }
+                        SaveObject* scr = db.get_scores(steam_id);
+                        std::string s = scr->to_string();
+                        std::string comp = compress_string(s);
+                        uint32_t length = comp.length();
+                        outbuf.append((char*)&length, 4);
+                        outbuf.append(comp);
+                        delete scr;
                     }
                     else
                     {
@@ -227,7 +346,7 @@ public:
                 }
                 catch (const std::runtime_error& error)
                 {
-                    std::cerr << error.what() << "\n";
+                    std::cout << error.what() << "\n";
                     close();
                     break;
                 }
@@ -241,7 +360,7 @@ public:
     {
         if (conn_fd < 0)
             return;
-        shutdown(conn_fd, SHUT_WR);
+        shutdown(conn_fd, SHUT_RDWR);
         ::close(conn_fd);
         conn_fd = -1;
     }
@@ -279,7 +398,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error& error)
     {
-        std::cerr << error.what() << "\n";
+        std::cout << error.what() << "\n";
     }
 
     struct sockaddr_in myaddr ,clientaddr;
@@ -370,22 +489,15 @@ int main(int argc, char *argv[])
             SaveObject* savobj = db.save(false);
             savobj->save(outfile);
             delete savobj;
-            std::ofstream outfile_lite ("db.save.lite");
-            SaveObject* savobj_lite = db.save(true);
-            savobj_lite->save(outfile_lite);
-            delete savobj_lite;
         }
     }
     close(sockid);
+    if (0)
     {
         std::ofstream outfile ("db.save");
         SaveObject* savobj = db.save(false);
         savobj->save(outfile);
         delete savobj;
-        std::ofstream outfile_lite ("db.save.lite");
-        SaveObject* savobj_lite = db.save(true);
-        savobj_lite->save(outfile_lite);
-        delete savobj_lite;
     }
     curl_global_cleanup();
     return 0;
