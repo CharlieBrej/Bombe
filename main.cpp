@@ -141,6 +141,20 @@ void mainloop()
         catch (const std::runtime_error& error)
         {
             std::cerr << error.what() << "\n";
+            try
+            {
+                while (str.find ("\r\n") != std::string::npos)
+                {
+                    str.erase(str.find ("\r\n"), 1);
+                }
+                str = decompress_string(str);
+                json = false;
+            }
+            catch (const std::runtime_error& error)
+            {
+                std::cerr << error.what() << "\n";
+            }
+
         }
 
         game_state = new GameState(str, json);
@@ -183,8 +197,8 @@ void mainloop()
             save_index = (save_index + 1) % 10;
 
 #ifdef _WIN32
-            std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()));
-            std::ofstream outfile2 (std::filesystem::path((char8_t*)my_save_filename.c_str()));
+            std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
+            std::ofstream outfile2 (std::filesystem::path((char8_t*)my_save_filename.c_str()), std::ios::binary);
 #else
             std::ofstream outfile1 (save_filename.c_str());
             std::ofstream outfile2 (my_save_filename.c_str());
@@ -212,7 +226,7 @@ void mainloop()
     {
         SaveObject* omap = game_state->save();
 #ifdef _WIN32
-        std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()));
+        std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
 #else
         std::ofstream outfile1 (save_filename.c_str());
 #endif

@@ -173,7 +173,7 @@ GameState::GameState(std::string& load_data, bool json)
     {
         std::string s = it->first;
         std::string filename = lang_data->get_item(s)->get_map()->get_string("font");
-        fonts[filename] = TTF_OpenFont(filename.c_str(), 64);
+        fonts[filename] = TTF_OpenFont(filename.c_str(), 32);
     }
     set_language(language);
     score_font = TTF_OpenFont("font-fixed.ttf", 19*4);
@@ -828,8 +828,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left)
         textures.push_back(new_texture);
         SDL_Rect txt_rect;
         SDL_GetClipRect(text_surface, &txt_rect);
-        text_box_size.x = std::max(text_box_size.x, txt_rect.w * button_size / 128);
-        text_box_size.y += txt_rect.h * button_size / 128;
+        text_box_size.x = std::max(text_box_size.x, txt_rect.w * button_size / 64);
+        text_box_size.y += txt_rect.h * button_size / 64;
         if (eol == std::string::npos)
             break;
         start = eol + 1;
@@ -853,8 +853,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left)
         SDL_Rect txt_rect;
         SDL_GetClipRect(text_surfaces[i], &txt_rect);
         SDL_Rect dst_rect;
-        dst_rect.w = txt_rect.w * button_size / 128;
-        dst_rect.h = txt_rect.h * button_size / 128;
+        dst_rect.w = txt_rect.w * button_size / 64;
+        dst_rect.h = txt_rect.h * button_size / 64;
         dst_rect.x = txt_pos.x;
         dst_rect.y = txt_pos.y;
         SDL_RenderCopy(sdl_renderer, textures[i], &txt_rect, &dst_rect);
@@ -2519,10 +2519,7 @@ void GameState::grid_click(XYPos pos, int clicks)
     grid_dragging = true;
     grid_dragging_last_pos = mouse;
 
-    if (display_scores)
-    {
-    }
-    else if (display_rules)
+    if (display_scores || display_rules)
     {
         display_rules_click = true;
         display_rules_click_drag = true;
@@ -3227,7 +3224,6 @@ void GameState::deal_with_scores()
             try 
             {
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
-                std::cout << omap->to_string() << "\n";
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
                 for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
                 {
