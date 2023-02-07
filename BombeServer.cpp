@@ -11,6 +11,7 @@
 #include <codecvt>
 #include <locale>
 #include <time.h>
+#include <set>
 #include <curl/curl.h>
 
 #include <unistd.h>
@@ -137,7 +138,7 @@ public:
         omap->add_item("scores", score_list);
         return omap;
     }
-    SaveObject* get_scores(uint64_t user_id)
+    SaveObject* get_scores(uint64_t user_id, std::set<uint64_t> friends)
     {
         SaveObjectMap* resp = new SaveObjectMap();
         SaveObjectList* top_list = new SaveObjectList();
@@ -145,14 +146,32 @@ public:
         {
             SaveObjectList* score_list = new SaveObjectList();
             int pos = 0;
+            int prevpos = 0;
             for (std::multimap<Score, uint64_t>::reverse_iterator rit = scores[i].sorted_scores.rbegin(); rit != scores[i].sorted_scores.rend(); rit++)
             {
                 pos++;
+                int fr = friends.count(rit->second);
+                if (rit->second == user_id)
+                    fr = 2;
+                if (pos > 100 && fr == 0)
+                    continue;
+                if ((prevpos + 1) < pos)
+                {
+                    SaveObjectMap* score_map = new SaveObjectMap();
+                    score_map->add_num("pos", 0);
+                    score_map->add_string("name", "");
+                    score_map->add_num("score", 0);
+                    score_map->add_num("hidden", 1);
+                    score_list->add_item(score_map);
+                }
                 SaveObjectMap* score_map = new SaveObjectMap();
                 score_map->add_num("pos", pos);
                 score_map->add_string("name", players[rit->second]);
                 score_map->add_num("score", rit->first);
+                if (fr)
+                    score_map->add_num("friend", fr);
                 score_list->add_item(score_map);
+                prevpos = pos;
             }
             top_list->add_item(score_list);
         }
@@ -328,7 +347,18 @@ public:
                             Score s = progress_list->get_num(lset);
                             db.scores[lset].add_score(steam_id, s);
                         }
-                        SaveObject* scr = db.get_scores(steam_id);
+                        std::set<uint64_t> friends;
+                        if (omap->has_key("friends"))
+                        {
+                            SaveObjectList* friend_list = omap->get_item("friends")->get_list();
+                            for (unsigned i = 0; i < friend_list->get_count(); i++)
+                            {
+                                friends.insert(friend_list->get_num(i));
+                            }
+                            friends.insert(omap->get_num("steam_id"));
+                        }
+
+                        SaveObject* scr = db.get_scores(steam_id, friends);
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
                         uint32_t length = comp.length();

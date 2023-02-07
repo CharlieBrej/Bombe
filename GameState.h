@@ -77,7 +77,6 @@ public:
 
     int tutorial_index = 0;
     int rules_list_offset = 0;
-    int scores_list_offset = 0;
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
@@ -164,8 +163,10 @@ public:
         unsigned pos = 0;
         std::string name;
         unsigned score;
-        PlayerScore(unsigned pos_, std::string name_, unsigned score_):
-            pos(pos_), name(name_), score(score_)
+        unsigned is_friend;
+        unsigned hidden;
+        PlayerScore(unsigned pos_, std::string name_, unsigned score_, unsigned is_friend_, unsigned hidden_):
+            pos(pos_), name(name_), score(score_), is_friend(is_friend_), hidden(hidden_)
         {}
     };
 

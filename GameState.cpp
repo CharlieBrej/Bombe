@@ -1253,16 +1253,26 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Score");
         }
 
+        if (rules_list_offset + row_count > (int)score_tables[current_level_group_index].size())
+            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+
         for (int score_index = 0; score_index < row_count; score_index++)
         {
-            if (score_index + scores_list_offset >= score_tables[current_level_group_index].size())
+            if (score_index + rules_list_offset >= score_tables[current_level_group_index].size())
                 break;
-            PlayerScore& s = score_tables[current_level_group_index][score_index + scores_list_offset];
+            PlayerScore& s = score_tables[current_level_group_index][score_index + rules_list_offset];
+            if (s.hidden)
+                continue;
 
             render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
 
             {
                 SDL_Color color = {0xFF, 0xFF, 0xFF};
+                if (s.is_friend == 1)
+                    color = {0x80, 0xFF, 0x80};
+                if (s.is_friend == 2)
+                    color = {0xFF, 0x80, 0x80};
                 SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, s.name.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
@@ -1443,7 +1453,7 @@ void GameState::render(bool saving)
                 break;
             RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
             GridRule& rule = *rd.rule;
-            if (&rule == inspected_rule.rule)
+            if ((right_panel_mode == RIGHT_MENU_RULE_INSPECT) && (&rule == inspected_rule.rule))
             {
                 render_box(list_pos + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
             }
@@ -2360,7 +2370,7 @@ void GameState::render(bool saving)
                 std::string t = translate("Rule Inspector");
                 render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
             }
-            if (inspected_rule.rule->deleted)
+            if (!inspected_rule.rule->deleted)
             {
                 SDL_Rect src_rect = {1664, 960, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size};
@@ -3189,7 +3199,7 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
-                if (display_rules)
+                if (display_rules || display_scores)
                 {
                     rules_list_offset -= e.wheel.y;
                     break;
@@ -3235,7 +3245,13 @@ void GameState::deal_with_scores()
                     for (int j = 0; j < scores->get_count(); j++)
                     {
                         SaveObjectMap* score = scores->get_item(j)->get_map();
-                        score_tables[i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score"))));
+                        unsigned is_friend = 0;
+                        if (score->has_key("friend"))
+                            is_friend = score->get_num("friend");
+                        unsigned hidden = 0;
+                        if (score->has_key("hidden"))
+                            hidden = score->get_num("hidden");
+                        score_tables[i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score")), is_friend, hidden));
                     }
                 }
             }
