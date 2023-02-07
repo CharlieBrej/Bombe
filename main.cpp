@@ -125,7 +125,7 @@ void mainloop()
     GameState* game_state;
     {
 #ifdef _WIN32
-        std::ifstream loadfile(std::filesystem::path((char8_t*)save_filename.c_str()));
+        std::ifstream loadfile(std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
 #else
         std::ifstream loadfile(save_filename.c_str());
 #endif

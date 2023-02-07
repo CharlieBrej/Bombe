@@ -1270,6 +1270,9 @@ void GameState::render(bool saving)
                 int width = (src_rect.w * cell_height) / src_rect.h;
                 SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y + cell_width + score_index * cell_height, width, cell_height};
                 SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
+                SDL_DestroyTexture(new_texture);
+                SDL_FreeSurface(text_surface);
+
             }
             render_number(s.score, list_pos + XYPos(6 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
         }
