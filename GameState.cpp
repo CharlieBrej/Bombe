@@ -1252,6 +1252,14 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Score");
         }
+        {
+            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 192};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Close");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                display_scores = false;
+        }
 
         if (rules_list_offset + row_count > (int)score_tables[current_level_group_index].size())
             rules_list_offset = score_tables[current_level_group_index].size() - row_count;
