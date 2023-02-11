@@ -1847,7 +1847,12 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         dst_rect.w *= 2;
         add_tooltip(dst_rect, "Rules");
-        int rule_count = rules.size();
+        int rule_count = 0;
+        for (GridRule& rule : rules)
+        {
+            if (!rule.deleted)
+                rule_count++;
+        }
         render_number(rule_count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
 
@@ -2909,7 +2914,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             if (constructed_rule.region_count && constructed_rule.apply_region_bitmap)
             {
-                if (constructed_rule.is_legal())
+                if (!constructed_rule_is_already_present && constructed_rule.is_legal())
                 {
                     rules.push_back(constructed_rule);
                     reset_rule_gen_region();
@@ -3198,7 +3203,7 @@ bool GameState::events()
                 {
                     right_panel_click(mouse - right_panel_offset, e.button.clicks);
                 }
-                else if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
+                else if ((mouse - left_panel_offset - XYPos(panel_size.x, 0)).inside(XYPos(panel_size.y, panel_size.y)))
                 {
                     grid_click(mouse, e.button.clicks);
                 }
