@@ -526,16 +526,20 @@ void GameState::advance(int steps)
                 r.visibility_force = GridRegion::VIS_FORCE_HINT;
                 r.vis_level = GRID_VIS_LEVEL_HIDE;
 
+                std::set<XYPos> new_clue_solves;
+
                 for (const XYPos& pos : clue_solves)
                 {
-                    if (!grid->is_determinable_using_regions(pos, true))
-                    {
-                        r.vis_level = GRID_VIS_LEVEL_SHOW;
-                        break;
-                    }
+                    if (grid->is_determinable_using_regions(pos, true))
+                        new_clue_solves.insert(pos);
                 }
-                if (r.vis_level == GRID_VIS_LEVEL_HIDE)
+                if (new_clue_solves.empty())
                 {
+                    r.vis_level = GRID_VIS_LEVEL_SHOW;
+                }
+                else
+                {
+                    clue_solves = new_clue_solves;
                     return;
                 }
             }
@@ -2281,7 +2285,12 @@ void GameState::render(bool saving)
                 XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
                 RegionType new_region_type = region_type;
                 if (region_type.type >= 50)
+                {
                     new_region_type = RegionType(RegionType::NONE, 0);
+                    if ((rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
+                        (rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0)))
+                        new_region_type = RegionType(RegionType::EQUAL, 0);
+                }
                 if (new_region_type == rule.square_counts[hover_rulemaker_bits])
                 {
                     uint8_t square_counts[16];
@@ -2884,7 +2893,12 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                     uint8_t square_counts[16];
                     RegionType new_region_type = region_type;
                     if (region_type.type >= 50)
+                    {
                         new_region_type = RegionType(RegionType::NONE, 0);
+                        if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
+                            (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0)))
+                            new_region_type = RegionType(RegionType::EQUAL, 0);
+                    }
                     GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
                     {
