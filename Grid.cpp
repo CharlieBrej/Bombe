@@ -263,6 +263,30 @@ void GridRule::get_square_counts(uint8_t square_counts[16], GridRegion* r1, Grid
     }
 }
 
+GridRule GridRule::permute(std::vector<int>& p)
+{
+    GridRule r;
+    r.region_count = region_count;
+    r.apply_region_type = apply_region_type;
+    
+    for (int i = 0; i < region_count; i++)
+        r.region_type[i] = region_type[p[i]];
+
+    for (int i = 0; i < (1 << region_count); i++)
+    {
+        int p_index = 0;
+        for (int a = 0; a < region_count; a++)
+        {
+            if ((i >> a) & 1)
+                p_index |= 1 << p[a];
+        }
+        r.square_counts[i] = square_counts[p_index];
+        if ((apply_region_bitmap >> i) & 1)
+            r.apply_region_bitmap |= 1 << p_index;
+    }
+    return r;
+}
+
 bool GridRule::matches(GridRule& other)
 {
     if (deleted || other.deleted)

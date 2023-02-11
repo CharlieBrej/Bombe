@@ -102,7 +102,7 @@ public:
 
 
     bool constructed_rule_is_logical = false;
-    bool constructed_rule_is_already_present = false;
+    GridRule* constructed_rule_is_already_present = NULL;
 
     GridRegion* mouse_hover_region = NULL;
     GridRegion *inspected_region = NULL;

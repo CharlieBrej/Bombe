@@ -677,12 +677,23 @@ void GameState::reset_rule_gen_region()
 void GameState::update_constructed_rule()
 {
     constructed_rule_is_logical = constructed_rule.is_legal();
-    constructed_rule_is_already_present = false;
-    for (GridRule& rule : rules)
-    {
-        if (constructed_rule.matches(rule))
-            constructed_rule_is_already_present = true;
+    constructed_rule_is_already_present = NULL;
+
+    std::vector<int> order;
+    for(int i = 0; i < constructed_rule.region_count; i++)
+        order.push_back(i);
+    do{
+
+        GridRule prule = constructed_rule.permute(order);
+        for (GridRule& rule : rules)
+        {
+            if (rule.matches(prule))
+            {
+                constructed_rule_is_already_present = &rule;
+            }
+        }
     }
+    while(std::next_permutation(order.begin(),order.end()));
 }
 
 static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned col, unsigned fade)
@@ -2300,17 +2311,17 @@ void GameState::render(bool saving)
             {
                 XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
                 RegionType new_region_type = region_type;
+                uint8_t square_counts[16];
+                GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                 if (region_type.type >= 50)
                 {
                     new_region_type = RegionType(RegionType::NONE, 0);
                     if ((rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
-                        (rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0)))
+                        (rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
                         new_region_type = RegionType(RegionType::EQUAL, 0);
                 }
                 if (new_region_type == rule.square_counts[hover_rulemaker_bits])
                 {
-                    uint8_t square_counts[16];
-                    GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     new_region_type = RegionType(RegionType::EQUAL, square_counts[hover_rulemaker_bits]);
                 }
                 {
@@ -2907,15 +2918,15 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                 if (!hover_rulemaker_lower_right)
                 {
                     uint8_t square_counts[16];
+                    GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     RegionType new_region_type = region_type;
                     if (region_type.type >= 50)
                     {
                         new_region_type = RegionType(RegionType::NONE, 0);
                         if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
-                            (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0)))
+                            (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
                             new_region_type = RegionType(RegionType::EQUAL, 0);
                     }
-                    GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
                     {
                         constructed_rule.square_counts[hover_rulemaker_bits] = RegionType(RegionType::EQUAL, square_counts[hover_rulemaker_bits]);
@@ -2944,10 +2955,18 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             if (constructed_rule.region_count && constructed_rule.apply_region_bitmap)
             {
-                if (!constructed_rule_is_already_present && constructed_rule.is_legal())
+                if (constructed_rule.is_legal())
                 {
-                    rules.push_back(constructed_rule);
-                    reset_rule_gen_region();
+                    if (constructed_rule_is_already_present)
+                    {
+                        inspected_rule = GridRegionCause(constructed_rule_is_already_present, NULL, NULL, NULL, NULL);
+                        right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                    }
+                    else
+                    {
+                        rules.push_back(constructed_rule);
+                        reset_rule_gen_region();
+                    }
                 }
             }
         }
@@ -2956,7 +2975,6 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             if (constructed_rule.region_count)
             {
-
                 rule_gen_region[constructed_rule.region_count - 1] = NULL;
                 constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                 if (constructed_rule.region_count == 0)
