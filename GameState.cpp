@@ -151,7 +151,7 @@ GameState::GameState(std::string& load_data, bool json)
         display_language_chooser = true;
     }
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 0);
 	sdl_texture = loadTexture("texture.png");
@@ -687,7 +687,7 @@ void GameState::update_constructed_rule()
         GridRule prule = constructed_rule.permute(order);
         for (GridRule& rule : rules)
         {
-            if (rule.matches(prule))
+            if (rule.covers(prule))
             {
                 constructed_rule_is_already_present = &rule;
             }
@@ -3026,6 +3026,36 @@ bool GameState::events()
                 }
                 switch (e.key.keysym.scancode)
                 {
+                    case SDL_SCANCODE_Q:
+                    {
+                        if (right_panel_mode == RIGHT_MENU_REGION)
+                        {
+                            inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
+                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                            inspected_region->stale = false;
+                        }
+                        break;
+                    }
+                    case SDL_SCANCODE_W:
+                    {
+                        if (right_panel_mode == RIGHT_MENU_REGION)
+                        {
+                            inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
+                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                            inspected_region->stale = false;
+                        }
+                        break;
+                    }
+                    case SDL_SCANCODE_E:
+                    {
+                        if (right_panel_mode == RIGHT_MENU_REGION)
+                        {
+                            inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
+                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                            inspected_region->stale = false;
+                        }
+                        break;
+                    }
                     case SDL_SCANCODE_C:
                     {
                         std::string s = grid->to_string();

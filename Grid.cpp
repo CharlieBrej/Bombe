@@ -287,7 +287,7 @@ GridRule GridRule::permute(std::vector<int>& p)
     return r;
 }
 
-bool GridRule::matches(GridRule& other)
+bool GridRule::covers(GridRule& other)
 {
     if (deleted || other.deleted)
         return false;
@@ -297,11 +297,13 @@ bool GridRule::matches(GridRule& other)
         if (region_type[i] != other.region_type[i])
             return false;
     for (int i = 0; i < (1 << region_count); i++)
+    {
         if (square_counts[i] != other.square_counts[i])
             return false;
+        if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
+            return false;
+    }
     if (apply_region_type != other.apply_region_type)
-        return false;
-    if (apply_region_bitmap != other.apply_region_bitmap)
         return false;
     return true;
 }

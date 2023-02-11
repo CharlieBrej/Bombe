@@ -174,7 +174,7 @@ public:
     static void get_square_counts(uint8_t square_counts[16], GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
 
     GridRule permute(std::vector<int>& p);
-    bool matches(GridRule& other);
+    bool covers(GridRule& other);
     bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     bool is_legal();
