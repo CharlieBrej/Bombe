@@ -94,6 +94,233 @@
             ]
         ]
     },
+    "Deutsch": {
+        "font": "font-en.ttf",
+        "translate": {
+            "Action": "Aktion",
+            "Add to Rule Constructor": "Zur Regel Hinzufügen",
+            "Auto Region": "Auto Region",
+            "Bomb": "Bombe",
+            "Cancel": "Abbruch",
+            "Cells Cleared": "Anzahl Zellen gelöst",
+            "Clear": "Aufdecken",
+            "Clear Filter": "Filter zurücksetzen",
+            "Close": "Schließen",
+            "Don't Care": "Egal",
+            "Duplicate Rule": "Regel verdoppeln",
+            "Edit Rule": "Regel bearbeiten",
+            "Filter": "Filter",
+            "Full Screen": "Vollbild",
+            "Go to Rule Constructor": "Zur Regel",
+            "Help": "Hilfe",
+            "Hidden": "Versteckt",
+            "Hint": "Tipp",
+            "Illogical": "Unlogisch",
+            "Main Menu": "Hauptmenü",
+            "Position": "Position",
+            "Player Name": "Spieler Name",
+            "OK": "OK",
+            "Quit": "Beenden",
+            "Refresh Regions": "Regionen neuberechnen",
+            "Region Inspector": "Region",
+            "Regions": "Regionen",
+            "Remove Rule": "Regel entfernen",
+            "Reset Game": "Spiel zurücksetzen",
+            "Reset Levels": "Level zurücksetzen",
+            "Rule Already Present": "Regel existiert bereits",
+            "Rule Constructor": "Regel erstellen",
+            "Rule ID": "Regel ID",
+            "Rule Inspector": "Regel inspizieren",
+            "Rules": "Regeln",
+            "Score": "Score",
+            "Scores": "Scores",
+            "Select Language": "Sprache ändern",
+            "Show Creation Rule": "Erzeugende Regel anzeigen",
+            "Show Row Clues": "Regelhinweise anzeigen",
+            "Show Visibility Rule": "Regelsichtbarkeit anzeigen",
+            "Skip Level": "Level überspringen",
+            "Times Applied": "Anzahl angewendet",
+            "Trash": "Müll",
+            "Visible": "Sichtbar"
+        },
+        "tutorial": [
+            [
+                {
+                    "x": 50,
+                    "y": 600,
+                    "text": "Nummern zeigen an\nwie viele Bomben sich in\nbenachbarten Zellen befinden"
+                },
+                {
+                    "x": 1100,
+                    "y": 750,
+                    "text": "Regionen zeigen an\nwie viele bomben noch unentdeckt sind"
+                }
+            ],
+            [
+                {
+                    "x": 100,
+                    "y": 650,
+                    "text": "Wenn sie eine Region doppelklicken\nkönnen sie diese bearbeiten"
+                },
+                { "x": 1050, "y": 100, "left": 1, "text": "Regiontyp" },
+                { "x": 1050, "y": 530, "left": 1, "text": "Anzahl an Zellen" },
+                { "x": 1240, "y": 560, "text": "Ausführbare Aktionen" },
+                {
+                    "x": 800,
+                    "y": 630,
+                    "text": "Die Regel bedeutet:\nIn einer Region mit 3 Bomben\nund 3 Zellen müssen alle Zellen Bomben sein"
+                },
+
+                { "x": 370, "y": 950, "text": "Markiere alle als Bomben" },
+                { "x": 1200, "y": 950, "text": "Alle Zellen aufdecken" },
+                {
+                    "x": 1450,
+                    "y": 250,
+                    "text": "Die Regel wird\nautomatisch angewendet,\n wenn Sie OK klicken"
+                }
+            ],
+            [
+                { "x": 200, "y": 800, "text": "Doppelklicke eine Region" },
+                { "x": 1200, "y": 200, "text": "Gib die Nummer an Zellen an" },
+                { "x": 1200, "y": 500, "text": "Gib eine Aktion an" },
+                { "x": 1300, "y": 800, "text": "Klicke OK" }
+            ],
+            [
+                {
+                    "x": 150,
+                    "y": 500,
+                    "text": "Die Anzahl an Zellen\nkann auf \"Egal\"\ngesetzt werden"
+                },
+                {
+                    "x": 640,
+                    "y": 500,
+                    "text": "Es können bis zu\nvier Regionen zu einer\nRegel hinzugefügt werden"
+                },
+                {
+                    "x": 1200,
+                    "y": 500,
+                    "text": "Regeln können verwendet werden\num neue Regeln zu erstellen"
+                }
+            ],
+            [
+                { "x": 240, "y": 60, "text": "Genau 6" },
+                { "x": 240, "y": 200, "text": "2 oder mehr" },
+                { "x": 240, "y": 340, "text": "5 oder weniger" },
+                { "x": 240, "y": 480, "text": "Alles außer 4" },
+                { "x": 240, "y": 620, "text": "Entweder 4 oder 6" },
+                { "x": 240, "y": 760, "text": "Entweder 3, 5 oder 7" },
+                { "x": 240, "y": 900, "text": "Entweder 2, 4, 6 oder 8" },
+
+                { "x": 1050, "y": 100, "text": "Normal sichtbar" },
+                {
+                    "x": 1050,
+                    "y": 290,
+                    "text": "Versteckt, aber immer noch durch Regeln genutzt"
+                },
+                { "x": 1050, "y": 490, "text": "Müll, von Regeln ignoriert" },
+                {
+                    "x": 1050,
+                    "y": 700,
+                    "text": "Regeln können verwendet werden,\num die Sichtbarkeit von Regionen zu verändern"
+                }
+            ]
+        ]
+    },
+    "Türkçe":
+    {
+        "font" : "font-en.ttf",
+        "translate":
+        {
+            "Action" :                      "Eylem",
+            "Add to Rule Constructor" :     "Kural İnşaatcısına Ekle",
+            "Auto Region" :                 "Otomatik Bölge",
+            "Bomb" :                        "Bomba",
+            "Cancel" :                      "İptal Et",
+            "Cells Cleared" :               "Temizlenen Hücreler",
+            "Clear" :                       "Temiz",
+            "Clear Filter" :                "Filitreyi Temizle",
+            "Close":                        "Kapat",
+            "Don't Care" :                  "Umursama",
+            "Duplicate Rule" :              "Kuralı Çoğalt",
+            "Edit Rule" :                   "Kuralı Düzenle",
+            "Filter" :                      "Filitre",
+            "Full Screen" :                 "Tam Ekran",
+            "Go to Rule Constructor" :      "Kural İnşaatcısına Git",
+            "Help" :                        "Yardım",
+            "Hidden" :                      "Gizlenmiş",
+            "Hint" :                        "İpucu",
+            "Illogical" :                   "Mantıksız",
+            "Main Menu" :                   "Ana Menü",
+            "Position" :                    "Pozisyon",
+            "Player Name" :                 "Oyuncu İsmi",
+            "OK" :                          "Tamam",
+            "Quit" :                        "Çık",
+            "Refresh Regions" :             "Bölgeleri Yenile",
+            "Region Inspector" :            "Bölge Denetleyicisi",
+            "Regions" :                     "Bölgeler",
+            "Remove Rule" :                 "Kuralı Kaldır",
+            "Reset Game" :                  "Oyunu Sıfırla",
+            "Reset Levels" :                "Bölümü Sıfırla",
+            "Rule Already Present" :        "Kural Çoktan Var",
+            "Rule Constructor" :            "Kural İnşaatcısı",
+            "Rule ID" :                     "Kural ID",
+            "Rule Inspector" :              "Kural Denetleyicisi",
+            "Rules" :                       "Kurallar",
+            "Score" :                       "Skor",
+            "Scores" :                      "Skorlar",
+            "Select Language" :             "Dil Seçimi",
+            "Show Creation Rule" :          "Oluşturan Kuralı Göster",
+            "Show Row Clues" :              "Satır İpucunu Göster",
+            "Show Visibility Rule" :        "Görünürlük Kuralını Göster",
+            "Skip Level" :                  "Seviyeyi Atla",
+            "Times Applied" :               "Uygulanma Sayısı",
+            "Trash" :                       "Çöp",
+            "Visible" :                     "Görünür"
+        },
+        "tutorial":
+        [
+            [
+                {"x": 50,   "y": 600,           "text":"Numaralar komşu\nhücrelerde kaç tane\nmayın olduğunu belirtir"},
+                {"x": 1100, "y": 750,           "text":"Bölgeler kaç tane bulunmamış\nbomba olduğunu gösterir"}
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"Bölgeye çift tıklamak o bölgeyi\nKural İnşaatçısına alır"},
+                {"x":1050,  "y": 100, "left":1, "text":"Bölge tipi"},
+                {"x":1050,  "y": 530, "left":1, "text":"Hücre sayısı"},
+                {"x":1240,  "y": 560,           "text":"Yapılacak eylem"},
+                {"x":800,   "y": 630,           "text":"Bu kural 3 bomba ve 3 hücreye\nsahip olan bir bölgenin tamamen \nbomba oldğunu söylüyor"},
+
+                {"x":370,   "y": 890,           "text":"Tamamen bomba işaretle"},
+                {"x":1200,  "y": 890,           "text":"Tamamen temiz işaretle"},
+                {"x":1450,  "y": 250,           "text":"Tamama tıkladığında\nkural otomatik\nolarak uygulanır"}
+            ],
+            [
+                {"x": 200,  "y": 800,           "text":"Bir bölgeye çift tıkla"},
+                {"x":1200,  "y": 200,           "text":"Hücre sayısını gir"},
+                {"x":1200,  "y": 500,           "text":"Uygulanacak eylemi gir"},
+                {"x":1300,  "y": 800,           "text":"Tamama tıkla"},
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"Hücre saysı\n\"Umursama\"\nolarak ayarlanabilir"},
+                {"x": 640,  "y": 500,           "text":"4 hücreye kadar\nHücre İnşaatcısına\nhücre eklenebilir"},
+                {"x": 1200, "y": 500,           "text":"Kurallar yeni bölge\noluşturmakta kullanılabilir"}
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"Tam olarak 6"},
+                {"x": 240,  "y": 200,           "text":"2 ya da daha fazla"},
+                {"x": 240,  "y": 340,           "text":"5 ya da daha az"},
+                {"x": 240,  "y": 480,           "text":"4 dışında herhangi bir sayı"},
+                {"x": 240,  "y": 620,           "text":"4 ya da 6"},
+                {"x": 240,  "y": 760,           "text":"3, 5 ya da 7"},
+                {"x": 240,  "y": 900,           "text":"2, 4, 6 ya da 8"},
+
+                {"x":1050,  "y": 100,           "text":"Normal görünür"},
+                {"x":1050,  "y": 290,           "text":"Gizli, ama hala kurallar tarafından kullanılabilir"},
+                {"x":1050,  "y": 490,           "text":"Çöp, kurallar tarafından önemsenmez"},
+                {"x":1050,  "y": 700,           "text":"Bölgenin görünürlüğünü\ndeğiştirmek için kullanılabilir"}
+            ]
+        ]
+    },
     "繁體中文":
     {
         "font" : "font-tc.otf",
@@ -104,10 +331,10 @@
             "Auto Region" :                 "自動區域生成",
             "Bomb" :                        "炸彈",
             "Cancel" :                      "取消",
-            "Cells Cleared" :               "消除方塊數",
+            "Cells Cleared" :               "消除方格數",
             "Clear" :                       "清除",
-            "Clear Filter" :                "清除過濾器",
-            "Close":                        "Close",
+            "Clear Filter" :                "清除篩選",
+            "Close":                        "關閉",
             "Don't Care" :                  "任意數值",
             "Duplicate Rule" :              "複製規則",
             "Edit Rule" :                   "編輯規則",
@@ -119,9 +346,9 @@
             "Hint" :                        "提示",
             "Illogical" :                   "不合邏輯",
             "Main Menu" :                   "主選單",
-            "Position" :                    "Position",
-            "Player Name" :                 "Player Name",
-            "OK" :                          "OK",
+            "Position" :                    "位置",
+            "Player Name" :                 "玩家名",
+            "OK" :                          "確認",
             "Quit" :                        "退出遊戲",
             "Refresh Regions" :             "刷新區域",
             "Region Inspector" :            "區域檢視器",
@@ -132,10 +359,10 @@
             "Rule Already Present" :        "規則已經存在",
             "Rule Constructor" :            "規則生成器",
             "Rule ID" :                     "規則編號",
-            "Rule Inspector" :              "區域檢視器",
+            "Rule Inspector" :              "規則檢視器",
             "Rules" :                       "規則",
-            "Score" :                       "Score",
-            "Scores" :                      "Scores",
+            "Score" :                       "得分",
+            "Scores" :                      "得分",
             "Select Language" :             "選擇語言",
             "Show Creation Rule" :          "顯示規則來源",
             "Show Row Clues" :              "顯示行列規則",
@@ -143,34 +370,34 @@
             "Skip Level" :                  "跳過關卡",
             "Times Applied" :               "套用次數",
             "Speed" :                       "速度",
-            "Trash" :                       "垃圾",
+            "Trash" :                       "無效",
             "Visible" :                     "可見的"
         },
         "tutorial":
         [
             [
-                {"x": 50,   "y": 600,           "text":"數字表示相鄰方塊\n中有多少炸彈"},
+                {"x": 50,   "y": 600,           "text":"數字表示相鄰方格\n中有多少炸彈"},
                 {"x": 1100, "y": 750,           "text":"區域顯示還有多少\n炸彈未發現"}
             ],
             [
                 {"x": 140,  "y": 650,           "text":"雙擊區域進入規則生成器"},
                 {"x":1050,  "y": 100, "left":1, "text":"區域類型"},
-                {"x":1050,  "y": 530, "left":1, "text":"方塊數"},
+                {"x":1050,  "y": 530, "left":1, "text":"方格數"},
                 {"x":1240,  "y": 560,           "text":"要採取的行動"},
-                {"x":800,   "y": 630,           "text":"規則指：\n有 3 個炸彈和 3 個方塊\n的區域必定全是炸彈"},
+                {"x":800,   "y": 630,           "text":"規則指：\n有 3 個炸彈和 3 個方格\n的區域必定全是炸彈"},
 
-                {"x":370,   "y": 950,           "text":"標記為全部炸彈"},
-                {"x":1200,  "y": 950,           "text":"標記為全部清除"},
+                {"x":370,   "y": 950,           "text":"全部標記為炸彈"},
+                {"x":1200,  "y": 950,           "text":"全部標記為安全"},
                 {"x":1450,  "y": 250,           "text":"單擊OK後,\n規則將自動\n套用"}
             ],
             [
                 {"x": 160,  "y": 800,           "text":"雙擊區域\n把該區域添加到規則生成器"},
-                {"x":1200,  "y": 200,           "text":"可改變方塊數目"},
+                {"x":1200,  "y": 200,           "text":"可改變方格數目"},
                 {"x":1200,  "y": 500,           "text":"決定要採取的行動"},
                 {"x":1300,  "y": 800,           "text":"點擊OK"},
             ],
             [
-                {"x": 200,  "y": 500,           "text":"方塊數\n可以設置為\n任意數值\"?\""},
+                {"x": 200,  "y": 500,           "text":"方格數\n可以設置為\n任意數值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 個區域\n添加到規則生成器"},
                 {"x": 1220, "y": 500,           "text":"規則可用於\n生成新的區域"}
             ],
@@ -185,7 +412,7 @@
 
                 {"x":1050,  "y": 100,           "text":"正常可見"},
                 {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
-                {"x":1050,  "y": 490,           "text":"垃圾,被規則忽略"},
+                {"x":1050,  "y": 490,           "text":"無效,被規則忽略"},
                 {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
             ]
         ]
@@ -200,12 +427,12 @@
             "Auto Region" :                 "自动区域生成",
             "Bomb" :                        "炸弹",
             "Cancel" :                      "取消",
-            "Cells Cleared" :               "消除方块数",
+            "Cells Cleared" :               "消除方格数",
             "Clear" :                       "清除",
-            "Clear Filter" :                "清除过滤器",
-            "Close":                        "Close",
+            "Clear Filter" :                "清除筛选",
+            "Close":                        "关闭",
             "Don't Care" :                  "任意数值",
-            "Duplicate Rule" :              "複製规则",
+            "Duplicate Rule" :              "复制规则",
             "Edit Rule" :                   "编辑规则",
             "Filter" :                      "筛选",
             "Full Screen" :                 "全屏",
@@ -215,9 +442,9 @@
             "Hint" :                        "提示",
             "Illogical" :                   "不合逻辑",
             "Main Menu" :                   "主选单",
-            "Position" :                    "Position",
-            "Player Name" :                 "Player Name",
-            "OK" :                          "OK",
+            "Position" :                    "位置",
+            "Player Name" :                 "玩家名",
+            "OK" :                          "确认",
             "Quit" :                        "退出游戏",
             "Refresh Regions" :             "刷新区域",
             "Region Inspector" :            "区域检视器",
@@ -230,43 +457,43 @@
             "Rule ID" :                     "规则编号",
             "Rule Inspector" :              "区域检视器",
             "Rules" :                       "规则",
-            "Score" :                       "Score",
-            "Scores" :                      "Scores",
+            "Score" :                       "得分",
+            "Scores" :                      "得分",
             "Select Language" :             "选择语言",
             "Show Creation Rule" :          "显示规则来源",
             "Show Row Clues" :              "显示行列规则",
             "Show Visibility Rule" :        "显示可见性规则",
             "Skip Level" :                  "跳过关卡",
             "Times Applied" :               "套用次数",
-            "Speed" :                       "速度",
-            "Trash" :                       "垃圾",
+            "Speed" :                       "动画速度",
+            "Trash" :                       "无效",
             "Visible" :                     "可见的"
         },
         "tutorial":
         [
             [
-                {"x": 50,   "y": 600,           "text":"数字表示相邻方块\n中有多少炸弹"},
+                {"x": 50,   "y": 600,           "text":"数字表示相邻方格\n中有多少炸弹"},
                 {"x": 1100, "y": 750,           "text":"区域显示还有多少\n未发现的炸弹"}
             ],
             [
                 {"x": 140,  "y": 650,           "text":"双击区域进入规则生成器"},
                 {"x":1050,  "y": 100, "left":1, "text":"区域类型"},
-                {"x":1050,  "y": 530, "left":1, "text":"方块数"},
-                {"x":1240,  "y": 560,           "text":"要採取的行动"},
-                {"x":800,   "y": 630,           "text":"规则指：\n有 3 个炸弹和 3 个方块\n的区域必定全是炸弹"},
+                {"x":1050,  "y": 530, "left":1, "text":"方格数"},
+                {"x":1240,  "y": 560,           "text":"要采取的行动"},
+                {"x":800,   "y": 630,           "text":"规则指：\n有 3 个炸弹和 3 个方格\n的区域必定全是炸弹"},
 
-                {"x":370,   "y": 950,           "text":"标记为全部炸弹"},
-                {"x":1200,  "y": 950,           "text":"标记为全部清除"},
+                {"x":370,   "y": 950,           "text":"全部标记为炸弹"},
+                {"x":1200,  "y": 950,           "text":"全部标记为安全"},
                 {"x":1450,  "y": 250,           "text":"单击OK后,\n规则将\n自动应用"}
             ],
             [
                 {"x": 160,  "y": 800,           "text":"双击区域\n把该区域添加到规则生成器"},
-                {"x":1200,  "y": 200,           "text":"可改变方块数目"},
+                {"x":1200,  "y": 200,           "text":"可改变方格数目"},
                 {"x":1200,  "y": 500,           "text":"决定要採取的行动"},
                 {"x":1300,  "y": 800,           "text":"点击OK"},
             ],
             [
-                {"x": 200,  "y": 500,           "text":"方块数\n可以设置为\n任意数值\"?\""},
+                {"x": 200,  "y": 500,           "text":"方格数\n可以设置为\n任意数值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 个区域\n添加到规则生成器"},
                 {"x": 1200, "y": 500,           "text":"规则可用于\n生成新的区域"}
             ],
@@ -281,7 +508,7 @@
 
                 {"x":1050,  "y": 100,           "text":"正常可见"},
                 {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
-                {"x":1050,  "y": 490,           "text":"垃圾,被规则忽略"},
+                {"x":1050,  "y": 490,           "text":"无效,被规则忽略"},
                 {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
             ]
         ]
