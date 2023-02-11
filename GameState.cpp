@@ -1428,19 +1428,35 @@ void GameState::render(bool saving)
             RuleDiplaySort(int col_, bool descend_):
                 col(col_), descend(descend_)
             {};
-            bool operator() (RuleDiplay a,RuleDiplay b)
+            bool operator() (RuleDiplay a_,RuleDiplay b_)
             {
+                RuleDiplay &a = descend ? a_ : b_;
+                RuleDiplay &b = descend ? b_ : a_;
                 if (col == 0)
-                    return descend ? (a.index < b.index) :  (b.index < a.index);
+                    return (a.index < b.index);
                 if (col == 1)
-                    return descend ? (a.rule->apply_region_type < b.rule->apply_region_type) : (b.rule->apply_region_type < a.rule->apply_region_type);
+                    return (a.rule->apply_region_type < b.rule->apply_region_type);
                 if (col == 2)
-                    return descend ? (a.rule->region_count < b.rule->region_count) : (b.rule->region_count < a.rule->region_count);
+                {
+                    if (a.rule->region_count < b.rule->region_count)
+                        return true;
+                    if (a.rule->region_count > b.rule->region_count)
+                        return false;
+                    for (int i = 0; i < a.rule->region_count; i++)
+                    {
+                        if (a.rule->region_type[i] < b.rule->region_type[i])
+                            return true;
+                        if (b.rule->region_type[i] < a.rule->region_type[i])
+                            return false;
+                    }
+
+                    return false;
+                }
                 if (col == 5)
-                    return descend ? (a.rule->used_count < b.rule->used_count) : (b.rule->used_count < a.rule->used_count);
+                    return (a.rule->used_count < b.rule->used_count);
                 if (col == 6)
-                    return descend ? (a.rule->clear_count < b.rule->clear_count) : (b.rule->clear_count < a.rule->clear_count);
-                return descend ? (a.index < b.index) :  (b.index < a.index);
+                    return (a.rule->clear_count < b.rule->clear_count);
+                return (a.index < b.index);
             }
         };
         std::vector<RuleDiplay> rules_list;
