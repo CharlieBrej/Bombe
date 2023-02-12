@@ -1271,13 +1271,18 @@ void GameState::render(bool saving)
             y -= 2;
             y ^= y >> 1;
 
-            hover_rulemaker = true;
             hover_rulemaker_bits = x + y * 4;
-            if (rule_cause.regions[0] && hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << rule_cause.rule->region_count))
+            if (hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << rule_cause.rule->region_count))
             {
+                hover_rulemaker = true;
                 hover_squares_highlight = ~hover_squares_highlight;
                 for (int i = 0; i < rule_cause.rule->region_count; i++)
                 {
+                    if (!rule_cause.regions[i])
+                    {
+                        hover_squares_highlight.clear();
+                        break;
+                    }
                     hover_squares_highlight = hover_squares_highlight & (((hover_rulemaker_bits >> i) & 1) ? rule_cause.regions[i]->elements : ~rule_cause.regions[i]->elements);
                 }
             }
