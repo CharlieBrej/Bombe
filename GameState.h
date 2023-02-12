@@ -100,6 +100,8 @@ public:
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
+    GridRule* replace_rule = NULL;
+
     std::list<ConstructedRuleState> constructed_rule_undo;
     std::list<ConstructedRuleState> constructed_rule_redo;
 
@@ -227,9 +229,9 @@ public:
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);
-    void grid_click(XYPos pos, int clicks);
-    void left_panel_click(XYPos pos, int clicks);
-    void right_panel_click(XYPos pos, int clicks);
+    void grid_click(XYPos pos, int clicks, int btn);
+    void left_panel_click(XYPos pos, int clicks, int btn);
+    void right_panel_click(XYPos pos, int clicks, int btn);
     bool events();
     void deal_with_scores();
 };

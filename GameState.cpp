@@ -699,6 +699,7 @@ void GameState::reset_rule_gen_region()
     rule_gen_region[1] = NULL;
     rule_gen_region[2] = NULL;
     rule_gen_region[3] = NULL;
+    replace_rule = NULL;
 //    rule_gen_region_count = 0;
 //    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
@@ -2463,8 +2464,14 @@ void GameState::render(bool saving)
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     add_tooltip(dst_rect, "Rule Already Present");
                 }
-                else
-
+                else if (replace_rule)
+                {
+                    SDL_Rect src_rect = {1088, 960, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Update Rule");
+                }
+                else 
                 {
                     SDL_Rect src_rect = {704, 384, 192, 192};
                     SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
@@ -2636,7 +2643,7 @@ void GameState::render(bool saving)
     SDL_RenderPresent(sdl_renderer);
 }
 
-void GameState::grid_click(XYPos pos, int clicks)
+void GameState::grid_click(XYPos pos, int clicks, int btn)
 {
     grid_dragging = true;
     grid_dragging_last_pos = mouse;
@@ -2696,7 +2703,7 @@ void GameState::grid_click(XYPos pos, int clicks)
     }
 }
 
-void GameState::left_panel_click(XYPos pos, int clicks)
+void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 {
     const int trim = 27;
     int digit_height = button_size * 0.75;
@@ -2787,7 +2794,7 @@ void GameState::left_panel_click(XYPos pos, int clicks)
     }
 }
 
-void GameState::right_panel_click(XYPos pos, int clicks)
+void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 {
     XYPos bpos = pos / button_size;
 
@@ -2878,7 +2885,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
             constructed_rule.stale = false;
             if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
             {
-                inspected_rule.rule->deleted = true;
+                replace_rule = inspected_rule.rule;
             }
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
@@ -3039,7 +3046,11 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                     }
                     else
                     {
-                        rules.push_back(constructed_rule);
+                        if (replace_rule)
+                            *replace_rule = constructed_rule;
+                        else
+                            rules.push_back(constructed_rule);
+
                         reset_rule_gen_region();
                     }
                 }
@@ -3048,16 +3059,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
 
         if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size, button_size)))
         {
-            if (constructed_rule.region_count)
-            {
-                update_constructed_rule_pre();
-                rule_gen_region[constructed_rule.region_count - 1] = NULL;
-                constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                if (constructed_rule.region_count == 0)
-                    right_panel_mode = RIGHT_MENU_NONE;
-                update_constructed_rule();
-            }
-
+            reset_rule_gen_region();
         }
     }
 }
@@ -3351,15 +3353,15 @@ bool GameState::events()
 
                 if ((mouse - left_panel_offset).inside(panel_size))
                 {
-                    left_panel_click(mouse - left_panel_offset, e.button.clicks);
+                    left_panel_click(mouse - left_panel_offset, e.button.clicks, btn);
                 }
                 else if ((mouse - right_panel_offset).inside(panel_size))
                 {
-                    right_panel_click(mouse - right_panel_offset, e.button.clicks);
+                    right_panel_click(mouse - right_panel_offset, e.button.clicks, btn);
                 }
                 else if ((mouse - left_panel_offset - XYPos(panel_size.x, 0)).inside(XYPos(panel_size.y, panel_size.y)))
                 {
-                    grid_click(mouse, e.button.clicks);
+                    grid_click(mouse, e.button.clicks, btn);
                 }
                 break;
             }
