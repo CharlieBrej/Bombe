@@ -467,6 +467,27 @@ bool GridRule::is_legal()
     }
 }
 
+void GridRule::remove_region(int index)
+{
+    region_count--;
+    for (int i = index; i < region_count; i++)
+        region_type[i] = region_type[i + 1];
+    region_type[region_count] = RegionType();
+
+    uint16_t new_apply_region_bitmap = 0;
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+            int idx = i & ((1 << (index)) - 1);
+            idx |= (i >> (index)) << (index + 1);
+            int idx2 = idx | (1 << index);
+            int c = square_counts[idx].value + square_counts[idx | (1 << index)].value;
+            square_counts[i] = RegionType(RegionType::EQUAL, c);
+            if ((apply_region_bitmap >> idx) & (apply_region_bitmap >> idx2) & 1)
+                new_apply_region_bitmap |= 1 << i;
+    }
+    apply_region_bitmap = new_apply_region_bitmap;
+}
+
 void Grid::randomize(XYPos size_, int merged_count, int row_percent)
 {
     size = size_;

@@ -674,6 +674,8 @@ void GameState::rule_gen_undo()
         constructed_rule_undo.pop_front();
     }
     update_constructed_rule();
+    if (!constructed_rule.region_count)
+        right_panel_mode = RIGHT_MENU_NONE;
 }
 
 void GameState::rule_gen_redo()
@@ -681,8 +683,10 @@ void GameState::rule_gen_redo()
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
         right_panel_mode = RIGHT_MENU_RULE_GEN;
+        if (constructed_rule.region_count)
+            return;
     }
-    else if (!constructed_rule_redo.empty())
+    if (!constructed_rule_redo.empty())
     {
         constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
         ConstructedRuleState& s = constructed_rule_redo.front();
@@ -2919,16 +2923,41 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
         if (region_index >= 0)
         {
-            if ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (region_type.type == RegionType::VISIBILITY))
+            if (right_panel_mode == RIGHT_MENU_RULE_GEN)
             {
-                update_constructed_rule_pre();
-                constructed_rule.apply_region_bitmap ^= 1 << region_index;
-                if (constructed_rule.apply_region_type != region_type)
+                if (btn == 2)
                 {
-                    constructed_rule.apply_region_type = region_type;
-                    constructed_rule.apply_region_bitmap = 1 << region_index;
+                    update_constructed_rule_pre();
+                    int new_count = constructed_rule.region_count - 1;
+                    for (int i = region_index; i < new_count; i++)
+                        rule_gen_region[i] = rule_gen_region[i+1];
+                    rule_gen_region[new_count] = NULL;
+                    constructed_rule.remove_region(region_index);
+                    update_constructed_rule();
+                    return;
                 }
-                update_constructed_rule();
+                if (region_type.type == RegionType::VISIBILITY)
+                {
+                    update_constructed_rule_pre();
+                    constructed_rule.apply_region_bitmap ^= 1 << region_index;
+                    if (constructed_rule.apply_region_type != region_type)
+                    {
+                        constructed_rule.apply_region_type = region_type;
+                        constructed_rule.apply_region_bitmap = 1 << region_index;
+                    }
+                    update_constructed_rule();
+                    return;
+                } 
+                if (region_type != constructed_rule.region_type[region_index])
+                {
+                    if ((region_type.type == RegionType::NONE) || (region_type.type > 50))
+                        return;
+                    update_constructed_rule_pre();
+                    constructed_rule.region_type[region_index] = region_type;
+                    rule_gen_region[region_index] = NULL;
+                    update_constructed_rule();
+                    return;
+                }
             }
             else if (rule_cause.regions[region_index])
             {
@@ -2937,6 +2966,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             }
         }
     }
+    if (btn)
+        return;
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {

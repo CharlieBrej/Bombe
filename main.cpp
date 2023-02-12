@@ -108,6 +108,7 @@ void SteamGameManager::update_achievements(GameState* game_state)
             str += lut[c & 0xF];
         }
         game_state->steam_session_string = str;
+        game_state->fetch_scores();
     }
 }
 
