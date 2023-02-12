@@ -1066,7 +1066,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
 
 }
 
-void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz)
+void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz, bool selected)
 {
     set_region_colour(sdl_texture, type.value, colour, 255);
     SDL_Rect src_rect = {64, 512, 192, 192};
@@ -2438,6 +2438,20 @@ void GameState::render(bool saving)
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     render_region_type(region_type, p, button_size);
                 }
+            }
+            else if ((region_type.type != RegionType::NONE) && (region_type.type < 50))
+            {
+                {
+                    SDL_Rect src_rect = {256, 992, 128, 128};
+                    SDL_Rect dst_rect = {p.x, p.y, button_size, button_size};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
+                {
+                    SDL_Rect src_rect = {384, 992, 64, 64};
+                    SDL_Rect dst_rect = {p.x + button_size * 3 / 4 , p.y, button_size / 2, button_size / 2};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
+                    render_region_bubble(region_type, 0, p, button_size);
             }
         }
 
