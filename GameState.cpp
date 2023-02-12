@@ -659,6 +659,40 @@ void GameState::set_language(std::string lang)
     font = fonts[filename];
 }
 
+void GameState::rule_gen_undo()
+{
+    if (right_panel_mode != RIGHT_MENU_RULE_GEN)
+    {
+        right_panel_mode = RIGHT_MENU_RULE_GEN;
+    }
+    else if (!constructed_rule_undo.empty())
+    {
+        constructed_rule_redo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
+        ConstructedRuleState& s = constructed_rule_undo.front();
+        constructed_rule = s.rule;
+        std::copy(s.regions, s.regions + 4, rule_gen_region);
+        constructed_rule_undo.pop_front();
+    }
+    update_constructed_rule();
+}
+
+void GameState::rule_gen_redo()
+{
+    if (right_panel_mode != RIGHT_MENU_RULE_GEN)
+    {
+        right_panel_mode = RIGHT_MENU_RULE_GEN;
+    }
+    else if (!constructed_rule_redo.empty())
+    {
+        constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
+        ConstructedRuleState& s = constructed_rule_redo.front();
+        constructed_rule = s.rule;
+        std::copy(s.regions, s.regions + 4, rule_gen_region);
+        constructed_rule_redo.pop_front();
+    }
+    update_constructed_rule();
+}
+
 void GameState::reset_rule_gen_region()
 {
     rule_gen_region[0] = NULL;
@@ -1237,10 +1271,10 @@ void GameState::render(bool saving)
             y -= 2;
             y ^= y >> 1;
 
+            hover_rulemaker = true;
             hover_rulemaker_bits = x + y * 4;
             if (rule_cause.regions[0] && hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << rule_cause.rule->region_count))
             {
-                hover_rulemaker = true;
                 hover_squares_highlight = ~hover_squares_highlight;
                 for (int i = 0; i < rule_cause.rule->region_count; i++)
                 {
@@ -3064,32 +3098,10 @@ bool GameState::events()
                 switch (e.key.keysym.scancode)
                 {
                     case SDL_SCANCODE_Z:
-                        if (right_panel_mode != RIGHT_MENU_RULE_GEN)
-                        {
-                            right_panel_mode = RIGHT_MENU_RULE_GEN;
-                        }
-                        else if (!constructed_rule_undo.empty())
-                        {
-                            constructed_rule_redo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
-                            ConstructedRuleState& s = constructed_rule_undo.front();
-                            constructed_rule = s.rule;
-                            std::copy(s.regions, s.regions + 4, rule_gen_region);
-                            constructed_rule_undo.pop_front();
-                        }
+                        rule_gen_undo();
                         break;
                     case SDL_SCANCODE_Y:
-                        if (right_panel_mode != RIGHT_MENU_RULE_GEN)
-                        {
-                            right_panel_mode = RIGHT_MENU_RULE_GEN;
-                        }
-                        else if (!constructed_rule_redo.empty())
-                        {
-                            constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
-                            ConstructedRuleState& s = constructed_rule_redo.front();
-                            constructed_rule = s.rule;
-                            std::copy(s.regions, s.regions + 4, rule_gen_region);
-                            constructed_rule_redo.pop_front();
-                        }
+                        rule_gen_redo();
                         break;
                     case SDL_SCANCODE_Q:
                         key_held = 'Q';
@@ -3201,11 +3213,6 @@ bool GameState::events()
             {
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
-                if(e.button.button == SDL_BUTTON_RIGHT)
-                {
-                    reset_rule_gen_region();
-                    break;
-                }
                 if (display_language_chooser)
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
@@ -3318,6 +3325,24 @@ bool GameState::events()
                             tutorial_index++;
                     break;
                 }
+
+                if(e.button.button == SDL_BUTTON_X1)
+                {
+                    rule_gen_undo();
+                    break;
+                }
+                if(e.button.button == SDL_BUTTON_X2)
+                {
+                    rule_gen_redo();
+                    break;
+                }
+
+                int btn = 0;
+                if(e.button.button == SDL_BUTTON_RIGHT)
+                {
+                    btn = 2;
+                }
+
 
                 if ((mouse - left_panel_offset).inside(panel_size))
                 {

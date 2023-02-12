@@ -98,7 +98,6 @@ public:
         }
     };
 
-
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
     std::list<ConstructedRuleState> constructed_rule_undo;
@@ -211,6 +210,8 @@ public:
     void set_language(std::string lang);
 
     GridRule rule_from_rule_gen_region();
+    void rule_gen_undo();
+    void rule_gen_redo();
     void reset_rule_gen_region();
     void update_constructed_rule_pre();
     void update_constructed_rule();
