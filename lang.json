@@ -48,7 +48,8 @@
             "Skip Level" :                  "Skip Level",
             "Times Applied" :               "Times Applied",
             "Trash" :                       "Trash",
-            "Visible" :                     "Visible"
+            "Visible" :                     "Visible",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial":
         [
@@ -141,7 +142,8 @@
             "Skip Level": "Level überspringen",
             "Times Applied": "Anzahl angewendet",
             "Trash": "Müll",
-            "Visible": "Sichtbar"
+            "Visible": "Sichtbar",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial": [
             [
@@ -275,7 +277,8 @@
             "Skip Level" :                  "Seviyeyi Atla",
             "Times Applied" :               "Uygulanma Sayısı",
             "Trash" :                       "Çöp",
-            "Visible" :                     "Görünür"
+            "Visible" :                     "Görünür",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial":
         [
@@ -371,7 +374,8 @@
             "Times Applied" :               "套用次數",
             "Speed" :                       "速度",
             "Trash" :                       "無效",
-            "Visible" :                     "可見的"
+            "Visible" :                     "可見的",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial":
         [
@@ -467,7 +471,8 @@
             "Times Applied" :               "套用次数",
             "Speed" :                       "动画速度",
             "Trash" :                       "无效",
-            "Visible" :                     "可见的"
+            "Visible" :                     "可见的",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial":
         [
@@ -562,7 +567,8 @@
 		    "Skip Level":                   "レベルをスキップ",
             "Times Applied" :               "Times Applied",
 		    "Trash":                        "ごみ",
-		    "Visible":                      "見える"           
+		    "Visible":                      "見える",
+            "Visibility set by User" :      "Visibility set by User"
         },
         "tutorial":
         [

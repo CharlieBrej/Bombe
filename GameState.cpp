@@ -151,7 +151,7 @@ GameState::GameState(std::string& load_data, bool json)
         display_language_chooser = true;
     }
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 0);
 	sdl_texture = loadTexture("texture.png");
@@ -2130,13 +2130,21 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Show Creation Rule");
         }
 
-        if (inspected_region->vis_cause.rule)
+        if (inspected_region->visibility_force == GridRegion::VIS_FORCE_USER)
+        {
+            SDL_Rect src_rect = { 1472, 768, 192, 192};
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size, button_size, button_size };
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Visibility set by User");
+        }
+        else if (inspected_region->vis_cause.rule)
         {
             SDL_Rect src_rect = { 896, 768, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size, button_size, button_size };
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Show Visibility Rule");
         }
+        
 
         {
             if (inspected_region->vis_level == GRID_VIS_LEVEL_SHOW)
@@ -3027,35 +3035,14 @@ bool GameState::events()
                 switch (e.key.keysym.scancode)
                 {
                     case SDL_SCANCODE_Q:
-                    {
-                        if (right_panel_mode == RIGHT_MENU_REGION)
-                        {
-                            inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
-                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
-                            inspected_region->stale = false;
-                        }
+                        key_held = 'Q';
                         break;
-                    }
                     case SDL_SCANCODE_W:
-                    {
-                        if (right_panel_mode == RIGHT_MENU_REGION)
-                        {
-                            inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
-                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
-                            inspected_region->stale = false;
-                        }
+                        key_held = 'W';
                         break;
-                    }
                     case SDL_SCANCODE_E:
-                    {
-                        if (right_panel_mode == RIGHT_MENU_REGION)
-                        {
-                            inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
-                            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
-                            inspected_region->stale = false;
-                        }
+                        key_held = 'E';
                         break;
-                    }
                     case SDL_SCANCODE_C:
                     {
                         std::string s = grid->to_string();
@@ -3122,8 +3109,10 @@ bool GameState::events()
             case SDL_KEYUP:
                 switch (e.key.keysym.scancode)
                 {
-                    case SDL_SCANCODE_LSHIFT:
-                        break;
+                    case SDL_SCANCODE_Q:
+                    case SDL_SCANCODE_W:
+                    case SDL_SCANCODE_E:
+                        key_held = 0;
                 }
                 break;
             case SDL_MOUSEMOTION:
@@ -3315,6 +3304,20 @@ bool GameState::events()
             }
         }
     }
+
+    if (right_panel_mode == RIGHT_MENU_REGION && key_held)
+    {
+        if (key_held == 'Q')
+            inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
+        else if (key_held == 'W')
+            inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
+        else if (key_held == 'E')
+            inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
+        inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+        inspected_region->stale = false;
+    }
+
+
     return quit;
 }
 

@@ -57,6 +57,8 @@ public:
     bool display_rules = false;
     bool display_scores = false;
 
+    char key_held = 0;
+
     bool dragging_speed = false;
     double speed_dial = 0.25;
 
