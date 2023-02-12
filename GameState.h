@@ -12,6 +12,8 @@
 #include <map>
 #include <list>
 #include <set>
+#include <algorithm>
+#include <iterator>
 
 extern bool IS_DEMO;
 extern bool IS_PLAYTEST;
@@ -85,10 +87,24 @@ public:
     int display_rules_sort_col = 0;
     bool display_rules_sort_dir = true;
 
+    struct ConstructedRuleState
+    {
+        GridRule rule;
+        GridRegion* regions[4] = {};
+        ConstructedRuleState(GridRule& rule_, GridRegion* regions_[4])
+        {
+            rule = rule_;
+            std::copy(regions_, regions_ + 4, regions);
+        }
+    };
 
 
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
+    std::list<ConstructedRuleState> constructed_rule_undo;
+    std::list<ConstructedRuleState> constructed_rule_redo;
+
+    
     RegionType region_type = RegionType(RegionType::SET, 0);
     int region_menu = 0;
     const RegionType menu_region_types1[5] = {  RegionType(RegionType::EQUAL, 1),
@@ -196,6 +212,7 @@ public:
 
     GridRule rule_from_rule_gen_region();
     void reset_rule_gen_region();
+    void update_constructed_rule_pre();
     void update_constructed_rule();
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);

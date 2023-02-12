@@ -669,9 +669,17 @@ void GameState::reset_rule_gen_region()
 //    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+    constructed_rule_undo.clear();
+    constructed_rule_redo.clear();
     update_constructed_rule();
     right_panel_mode = RIGHT_MENU_NONE;
     filter_pos.clear();
+}
+
+void GameState::update_constructed_rule_pre()
+{
+    constructed_rule_redo.clear();
+    constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
 }
 
 void GameState::update_constructed_rule()
@@ -2144,7 +2152,12 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Show Visibility Rule");
         }
-        
+        {
+            SDL_Rect src_rect = { 1856, 576, 192, 192};
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 0, right_panel_offset.y + 5 * button_size, button_size, button_size };
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Change Colour");
+        }
 
         {
             if (inspected_region->vis_level == GRID_VIS_LEVEL_SHOW)
@@ -2619,9 +2632,12 @@ void GameState::grid_click(XYPos pos, int clicks)
                                 found = true;
                         }
                         if (!found)
+                        {
+                            update_constructed_rule_pre();
                             rule_gen_region[constructed_rule.region_count] = mouse_hover_region;
-                        constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                        update_constructed_rule();
+                            constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                            update_constructed_rule();
+                        }
                     }
                 }
                 else
@@ -2750,9 +2766,12 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                         found = true;
                 }
                 if (!found)
+                {
+                    update_constructed_rule_pre();
                     rule_gen_region[constructed_rule.region_count] = inspected_region;
-                constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                update_constructed_rule();
+                    constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                    update_constructed_rule();
+                }
             }
             return;
         }
@@ -2772,6 +2791,11 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                 right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                 inspected_rule = inspected_region->vis_cause;
             }
+            return;
+        }
+        if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size, button_size)))
+        {
+            inspected_region->next_colour();
             return;
         }
 
@@ -2805,6 +2829,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
+            reset_rule_gen_region();
             constructed_rule = *inspected_rule.rule;
             rule_gen_region[0] = inspected_rule.regions[0];
             rule_gen_region[1] = inspected_rule.regions[1];
@@ -2850,6 +2875,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             if ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (region_type.type == RegionType::VISIBILITY))
             {
+                update_constructed_rule_pre();
                 constructed_rule.apply_region_bitmap ^= 1 << region_index;
                 if (constructed_rule.apply_region_type != region_type)
                 {
@@ -2925,6 +2951,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
             {
                 if (!hover_rulemaker_lower_right)
                 {
+                    update_constructed_rule_pre();
                     uint8_t square_counts[16];
                     GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     RegionType new_region_type = region_type;
@@ -2948,6 +2975,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
                 }
                 else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                 {
+                    update_constructed_rule_pre();
                     constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
                     {
                         if (constructed_rule.apply_region_type != region_type)
@@ -2983,6 +3011,7 @@ void GameState::right_panel_click(XYPos pos, int clicks)
         {
             if (constructed_rule.region_count)
             {
+                update_constructed_rule_pre();
                 rule_gen_region[constructed_rule.region_count - 1] = NULL;
                 constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                 if (constructed_rule.region_count == 0)
@@ -3034,6 +3063,34 @@ bool GameState::events()
                 }
                 switch (e.key.keysym.scancode)
                 {
+                    case SDL_SCANCODE_Z:
+                        if (right_panel_mode != RIGHT_MENU_RULE_GEN)
+                        {
+                            right_panel_mode = RIGHT_MENU_RULE_GEN;
+                        }
+                        else if (!constructed_rule_undo.empty())
+                        {
+                            constructed_rule_redo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
+                            ConstructedRuleState& s = constructed_rule_undo.front();
+                            constructed_rule = s.rule;
+                            std::copy(s.regions, s.regions + 4, rule_gen_region);
+                            constructed_rule_undo.pop_front();
+                        }
+                        break;
+                    case SDL_SCANCODE_Y:
+                        if (right_panel_mode != RIGHT_MENU_RULE_GEN)
+                        {
+                            right_panel_mode = RIGHT_MENU_RULE_GEN;
+                        }
+                        else if (!constructed_rule_redo.empty())
+                        {
+                            constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
+                            ConstructedRuleState& s = constructed_rule_redo.front();
+                            constructed_rule = s.rule;
+                            std::copy(s.regions, s.regions + 4, rule_gen_region);
+                            constructed_rule_redo.pop_front();
+                        }
+                        break;
                     case SDL_SCANCODE_Q:
                         key_held = 'Q';
                         break;

@@ -126,6 +126,11 @@ bool GridRegion::contains_all(std::set<XYPos>& other)
     return true;
 }
 
+void GridRegion::next_colour()
+{
+    colour = colours_used[type.value]++;
+}
+
 GridRule::GridRule(SaveObject* sobj, int version)
 {
     SaveObjectMap* omap = sobj->get_map();

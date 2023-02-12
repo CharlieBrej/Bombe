@@ -122,6 +122,14 @@ public:
         regions[2] = r3;
         regions[3] = r4;
     }
+    void reset()
+    {
+        rule = NULL;
+        regions[0] = NULL;
+        regions[1] = NULL;
+        regions[2] = NULL;
+        regions[3] = NULL;
+    }
 };
 
 
@@ -151,6 +159,7 @@ public:
     {
         return (type == other.type) && (elements == other.elements);
     }
+    void next_colour();
 
 };
 

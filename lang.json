@@ -10,6 +10,7 @@
             "Bomb" :                        "Bomb",
             "Cancel" :                      "Cancel",
             "Cells Cleared" :               "Cells Cleared",
+            "Change Colour":                "Change Colour",
             "Clear" :                       "Clear",
             "Clear Filter" :                "Clear Filter",
             "Close":                        "Close",
@@ -98,133 +99,93 @@
     "Deutsch": {
         "font": "font-en.ttf",
         "translate": {
-            "Action": "Aktion",
-            "Add to Rule Constructor": "Zur Regel Hinzufügen",
-            "Auto Region": "Auto Region",
-            "Bomb": "Bombe",
-            "Cancel": "Abbruch",
-            "Cells Cleared": "Anzahl Zellen gelöst",
-            "Clear": "Aufdecken",
-            "Clear Filter": "Filter zurücksetzen",
-            "Close": "Schließen",
-            "Don't Care": "Egal",
-            "Duplicate Rule": "Regel verdoppeln",
-            "Edit Rule": "Regel bearbeiten",
-            "Filter": "Filter",
-            "Full Screen": "Vollbild",
-            "Go to Rule Constructor": "Zur Regel",
-            "Help": "Hilfe",
-            "Hidden": "Versteckt",
-            "Hint": "Tipp",
-            "Illogical": "Unlogisch",
-            "Main Menu": "Hauptmenü",
-            "Position": "Position",
-            "Player Name": "Spieler Name",
-            "OK": "OK",
-            "Quit": "Beenden",
-            "Refresh Regions": "Regionen neuberechnen",
-            "Region Inspector": "Region",
-            "Regions": "Regionen",
-            "Remove Rule": "Regel entfernen",
-            "Reset Game": "Spiel zurücksetzen",
-            "Reset Levels": "Level zurücksetzen",
-            "Rule Already Present": "Regel existiert bereits",
-            "Rule Constructor": "Regel erstellen",
-            "Rule ID": "Regel ID",
-            "Rule Inspector": "Regel inspizieren",
-            "Rules": "Regeln",
-            "Score": "Score",
-            "Scores": "Scores",
-            "Select Language": "Sprache ändern",
-            "Show Creation Rule": "Erzeugende Regel anzeigen",
-            "Show Row Clues": "Regelhinweise anzeigen",
-            "Show Visibility Rule": "Regelsichtbarkeit anzeigen",
-            "Skip Level": "Level überspringen",
-            "Times Applied": "Anzahl angewendet",
-            "Trash": "Müll",
-            "Visible": "Sichtbar",
-            "Visibility set by User" :      "Visibility set by User"
+            "Action" :                      "Aktion",                                                 
+            "Add to Rule Constructor" :     "Zur Regel Hinzufügen",                                  
+            "Auto Region" :                 "Auto Region",                                            
+            "Bomb" :                        "Bombe",                                                  
+            "Cancel" :                      "Abbruch",                                                
+            "Cells Cleared" :               "Anzahl Zellen gelöst",                                  
+            "Change Colour" :               "Change Colour",                                          
+            "Clear" :                       "Aufdecken",                                              
+            "Clear Filter" :                "Filter zurücksetzen",                                   
+            "Close" :                       "Schließen",                                             
+            "Don't Care" :                  "Egal",                                                   
+            "Duplicate Rule" :              "Regel verdoppeln",                                       
+            "Edit Rule" :                   "Regel bearbeiten",                                       
+            "Filter" :                      "Filter",                                                 
+            "Full Screen" :                 "Vollbild",                                               
+            "Go to Rule Constructor" :      "Zur Regel",                                              
+            "Help" :                        "Hilfe",                                                  
+            "Hidden" :                      "Versteckt",                                              
+            "Hint" :                        "Tipp",                                                   
+            "Illogical" :                   "Unlogisch",                                              
+            "Main Menu" :                   "Hauptmenü",                                             
+            "Position" :                    "Position",                                               
+            "Player Name" :                 "Spieler Name",                                           
+            "OK" :                          "OK",                                                     
+            "Quit" :                        "Beenden",                                                
+            "Refresh Regions" :             "Regionen neuberechnen",                                  
+            "Region Inspector" :            "Region",                                                 
+            "Regions" :                     "Regionen",                                               
+            "Remove Rule" :                 "Regel entfernen",                                        
+            "Reset Game" :                  "Spiel zurücksetzen",                                    
+            "Reset Levels" :                "Level zurücksetzen",                                    
+            "Rule Already Present" :        "Regel existiert bereits",                                
+            "Rule Constructor" :            "Regel erstellen",                                        
+            "Rule ID" :                     "Regel ID",                                               
+            "Rule Inspector" :              "Regel inspizieren",                                      
+            "Rules" :                       "Regeln",                                                 
+            "Score" :                       "Score",                                                  
+            "Scores" :                      "Scores",                                                 
+            "Select Language" :             "Sprache ändern",                                        
+            "Show Creation Rule" :          "Erzeugende Regel anzeigen",                              
+            "Show Row Clues" :              "Regelhinweise anzeigen",                                 
+            "Show Visibility Rule" :        "Regelsichtbarkeit anzeigen",                             
+            "Skip Level" :                  "Level überspringen",                                    
+            "Times Applied" :               "Anzahl angewendet",                                      
+            "Trash" :                       "Müll",                                                  
+            "Visible" :                     "Sichtbar",                                               
+            "Visibility set by User"  :     "Visibility set by User"                                  
         },
         "tutorial": [
             [
-                {
-                    "x": 50,
-                    "y": 600,
-                    "text": "Nummern zeigen an\nwie viele Bomben sich in\nbenachbarten Zellen befinden"
-                },
-                {
-                    "x": 1100,
-                    "y": 750,
-                    "text": "Regionen zeigen an\nwie viele bomben noch unentdeckt sind"
-                }
+                {"x": 50,   "y": 600,           "text": "Nummern zeigen an\nwie viele Bomben sich in\nbenachbarten Zellen befinden" },                           
+                {"x": 1100, "y": 750,           "text": "Regionen zeigen an\nwie viele bomben noch unentdeckt sind" }                                            
             ],
             [
-                {
-                    "x": 100,
-                    "y": 650,
-                    "text": "Wenn sie eine Region doppelklicken\nkönnen sie diese bearbeiten"
-                },
-                { "x": 1050, "y": 100, "left": 1, "text": "Regiontyp" },
-                { "x": 1050, "y": 530, "left": 1, "text": "Anzahl an Zellen" },
-                { "x": 1240, "y": 560, "text": "Ausführbare Aktionen" },
-                {
-                    "x": 800,
-                    "y": 630,
-                    "text": "Die Regel bedeutet:\nIn einer Region mit 3 Bomben\nund 3 Zellen müssen alle Zellen Bomben sein"
-                },
+                {"x": 100,  "y": 650,           "text": "Wenn sie eine Region doppelklicken\nkönnen sie diese bearbeiten" },                                    
+                {"x": 1050, "y": 100, "left": 1,"text": "Regiontyp" },                                                                                
+                {"x": 1050, "y": 530, "left": 1,"text": "Anzahl an Zellen" },                                                                         
+                {"x": 1240, "y": 560,           "text": "Ausführbare Aktionen" },                                                                               
+                {"x": 800,  "y": 630,           "text": "Die Regel bedeutet:\nIn einer Region mit 3 Bomben\nund 3 Zellen müssen alle Zellen Bomben sein" },      
 
-                { "x": 370, "y": 950, "text": "Markiere alle als Bomben" },
-                { "x": 1200, "y": 950, "text": "Alle Zellen aufdecken" },
-                {
-                    "x": 1450,
-                    "y": 250,
-                    "text": "Die Regel wird\nautomatisch angewendet,\n wenn Sie OK klicken"
-                }
+                {"x": 370,  "y": 950,           "text": "Markiere alle als Bomben" },                                                                            
+                {"x": 1200, "y": 950,           "text": "Alle Zellen aufdecken" },                                                                               
+                {"x": 1450, "y": 250,           "text": "Die Regel wird\nautomatisch angewendet,\n wenn Sie OK klicken" }                                        
             ],
             [
-                { "x": 200, "y": 800, "text": "Doppelklicke eine Region" },
-                { "x": 1200, "y": 200, "text": "Gib die Nummer an Zellen an" },
-                { "x": 1200, "y": 500, "text": "Gib eine Aktion an" },
-                { "x": 1300, "y": 800, "text": "Klicke OK" }
+                {"x": 200,  "y": 800,           "text": "Doppelklicke eine Region" },                                                                            
+                {"x": 1200, "y": 200,           "text": "Gib die Nummer an Zellen an" },                                                                         
+                {"x": 1200, "y": 500,           "text": "Gib eine Aktion an" },                                                                                  
+                {"x": 1300, "y": 800,           "text": "Klicke OK" }                                                                                            
             ],
             [
-                {
-                    "x": 150,
-                    "y": 500,
-                    "text": "Die Anzahl an Zellen\nkann auf \"Egal\"\ngesetzt werden"
-                },
-                {
-                    "x": 640,
-                    "y": 500,
-                    "text": "Es können bis zu\nvier Regionen zu einer\nRegel hinzugefügt werden"
-                },
-                {
-                    "x": 1200,
-                    "y": 500,
-                    "text": "Regeln können verwendet werden\num neue Regeln zu erstellen"
-                }
+                {"x": 150,  "y": 500,           "text": "Die Anzahl an Zellen\nkann auf \"Egal\"\ngesetzt werden" },                                             
+                {"x": 640,  "y": 500,           "text": "Es können bis zu\nvier Regionen zu einer\nRegel hinzugefügt werden" },                                
+                {"x": 1200, "y": 500,           "text": "Regeln können verwendet werden\num neue Regeln zu erstellen" }                                         
             ],
             [
-                { "x": 240, "y": 60, "text": "Genau 6" },
-                { "x": 240, "y": 200, "text": "2 oder mehr" },
-                { "x": 240, "y": 340, "text": "5 oder weniger" },
-                { "x": 240, "y": 480, "text": "Alles außer 4" },
-                { "x": 240, "y": 620, "text": "Entweder 4 oder 6" },
-                { "x": 240, "y": 760, "text": "Entweder 3, 5 oder 7" },
-                { "x": 240, "y": 900, "text": "Entweder 2, 4, 6 oder 8" },
-
-                { "x": 1050, "y": 100, "text": "Normal sichtbar" },
-                {
-                    "x": 1050,
-                    "y": 290,
-                    "text": "Versteckt, aber immer noch durch Regeln genutzt"
-                },
-                { "x": 1050, "y": 490, "text": "Müll, von Regeln ignoriert" },
-                {
-                    "x": 1050,
-                    "y": 700,
-                    "text": "Regeln können verwendet werden,\num die Sichtbarkeit von Regionen zu verändern"
-                }
+                {"x": 240,  "y": 60,            "text": "Genau 6" },                                                                                             
+                {"x": 240,  "y": 200,           "text": "2 oder mehr" },                                                                                         
+                {"x": 240,  "y": 340,           "text": "5 oder weniger" },                                                                                      
+                {"x": 240,  "y": 480,           "text": "Alles außer 4" },                                                                                      
+                {"x": 240,  "y": 620,           "text": "Entweder 4 oder 6" },                                                                                   
+                {"x": 240,  "y": 760,           "text": "Entweder 3, 5 oder 7" },                                                                                
+                {"x": 240,  "y": 900,           "text": "Entweder 2, 4, 6 oder 8" },                                                                             
+                {"x": 1050, "y": 100,           "text": "Normal sichtbar" },                                                                                     
+                {"x": 1050, "y": 290,           "text": "Versteckt, aber immer noch durch Regeln genutzt" },                                                     
+                {"x": 1050, "y": 490,           "text": "Müll, von Regeln ignoriert" },                                                                         
+                {"x": 1050, "y": 700,           "text": "Regeln können verwendet werden,\num die Sichtbarkeit von Regionen zu verändern"}
             ]
         ]
     },
@@ -239,6 +200,7 @@
             "Bomb" :                        "Bomba",
             "Cancel" :                      "İptal Et",
             "Cells Cleared" :               "Temizlenen Hücreler",
+            "Change Colour":                "Change Colour",
             "Clear" :                       "Temiz",
             "Clear Filter" :                "Filitreyi Temizle",
             "Close":                        "Kapat",
@@ -335,6 +297,7 @@
             "Bomb" :                        "炸彈",
             "Cancel" :                      "取消",
             "Cells Cleared" :               "消除方格數",
+            "Change Colour":                "Change Colour",
             "Clear" :                       "清除",
             "Clear Filter" :                "清除篩選",
             "Close":                        "關閉",
@@ -432,6 +395,7 @@
             "Bomb" :                        "炸弹",
             "Cancel" :                      "取消",
             "Cells Cleared" :               "消除方格数",
+            "Change Colour":                "Change Colour",
             "Clear" :                       "清除",
             "Clear Filter" :                "清除筛选",
             "Close":                        "关闭",
@@ -529,6 +493,7 @@
 		    "Bomb":                         "爆弾",
 		    "Cancel":                       "キャンセル",
             "Cells Cleared" :               "Cells Cleared",
+            "Change Colour":                "Change Colour",
 		    "Clear":                        "クリア",
 		    "Clear Filter":                 "フィルターをクリア",
             "Close":                        "Close",
