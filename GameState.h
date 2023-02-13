@@ -37,6 +37,7 @@ public:
     TTF_Font *font = NULL;
     TTF_Font *score_font = NULL;
     SaveObjectMap* lang_data;
+    unsigned frame = 0;
 
     static const int tut_texture_count = 5;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
@@ -217,8 +218,8 @@ public:
     void reset_rule_gen_region();
     void update_constructed_rule_pre();
     void update_constructed_rule();
-    void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
-    void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken);
+    void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, int disp_type = 0);
+    void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, int disp_type = 0);
     void render_text_box(XYPos pos, std::string& s, bool left = false);
     std::string translate(std::string s);
     void render_tooltip();
