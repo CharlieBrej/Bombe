@@ -491,28 +491,7 @@ void GridRule::remove_region(int index)
 void Grid::randomize(XYPos size_, int merged_count, int row_percent)
 {
     size = size_;
-
-    for (int i = 0; i < merged_count;)
-    {
-        XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
-        XYPos m_size(1 + unsigned(rnd) % 4, 1 + unsigned(rnd) % 4);
-        if (!(m_size + m_pos).inside(size))
-            continue;
-        if (m_size == XYPos(1,1))
-            continue;
-        bool bad = false;
-        for ( const auto &m_reg : merged )
-        {
-            if ( (std::min(m_reg.first.x + m_reg.second.x, m_pos.x + m_size.x) > std::max(m_reg.first.x, m_pos.x)) &&
-                 (std::min(m_reg.first.y + m_reg.second.y, m_pos.y + m_size.y) > std::max(m_reg.first.y, m_pos.y)) )
-                bad = true;
-
-        }
-        if (bad)
-            continue;
-        merged[m_pos] = m_size;
-        i++;
-    }
+    add_random_merged(merged_count);
 
     XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
@@ -680,26 +659,6 @@ RegionType& Grid::get_clue(XYPos p)
         return edges[XYPos(-1 - p.x, p.y)];
     assert (p.inside(size));
     return vals[p].clue;
-}
-
-XYPos Grid::get_square_size(XYPos p)
-{
-    for (const auto &m_reg : merged)
-    {
-        if (p == m_reg.first)
-            return m_reg.second;
-    }
-    return XYPos(1,1);
-
-}
-XYPos Grid::get_base_square(XYPos p)
-{
-    for (const auto &m_reg : merged)
-    {
-        if ((p - m_reg.first).inside(m_reg.second))
-            return m_reg.first;
-    }
-    return p;
 }
 
 static std::list<GridRule> global_rules;
@@ -2018,6 +1977,49 @@ void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCm
         }
     }
 }
+void SquareGrid::add_random_merged(int merged_count)
+{
+    for (int i = 0; i < merged_count;)
+    {
+        XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
+        XYPos m_size(1 + unsigned(rnd) % 4, 1 + unsigned(rnd) % 4);
+        if (!(m_size + m_pos - XYPos(1,1)).inside(size))
+            continue;
+        if (m_size == XYPos(1,1))
+            continue;
+        bool bad = false;
+        for ( const auto &m_reg : merged )
+        {
+            if ( (std::min(m_reg.first.x + m_reg.second.x, m_pos.x + m_size.x) > std::max(m_reg.first.x, m_pos.x)) &&
+                 (std::min(m_reg.first.y + m_reg.second.y, m_pos.y + m_size.y) > std::max(m_reg.first.y, m_pos.y)) )
+                bad = true;
+        }
+        if (bad)
+            continue;
+        merged[m_pos] = m_size;
+        i++;
+    }
+}
+
+XYPos SquareGrid::get_square_size(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if (p == m_reg.first)
+            return m_reg.second;
+    }
+    return XYPos(1,1);
+
+}
+XYPos SquareGrid::get_base_square(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if ((p - m_reg.first).inside(m_reg.second))
+            return m_reg.first;
+    }
+    return p;
+}
 
 std::string TriangleGrid::to_string()
 {
@@ -2029,6 +2031,16 @@ XYSet TriangleGrid::get_squares()
     XYSet rep;
     FOR_XY(pos, XYPos(), size)
         rep.set(pos);
+    for ( const auto &m_reg : merged )
+    {
+        FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
+        {
+            if (pos == m_reg.first)
+                continue;
+            rep.clear(pos);
+        }
+    }
+
     return rep;
 }
 
@@ -2074,22 +2086,33 @@ XYSet TriangleGrid::get_row(unsigned type, int index)
     return rep;
 }
 
-XYSet TriangleGrid::get_neighbors(XYPos pos)
+XYSet TriangleGrid::base_get_neighbors(XYPos pos)
 {
     bool downwards = (pos.x ^ pos.y) & 1;
     XYSet rep;
 
     FOR_XY(offset, XYPos(-2,-1), XYPos(3,2))
     {
-        if (offset == XYPos(0,0)) continue;
         if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
         if (offset == XYPos(2, downwards ? 1 : -1)) continue;
         XYPos t = pos + offset;
-
-        if (t.inside(size))
-            rep.set(t);
+        if (!t.inside(size))
+            continue;
+        rep.set(get_base_square(t));
     }
 
+    return rep;
+}
+
+
+XYSet TriangleGrid::get_neighbors(XYPos pos)
+{
+    XYSet rep;
+    XYPos s = get_square_size(pos);
+    FOR_XY(p, pos, pos + s)
+        rep = rep | base_get_neighbors(p);
+    FOR_XY(p, pos, pos + s)
+        rep.clear(p);
     return rep;
 }
 
@@ -2175,19 +2198,102 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
 
 void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
 {
+    XYPos sq_size = get_square_size(pos);
+    if (sq_size == XYPos(3,2))
+    {
+        XYRect src(2, 1024, 1, 1);
+        XYRect dst;
+        dst = XYRect ((pos + XYPos(1, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 0, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(3, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 60, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(4, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 120, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(3, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 180, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(1, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 240, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(0, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 300, XYPos(0,1)));
+        return;
+
+    }
     bool downwards = (pos.x ^ pos.y) & 1;
     if (highlighted)
     {
         XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
         XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
-        cmds.push_back({src,dst});
+        cmds.push_back(RenderCmd(src,dst));
     }
 
+    if (downwards)
     {
-        XYRect src(64, downwards ? 1344 : 1152 , 192, 192);
-        XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
-        cmds.push_back({src,dst});
+        XYRect src(1, 1024, 192, 6);
+        XYRect dst;
+        dst = XYRect ((pos + XYPos(0, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src,dst));
+        dst = XYRect ((pos + XYPos(2, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 120, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(1, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 240, XYPos(0,1)));
     }
+    else
+    {
+        XYRect src(1, 1024, 192, 6);
+        XYRect dst;
+        dst = XYRect ((pos + XYPos(0, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, -60, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(1, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 60, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(2, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 16));
+        cmds.push_back(RenderCmd(src, dst, 180, XYPos(0,1)));
+    }
+
+
+}
+
+void TriangleGrid::add_random_merged(int merged_count)
+{
+    for (int i = 0; i < merged_count;)
+    {
+        XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
+        XYPos m_size(3, 2);
+
+        if ((m_pos.x ^ m_pos.y) & 1)
+            continue;
+        if (!(m_size + m_pos - XYPos(1,1)).inside(size))
+            continue;
+        bool bad = false;
+        for ( const auto &m_reg : merged )
+        {
+            if ( (std::min(m_reg.first.x + m_reg.second.x, m_pos.x + m_size.x) > std::max(m_reg.first.x, m_pos.x)) &&
+                 (std::min(m_reg.first.y + m_reg.second.y, m_pos.y + m_size.y) > std::max(m_reg.first.y, m_pos.y)) )
+                bad = true;
+        }
+        if (bad)
+            continue;
+        merged[m_pos] = m_size;
+        i++;
+    }
+}
+XYPos TriangleGrid::get_square_size(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if (p == m_reg.first)
+            return m_reg.second;
+    }
+    return XYPos(1,1);
+
+}
+XYPos TriangleGrid::get_base_square(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        if ((p - m_reg.first).inside(m_reg.second))
+            return m_reg.first;
+    }
+    return p;
 }
 
 std::string HexagonGrid::to_string()
@@ -2373,12 +2479,12 @@ void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderC
     {
         XYRect src(64, 1984 , 384, 384);
         XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
-        cmds.push_back({src,dst});
+        cmds.push_back(RenderCmd(src,dst));
     }
 
     {
         XYRect src(64, 1568, 384, 384);
         XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
-        cmds.push_back({src,dst});
+        cmds.push_back(RenderCmd(src,dst));
     }
 }

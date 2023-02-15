@@ -1571,7 +1571,8 @@ void GameState::render(bool saving)
                 break;
             RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
             GridRule& rule = *rd.rule;
-            if ((right_panel_mode == RIGHT_MENU_RULE_INSPECT) && (&rule == inspected_rule.rule))
+            if (((right_panel_mode == RIGHT_MENU_RULE_INSPECT) && (&rule == inspected_rule.rule)) ||
+                ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (&rule == replace_rule)))
             {
                 render_box(list_pos + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
             }
@@ -1663,7 +1664,8 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                 SDL_Rect dst_rect = {scaled_grid_offset.x + cmd.dst.pos.x, scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                SDL_Point rot_center = {cmd.center.x, cmd.center.y};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
             }
             SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
         }
@@ -2721,7 +2723,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
         if (mouse_hover_region)
         {
             {
-                if (clicks >= 2)
+                if ((!key_held) && (clicks >= 2))
                 {
                     right_panel_mode = RIGHT_MENU_RULE_GEN;
                     if (constructed_rule.region_count < 4)
@@ -2932,6 +2934,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             reset_rule_gen_region();
             constructed_rule = *inspected_rule.rule;
+            constructed_rule.used_count = 0;
+            constructed_rule.clear_count = 0;
+
             rule_gen_region[0] = inspected_rule.regions[0];
             rule_gen_region[1] = inspected_rule.regions[1];
             rule_gen_region[2] = inspected_rule.regions[2];

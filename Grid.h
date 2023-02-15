@@ -195,7 +195,10 @@ struct RenderCmd
 {
     XYRect src;
     XYRect dst;
+    double angle = 0.0;
+    XYPos center = XYPos(0,0);
     RenderCmd (XYRect src_, XYRect dst_): src(src_),dst(dst_){}
+    RenderCmd (XYRect src_, XYRect dst_, double angle_, XYPos center_): src(src_),dst(dst_), angle(angle_), center(center_) {}
 };
 
 struct EdgePos
@@ -247,10 +250,8 @@ public:
     virtual XYRect get_square_pos(XYPos pos, XYPos grid_pitch) = 0;
     virtual XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total) = 0;
     virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted) = 0;
-
-
-    XYPos get_square_size(XYPos p);
-    XYPos get_base_square(XYPos p);
+    virtual void add_random_merged(int count) {}
+    virtual XYPos get_base_square(XYPos p) {return p;}
 
     void solve_easy();
     bool is_solveable();
@@ -298,6 +299,7 @@ public:
     SquareGrid() {}
     SquareGrid(std::string s) {from_string(s);}
 
+    std::string to_string();
     Grid* dup() {return new SquareGrid(*this);}
     XYSet get_squares();
     XYSet get_row(unsigned type, int index);
@@ -310,7 +312,9 @@ public:
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
-    std::string to_string();
+    void add_random_merged(int count);
+    XYPos get_square_size(XYPos p);
+    XYPos get_base_square(XYPos p);
 };
 
 class TriangleGrid : public Grid
@@ -319,9 +323,13 @@ public:
     TriangleGrid() {}
     TriangleGrid(std::string s) {from_string(s);}
 
+    std::string to_string();
     Grid* dup() {return new TriangleGrid(*this);}
     XYSet get_squares();
     XYSet get_row(unsigned type, int index);
+private:
+    XYSet base_get_neighbors(XYPos pos);
+public:
     XYSet get_neighbors(XYPos p);
     void get_row_types(std::vector<XYPos>& rep);
     void get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch);
@@ -331,7 +339,9 @@ public:
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
-    std::string to_string();
+    void add_random_merged(int count);
+    XYPos get_square_size(XYPos p);
+    XYPos get_base_square(XYPos p);
 };
 
 class HexagonGrid : public Grid
@@ -340,6 +350,7 @@ public:
     HexagonGrid() {}
     HexagonGrid(std::string s) {from_string(s);}
 
+    std::string to_string();
     Grid* dup() {return new HexagonGrid(*this);}
     XYSet get_squares();
     XYSet get_row(unsigned type, int index);
@@ -352,5 +363,4 @@ public:
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
-    std::string to_string();
 };
