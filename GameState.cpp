@@ -610,7 +610,7 @@ void GameState::advance(int steps)
             {
                 for (GridRegion& r : grid->regions)
                 {
-                    if (r.vis_level != GRID_VIS_LEVEL_SHOW)
+                    if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force != GridRegion::VIS_FORCE_USER))
                     {
                         r.vis_level = GRID_VIS_LEVEL_SHOW;
                         r.stale = false;
@@ -824,9 +824,9 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             if ((disp_type == 1) && selected)
             {
-                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
                 SDL_Point rot_center = {0, line_thickness * 2};
-                double f = (frame / 10 + pos.x) % 1024;
+                double f = (frame / 5 + pos.x) % 1024;
                 SDL_Rect src_rect = {int(f), 2528, int(dist / line_thickness * 10), 32};
                 SDL_Rect dst_rect = {scaled_grid_offset.x + pos.x, scaled_grid_offset.y + pos.y - line_thickness * 2, int(dist), line_thickness * 4};
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
@@ -873,7 +873,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
             continue;
         if ((disp_type == 1) && selected)
         {
-                SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
                 XYPos margin = d.size / 8;
                 SDL_Rect src_rect = {512, 1728, 192, 192};
                 SDL_Rect dst_rect = {scaled_grid_offset.x + d.pos.x - margin.x, scaled_grid_offset.y + d.pos.y - margin.y, d.size.x + margin.x * 2, d.size.y + margin.x * 2};
