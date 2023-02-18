@@ -6,8 +6,8 @@ pthread_mutex_t glob_mutex;
 void* exec(void* dummy)
 {
     int params[][9] = {
-      // cnt shp   x  y  mrg +- x/y msc rows
-        { 200, 0,   4, 3, 0,  0, 0,  0, 0},
+      // cnt shp    x  y  mrg +- x/y msc rows
+        /*{ 200, 0,   4, 3, 0,  0, 0,  0, 0},
         { 200, 0,   4, 3, 0,  1, 0,  0, 0},
         { 200, 0,   4, 3, 0,  1, 1,  0, 0},
         { 200, 0,   4, 3, 0,  1, 1,  1, 0},
@@ -106,6 +106,8 @@ void* exec(void* dummy)
         { 200, 2,  11, 7, 0,  1, 1,  0, 0},
         { 200, 2,  11, 7, 0,  1, 1,  1, 0},
         { 200, 2,  11, 7, 0,  1, 1,  1, 50},
+*/
+        { 0 , 3,   5, 5, 0,  1, 1,  1, -1},
 
         {  -1, -1,  3, 3, 0,  0, 0,  0, 0}
      };
@@ -128,15 +130,17 @@ void* exec(void* dummy)
                 pthread_mutex_unlock(&glob_mutex);
                 printf("%d of %d\n", global_level_sets[j][cnt]->levels.size(), params[i][0]);
                 Grid* g;
-                if (j == 0)
+                int rn = (j == 3) ? global_level_sets[j][cnt]->levels.size() % 3 : j;
+
+                if (rn == 0)
                     g = new HexagonGrid ();
-                else if (j == 1)
+                else if (rn == 1)
                     g = new SquareGrid ();
-                else if (j == 2)
+                else if (rn == 2)
                     g = new TriangleGrid ();
                 else
                     assert(0);
-                g->randomize(XYPos(params[i][2], params[i][3]), params[i][4], params[i][8]);
+                g->randomize(XYPos(params[i][2], params[i][3]), (params[i][8] < 0), params[i][4], params[i][8] > 0 ? params[i][8] : 0);
 
                 g->make_harder(params[i][5], params[i][6], params[i][7]);
                 std::string s = g->to_string();

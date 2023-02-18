@@ -218,6 +218,7 @@ class Grid
 {
 public:
     XYPos size;
+    bool wrapped = false;
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
@@ -230,7 +231,7 @@ protected:
 
 public:
     virtual ~Grid(){};
-    void randomize(XYPos size_, int merged_count, int row_percent);
+    void randomize(XYPos size_, bool wrapped, int merged_count, int row_percent);
     void from_string(std::string s);
 
     static Grid* Load(std::string s);
@@ -252,6 +253,7 @@ public:
     virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted) = 0;
     virtual void add_random_merged(int count) {}
     virtual XYPos get_base_square(XYPos p) {return p;}
+    virtual XYPos get_wrapped_size(XYPos grid_pitch) = 0;
 
     void solve_easy();
     bool is_solveable();
@@ -315,6 +317,7 @@ public:
     void add_random_merged(int count);
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
+    XYPos get_wrapped_size(XYPos grid_pitch);
 };
 
 class TriangleGrid : public Grid
@@ -342,6 +345,7 @@ public:
     void add_random_merged(int count);
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
+    XYPos get_wrapped_size(XYPos grid_pitch);
 };
 
 class HexagonGrid : public Grid
@@ -363,4 +367,5 @@ public:
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    XYPos get_wrapped_size(XYPos grid_pitch);
 };

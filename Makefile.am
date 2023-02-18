@@ -53,7 +53,7 @@ BombeServer_SOURCES =   BombeServer.cpp BombeServer.h \
                         Compress.cpp Compress.h
                         
 
-BombeServer_CXXFLAGS = $(EXTRA_FLAGS)  @libcurl_CFLAGS@
+BombeServer_CXXFLAGS = @CXXFLAGS@  $(EXTRA_FLAGS)  @libcurl_CFLAGS@
 BombeServer_LDADD=@ZSTD_LIBS@ $(EXTRA_LDADD) -lpthread @libcurl_LIBS@
 BombeServer_LDFLAGS=-L. $(EXTRA_LD_FLAGS)
 

@@ -493,9 +493,10 @@ void GridRule::remove_region(int index)
     apply_region_bitmap = new_apply_region_bitmap;
 }
 
-void Grid::randomize(XYPos size_, int merged_count, int row_percent)
+void Grid::randomize(XYPos size_, bool wrapped_, int merged_count, int row_percent)
 {
     size = size_;
+    wrapped = wrapped_;
     add_random_merged(merged_count);
 
     XYSet grid_squares = get_squares();
@@ -553,7 +554,7 @@ void Grid::from_string(std::string s)
     size.y = a;
 
     a = s[2] - 'A';
-    assert(a == 0);
+    wrapped = a;
 
     int i = 3;
     while (s[i] == '#')
@@ -1379,7 +1380,7 @@ std::string Grid::to_string()
 
     s += 'A' + size.x;
     s += 'A' + size.y;
-    s += 'A';
+    s += 'A' + int(wrapped);
     for ( const auto &m_reg : merged )
     {
         s += '#';
@@ -1895,9 +1896,13 @@ XYSet SquareGrid::get_neighbors(XYPos p)
     {
         XYPos t;
         t = p + XYPos(-1, y);
+        if (wrapped)
+            t = t % size;
         if (t.inside(size))
             rep.set(get_base_square(t));
         t = p + XYPos(s.x, y);
+        if (wrapped)
+            t = t % size;
         if (t.inside(size))
             rep.set(get_base_square(t));
         rep.set(p);
@@ -1906,9 +1911,13 @@ XYSet SquareGrid::get_neighbors(XYPos p)
     {
         XYPos t;
         t = p + XYPos(x, -1);
+        if (wrapped)
+            t = t % size;
         if (t.inside(size))
             rep.set(get_base_square(t));
         t = p + XYPos(x, s.y);
+        if (wrapped)
+            t = t % size;
         if (t.inside(size))
             rep.set(get_base_square(t));
         rep.set(p);
@@ -2029,6 +2038,13 @@ XYPos SquareGrid::get_base_square(XYPos p)
     return p;
 }
 
+XYPos SquareGrid::get_wrapped_size(XYPos grid_pitch)
+{
+    if (!wrapped)
+        return XYPos();
+    return size * grid_pitch;
+}
+
 std::string TriangleGrid::to_string()
 {
     return "B" + Grid::to_string();
@@ -2104,6 +2120,8 @@ XYSet TriangleGrid::base_get_neighbors(XYPos pos)
         if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
         if (offset == XYPos(2, downwards ? 1 : -1)) continue;
         XYPos t = pos + offset;
+        if (wrapped)
+            t = t % size;
         if (!t.inside(size))
             continue;
         rep.set(get_base_square(t));
@@ -2352,6 +2370,13 @@ XYPos TriangleGrid::get_base_square(XYPos p)
     return p;
 }
 
+XYPos TriangleGrid::get_wrapped_size(XYPos grid_pitch)
+{
+    if (!wrapped)
+        return XYPos();
+    return XYPos(size.x, size.y) * grid_pitch;
+}
+
 std::string HexagonGrid::to_string()
 {
     return "C" + Grid::to_string();
@@ -2417,6 +2442,8 @@ XYSet HexagonGrid::get_neighbors(XYPos pos)
         if (downstep && offset.y == -1 && offset.x) continue;
         if (!downstep && offset.y == 1 && offset.x) continue;
         XYPos t = pos + offset;
+        if (wrapped)
+            t = t % size;
         if (t.inside(size))
             rep.set(t);
     }
@@ -2554,4 +2581,10 @@ void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderC
         dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(0, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 8));
         cmds.push_back(RenderCmd(src, dst, 300, XYPos(0,1)));
     }
+}
+XYPos HexagonGrid::get_wrapped_size(XYPos grid_pitch)
+{
+    if (!wrapped)
+        return XYPos();
+    return XYPos(size.x * 3, size.y * 2) * grid_pitch;
 }

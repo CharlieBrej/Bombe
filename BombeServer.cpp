@@ -23,6 +23,7 @@
 #include "SaveState.h"
 
 bool power_down = false;
+const int LEVEL_TYPES = 3;
 
 typedef int64_t Score;
 
@@ -80,7 +81,6 @@ public:
 class Database
 {
 public:
-    static const int LEVEL_TYPES = 3;
     std::map<uint64_t, std::string> players;
     ScoreTable scores[LEVEL_TYPES];
     std::map<std::string, uint64_t> steam_sessions;
@@ -342,7 +342,7 @@ public:
                         std::cout << "\n";
 
                         SaveObjectList* progress_list = omap->get_item("scores")->get_list();
-                        for (int lset = 0; lset < progress_list->get_count(); lset++)
+                        for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES; lset++)
                         {
                             Score s = progress_list->get_num(lset);
                             db.scores[lset].add_score(steam_id, s);

@@ -272,6 +272,16 @@ public:
         return XYPos(x / other, y / other);
     }
 
+    XYPos operator%(const XYPos& other) const
+    {
+        XYPos rep(x % other.x, y % other.y);
+        if (rep.x < 0)
+            rep.x += other.x;
+        if (rep.y < 0)
+            rep.y += other.y;
+        return rep;
+    }
+
     void operator+=(const XYPos& other)
     {
         x += other.x;
