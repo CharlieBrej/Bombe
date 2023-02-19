@@ -1718,7 +1718,7 @@ void GameState::render(bool saving)
             grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
             for (RenderCmd& cmd : cmds)
             {
-                FOR_XY(r, XYPos(), wrap_end)
+                FOR_XY(r, wrap_start, wrap_end)
                 {
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + cmd.dst.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
