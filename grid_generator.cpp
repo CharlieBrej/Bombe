@@ -148,6 +148,11 @@ void* exec(void* dummy)
 
                 g->make_harder(params[i][6], params[i][7], params[i][8]);
                 std::string s = g->to_string();
+                {
+                    Grid* gt = Grid::Load(s);
+                    assert(gt->is_solveable());
+                    delete gt;
+                }
                 pthread_mutex_lock(&glob_mutex);
 
                 std::vector<std::string> &levels = global_level_sets[j][cnt]->levels;
@@ -177,6 +182,23 @@ int main( int argc, char* argv[] )
     void* dummy;
 
     LevelSet::init_global();
+
+    // for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
+    // {
+    //     for (auto a : global_level_sets[j])
+    //     {
+    //         for (std::string& s : a->levels)
+    //         {
+    //             std::cout << s << std::endl;
+    //             {
+    //                 Grid* gt = Grid::Load(s);
+    //                 assert(gt->is_solveable());
+    //                 delete gt;
+    //             }
+    //         }
+    //     }
+    // }
+
     for (int i = 0; i < TNUM; i++)
         pthread_create(&thread[i], NULL, exec, NULL);
     for (int i = 0; i < TNUM; i++)

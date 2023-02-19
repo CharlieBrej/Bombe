@@ -272,6 +272,17 @@ public:
         return XYPos(x / other, y / other);
     }
 
+    XYPos operator/(const XYPos& other) const
+    {
+        XYPos rep = XYPos(x / other.x, y / other.y);
+        if (x % other.x < 0)
+            rep.x--;
+        if (y % other.y < 0)
+            rep.y--;
+        return rep;
+    }
+
+
     XYPos operator%(const XYPos& other) const
     {
         XYPos rep(x % other.x, y % other.y);

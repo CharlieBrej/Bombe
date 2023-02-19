@@ -1700,9 +1700,13 @@ void GameState::render(bool saving)
     {
         XYSet grid_squares = grid->get_squares();
         XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
+        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-1, -1);
+        XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
+
         FOR_XY_SET(pos, grid_squares)
         {
             {
+                SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
                 if (clue_solves.count(pos))
                     SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
                 if (filter_pos.get(pos))
@@ -1712,7 +1716,7 @@ void GameState::render(bool saving)
             grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
             for (RenderCmd& cmd : cmds)
             {
-                FOR_XY(r, XYPos(-1, -1), XYPos(3, 3))
+                FOR_XY(r, wrap_start, wrap_end)
                 {
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + cmd.dst.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
@@ -1847,7 +1851,7 @@ void GameState::render(bool saving)
                 XYPosFloat epos = grid_offset - scaled_grid_offset + XYPosFloat(0.1,0.1);
 
                 double p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (epos.x) - epos.y;
-                if (p >= 0 && p < grid_size)
+                if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(0,1).angle())
                 {
                     double angle = edge.angle;
                     if (XYPosFloat(Angle(angle), 1).x < 0)
@@ -1867,7 +1871,7 @@ void GameState::render(bool saving)
                     }
                 }
                 p = -edge.pos / std::sin(edge.angle) + (epos.y) / std::tan(edge.angle) - epos.x;
-                if (p >= 0 && p < grid_size)
+                if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(1,0).angle())
                 {
                     double angle = edge.angle;
                     if (XYPosFloat(Angle(angle), 1).y < 0)
@@ -1886,9 +1890,8 @@ void GameState::render(bool saving)
                         best_edge_pos = edge;
                     }
                 }
-
                 p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (grid_size + epos.x) - epos.y;
-                if (p >= 0 && p < grid_size)
+                if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(0,1).angle())
                 {
                     double angle = edge.angle;
                     if (XYPosFloat(Angle(angle), 1).x > 0)
@@ -1909,7 +1912,7 @@ void GameState::render(bool saving)
                 }
 
                 p = -edge.pos / std::sin(edge.angle) + (grid_size + epos.y) / std::tan(edge.angle) - epos.x;
-                if (p >= 0 && p < grid_size)
+                if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(1,0).angle())
                 {
                     double angle = edge.angle;
                     if (XYPosFloat(Angle(angle), 1).y > 0)
