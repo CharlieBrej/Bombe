@@ -74,7 +74,7 @@
                 {"x": 200,  "y": 800,           "text":"Double click on a region"},
                 {"x":1200,  "y": 200,           "text":"Enter number of cells"},
                 {"x":1200,  "y": 500,           "text":"Enter action to perform"},
-                {"x":1300,  "y": 800,           "text":"Click OK"},
+                {"x":1300,  "y": 800,           "text":"Click OK"}
             ],
             [
                 {"x": 150,  "y": 500,           "text":"Number of cells\ncan be set to\n\"Don't Care\""},
@@ -266,7 +266,7 @@
                 {"x": 200,  "y": 800,           "text":"Bir bölgeye çift tıkla"},
                 {"x":1200,  "y": 200,           "text":"Hücre sayısını gir"},
                 {"x":1200,  "y": 500,           "text":"Uygulanacak eylemi gir"},
-                {"x":1300,  "y": 800,           "text":"Tamama tıkla"},
+                {"x":1300,  "y": 800,           "text":"Tamama tıkla"}
             ],
             [
                 {"x": 150,  "y": 500,           "text":"Hücre saysı\n\"Umursama\"\nolarak ayarlanabilir"},
@@ -299,8 +299,8 @@
             "Auto Region" :                 "自動區域生成",
             "Bomb" :                        "炸彈",
             "Cancel" :                      "取消",
-            "Cells Cleared" :               "消除方格數",
-            "Change Colour":                "Change Colour",
+            "Cells Cleared" :               "消除格子數",
+            "Change Colour":                "換個顏色",
             "Clear" :                       "清除",
             "Clear Filter" :                "清除篩選",
             "Close":                        "關閉",
@@ -315,8 +315,8 @@
             "Hint" :                        "提示",
             "Illogical" :                   "不合邏輯",
             "Main Menu" :                   "主選單",
-            "Position" :                    "位置",
-            "Player Name" :                 "玩家名",
+            "Position" :                    "順位",
+            "Player Name" :                 "玩家",
             "OK" :                          "確認",
             "Quit" :                        "退出遊戲",
             "Refresh Regions" :             "刷新區域",
@@ -324,7 +324,7 @@
             "Regions" :                     "區域數",
             "Remove Rule" :                 "刪除規則",
             "Reset Game" :                  "重置遊戲",
-            "Reset Levels" :                "重製關卡",
+            "Reset Levels" :                "重置關卡",
             "Rule Already Present" :        "規則已經存在",
             "Rule Constructor" :            "規則生成器",
             "Rule ID" :                     "規則編號",
@@ -341,34 +341,34 @@
             "Speed" :                       "速度",
             "Trash" :                       "無效",
             "Visible" :                     "可見的",
-            "Visibility set by User" :      "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Visibility set by User" :      "玩家設定的可見性",
+            "Update Rule" :                 "更新規則"
         },
         "tutorial":
         [
             [
-                {"x": 50,   "y": 600,           "text":"數字表示相鄰方格\n中有多少炸彈"},
+                {"x": 50,   "y": 600,           "text":"數字表示相鄰格子\n中有多少炸彈"},
                 {"x": 1100, "y": 750,           "text":"區域顯示還有多少\n炸彈未發現"}
             ],
             [
                 {"x": 140,  "y": 650,           "text":"雙擊區域進入規則生成器"},
                 {"x":1050,  "y": 100, "left":1, "text":"區域類型"},
-                {"x":1050,  "y": 530, "left":1, "text":"方格數"},
+                {"x":1050,  "y": 530, "left":1, "text":"格子數"},
                 {"x":1240,  "y": 560,           "text":"要採取的行動"},
-                {"x":800,   "y": 630,           "text":"規則指：\n有 3 個炸彈和 3 個方格\n的區域必定全是炸彈"},
+                {"x":800,   "y": 630,           "text":"規則指：\n有 3 個炸彈和 3 個格子\n的區域必定全是炸彈"},
 
                 {"x":370,   "y": 950,           "text":"全部標記為炸彈"},
                 {"x":1200,  "y": 950,           "text":"全部標記為安全"},
-                {"x":1450,  "y": 250,           "text":"單擊OK後,\n規則將自動\n套用"}
+                {"x":1450,  "y": 250,           "text":"單擊確認後,\n規則將自動套用"}
             ],
             [
                 {"x": 160,  "y": 800,           "text":"雙擊區域\n把該區域添加到規則生成器"},
-                {"x":1200,  "y": 200,           "text":"可改變方格數目"},
+                {"x":1200,  "y": 200,           "text":"可改變格子數目"},
                 {"x":1200,  "y": 500,           "text":"決定要採取的行動"},
-                {"x":1300,  "y": 800,           "text":"點擊OK"},
+                {"x":1300,  "y": 800,           "text":"確認"}
             ],
             [
-                {"x": 200,  "y": 500,           "text":"方格數\n可以設置為\n任意數值\"?\""},
+                {"x": 200,  "y": 500,           "text":"格子數\n可以設置為\n任意數值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 個區域\n添加到規則生成器"},
                 {"x": 1220, "y": 500,           "text":"規則可用於\n生成新的區域"}
             ],
@@ -398,8 +398,8 @@
             "Auto Region" :                 "自动区域生成",
             "Bomb" :                        "炸弹",
             "Cancel" :                      "取消",
-            "Cells Cleared" :               "消除方格数",
-            "Change Colour":                "Change Colour",
+            "Cells Cleared" :               "消除格子数",
+            "Change Colour":                "换个颜色",
             "Clear" :                       "清除",
             "Clear Filter" :                "清除筛选",
             "Close":                        "关闭",
@@ -414,8 +414,8 @@
             "Hint" :                        "提示",
             "Illogical" :                   "不合逻辑",
             "Main Menu" :                   "主选单",
-            "Position" :                    "位置",
-            "Player Name" :                 "玩家名",
+            "Position" :                    "顺位",
+            "Player Name" :                 "玩家",
             "OK" :                          "确认",
             "Quit" :                        "退出游戏",
             "Refresh Regions" :             "刷新区域",
@@ -440,34 +440,34 @@
             "Speed" :                       "动画速度",
             "Trash" :                       "无效",
             "Visible" :                     "可见的",
-            "Visibility set by User" :      "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Visibility set by User" :      "玩家设定的可见性",
+            "Update Rule" :                 "更新规则"
         },
         "tutorial":
         [
             [
-                {"x": 50,   "y": 600,           "text":"数字表示相邻方格\n中有多少炸弹"},
+                {"x": 50,   "y": 600,           "text":"数字表示相邻格子\n中有多少炸弹"},
                 {"x": 1100, "y": 750,           "text":"区域显示还有多少\n未发现的炸弹"}
             ],
             [
                 {"x": 140,  "y": 650,           "text":"双击区域进入规则生成器"},
                 {"x":1050,  "y": 100, "left":1, "text":"区域类型"},
-                {"x":1050,  "y": 530, "left":1, "text":"方格数"},
+                {"x":1050,  "y": 530, "left":1, "text":"格子数"},
                 {"x":1240,  "y": 560,           "text":"要采取的行动"},
-                {"x":800,   "y": 630,           "text":"规则指：\n有 3 个炸弹和 3 个方格\n的区域必定全是炸弹"},
+                {"x":800,   "y": 630,           "text":"规则指：\n有 3 个炸弹和 3 个格子\n的区域必定全是炸弹"},
 
                 {"x":370,   "y": 950,           "text":"全部标记为炸弹"},
                 {"x":1200,  "y": 950,           "text":"全部标记为安全"},
-                {"x":1450,  "y": 250,           "text":"单击OK后,\n规则将\n自动应用"}
+                {"x":1450,  "y": 250,           "text":"单击确认后,\n规则将自动应用"}
             ],
             [
                 {"x": 160,  "y": 800,           "text":"双击区域\n把该区域添加到规则生成器"},
-                {"x":1200,  "y": 200,           "text":"可改变方格数目"},
+                {"x":1200,  "y": 200,           "text":"可改变格子数目"},
                 {"x":1200,  "y": 500,           "text":"决定要採取的行动"},
-                {"x":1300,  "y": 800,           "text":"点击OK"},
+                {"x":1300,  "y": 800,           "text":"确认"}
             ],
             [
-                {"x": 200,  "y": 500,           "text":"方格数\n可以设置为\n任意数值\"?\""},
+                {"x": 200,  "y": 500,           "text":"格子数\n可以设置为\n任意数值\"?\""},
                 {"x": 640,  "y": 500,           "text":"最多可把 4 个区域\n添加到规则生成器"},
                 {"x": 1200, "y": 500,           "text":"规则可用于\n生成新的区域"}
             ],
@@ -562,7 +562,7 @@
                 {"x": 200,  "y": 800,           "text":"Double click on a region"},
                 {"x":1200,  "y": 200,           "text":"Enter number of cells"},
                 {"x":1200,  "y": 500,           "text":"Enter action to perform"},
-                {"x":1300,  "y": 800,           "text":"Click OK"},
+                {"x":1300,  "y": 800,           "text":"Click OK"}
             ],
             [
                 {"x": 150,  "y": 500,           "text":"正方形の数は\n\n\"Don't Care\"に設定できます"},
@@ -582,6 +582,105 @@
                 {"x":1050,  "y": 290,           "text":"非表示ですが、まだルールで使用されています"},
                 {"x":1050,  "y": 490,           "text":"ゴミ箱、ルールで無視"},
                 {"x":1050,  "y": 700,           "text":"ルールを使用して\n領域の可視性を変更できます"}
+            ]
+        ]
+    },
+    "Español":
+    {
+        "font" : "font-en.ttf",
+        "translate":
+        {
+            "Action" :                      "Acción",
+            "Add to Rule Constructor" :     "Agregar al constructor de reglas",
+            "Auto Region" :                 "Región automática",
+            "Bomb" :                        "Bomba",
+            "Cancel" :                      "Cancelar",
+            "Cells Cleared" :               "Celdas despejadas",
+            "Change Colour":                "Cambiar color",
+            "Clear" :                       "Despejar",
+            "Clear Filter" :                "Borrar filtro",
+            "Close":                        "Cerrar",
+            "Don't Care" :                  "Cualquier número",
+            "Duplicate Rule" :              "Duplicar regla",
+            "Edit Rule" :                   "Editar regla",
+            "Filter" :                      "Filtro",
+            "Full Screen" :                 "Pantalla completa",
+            "Go to Rule Constructor" :      "Ir al constructor de reglas",
+            "Help" :                        "Ayuda",
+            "Hidden" :                      "Ocultas",
+            "Hint" :                        "Pista",
+            "Illogical" :                   "Ilógico",
+            "Main Menu" :                   "Menú principal",
+            "Position" :                    "Posición",
+            "Player Name" :                 "Nombre del jugador",
+            "OK" :                          "ACEPTAR",
+            "Quit" :                        "Salir",
+            "Refresh Regions" :             "Actualizar regiones",
+            "Region Inspector" :            "Inspector de region",
+            "Regions" :                     "Regiones",
+            "Remove Rule" :                 "Borrar regla",
+            "Reset Game" :                  "Restablecer juego",
+            "Reset Levels" :                "Restablecer niveles",
+            "Rule Already Present" :        "Regla ya presente",
+            "Rule Constructor" :            "Constructor de regla",
+            "Rule ID" :                     "ID de regla",
+            "Rule Inspector" :              "Inspector de reglas",
+            "Rules" :                       "Reglas",
+            "Score" :                       "Puntuación",
+            "Scores" :                      "Puntuaciones",
+            "Select Language" :             "Seleccionar idioma",
+            "Show Creation Rule" :          "Mostrar regla de creación",
+            "Show Row Clues" :              "Mostrar pistas de fila",
+            "Show Visibility Rule" :        "Mostrar regla de visibilidad",
+            "Skip Level" :                  "Saltar nivel",
+            "Times Applied" :               "Veces aplicadas",
+            "Speed" :                       "Velocidad",
+            "Trash" :                       "Eliminadas",
+            "Visible" :                     "Visibles",
+            "Visibility set by User" :      "Visibilidad definida por el usuario",
+            "Update Rule" :                 "Actualizar regla"
+        },
+        "tutorial":
+        [
+            [
+                {"x": 50,   "y": 600,           "text":"Los números indican\nla cantidad de bombas\nen las celdas vecinas"},
+                {"x": 1100, "y": 750,           "text":"Las regiones indican\nla cantidad de bombas\nque quedan por descubrir"}
+            ],
+            [
+                {"x": 100,  "y": 650,           "text":"Doble clic en una región\nla agrega al Constructor de reglas"},
+                {"x":1050,  "y": 100, "left":1, "text":"Tipo de región"},
+                {"x":1050,  "y": 530, "left":1, "text":"Cantidad de celdas"},
+                {"x":1240,  "y": 560,           "text":"Acción a tomar"},
+                {"x":800,   "y": 630,           "text":"La regla dice:\nUna región con 3 bombas y 3 celdas\ndebe ser completamente bombas"},
+
+                {"x":370,   "y": 950,           "text":"Marcar todas como bombas"},
+                {"x":1200,  "y": 950,           "text":"Despejar todas\nlas celdas"},
+                {"x":1450,  "y": 250,           "text":"Al hacer clic en ACEPTAR,\nla regla se aplicará\nautomáticamente"}
+            ],
+            [
+                {"x": 200,  "y": 800,           "text":"Doble clic en una región"},
+                {"x":1200,  "y": 200,           "text":"Ingresar número de celdas"},
+                {"x":1200,  "y": 500,           "text":"Ingresar acción a realizar"},
+                {"x":1300,  "y": 800,           "text":"Hacer clic en ACEPTAR"}
+            ],
+            [
+                {"x": 150,  "y": 500,           "text":"Numero de celdas\npuede ser\n\"Cualquier número\""},
+                {"x": 640,  "y": 500,           "text":"Hasta 4 regiones\npueden agregarse al\nconstructor de reglas"},
+                {"x": 1200, "y": 500,           "text":"Las reglas pueden usarse\npara crear nuevas regiones"}
+            ],
+            [
+                {"x": 240,  "y": 60,            "text":"Exactamente 6"},
+                {"x": 240,  "y": 200,           "text":"2 o más"},
+                {"x": 240,  "y": 340,           "text":"5 o menos"},
+                {"x": 240,  "y": 480,           "text":"Cualquier número excepto 4"},
+                {"x": 240,  "y": 620,           "text":"Puede ser 4 o 6"},
+                {"x": 240,  "y": 760,           "text":"Puede ser 3, 5 o 7"},
+                {"x": 240,  "y": 900,           "text":"Puede ser 2, 4, 6 o 8"},
+
+                {"x":1050,  "y": 100,           "text":"Siempre visibles"},
+                {"x":1050,  "y": 290,           "text":"Ocultas, pero usadas por las reglas"},
+                {"x":1050,  "y": 490,           "text":"Eliminadas, son ignoradas por las reglas"},
+                {"x":1050,  "y": 700,           "text":"Las reglas pueden usarse para\ncambiar la visibilidad de las regiones"}
             ]
         ]
     }
