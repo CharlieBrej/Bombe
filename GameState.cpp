@@ -448,6 +448,7 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 void GameState::advance(int steps)
 {
     frame = frame + steps;
+    frame_step = steps;
     deal_with_scores();
     if (server_timeout)
         server_timeout-=steps;
@@ -714,6 +715,7 @@ void GameState::reset_rule_gen_region()
     update_constructed_rule();
     right_panel_mode = RIGHT_MENU_NONE;
     filter_pos.clear();
+    grid_cells_animation.clear();
 }
 
 void GameState::update_constructed_rule_pre()
@@ -767,7 +769,7 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
 {
     std::vector<XYPos> elements;
-    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-1, -1);
+    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-1, -1);
     XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
 
     FOR_XY_SET(pos, region.elements)
@@ -1716,7 +1718,7 @@ void GameState::render(bool saving)
             grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
             for (RenderCmd& cmd : cmds)
             {
-                FOR_XY(r, wrap_start, wrap_end)
+                FOR_XY(r, XYPos(), wrap_end)
                 {
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + cmd.dst.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
@@ -1795,14 +1797,22 @@ void GameState::render(bool saving)
 
         FOR_XY_SET(pos, grid_squares)
         {
-            XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
-            int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
             GridPlace place = grid->get(pos);
-            XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
-
             if (place.revealed)
             {
-                FOR_XY(r, XYPos(-1, -1), XYPos(3, 3))
+                XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
+                unsigned anim_prog = grid_cells_animation[pos];
+                unsigned max_anim_frame = 500;
+                grid_cells_animation[pos] = std::min(anim_prog + frame_step, max_anim_frame);
+                double fade = 1.0 - (double(anim_prog) / double(max_anim_frame));
+
+                sq_pos.pos -= XYPosFloat(sq_pos.size) * (fade / 2);
+                sq_pos.size += XYPosFloat(sq_pos.size) * (fade);
+
+                int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
+                XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
+                SDL_SetTextureAlphaMod(sdl_texture, 255.0 * (1.0 - pow(fade, 0.5)));
+                FOR_XY(r, wrap_start, wrap_end)
                 {
                     XYPos mgpos = gpos + wrap_size * r;
                     if (place.bomb)
@@ -1816,6 +1826,7 @@ void GameState::render(bool saving)
                         render_region_type(place.clue, mgpos, icon_width);
                     }
                 }
+                SDL_SetTextureAlphaMod(sdl_texture, 255);
             }
         }
         if (row_col_clues)

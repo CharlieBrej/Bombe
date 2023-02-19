@@ -38,6 +38,7 @@ public:
     TTF_Font *score_font = NULL;
     SaveObjectMap* lang_data;
     unsigned frame = 0;
+    unsigned frame_step = 0;
 
     static const int tut_texture_count = 5;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
@@ -102,6 +103,8 @@ public:
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
     GridRule* replace_rule = NULL;
+
+    std::map<XYPos, int> grid_cells_animation;
 
     std::list<ConstructedRuleState> constructed_rule_undo;
     std::list<ConstructedRuleState> constructed_rule_redo;
