@@ -23,14 +23,14 @@
 #include "SaveState.h"
 
 bool power_down = false;
-const int LEVEL_TYPES = 3;
+const int LEVEL_TYPES = 4;
 
 typedef int64_t Score;
 
 class ScoreTable
 {
 public:
-    std::multimap<Score, uint64_t> sorted_scores;
+    std::multimap<Score, int64_t> sorted_scores;
     std::map<uint64_t, Score> user_score;
     
     ~ScoreTable()
@@ -44,7 +44,7 @@ public:
         {
             SaveObjectMap* score_map = new SaveObjectMap;
             score_map->add_num("id", score.second);
-            score_map->add_num("score", score.first);
+            score_map->add_num("score", user_score[score.second]);
             score_list->add_item(score_map);
         }
         return score_list;
@@ -72,7 +72,7 @@ public:
                ++it;
         }
         user_score.erase(steam_id);
-        sorted_scores.insert({score, steam_id});
+        sorted_scores.insert({-score, steam_id});
         user_score[steam_id] = score;
     }
 };
@@ -147,7 +147,7 @@ public:
             SaveObjectList* score_list = new SaveObjectList();
             int pos = 0;
             int prevpos = 0;
-            for (std::multimap<Score, uint64_t>::reverse_iterator rit = scores[i].sorted_scores.rbegin(); rit != scores[i].sorted_scores.rend(); rit++)
+            for (std::multimap<Score, int64_t>::iterator rit = scores[i].sorted_scores.begin(); rit != scores[i].sorted_scores.end(); rit++)
             {
                 pos++;
                 int fr = friends.count(rit->second);
@@ -167,7 +167,7 @@ public:
                 SaveObjectMap* score_map = new SaveObjectMap();
                 score_map->add_num("pos", pos);
                 score_map->add_string("name", players[rit->second]);
-                score_map->add_num("score", rit->first);
+                score_map->add_num("score", scores[i].user_score[rit->second]);
                 if (fr)
                     score_map->add_num("friend", fr);
                 score_list->add_item(score_map);

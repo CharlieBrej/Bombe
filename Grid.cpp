@@ -1999,7 +1999,7 @@ void SquareGrid::add_random_merged(int merged_count)
     for (int i = 0; i < merged_count;)
     {
         XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
-        XYPos m_size(1 + unsigned(rnd) % 4, 1 + unsigned(rnd) % 4);
+        XYPos m_size(1 + unsigned(rnd) % 3, 1 + unsigned(rnd) % 3);
         if (!(m_size + m_pos - XYPos(1,1)).inside(size))
             continue;
         if (m_size == XYPos(1,1))

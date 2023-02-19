@@ -843,7 +843,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
                 SDL_Point rot_center = {0, line_thickness * 2};
                 double f = (frame / 5 + pos.x) % 1024;
-                SDL_Rect src_rect = {int(f), 2528, int(dist / line_thickness * 10), 32};
+                SDL_Rect src_rect = {int(f), 2528, int(dist / line_thickness), 32};
                 FOR_XY(r, wrap_start, wrap_end)
                 {
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + pos.x, wrap_size.y * r.y + scaled_grid_offset.y + pos.y - line_thickness * 2, int(dist), line_thickness * 4};
@@ -2075,7 +2075,7 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Trash");
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
     {
         SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};

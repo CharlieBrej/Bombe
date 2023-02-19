@@ -3,7 +3,7 @@
 #include "SaveState.h"
 #include <vector>
 
-#define GLBAL_LEVEL_SETS 3
+#define GLBAL_LEVEL_SETS 4
 
 class LevelSet
 {
