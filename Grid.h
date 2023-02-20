@@ -138,7 +138,6 @@ class GridRegion
 public:
     RegionType type;
     unsigned colour;
-    unsigned fade = 0;
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     enum
     {

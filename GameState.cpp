@@ -178,6 +178,12 @@ GameState::GameState(std::string& load_data, bool json)
     set_language(language);
     score_font = TTF_OpenFont("font-fixed.ttf", 19*4);
 
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
+    Mix_AllocateChannels(32);
+
+    sounds[0] = Mix_LoadWAV( "snd/plop.wav" );
+    Mix_Volume(-1, 40);
+
 
 //    font = TTF_OpenFont("font-en.ttf", 32);
 
@@ -253,6 +259,9 @@ GameState::~GameState()
         TTF_CloseFont(value);
     fonts.clear();
     TTF_CloseFont(score_font);
+
+    for (int i = 0; i < 1; i++)
+        Mix_FreeChunk(sounds[i]);
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -484,6 +493,8 @@ void GameState::advance(int steps)
             delete grid;
             grid = Grid::Load(s);
             reset_rule_gen_region();
+            grid_cells_animation.clear();
+            grid_regions_animation.clear();
             current_level_is_temp = false;
             grid_zoom = 0;
         }
@@ -595,7 +606,12 @@ void GameState::advance(int steps)
                 Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
                 {
+                    if (rule.apply_region_type.type == RegionType::SET)
+                    {
+                        Mix_PlayChannel(0, sounds[0], 0);
+                    }
                     hit = true;
+                    break;
                 }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
                 {
@@ -715,7 +731,6 @@ void GameState::reset_rule_gen_region()
     update_constructed_rule();
     right_panel_mode = RIGHT_MENU_NONE;
     filter_pos.clear();
-    grid_cells_animation.clear();
 }
 
 void GameState::update_constructed_rule_pre()
@@ -771,6 +786,8 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
     std::vector<XYPos> elements;
     XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-1, -1);
     XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
+
+    int fade = 50 + (205 * grid_regions_animation[&region]) / 500;
 
     FOR_XY_SET(pos, region.elements)
     {
@@ -842,7 +859,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             if ((disp_type == 1) && selected)
             {
-                set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
+                set_region_colour(sdl_texture, region.type.value, region.colour, fade);
                 SDL_Point rot_center = {0, line_thickness * 2};
                 double f = (frame / 5 + pos.x) % 1024;
                 SDL_Rect src_rect = {int(f), 2528, int(dist / line_thickness), 32};
@@ -856,7 +873,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             if ((disp_type == 0) || ((disp_type == 2) && selected))
             {
-                set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
+                set_region_colour(sdl_texture, region.type.value, region.colour, fade);
                 SDL_Point rot_center = {0, line_thickness};
                 SDL_Rect src_rect = {160, 608, 1, 1};
                 FOR_XY(r, wrap_start, wrap_end)
@@ -891,6 +908,8 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
     XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
     bool selected = (&region == mouse_hover_region);
 
+    int fade = 50 + (205 * grid_regions_animation[&region]) / 500;
+
     FOR_XY_SET(pos, region.elements)
     {
         XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
@@ -900,7 +919,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
             continue;
         if ((disp_type == 1) && selected)
         {
-            set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
+            set_region_colour(sdl_texture, region.type.value, region.colour, fade);
             XYPos margin = d.size / 8;
             SDL_Rect src_rect = {512, 1728, 192, 192};
             SDL_Point rot_center = {d.size.x / 2 + margin.x, d.size.y / 2 + margin.x};
@@ -912,7 +931,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
         }
         if ((disp_type == 0) || ((disp_type == 2) && selected))
         {
-            set_region_colour(sdl_texture, region.type.value, region.colour, region.fade);
+            set_region_colour(sdl_texture, region.type.value, region.colour, fade);
             SDL_Rect src_rect = {64, 512, 192, 192};
             FOR_XY(r, wrap_start, wrap_end)
             {
@@ -1781,18 +1800,12 @@ void GameState::render(bool saving)
 
         for (GridRegion* region : display_regions)
         {
+            int r = grid_regions_animation[region];
             if (!mouse_hover_region || (region == mouse_hover_region))
-            {
-                region->fade += std::min(10, 255 - int(region->fade));
-            }
+                r = std::min(r + frame_step, 500);
             else
-            {
-                region->fade -= std::min(10, int(region->fade - 100));
-                if (region->fade < 100)
-                {
-                    region->fade += std::min(10, 100 - int(region->fade));
-                }
-            }
+                r = std::max(r - frame_step, 0);
+            grid_regions_animation[region] = r;
         }
 
         FOR_XY_SET(pos, grid_squares)
@@ -1805,9 +1818,10 @@ void GameState::render(bool saving)
                 unsigned max_anim_frame = 500;
                 grid_cells_animation[pos] = std::min(anim_prog + frame_step, max_anim_frame);
                 double fade = 1.0 - (double(anim_prog) / double(max_anim_frame));
+                double wob = -sin((10 / (fade + 0.3))) * (fade * fade);
 
-                sq_pos.pos -= XYPosFloat(sq_pos.size) * (fade / 2);
-                sq_pos.size += XYPosFloat(sq_pos.size) * (fade);
+                sq_pos.pos -= XYPosFloat(sq_pos.size) * (wob / 2);
+                sq_pos.size += XYPosFloat(sq_pos.size) * (wob);
 
                 int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
                 XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
@@ -2859,8 +2873,10 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
+        grid_regions_animation.clear();
         grid->clear_regions();
         reset_rule_gen_region();
+        get_hint = false;
     }
     if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size * 3, button_size)))
     {
@@ -3275,6 +3291,8 @@ bool GameState::events()
                         delete grid;
                         grid = Grid::Load(s);
                         SDL_free(s);
+                        grid_cells_animation.clear();
+                        grid_regions_animation.clear();
                         current_level_is_temp = true;
                         break;
                     }
@@ -3304,6 +3322,7 @@ bool GameState::events()
                     case SDL_SCANCODE_F4:
                     {
                         clue_solves.clear();
+                        grid_regions_animation.clear();
                         grid->clear_regions();
                         reset_rule_gen_region();
                         get_hint = false;
