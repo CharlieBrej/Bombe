@@ -759,7 +759,7 @@ bool Grid::is_determinable(XYPos q)
     LocalGrid tst = *this;
     tst->regions.clear();
     while (tst->add_regions(-1)) {}
-    add_new_regions();
+    tst->add_new_regions();
 
     return tst->is_determinable_using_regions(q);
 }
@@ -1472,7 +1472,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
         reg.elements = elements;
         if (!contains(regions, reg) && !contains(regions_to_add, reg))
         {
-            regions.push_back(reg);
+            regions_to_add.push_back(reg);
             return true;
         }
         return false;

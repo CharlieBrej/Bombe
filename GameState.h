@@ -50,7 +50,7 @@ public:
     std::set<uint64_t> steam_friends;
     std::string language = "English";
     Mix_Chunk* sounds[8];
-    int sound_index = 0;
+    int sound_frame_index = 0;
 
     Grid *grid;
     std::list<GridRule> rules;
@@ -155,7 +155,6 @@ public:
     std::string tooltip_string = "";
 
     bool skip_level = false;
-    int cooldown = 0;
     double steps_had = 0;
 
     unsigned server_timeout = 0;

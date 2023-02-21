@@ -597,71 +597,82 @@ void GameState::advance(int steps)
         steps_had -= steps_needed;
 
         bool hit = false;
-        hit = grid->add_regions(-1);
-        if (!hit)
-            hit = grid->add_one_new_region();
 
-        if (!hit)
+        for (GridRule& rule : rules)
         {
+            if (rule.deleted)
+                continue;
+            if (rule.apply_region_type.type != RegionType::SET)
+                continue;
+
+            while (true)
+            {
+                Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
+                if (resp == Grid::APPLY_RULE_RESP_HIT)
+                    hit = true;
+                if (resp == Grid::APPLY_RULE_RESP_ERROR)
+                    assert(0);
+                if (resp == Grid::APPLY_RULE_RESP_NONE)
+                {
+                    rule.stale = true;
+                    break;
+                }
+            }
+        }
+        if (hit)
+        {
+            for (GridRegion& r : grid->regions)
+            {
+                if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force != GridRegion::VIS_FORCE_USER))
+                {
+                    r.vis_level = GRID_VIS_LEVEL_SHOW;
+                    r.stale = false;
+                }
+            }
             for (GridRule& rule : rules)
             {
                 if (rule.deleted)
                     continue;
-    //                if (hit) break;
                 if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                    continue;
+                    grid->apply_rule(rule);
+            }
+            if ((frame - sound_frame_index) > 50)
+            {
+                Mix_PlayChannel(frame % 32, sounds[frame % 8], 0);
+                sound_frame_index = frame;
+            }
+            continue;
+        }
+        while (grid->add_regions(-1)) {}
+        for (GridRule& rule : rules)
+        {
+            if (rule.deleted)
+                continue;
+//                if (hit) break;
+            if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                continue;
+            if (rule.apply_region_type.type == RegionType::SET)
+                continue;
 
+            while (true)
+            {
                 Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
-                {
-                    if (rule.apply_region_type.type == RegionType::SET)
-                        cleared_cell = true;
                     hit = true;
-                }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
-                {
                     assert(0);
-                    break;
-                }
                 if (resp == Grid::APPLY_RULE_RESP_NONE)
                 {
                     rule.stale = true;
+                    break;
                 }
-            }
-            if (hit)
-            {
-                for (GridRegion& r : grid->regions)
-                {
-                    if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force != GridRegion::VIS_FORCE_USER))
-                    {
-                        r.vis_level = GRID_VIS_LEVEL_SHOW;
-                        r.stale = false;
-                    }
-                }
-                grid->add_one_new_region();
-            }
-            else
-            {
-                steps_had = 0;
-                for (GridRegion& r : grid->regions)
-                {
-                    r.stale = true;
-                }
-                return;
             }
         }
-
-        if (hit)
+        for (GridRegion& r : grid->regions)
+            r.stale = true;
+        
+        if (grid->add_one_new_region())
         {
-            if(cleared_cell)
-            {
-                if ((frame - sound_index) > 50)
-                {
-                    Mix_PlayChannel(frame % 32, sounds[frame % 8], 0);
-                    sound_index = frame;
-                }
-            }
-            clue_solves.clear();
             for (GridRule& rule : rules)
             {
                 if (rule.deleted)
@@ -673,6 +684,7 @@ void GameState::advance(int steps)
                         rule.stale = true;
                 }
             }
+            clue_solves.clear();
         }
     }
 }
