@@ -181,7 +181,14 @@ GameState::GameState(std::string& load_data, bool json)
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
     Mix_AllocateChannels(32);
 
-    sounds[0] = Mix_LoadWAV( "snd/plop.wav" );
+    sounds[0] = Mix_LoadWAV( "snd/plop0.wav" );
+    sounds[1] = Mix_LoadWAV( "snd/plop1.wav" );
+    sounds[2] = Mix_LoadWAV( "snd/plop2.wav" );
+    sounds[3] = Mix_LoadWAV( "snd/plop3.wav" );
+    sounds[4] = Mix_LoadWAV( "snd/plop4.wav" );
+    sounds[5] = Mix_LoadWAV( "snd/plop5.wav" );
+    sounds[6] = Mix_LoadWAV( "snd/plop6.wav" );
+    sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
     Mix_Volume(-1, 40);
 
 
@@ -260,7 +267,7 @@ GameState::~GameState()
     fonts.clear();
     TTF_CloseFont(score_font);
 
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 8; i++)
         Mix_FreeChunk(sounds[i]);
 
     SDL_DestroyTexture(sdl_texture);
@@ -574,6 +581,7 @@ void GameState::advance(int steps)
     }
 
     unsigned oldtime = SDL_GetTicks();
+    bool cleared_cell = false;
 
     while (true)
     {
@@ -607,11 +615,8 @@ void GameState::advance(int steps)
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
                 {
                     if (rule.apply_region_type.type == RegionType::SET)
-                    {
-                        Mix_PlayChannel(0, sounds[0], 0);
-                    }
+                        cleared_cell = true;
                     hit = true;
-                    break;
                 }
                 if (resp == Grid::APPLY_RULE_RESP_ERROR)
                 {
@@ -648,6 +653,14 @@ void GameState::advance(int steps)
 
         if (hit)
         {
+            if(cleared_cell)
+            {
+                if ((frame - sound_index) > 50)
+                {
+                    Mix_PlayChannel(frame % 32, sounds[frame % 8], 0);
+                    sound_index = frame;
+                }
+            }
             clue_solves.clear();
             for (GridRule& rule : rules)
             {
