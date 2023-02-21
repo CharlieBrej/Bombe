@@ -503,7 +503,7 @@ void GameState::advance(int steps)
             grid_cells_animation.clear();
             grid_regions_animation.clear();
             current_level_is_temp = false;
-            grid_zoom = 0;
+//            grid_zoom = 0;
         }
     }
 
@@ -1310,6 +1310,8 @@ void GameState::render(bool saving)
             grid_offset += XYPos(edge_clue_border, edge_clue_border);
             grid_size -= edge_clue_border * 2;
         }
+        if (!grid->wrapped && grid_zoom < 0)
+            grid_zoom = 0;
         scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
         grid_pitch = grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size));
 
@@ -1746,8 +1748,8 @@ void GameState::render(bool saving)
     {
         XYSet grid_squares = grid->get_squares();
         XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
-        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-1, -1);
-        XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
+        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-2, -2);
+        XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
 
         FOR_XY_SET(pos, grid_squares)
         {
@@ -3560,7 +3562,7 @@ bool GameState::events()
                     break;
                 }
                 grid_zoom += e.wheel.y;
-                grid_zoom = std::clamp(grid_zoom, 0, 20);
+                grid_zoom = std::clamp(grid_zoom, -10, 20);
                 int new_scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
                 scaled_grid_offset -= (mouse - scaled_grid_offset) * (new_scaled_grid_size - scaled_grid_size) / scaled_grid_size;
                 scaled_grid_size = new_scaled_grid_size;
