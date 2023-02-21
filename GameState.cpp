@@ -465,6 +465,7 @@ void GameState::advance(int steps)
 {
     frame = frame + steps;
     frame_step = steps;
+    sound_frame_index = std::min(sound_frame_index + steps, 500);
     deal_with_scores();
     if (server_timeout)
         server_timeout-=steps;
@@ -637,10 +638,10 @@ void GameState::advance(int steps)
                 if (rule.apply_region_type.type == RegionType::VISIBILITY)
                     grid->apply_rule(rule);
             }
-            if ((frame - sound_frame_index) > 50)
+            if (sound_frame_index > 50)
             {
                 Mix_PlayChannel(frame % 32, sounds[frame % 8], 0);
-                sound_frame_index = frame;
+                sound_frame_index -= 50;
             }
             continue;
         }

@@ -1434,6 +1434,19 @@ bool Grid::is_solved(void)
     return true;
 }
 
+bool Grid::add_region(GridRegion& reg)
+{
+    if (contains(regions, reg))
+        return false;
+    for (GridRegion& r : regions_to_add)
+    {
+        if (r == reg && r.gen_cause == reg.gen_cause)
+            return false;
+    }
+    regions_to_add.push_back(reg);
+    return true;
+}
+
 bool Grid::add_region(XYSet& elements, RegionType clue)
 {
     if (!elements.count())
@@ -1467,16 +1480,9 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
         return false;
     }
     assert (clue.value >= 0);
-    {
-        GridRegion reg(clue);
-        reg.elements = elements;
-        if (!contains(regions, reg) && !contains(regions_to_add, reg))
-        {
-            regions_to_add.push_back(reg);
-            return true;
-        }
-        return false;
-    }
+    GridRegion reg(clue);
+    reg.elements = elements;
+    return add_region(reg);
 }
 
 bool Grid::add_regions(int level)
@@ -1640,11 +1646,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
             reg.elements.set(pos);
         }
         reg.gen_cause = GridRegionCause(&rule, r1, r2, r3, r4);
-        bool found = (std::find(regions.begin(), regions.end(), reg) != regions.end())  ||
-                     (std::find(regions_to_add.begin(), regions_to_add.end(),reg) != regions_to_add.end());
-        if (!found)
+        bool added = add_region(reg);
+        if (added)
         {
-            regions_to_add.push_back(reg);
             rule.used_count++;
             return APPLY_RULE_RESP_HIT;
         }
@@ -1808,11 +1812,25 @@ void Grid::add_new_regions()
 
 bool Grid::add_one_new_region()
 {
-    if (!regions_to_add.empty())
+    std::list<GridRegion>::iterator it = regions_to_add.begin();
+    while (it != regions_to_add.end())
     {
-        regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
-        return true;
+        GridRegionCause c = (*it).gen_cause;
+        if( contains(regions, *it) ||
+            (c.regions[0] && c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN) ||
+            (c.regions[1] && c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN) ||
+            (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
+            (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))
+        {
+            it = regions_to_add.erase(it);
+        }
+        else
+        {
+            regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
+            return true;
+        }
     }
+
     return false;
 }
 
@@ -1881,7 +1899,7 @@ void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 
 XYPos SquareGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
-    XYPos rep(pos.x / grid_pitch.x, pos.y / grid_pitch.y);
+    XYPos rep(pos / grid_pitch);
     if (wrapped)
         rep = rep % size;
     if (rep.inside(size))

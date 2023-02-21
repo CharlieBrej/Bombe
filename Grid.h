@@ -130,6 +130,10 @@ public:
         regions[2] = NULL;
         regions[3] = NULL;
     }
+    bool operator==(const GridRegionCause& other) const
+    {
+        return ((rule == other.rule) && (regions[0] == other.regions[0]) && (regions[1] == other.regions[1]) && (regions[2] == other.regions[2]) && (regions[3] == other.regions[3]));
+    }
 };
 
 
@@ -264,6 +268,7 @@ public:
     void reveal(XYPos p);
     bool is_solved(void);
 
+    bool add_region(GridRegion& r);
     bool add_region(XYSet& elements, RegionType clue);
     bool add_regions(int level);
 
