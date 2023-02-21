@@ -108,6 +108,7 @@ public:
 
     std::map<XYPos, int> grid_cells_animation;
     std::map<GridRegion*, int> grid_regions_animation;
+    std::map<GridRegion*, int> grid_regions_fade;
 
     std::list<ConstructedRuleState> constructed_rule_undo;
     std::list<ConstructedRuleState> constructed_rule_redo;
