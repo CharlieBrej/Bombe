@@ -1689,6 +1689,46 @@ static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r
     }
 }
 
+static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
+{
+    XYSet s = r0->elements;
+    unsigned int connected = 1 << 0;
+    bool hit;
+    do
+    {
+        hit = false;
+        if (r1 && !(connected & (1 << 1)) && s.overlaps(r1->elements))
+        {
+            connected |= (1 << 1);
+            s = s | r1->elements;
+            hit = true;
+        }
+        if (r2 && !(connected & (1 << 2)) && s.overlaps(r2->elements))
+        {
+            connected |= (1 << 2);
+            s = s | r2->elements;
+            hit = true;
+        }
+        if (r3 && !(connected & (1 << 3)) && s.overlaps(r3->elements))
+        {
+            connected |= (1 << 3);
+            s = s | r3->elements;
+            hit = true;
+        }
+    }
+    while (hit);
+    if (!r1)
+        return true;
+    if (!r2 && connected == 3)
+        return true;
+    if (!r3 && connected == 7)
+        return true;
+    if (connected == 0xf)
+        return true;
+    return false;
+}
+
+
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
 {
     if (rule.deleted)
@@ -1771,6 +1811,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
                         }
                         else
                         {
+
                             for (GridRegion& r4 : regions)
                             {
                                 if (r4.type != rule.region_type[3])
@@ -1804,6 +1845,86 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
     }
     return APPLY_RULE_RESP_NONE;
 }
+
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion& unstale_region)
+{
+    if (rule.deleted)
+        return APPLY_RULE_RESP_NONE;
+    bool ignore_bin = (rule.apply_region_type.type == RegionType::VISIBILITY);
+
+    assert(rule.region_count);
+    unsigned places_for_reg = 0;
+    for (int i = 0; i < rule.region_count; i++)
+    {
+        if (unstale_region.type == rule.region_type[i])
+            places_for_reg |= 1 << i;
+    }
+    if (!places_for_reg)
+        return APPLY_RULE_RESP_NONE;
+
+    std::vector<GridRegion*> pos_regions[4];
+    for (int i = 0; i < 4; i++)
+    {
+        if (i >= rule.region_count)
+            pos_regions[i].push_back(NULL);
+        else
+        {
+            for (GridRegion& r : regions)
+            {
+                if (r.type != rule.region_type[i])
+                    continue;
+                if (r.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+                    continue;
+
+                pos_regions[i].push_back(&r);
+            }
+        }
+    }
+
+    std::vector<GridRegion*> unstale_regions;
+    unstale_regions.push_back(&unstale_region);
+
+    for (int nonstale_rep_index = 0; nonstale_rep_index < rule.region_count; nonstale_rep_index++)
+    {
+        if (unstale_region.type == rule.region_type[nonstale_rep_index])
+        {
+            std::vector<GridRegion*>& set0 = (nonstale_rep_index == 0) ? unstale_regions : pos_regions[0];
+            for (GridRegion* r0 : set0)
+            {
+                std::vector<GridRegion*>& set1 = (nonstale_rep_index == 1) ? unstale_regions : pos_regions[1];
+                for (GridRegion* r1 : set1)
+                {
+                    std::vector<GridRegion*>& set2 = (nonstale_rep_index == 2) ? unstale_regions : pos_regions[2];
+                    for (GridRegion* r2 : set2)
+                    {
+                        std::vector<GridRegion*>& set3 = (nonstale_rep_index == 3) ? unstale_regions : pos_regions[3];
+                        for (GridRegion* r3 : set3)
+                        {
+                            if (r1 && ((r0 == r1) || (r2 == r1) || (r3 == r1))) continue;
+                            if (r2 && ((r0 == r2) || (r1 == r2) || (r3 == r2))) continue;
+                            if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
+                            if (!are_connected(r0, r1, r2, r3)) continue;
+                            if (rule.matches(r0, r1, r2, r3))
+                            {
+                                ApplyRuleResp resp = apply_rule(rule, r0, r1, r2, r3);
+                                if (resp != APPLY_RULE_RESP_NONE)
+                                    return resp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    return APPLY_RULE_RESP_NONE;
+}
+
+
+
+
+
 void Grid::add_new_regions()
 {
     regions.splice(regions.end(), regions_to_add);

@@ -345,6 +345,10 @@ public:
                         for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES; lset++)
                         {
                             Score s = progress_list->get_num(lset);
+                            if (steam_id == 76561198083927051ull)
+                                continue;
+                            if (steam_id == 1337420ull)
+                                continue;
                             db.scores[lset].add_score(steam_id, s);
                         }
                         std::set<uint64_t> friends;

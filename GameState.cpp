@@ -509,18 +509,6 @@ void GameState::advance(int steps)
         }
     }
 
-    for (GridRule& rule : rules)
-    {
-        if (rule.deleted || rule.stale)
-            continue;
-        if (rule.apply_region_type.type == RegionType::VISIBILITY)
-        {
-            Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-            if (resp == Grid::APPLY_RULE_RESP_NONE)
-                rule.stale = true;
-        }
-    }
-
     if(clue_solves.empty())
         get_hint = false;
     steps_had += steps;
@@ -576,6 +564,8 @@ void GameState::advance(int steps)
         }
     }
 
+
+
     if (speed_dial == 0)
     {
         steps_had = 0;
@@ -598,45 +588,81 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
-        bool hit = false;
-
         for (GridRule& rule : rules)
         {
             if (rule.deleted)
                 continue;
-            if (rule.apply_region_type.type != RegionType::SET)
+            if (rule.stale)
                 continue;
+            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, true);
+            if (resp == Grid::APPLY_RULE_RESP_HIT)
+                return;
+            if (resp == Grid::APPLY_RULE_RESP_NONE)
+                rule.stale = true;
+        }
 
-            while (true)
+        bool hit = false;
+        bool rpt = true;
+        while (rpt)
+        {
+            rpt = false;
+            for (GridRegion& region : grid->regions)
             {
-                Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-                if (resp == Grid::APPLY_RULE_RESP_HIT)
-                    hit = true;
-                if (resp == Grid::APPLY_RULE_RESP_ERROR)
-                    assert(0);
-                if (resp == Grid::APPLY_RULE_RESP_NONE)
+                if (!region.stale)
                 {
-                    rule.stale = true;
-                    break;
+                    for (GridRule& rule : rules)
+                    {
+                        if (rule.deleted)
+                            continue;
+                        if (rule.apply_region_type.type != RegionType::SET)
+                            continue;
+
+                        while (true)
+                        {
+                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                            if (resp == Grid::APPLY_RULE_RESP_HIT)
+                            {
+                                hit = true;
+                                rpt = true;
+                                break;
+                            }
+                            if (resp == Grid::APPLY_RULE_RESP_ERROR)
+                                assert(0);
+                            if (resp == Grid::APPLY_RULE_RESP_NONE)
+                            {
+                                break;
+                            }
+                        }
+                        if (rpt)
+                            break;
+                    }
+                    if (rpt)
+                        break;
                 }
             }
         }
+
+
         if (hit)
         {
             for (GridRegion& r : grid->regions)
             {
-                if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force != GridRegion::VIS_FORCE_USER))
+                if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force == GridRegion::VIS_FORCE_NONE))
                 {
+                    GridVisLevel prev = r.vis_level;
                     r.vis_level = GRID_VIS_LEVEL_SHOW;
-                    r.stale = false;
+                    for (GridRule& rule : rules)
+                    {
+                        if (rule.deleted)
+                            continue;
+                        if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                        {
+                            grid->apply_rule(rule, r);
+                        }
+                        if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
+                            r.stale = false;
+                    }
                 }
-            }
-            for (GridRule& rule : rules)
-            {
-                if (rule.deleted)
-                    continue;
-                if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                    grid->apply_rule(rule);
             }
             if (sound_frame_index > 50)
             {
@@ -645,28 +671,37 @@ void GameState::advance(int steps)
             }
             continue;
         }
-        while (grid->add_regions(-1)) {}
-        for (GridRule& rule : rules)
-        {
-            if (rule.deleted)
-                continue;
-//                if (hit) break;
-            if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                continue;
-            if (rule.apply_region_type.type == RegionType::SET)
-                continue;
 
-            while (true)
+        while (grid->add_regions(-1)) {}
+        for (GridRegion& region : grid->regions)
+        {
+            if (!region.stale)
             {
-                Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-                if (resp == Grid::APPLY_RULE_RESP_HIT)
-                    hit = true;
-                if (resp == Grid::APPLY_RULE_RESP_ERROR)
-                    assert(0);
-                if (resp == Grid::APPLY_RULE_RESP_NONE)
+                for (GridRule& rule : rules)
                 {
-                    rule.stale = true;
-                    break;
+                    if (rule.deleted)
+                        continue;
+                    if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                        continue;
+                    if (rule.apply_region_type.type == RegionType::SET)
+                        continue;
+
+                    while (true)
+                    {
+                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                        if (resp == Grid::APPLY_RULE_RESP_HIT)
+                        {
+                            //grid->apply_rule(rule, region);
+                            hit = true;
+                        }
+                        if (resp == Grid::APPLY_RULE_RESP_ERROR)
+                            assert(0);
+                        if (resp == Grid::APPLY_RULE_RESP_NONE)
+                        {
+                            rule.stale = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -675,15 +710,21 @@ void GameState::advance(int steps)
         
         if (grid->add_one_new_region())
         {
-            for (GridRule& rule : rules)
+            for (GridRegion& region : grid->regions)
             {
-                if (rule.deleted)
-                    continue;
-                if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                if (!region.stale)
                 {
-                    Grid::ApplyRuleResp resp  = grid->apply_rule(rule);
-                    if (resp == Grid::APPLY_RULE_RESP_NONE)
-                        rule.stale = true;
+                    for (GridRule& rule : rules)
+                    {
+                        if (rule.deleted)
+                            continue;
+                        if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                        {
+                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                            if (resp == Grid::APPLY_RULE_RESP_NONE)
+                                rule.stale = true;
+                        }
+                    }
                 }
             }
             clue_solves.clear();
