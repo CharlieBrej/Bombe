@@ -45,6 +45,8 @@ static void DisplayWebsite(const char* url)
 
 }
 
+static Rand rnd(1);
+
 GameState::GameState(std::string& load_data, bool json)
 {
     LevelSet::init_global();
@@ -641,6 +643,20 @@ void GameState::advance(int steps)
                 }
             }
         }
+        // int s = 0;
+        // int ns = 0;
+        // for (GridRegion& r : grid->regions)
+        //     if (r.stale)
+        //         s++;
+        //     else
+        //         ns++;
+        // int ta = 0;
+        // for (GridRegion& r : grid->regions_to_add)
+        //     ta++;
+        // std::cout << "s: " << s << " ns: " << ns << " ta: " << ta << std::endl;
+        // // if (s > 700)
+        // //     exit(1);
+
 
 
         if (hit)
@@ -666,7 +682,7 @@ void GameState::advance(int steps)
             }
             if (sound_frame_index > 50)
             {
-                Mix_PlayChannel(frame % 32, sounds[frame % 8], 0);
+                Mix_PlayChannel(rnd % 32, sounds[rnd % 8], 0);
                 sound_frame_index -= 50;
             }
             continue;
@@ -852,8 +868,8 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
 {
     std::vector<XYPos> elements;
-    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-1, -1);
-    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
+    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
+    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
 
     unsigned anim_prog = grid_regions_animation[&region];
     unsigned max_anim_frame = 500;
@@ -975,8 +991,8 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
 void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
 {
-    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-1, -1);
-    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(3, 3);
+    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
+    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
     bool selected = (&region == mouse_hover_region);
 
     unsigned anim_prog = grid_regions_animation[&region];
@@ -1803,7 +1819,7 @@ void GameState::render(bool saving)
     {
         XYSet grid_squares = grid->get_squares();
         XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
-        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos() : XYPos(-2, -2);
+        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
         XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
 
         FOR_XY_SET(pos, grid_squares)

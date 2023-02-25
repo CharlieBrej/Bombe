@@ -758,6 +758,8 @@ bool Grid::is_determinable(XYPos q)
 {
     LocalGrid tst = *this;
     tst->regions.clear();
+    tst->regions_set.clear();
+
     while (tst->add_regions(-1)) {}
     tst->add_new_regions();
 
@@ -1355,6 +1357,7 @@ void Grid::reveal(XYPos p)
     {
         if((*it).elements.get(p))
         {
+            regions_set.erase(&*it);
             std::list<GridRegion>::iterator old_it = it;
             old_it++;
             deleted_regions.splice(deleted_regions.end(),regions, it);
@@ -1367,8 +1370,12 @@ void Grid::reveal(XYPos p)
     it = regions_to_add.begin();
     while (it != regions_to_add.end())
     {
-        if((*it).elements.get(p))
+        GridRegion* rp = &(*it);
+        if(rp->elements.get(p))
+        {
             it = regions_to_add.erase(it);
+            remove_from_regions_to_add_multiset(&(*it));
+        }
         else
             ++it;
     }
@@ -1436,14 +1443,19 @@ bool Grid::is_solved(void)
 
 bool Grid::add_region(GridRegion& reg)
 {
-    if (contains(regions, reg))
+    if (regions_set.count(&reg)) 
         return false;
-    for (GridRegion& r : regions_to_add)
+
+    const auto [start, end] = regions_to_add_multiset.equal_range(&reg);
+    for (auto i{start}; i != end; i++)
     {
-        if (r == reg && r.gen_cause == reg.gen_cause)
+        GridRegion& r = **i;
+        if (r.gen_cause == reg.gen_cause)
             return false;
     }
+
     regions_to_add.push_back(reg);
+    regions_to_add_multiset.insert(&regions_to_add.back());
     return true;
 }
 
@@ -1916,38 +1928,50 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion& unstale_region)
             }
         }
     }
-
-
     return APPLY_RULE_RESP_NONE;
 }
 
-
-
-
+void Grid::remove_from_regions_to_add_multiset(GridRegion* r)
+{
+    const auto [start, end] = regions_to_add_multiset.equal_range(r);
+    for (auto i{start}; i != end; i++)
+    {
+        if (*i == r)
+        {
+            regions_to_add_multiset.erase(i);
+            return;
+        }
+    }
+}
 
 void Grid::add_new_regions()
 {
+    for (GridRegion& r :regions_to_add)
+        regions_set.insert(&r);
     regions.splice(regions.end(), regions_to_add);
-
+    regions_to_add_multiset.clear();
 }
 
 bool Grid::add_one_new_region()
 {
-    std::list<GridRegion>::iterator it = regions_to_add.begin();
-    while (it != regions_to_add.end())
+    std::list<GridRegion>::iterator it;
+    while ((it = regions_to_add.begin()) != regions_to_add.end())
     {
         GridRegionCause c = (*it).gen_cause;
-        if( contains(regions, *it) ||
+        if( regions_set.count(&*it) ||
             (c.regions[0] && c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[1] && c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))
         {
-            it = regions_to_add.erase(it);
+            regions_to_add.erase(it);
+            remove_from_regions_to_add_multiset(&(*it));
         }
         else
         {
-            regions.splice(regions.end(), regions_to_add, regions_to_add.begin());
+            remove_from_regions_to_add_multiset(&(*it));
+            regions_set.insert(&(*it));
+            regions.splice(regions.end(), regions_to_add, it);
             return true;
         }
     }
@@ -1958,7 +1982,9 @@ bool Grid::add_one_new_region()
 void Grid::clear_regions()
 {
     regions.clear();
+    regions_set.clear();
     regions_to_add.clear();
+    regions_to_add_multiset.clear();
     deleted_regions.clear();
 }
 

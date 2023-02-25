@@ -6,6 +6,7 @@
 #include <set>
 #include <list>
 #include <bitset>
+#include <array>
 
 void grid_set_rnd(int a = 0);
 
@@ -40,6 +41,19 @@ public:
     bool contains(XYSet p) {return !(p & ~*this).any();}
     bool empty() {return d.none();}
     bool operator==(const XYSet& other) const { return (d == other.d); }
+    bool operator<(const XYSet& other) const
+    {
+        typedef std::array<uint64_t, (SIZE / 64)> AsArray;
+        const AsArray a = *reinterpret_cast<const AsArray*>(this);
+        const AsArray b = *reinterpret_cast<const AsArray*>(&other);
+        bool rep = false;
+        for (int i = (SIZE / 64) - 1; i >= 0 ; i--)
+        {
+            if (a[i] < b[i]) {rep = true; break; }
+            if (a[i] > b[i]) {rep = false; break; }
+        }
+        return rep;
+    }
     XYSet operator~() const {return XYSet(~d); }
     XYSet operator&(const XYSet other) const {return XYSet(d & other.d); }
     XYSet operator|(const XYSet other) const {return XYSet(d | other.d); }
@@ -162,6 +176,13 @@ public:
     {
         return (type == other.type) && (elements == other.elements);
     }
+    bool operator<(const GridRegion& other) const
+    {
+        if (type < other.type) return true;
+        if (other.type < type) return false;
+        if (elements < other.elements) return true;
+        return false;
+    }
     void next_colour();
 
 };
@@ -217,6 +238,13 @@ struct EdgePos
     }
 };
 
+
+struct GridRegionCompare {
+    bool operator()(GridRegion* const& lhs, GridRegion* const& rhs) const {
+        return *lhs < *rhs;
+    }
+};
+
 class Grid
 {
 public:
@@ -226,7 +254,9 @@ public:
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
     std::list<GridRegion> regions;
+    std::set<GridRegion*, GridRegionCompare> regions_set;
     std::list<GridRegion> regions_to_add;
+    std::multiset<GridRegion*, GridRegionCompare> regions_to_add_multiset;
     std::list<GridRegion> deleted_regions;
 
 protected:
@@ -282,6 +312,7 @@ public:
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion& region);
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
+    void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
     bool add_one_new_region();
     void clear_regions();
