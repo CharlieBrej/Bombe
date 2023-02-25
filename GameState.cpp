@@ -463,6 +463,7 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 	return new_texture;
 }
 
+
 void GameState::advance(int steps)
 {
     frame = frame + steps;
@@ -643,22 +644,6 @@ void GameState::advance(int steps)
                 }
             }
         }
-        // int s = 0;
-        // int ns = 0;
-        // for (GridRegion& r : grid->regions)
-        //     if (r.stale)
-        //         s++;
-        //     else
-        //         ns++;
-        // int ta = 0;
-        // for (GridRegion& r : grid->regions_to_add)
-        //     ta++;
-        // std::cout << "s: " << s << " ns: " << ns << " ta: " << ta << std::endl;
-        // // if (s > 700)
-        // //     exit(1);
-
-
-
         if (hit)
         {
             for (GridRegion& r : grid->regions)

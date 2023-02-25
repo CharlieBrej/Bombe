@@ -250,6 +250,7 @@ class Grid
 public:
     XYPos size;
     bool wrapped = false;
+    bool big_regions_to_add = false;
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
@@ -298,7 +299,7 @@ public:
     void reveal(XYPos p);
     bool is_solved(void);
 
-    bool add_region(GridRegion& r);
+    bool add_region(GridRegion& r, bool front = false);
     bool add_region(XYSet& elements, RegionType clue);
     bool add_regions(int level);
 

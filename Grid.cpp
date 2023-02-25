@@ -1373,8 +1373,8 @@ void Grid::reveal(XYPos p)
         GridRegion* rp = &(*it);
         if(rp->elements.get(p))
         {
-            it = regions_to_add.erase(it);
             remove_from_regions_to_add_multiset(&(*it));
+            it = regions_to_add.erase(it);
         }
         else
             ++it;
@@ -1441,21 +1441,39 @@ bool Grid::is_solved(void)
     return true;
 }
 
-bool Grid::add_region(GridRegion& reg)
+bool Grid::add_region(GridRegion& reg, bool front)
 {
     if (regions_set.count(&reg)) 
         return false;
-
+    int cnt = 0;
     const auto [start, end] = regions_to_add_multiset.equal_range(&reg);
     for (auto i{start}; i != end; i++)
     {
-        GridRegion& r = **i;
-        if (r.gen_cause == reg.gen_cause)
+        if (big_regions_to_add)
             return false;
+        GridRegion& r = **i;
+        cnt++;
+        if (r.gen_cause == reg.gen_cause)
+        {
+            return false;
+        }
     }
 
-    regions_to_add.push_back(reg);
-    regions_to_add_multiset.insert(&regions_to_add.back());
+    if (front)
+    {
+        regions_to_add.push_front(reg);
+        regions_to_add_multiset.insert(&regions_to_add.front());
+    }
+    else
+    {
+        regions_to_add.push_back(reg);
+        regions_to_add_multiset.insert(&regions_to_add.back());
+    }
+    if (!big_regions_to_add)
+    {
+        if (regions_to_add.size() > 1000)
+            big_regions_to_add = true;
+    }
     return true;
 }
 
@@ -1494,7 +1512,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
     assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
-    return add_region(reg);
+    return add_region(reg, true);
 }
 
 bool Grid::add_regions(int level)
@@ -1950,6 +1968,7 @@ void Grid::add_new_regions()
         regions_set.insert(&r);
     regions.splice(regions.end(), regions_to_add);
     regions_to_add_multiset.clear();
+    big_regions_to_add = false;
 }
 
 bool Grid::add_one_new_region()
@@ -1964,8 +1983,8 @@ bool Grid::add_one_new_region()
             (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))
         {
-            regions_to_add.erase(it);
             remove_from_regions_to_add_multiset(&(*it));
+            regions_to_add.erase(it);
         }
         else
         {
@@ -1975,7 +1994,7 @@ bool Grid::add_one_new_region()
             return true;
         }
     }
-
+    big_regions_to_add = false;
     return false;
 }
 
@@ -1985,6 +2004,7 @@ void Grid::clear_regions()
     regions_set.clear();
     regions_to_add.clear();
     regions_to_add_multiset.clear();
+    big_regions_to_add = false;
     deleted_regions.clear();
 }
 
