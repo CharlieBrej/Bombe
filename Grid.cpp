@@ -1451,6 +1451,8 @@ bool Grid::add_region(GridRegion& reg, bool front)
     {
         GridRegion& r = **i;
         cnt++;
+        if (cnt > 100)
+            return false;
         if (r.gen_cause == reg.gen_cause)
         {
             return false;
@@ -1911,6 +1913,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
 
     std::vector<GridRegion*> unstale_regions;
     unstale_regions.push_back(unstale_region);
+    ApplyRuleResp rep = APPLY_RULE_RESP_NONE;
 
     for (int nonstale_rep_index = 0; nonstale_rep_index < rule.region_count; nonstale_rep_index++)
     {
@@ -1935,8 +1938,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                             if (rule.matches(r0, r1, r2, r3))
                             {
                                 ApplyRuleResp resp = apply_rule(rule, r0, r1, r2, r3);
-                                if (resp != APPLY_RULE_RESP_NONE)
+                                if ((resp != APPLY_RULE_RESP_NONE) && (rule.apply_region_type.type == RegionType::SET))
                                     return resp;
+                                if (resp == APPLY_RULE_RESP_HIT)
+                                    rep = APPLY_RULE_RESP_HIT;
+
                             }
                         }
                     }
@@ -1944,7 +1950,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
             }
         }
     }
-    return APPLY_RULE_RESP_NONE;
+    return rep;
 }
 
 void Grid::remove_from_regions_to_add_multiset(GridRegion* r)

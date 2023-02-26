@@ -699,6 +699,7 @@ void GameState::advance(int steps)
                         {
                             //grid->apply_rule(rule, region);
                             hit = true;
+                            break;
                         }
                         if (resp == Grid::APPLY_RULE_RESP_ERROR)
                             assert(0);
