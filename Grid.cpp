@@ -492,6 +492,23 @@ void GridRule::remove_region(int index)
     }
     apply_region_bitmap = new_apply_region_bitmap;
 }
+RegionType GridRule::get_region_sorted(int index)
+{
+    if (sort_perm)
+        return region_type[(sort_perm >> (index * 2)) & 0x3];
+    struct Sorter {
+        GridRule& g;
+        Sorter(GridRule& g_): g(g_) {};
+        bool operator() (int i,int j) { return (g.region_type[i] < g.region_type[j]);}
+    };
+    Sorter sorter(*this);
+    std::vector<int> idx;
+    for(int i=0;i<region_count;i++)
+        idx.push_back(i);
+    std::sort (idx.begin(), idx.end(), sorter);
+    sort_perm = idx[0] | (idx[1] << 2) | (idx[2] << 4) | (idx[3] << 6);
+    return region_type[(sort_perm >> (index * 2)) & 0x3];
+}
 
 void Grid::randomize(XYPos size_, bool wrapped_, int merged_count, int row_percent)
 {

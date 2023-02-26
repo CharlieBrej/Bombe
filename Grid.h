@@ -148,6 +148,7 @@ public:
     {
         return ((rule == other.rule) && (regions[0] == other.regions[0]) && (regions[1] == other.regions[1]) && (regions[2] == other.regions[2]) && (regions[3] == other.regions[3]));
     }
+    
 };
 
 
@@ -199,6 +200,7 @@ public:
     bool deleted = false;
     unsigned used_count = 0;
     unsigned clear_count = 0;
+    uint8_t sort_perm = 0;
 
 
     GridRule(){};
@@ -212,6 +214,7 @@ public:
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     bool is_legal();
     void remove_region(int index);
+    RegionType get_region_sorted(int index);
 
 };
 

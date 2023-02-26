@@ -1719,9 +1719,9 @@ void GameState::render(bool saving)
                 {
                     for (int i = 0; i < a.rule->region_count && i < b.rule->region_count; i++)
                     {
-                        if (a.rule->region_type[i] < b.rule->region_type[i])
+                        if (a.rule->get_region_sorted(i) < b.rule->get_region_sorted(i))
                             return true;
-                        if (b.rule->region_type[i] < a.rule->region_type[i])
+                        if (b.rule->get_region_sorted(i) < a.rule->get_region_sorted(i))
                             return false;
                     }
                     return (a.rule->region_count < b.rule->region_count);
@@ -1771,7 +1771,7 @@ void GameState::render(bool saving)
             render_number(rule.region_count, list_pos + XYPos(2 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
             for (int i = 0; i <rule.region_count; i++)
             {
-                render_region_bubble(rule.region_type[i], 0, list_pos + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
+                render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
 
             render_number(rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
