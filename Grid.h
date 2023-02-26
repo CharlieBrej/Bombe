@@ -311,7 +311,7 @@ public:
     };
 
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion& region);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region);
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();

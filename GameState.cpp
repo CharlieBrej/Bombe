@@ -600,7 +600,7 @@ void GameState::advance(int steps)
                 continue;
             if (rule.stale)
                 continue;
-            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, true);
+            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
             if (resp == Grid::APPLY_RULE_RESP_HIT)
                 return;
             if (resp == Grid::APPLY_RULE_RESP_NONE)
@@ -625,7 +625,7 @@ void GameState::advance(int steps)
 
                         while (true)
                         {
-                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
                             if (resp == Grid::APPLY_RULE_RESP_HIT)
                             {
                                 hit = true;
@@ -661,7 +661,7 @@ void GameState::advance(int steps)
                             continue;
                         if (rule.apply_region_type.type == RegionType::VISIBILITY)
                         {
-                            grid->apply_rule(rule, r);
+                            grid->apply_rule(rule, &r);
                         }
                         if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
                             r.stale = false;
@@ -681,6 +681,8 @@ void GameState::advance(int steps)
         {
             if (!region.stale)
             {
+                if (region.vis_level == GRID_VIS_LEVEL_BIN)
+                        continue;
                 for (GridRule& rule : rules)
                 {
                     if (rule.deleted)
@@ -692,7 +694,7 @@ void GameState::advance(int steps)
 
                     while (true)
                     {
-                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
                         if (resp == Grid::APPLY_RULE_RESP_HIT)
                         {
                             //grid->apply_rule(rule, region);
@@ -724,7 +726,7 @@ void GameState::advance(int steps)
                             continue;
                         if (rule.apply_region_type.type == RegionType::VISIBILITY)
                         {
-                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, region);
+                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
                             if (resp == Grid::APPLY_RULE_RESP_NONE)
                                 rule.stale = true;
                         }
