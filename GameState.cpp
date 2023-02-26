@@ -495,7 +495,10 @@ void GameState::advance(int steps)
                 {
                     current_level_index++;
                     if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
+                    {
+                        auto_progress = false;
                         current_level_index = 0;
+                    }
                 }
                 while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
             }
@@ -730,6 +733,11 @@ void GameState::advance(int steps)
             }
             clue_solves.clear();
         }
+        else
+        {
+            if (auto_progress && !grid->is_solved())
+                skip_level = true;
+        }
     }
 }
 
@@ -853,6 +861,7 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
 {
     std::vector<XYPos> elements;
+    std::vector<int> element_sizes;
     XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
     XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
 
@@ -866,6 +875,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
         XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
         XYPos n = d.pos + d.size / 2;
         elements.push_back(n);
+        element_sizes.push_back(std::min(d.size.x, d.size.y));
         taken[pos]++;
         FOR_XY(r, wrap_start, wrap_end)
         {
@@ -927,7 +937,9 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             XYPos last = elements[best_con.y] + best_grid * wrap_size;
             double dist = XYPosFloat(pos).distance(XYPosFloat(last));
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
-            int line_thickness = (scaled_grid_size / std::min(grid->size.x, grid->size.y)) / 32;
+            int s = std::min(element_sizes[best_con.x], element_sizes[best_con.y]);
+            int line_thickness = std::min(s/4, (scaled_grid_size / std::min(grid->size.x, grid->size.y)) / 32);
+
 
             if ((disp_type == 1) && selected)
             {
@@ -3004,6 +3016,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             current_level_set_index = idx;
             current_level_index = 0;
             skip_level = true;
+            auto_progress =  (clicks > 1);
         }
     }
 }

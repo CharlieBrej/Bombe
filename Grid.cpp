@@ -1977,11 +1977,12 @@ bool Grid::add_one_new_region()
     while ((it = regions_to_add.begin()) != regions_to_add.end())
     {
         GridRegionCause c = (*it).gen_cause;
-        if( regions_set.count(&*it) ||
+        if (regions_set.count(&*it) ||
+            (!big_regions_to_add && (
             (c.regions[0] && c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[1] && c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN) ||
             (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
-            (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))
+            (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))))
         {
             remove_from_regions_to_add_multiset(&(*it));
             regions_to_add.erase(it);

@@ -156,6 +156,7 @@ public:
     std::string tooltip_string = "";
 
     bool skip_level = false;
+    bool auto_progress = false;
     double steps_had = 0;
 
     unsigned server_timeout = 0;
