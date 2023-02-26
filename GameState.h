@@ -156,6 +156,7 @@ public:
 
     bool full_screen = false;
     std::string tooltip_string = "";
+    XYRect tooltip_rect;
 
     bool skip_level = false;
     bool auto_progress = false;
@@ -232,7 +233,7 @@ public:
     void render_text_box(XYPos pos, std::string& s, bool left = false);
     std::string translate(std::string s);
     void render_tooltip();
-    void add_tooltip(SDL_Rect& dst_rect, const char* text);
+    void add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_number_string(std::string str, XYPos pos, XYPos siz);

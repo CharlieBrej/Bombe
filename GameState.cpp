@@ -1116,12 +1116,13 @@ void GameState::render_tooltip()
 {
     if (tooltip_string != "")
     {
+        render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
         std::string t = translate(tooltip_string);
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
 }
 
-void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text)
+void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable)
 {
     if ((mouse.x >= dst_rect.x) &&
         (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -1129,6 +1130,7 @@ void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text)
         (mouse.y < (dst_rect.y + dst_rect.h)))
     {
         tooltip_string = text;
+        tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
     }
 }
 
@@ -2197,6 +2199,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {1088, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 2, button_size * 2, button_size};
         add_tooltip(dst_rect, "Visible");
     }
     {
@@ -2206,6 +2209,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {896, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 3, button_size * 2, button_size};
         add_tooltip(dst_rect, "Hidden");
     }
     {
@@ -2215,6 +2219,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {512, 768, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 4, button_size * 2, button_size};
         add_tooltip(dst_rect, "Trash");
     }
 
@@ -2230,14 +2235,6 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-    }
-
-    {
-        render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-        SDL_Rect src_rect = {512, 768, 192, 192};
-        SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Trash");
     }
 
     XYPos p = XYPos(0,0);
@@ -3348,7 +3345,22 @@ bool GameState::events()
 	    switch (e.type)
         {
             case SDL_WINDOWEVENT:
-                break;
+                switch (e.window.event)
+                {
+                    case SDL_WINDOWEVENT_LEAVE:
+                    {
+                        display_rules_click_drag = false;
+                        grid_dragging = false;
+                        dragging_speed = false;
+                    }
+
+                    default:
+                    {
+//                        printf("window event:0x%x\n", e.window.event);
+                        break;
+                    }
+                }
+            break;
 
             case SDL_QUIT:
 		        quit = true;
