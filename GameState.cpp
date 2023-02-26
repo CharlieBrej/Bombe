@@ -511,7 +511,6 @@ void GameState::advance(int steps)
             grid_regions_animation.clear();
             grid_regions_fade.clear();
             current_level_is_temp = false;
-//            grid_zoom = 0;
         }
     }
 
@@ -1636,6 +1635,14 @@ void GameState::render(bool saving)
                 col_click = 2;
         }
         {
+            SDL_Rect src_rect = {704 + 2 * 192, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 3 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Regions");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                col_click = 3;
+        }
+        {
             SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1664,10 +1671,20 @@ void GameState::render(bool saving)
             if (display_rules_sort_col == col_click)
                 display_rules_sort_dir = !display_rules_sort_dir;
             else
+            {
+                display_rules_sort_col_2nd = display_rules_sort_col;
+                display_rules_sort_dir_2nd = display_rules_sort_dir;
                 display_rules_sort_col = col_click;
+                display_rules_sort_dir = true;
+            }
         }
 
 
+        {
+            SDL_Rect src_rect = {1088 + (192 * 2) + (display_rules_sort_dir_2nd ? 0 : 192), 2336, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + display_rules_sort_col_2nd * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
         {
             SDL_Rect src_rect = {1088 + (display_rules_sort_dir ? 0 : 192), 2336, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + display_rules_sort_col * cell_width, list_pos.y, cell_width, cell_width};
@@ -1695,20 +1712,17 @@ void GameState::render(bool saving)
                 if (col == 1)
                     return (a.rule->apply_region_type < b.rule->apply_region_type);
                 if (col == 2)
+                    return a.rule->region_count < b.rule->region_count;
+                if (col == 3)
                 {
-                    if (a.rule->region_count < b.rule->region_count)
-                        return true;
-                    if (a.rule->region_count > b.rule->region_count)
-                        return false;
-                    for (int i = 0; i < a.rule->region_count; i++)
+                    for (int i = 0; i < a.rule->region_count && i < b.rule->region_count; i++)
                     {
                         if (a.rule->region_type[i] < b.rule->region_type[i])
                             return true;
                         if (b.rule->region_type[i] < a.rule->region_type[i])
                             return false;
                     }
-
-                    return false;
+                    return (a.rule->region_count < b.rule->region_count);
                 }
                 if (col == 5)
                     return (a.rule->used_count < b.rule->used_count);
@@ -1727,6 +1741,7 @@ void GameState::render(bool saving)
             i++;
         }
 
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd));
         std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir));
 
         if (rules_list_offset + row_count > rules_list.size())

@@ -90,6 +90,8 @@ public:
     bool display_rules_click_drag = false;
     int display_rules_sort_col = 0;
     bool display_rules_sort_dir = true;
+    int display_rules_sort_col_2nd = 1;
+    bool display_rules_sort_dir_2nd = true;
 
     struct ConstructedRuleState
     {
