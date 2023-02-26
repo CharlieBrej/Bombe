@@ -1739,6 +1739,7 @@ void GameState::render(bool saving)
         {
             if (r.deleted)
                 continue;
+            r.resort_region();
             rules_list.push_back(RuleDiplay{i, &r});
             i++;
         }

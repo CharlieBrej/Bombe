@@ -492,10 +492,8 @@ void GridRule::remove_region(int index)
     }
     apply_region_bitmap = new_apply_region_bitmap;
 }
-RegionType GridRule::get_region_sorted(int index)
+void GridRule::resort_region()
 {
-    if (sort_perm)
-        return region_type[(sort_perm >> (index * 2)) & 0x3];
     struct Sorter {
         GridRule& g;
         Sorter(GridRule& g_): g(g_) {};
@@ -507,6 +505,10 @@ RegionType GridRule::get_region_sorted(int index)
         idx.push_back(i);
     std::sort (idx.begin(), idx.end(), sorter);
     sort_perm = idx[0] | (idx[1] << 2) | (idx[2] << 4) | (idx[3] << 6);
+}
+
+RegionType GridRule::get_region_sorted(int index)
+{
     return region_type[(sort_perm >> (index * 2)) & 0x3];
 }
 

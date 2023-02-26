@@ -214,6 +214,7 @@ public:
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     bool is_legal();
     void remove_region(int index);
+    void resort_region();
     RegionType get_region_sorted(int index);
 
 };
