@@ -221,7 +221,8 @@ struct RenderCmd
     XYRect dst;
     double angle = 0.0;
     XYPos center = XYPos(0,0);
-    RenderCmd (XYRect src_, XYRect dst_): src(src_),dst(dst_){}
+    bool bg = false;
+    RenderCmd (XYRect src_, XYRect dst_, bool bg_ = false): src(src_),dst(dst_),bg(bg_){}
     RenderCmd (XYRect src_, XYRect dst_, double angle_, XYPos center_): src(src_),dst(dst_), angle(angle_), center(center_) {}
 };
 
@@ -284,7 +285,7 @@ public:
     virtual XYPos get_grid_pitch(XYPos grid_size) = 0;
     virtual XYRect get_square_pos(XYPos pos, XYPos grid_pitch) = 0;
     virtual XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total) = 0;
-    virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted) = 0;
+    virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd) = 0;
     virtual void add_random_merged(int count) {}
     virtual XYPos get_base_square(XYPos p) {return p;}
     virtual XYPos get_wrapped_size(XYPos grid_pitch) = 0;
@@ -350,7 +351,7 @@ public:
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
-    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     void add_random_merged(int count);
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
@@ -378,7 +379,7 @@ public:
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
-    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     void add_random_merged(int count);
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
@@ -403,6 +404,6 @@ public:
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
-    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd, bool highlighted);
+    void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     XYPos get_wrapped_size(XYPos grid_pitch);
 };

@@ -1841,23 +1841,44 @@ void GameState::render(bool saving)
 
         FOR_XY_SET(pos, grid_squares)
         {
+            Colour bg_col(0,0,0);
+            bool hl = false;
             {
-                SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
                 if (clue_solves.count(pos))
-                    SDL_SetTextureColorMod(sdl_texture, 0, 255, 0);
+                {
+                    bg_col = Colour(0, 255, 0);
+                }
                 if (filter_pos.get(pos))
-                    SDL_SetTextureColorMod(sdl_texture, 255,0, 0);
+                {
+                    bg_col = Colour(255,0, 0);
+                }
+                if (hover_rulemaker && hover_squares_highlight.get(pos))
+                {
+                    bg_col = Colour(255,255, 0);
+                }
             }
             std::vector<RenderCmd> cmds;
-            grid->render_square(pos, grid_pitch, cmds, hover_rulemaker && hover_squares_highlight.get(pos));
+            grid->render_square(pos, grid_pitch, cmds);
+            SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
             for (RenderCmd& cmd : cmds)
             {
                 FOR_XY(r, wrap_start, wrap_end)
                 {
+                    if (cmd.bg)
+                    {
+                        if (bg_col == Colour(0, 0, 0))
+                            continue;
+                        SDL_SetTextureColorMod(sdl_texture, bg_col.r,  bg_col.g, bg_col.b);
+
+                    }
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + cmd.dst.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
                     SDL_Point rot_center = {cmd.center.x, cmd.center.y};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
+                    if (cmd.bg)
+                        SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
+
+
                 }
             }
             SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);

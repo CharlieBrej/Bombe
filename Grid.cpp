@@ -2145,13 +2145,12 @@ XYRect SquareGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, u
 
 }
 
-void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
-    if (highlighted)
     {
         XYRect src(793, 250, 1, 1);
         XYRect dst(pos * grid_pitch, grid_pitch);
-        cmds.push_back({src,dst});
+        cmds.push_back({src,dst, true});
     }
     XYPos s = get_square_size(pos);
     if (s == XYPos(1,1))
@@ -2451,18 +2450,18 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         return XYRect(pos * grid_pitch + XYPos(p.x, grid_pitch.y - bsize - p.y), XYPos(bsize, bsize));
 }
 
-void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
     XYPos sq_size = get_square_size(pos);
     XYPos line_seg(grid_pitch.x * 2, grid_pitch.x / 16 + 1);
     if (sq_size == XYPos(3,2))
     {
 
-        if (highlighted)
+        
         {
             XYRect src(64, 1984 , 384, 384);
             XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
-            cmds.push_back(RenderCmd(src,dst));
+            cmds.push_back(RenderCmd(src,dst, true));
         }
         XYRect src(5, 1024, 1, 1);
         XYRect dst;
@@ -2482,11 +2481,10 @@ void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<Render
 
     }
     bool downwards = (pos.x ^ pos.y) & 1;
-    if (highlighted)
     {
         XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
         XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
-        cmds.push_back(RenderCmd(src,dst));
+        cmds.push_back(RenderCmd(src,dst, true));
     }
 
     if (downwards)
@@ -2740,14 +2738,13 @@ XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, 
     return XYRect(ppos + p, XYPos(bsize, bsize));
 }
 
-void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds, bool highlighted)
+void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
     int downstep = pos.x & 1;
-    if (highlighted)
     {
         XYRect src(64, 1984 , 384, 384);
         XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
-        cmds.push_back(RenderCmd(src,dst));
+        cmds.push_back(RenderCmd(src,dst, true));
     }
 
     {

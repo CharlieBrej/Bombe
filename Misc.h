@@ -576,3 +576,15 @@ uint64_t checksum(std::string s);
 template<class _container, class _Ty> inline
     bool contains(_container _C, const _Ty& _Val)
     {return std::find(_C.begin(), _C.end(), _Val) != _C.end(); }
+
+class Colour
+{
+public:
+    uint8_t r,g,b;
+    Colour(uint8_t r_, uint8_t g_, uint8_t b_):
+        r(r_),g(g_),b(b_) {}
+    bool operator==(const Colour& other) const
+    {
+        return (r == other.r) && (g == other.g) && (b == other.b);
+    }
+};
