@@ -485,7 +485,6 @@ void GameState::advance(int steps)
                 level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             }
         }
-        skip_level = false;
 
         if (level_progress[current_level_group_index][current_level_set_index].count_todo)
         {
@@ -493,11 +492,22 @@ void GameState::advance(int steps)
             {
                 do
                 {
-                    current_level_index++;
-                    if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
+                    if (skip_level < 0)
                     {
-                        auto_progress = false;
-                        current_level_index = 0;
+                        if (current_level_index == 0)
+                        {
+                            current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size() - 1;
+                        }
+                        current_level_index--;
+                    }
+                    else
+                    {
+                        current_level_index++;
+                        if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
+                        {
+                            auto_progress = false;
+                            current_level_index = 0;
+                        }
                     }
                 }
                 while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
@@ -512,6 +522,7 @@ void GameState::advance(int steps)
             grid_regions_fade.clear();
             current_level_is_temp = false;
         }
+        skip_level = 0;
     }
 
     if(clue_solves.empty())
@@ -744,7 +755,7 @@ void GameState::advance(int steps)
         else
         {
             if (auto_progress && !grid->is_solved())
-                skip_level = true;
+                skip_level = 1;
         }
     }
 }
@@ -3023,7 +3034,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 
     }
     if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
-        skip_level = true;
+    {
+        skip_level = (btn == 2) ? -1 : 1;
+    }
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         clue_solves.clear();
@@ -3058,7 +3071,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             current_level_group_index = x;
             current_level_set_index = 0;
             current_level_index = 0;
-            skip_level = true;
+            skip_level = 1;
         }
     }
 
@@ -3072,7 +3085,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         {
             current_level_set_index = idx;
             current_level_index = 0;
-            skip_level = true;
+            skip_level = 1;
             auto_progress =  (clicks > 1);
         }
     }
@@ -3488,7 +3501,7 @@ bool GameState::events()
                     }
                     case SDL_SCANCODE_F3:
                     {
-                        skip_level = true;
+                        skip_level = 1;
                         break;
                     }
                     case SDL_SCANCODE_F4:
@@ -3584,7 +3597,7 @@ bool GameState::events()
                             current_level_group_index = 1;
                             current_level_set_index = 0;
                             current_level_index = 0;
-                            skip_level = true;
+                            skip_level = 1;
                             if (!display_reset_confirm_levels_only)
                                 rules.clear();
                             else

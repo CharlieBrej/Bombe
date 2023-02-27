@@ -158,7 +158,7 @@ public:
     std::string tooltip_string = "";
     XYRect tooltip_rect;
 
-    bool skip_level = false;
+    int skip_level = 0;
     bool auto_progress = false;
     double steps_had = 0;
 
@@ -204,7 +204,7 @@ public:
 
     unsigned current_level_group_index = 1;
     unsigned current_level_set_index = 0;
-    unsigned current_level_index = 0;
+    int current_level_index = 0;
     bool current_level_is_temp = true;
 
 
