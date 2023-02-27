@@ -165,6 +165,7 @@ public:
         VIS_FORCE_USER,
     } visibility_force = VIS_FORCE_NONE;
     bool stale = false;
+    bool deleted = false;
     XYSet elements;
 
     GridRegionCause gen_cause;

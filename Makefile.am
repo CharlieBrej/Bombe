@@ -42,10 +42,11 @@ GridGenerator_SOURCES =     grid_generator.cpp \
                     Grid.cpp Grid.h \
                     Misc.cpp Misc.h \
                     SaveState.cpp SaveState.h \
-                    LevelSet.cpp LevelSet.h
+                    LevelSet.cpp LevelSet.h \
+                    Compress.cpp Compress.h
 
-GridGenerator_CXXFLAGS = @CXXFLAGS@ @Z3_CFLAGS@ $(EXTRA_FLAGS)
-GridGenerator_LDADD=@Z3_LIBS@ $(EXTRA_LDADD) -lpthread
+GridGenerator_CXXFLAGS = @CXXFLAGS@ @ZSTD_CFLAGS@ @Z3_CFLAGS@ $(EXTRA_FLAGS)
+GridGenerator_LDADD=@ZSTD_LIBS@ @Z3_LIBS@ $(EXTRA_LDADD) -lpthread
 GridGenerator_LDFLAGS=-L. $(EXTRA_LD_FLAGS)
 
 BombeServer_SOURCES =   BombeServer.cpp BombeServer.h \

@@ -1376,6 +1376,7 @@ void Grid::reveal(XYPos p)
     {
         if((*it).elements.get(p))
         {
+            (*it).deleted = true;
             regions_set.erase(&*it);
             std::list<GridRegion>::iterator old_it = it;
             old_it++;

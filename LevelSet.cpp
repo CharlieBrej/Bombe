@@ -1,6 +1,7 @@
 #include "LevelSet.h"
 #include "Grid.h"
 #include "SaveState.h"
+#include "Compress.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -37,10 +38,14 @@ SaveObject* LevelSet::save()
 
 void LevelSet::init_global()
 {
-    if (!global_level_sets[1].empty())
+    if (!global_level_sets[0].empty())
         return;
-    std::ifstream loadfile("levels.json");
-    SaveObjectMap* omap = SaveObject::load(loadfile)->get_map();
+    std::ifstream loadfile("levels.data");
+    std::stringstream str_stream;
+    str_stream << loadfile.rdbuf();
+    std::string str = decompress_string(str_stream.str());
+
+    SaveObjectMap* omap = SaveObject::load(str)->get_map();
     SaveObjectList* llist = omap->get_item("level_sets")->get_list();
     delete_global();
 
@@ -83,7 +88,9 @@ void LevelSet::save_global()
     }
 
     omap->add_item("level_sets", llist);
-    std::ofstream outfile ("levels.json");
+    std::ofstream outfile ("levels.data");
     omap->save(outfile);
+    std::string out_data = compress_string(omap->to_string());
+    outfile << out_data;
     delete omap;
 }

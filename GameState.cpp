@@ -580,6 +580,19 @@ void GameState::advance(int steps)
     unsigned oldtime = SDL_GetTicks();
     bool cleared_cell = false;
 
+    for (GridRule& rule : rules)
+    {
+        if (rule.deleted)
+            continue;
+        if (rule.stale)
+            continue;
+        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
+        if (resp == Grid::APPLY_RULE_RESP_HIT)
+            return;
+        if (resp == Grid::APPLY_RULE_RESP_NONE)
+            rule.stale = true;
+    }
+
     while (true)
     {
         unsigned diff = SDL_GetTicks() - oldtime;
@@ -593,18 +606,6 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
-        for (GridRule& rule : rules)
-        {
-            if (rule.deleted)
-                continue;
-            if (rule.stale)
-                continue;
-            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
-            if (resp == Grid::APPLY_RULE_RESP_HIT)
-                return;
-            if (resp == Grid::APPLY_RULE_RESP_NONE)
-                rule.stale = true;
-        }
 
         bool hit = false;
         bool rpt = true;
@@ -650,8 +651,13 @@ void GameState::advance(int steps)
         {
             for (GridRegion& r : grid->regions)
             {
-                if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && (r.visibility_force == GridRegion::VIS_FORCE_NONE))
+                if (r.vis_cause.rule && (
+                    (r.vis_cause.regions[0] && r.vis_cause.regions[0]->deleted) ||
+                    (r.vis_cause.regions[1] && r.vis_cause.regions[1]->deleted) ||
+                    (r.vis_cause.regions[2] && r.vis_cause.regions[2]->deleted) ||
+                    (r.vis_cause.regions[3] && r.vis_cause.regions[3]->deleted) ))
                 {
+                    r.vis_cause = GridRegionCause();
                     GridVisLevel prev = r.vis_level;
                     r.vis_level = GRID_VIS_LEVEL_SHOW;
                     for (GridRule& rule : rules)
@@ -1116,7 +1122,8 @@ void GameState::render_tooltip()
 {
     if (tooltip_string != "")
     {
-        render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
+        if (tooltip_rect.pos.x >= 0)
+            render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
         std::string t = translate(tooltip_string);
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
@@ -1130,7 +1137,10 @@ void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
         (mouse.y < (dst_rect.y + dst_rect.h)))
     {
         tooltip_string = text;
-        tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
+        if (clickable)
+            tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
+        else
+            tooltip_rect = XYRect(-1,-1,-1,-1);
     }
 }
 
@@ -2134,7 +2144,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Skip Level");
+        add_tooltip(dst_rect, "Next Level");
     }
     {
         SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
@@ -2146,7 +2156,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {704, 1920, 576, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size * 3, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_tooltip(dst_rect, "Speed");
+        add_tooltip(dst_rect, "Speed", false);
 
         src_rect = {1280, 1920, 64, 192};
         dst_rect = {left_panel_offset.x + int(speed_dial * 2.6666 * button_size), left_panel_offset.y + button_size * 1, button_size / 3, button_size};
@@ -2264,7 +2274,17 @@ void GameState::render(bool saving)
     {
         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
         if (i == current_level_set_index)
+        {
             render_box(pos, XYPos(button_size, button_size), button_size/4);
+            if (auto_progress)
+            {
+                SDL_Rect src_rect = {1344, 1920, 128, 128};
+                SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+                SDL_Point rot_center = {button_size / 2, button_size / 2};
+                double angle = frame * 0.05;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+            }
+        }
         int c = level_progress[current_level_group_index][i].count_todo;
         if (!global_level_sets[current_level_group_index][i]->levels.size() || !level_is_accessible(i))
         {
