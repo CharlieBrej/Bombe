@@ -5,6 +5,9 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#ifdef _WIN32
+    #include <filesystem>
+#endif
 
 std::vector<LevelSet*> global_level_sets[GLBAL_LEVEL_SETS];
 
@@ -40,7 +43,13 @@ void LevelSet::init_global()
 {
     if (!global_level_sets[0].empty())
         return;
-    std::ifstream loadfile("levels.data");
+
+#ifdef _WIN32
+        std::ifstream loadfile(std::filesystem::path((char8_t*)"levels.data"), std::ios::binary);
+#else
+        std::ifstream loadfile("levels.data");
+#endif
+
     std::stringstream str_stream;
     str_stream << loadfile.rdbuf();
     std::string str = decompress_string(str_stream.str());
@@ -88,7 +97,12 @@ void LevelSet::save_global()
     }
 
     omap->add_item("level_sets", llist);
-    std::ofstream outfile ("levels.data");
+#ifdef _WIN32
+            std::ofstream outfile (std::filesystem::path((char8_t*)"levels.data"), std::ios::binary);
+#else
+            std::ofstream outfile ("levels.data");
+#endif
+   
     omap->save(outfile);
     std::string out_data = compress_string(omap->to_string());
     outfile << out_data;
