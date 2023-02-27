@@ -901,7 +901,11 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             if (XYPosFloat(mouse - wrap_size * r - scaled_grid_offset - d.pos - d.size / 2).distance() <= (d.size.x / 2))
             {
                 if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
+                {
                     mouse_hover_region = &region;
+                    if (!grid_dragging)
+                        mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                }
             }
         }
     }
@@ -1131,13 +1135,20 @@ std::string GameState::translate(std::string s)
 }
 void GameState::render_tooltip()
 {
+    if (tooltip_rect.pos.x >= 0)
+    {
+        mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+        render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
+    }
     if (tooltip_string != "")
     {
         std::string t = translate(tooltip_string);
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
-    if (tooltip_rect.pos.x >= 0)
-        render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
+
+    SDL_Cursor* cursor;
+    cursor = SDL_CreateSystemCursor(mouse_cursor);
+    SDL_SetCursor(cursor);
 }
 
 void GameState::add_clickable_highlight(SDL_Rect& dst_rect)
@@ -1387,6 +1398,10 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 void GameState::render(bool saving)
 {
+    mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
+    if (grid_dragging)
+        mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
+
     XYPos window_size;
     bool row_col_clues = !grid->edges.empty() && show_row_clues;
     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
@@ -1889,7 +1904,6 @@ void GameState::render(bool saving)
             }
             std::vector<RenderCmd> cmds;
             grid->render_square(pos, grid_pitch, cmds);
-            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
             for (RenderCmd& cmd : cmds)
             {
                 FOR_XY(r, wrap_start, wrap_end)
@@ -1911,7 +1925,6 @@ void GameState::render(bool saving)
 
                 }
             }
-            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
         }
 
         std::map<XYPos, int> total_taken;
@@ -2382,6 +2395,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {512, (region_menu == i) ? 1152 : 1344, 192, 192};
             SDL_Rect dst_rect = {right_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
         }
 
         RegionType r_type = menu_region_types1[region_menu];
@@ -2389,10 +2403,14 @@ void GameState::render(bool saving)
         {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
+                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 8);
                 if (region_type == r_type)
-                    render_box(right_panel_offset+ pos * button_size + XYPos(0, button_size * 8), XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, right_panel_offset + pos * button_size + XYPos(0, button_size * 8), button_size);
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+                render_region_type(r_type, bpos, button_size);
                 r_type.value ++;
+                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
+
             }
         }
 
@@ -2401,10 +2419,13 @@ void GameState::render(bool saving)
         {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
+                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
                 if (region_type == r_type)
-                    render_box(right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2), XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, right_panel_offset + pos * button_size + XYPos(0, button_size * 10 + button_size/2), button_size);
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+                render_region_type(r_type, bpos, button_size);
                 r_type.value ++;
+                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
             }
         }
 

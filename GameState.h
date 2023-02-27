@@ -74,7 +74,7 @@ public:
         MOUSE_MODE_FILTER,
         }
         mouse_mode = MOUSE_MODE_NONE;
-
+    SDL_SystemCursor mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
     enum {
         RIGHT_MENU_NONE,
         RIGHT_MENU_REGION,

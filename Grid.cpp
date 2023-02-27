@@ -2168,7 +2168,7 @@ XYRect SquareGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, u
 void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
     {
-        XYRect src(793, 250, 1, 1);
+        XYRect src(5, 1024, 1, 1);
         XYRect dst(pos * grid_pitch, grid_pitch);
         cmds.push_back({src,dst, true});
     }
