@@ -1133,11 +1133,20 @@ void GameState::render_tooltip()
 {
     if (tooltip_string != "")
     {
-        if (tooltip_rect.pos.x >= 0)
-            render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
         std::string t = translate(tooltip_string);
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
+    if (tooltip_rect.pos.x >= 0)
+        render_box(tooltip_rect.pos, tooltip_rect.size, button_size / 4, 3);
+}
+
+void GameState::add_clickable_highlight(SDL_Rect& dst_rect)
+{
+    if ((mouse.x >= dst_rect.x) &&
+        (mouse.x < (dst_rect.x + dst_rect.w)) &&
+        (mouse.y >= dst_rect.y) &&
+        (mouse.y < (dst_rect.y + dst_rect.h)))
+        tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
 }
 
 void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable)
@@ -1150,8 +1159,6 @@ void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
         tooltip_string = text;
         if (clickable)
             tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
-        else
-            tooltip_rect = XYRect(-1,-1,-1,-1);
     }
 }
 
@@ -1435,6 +1442,7 @@ void GameState::render(bool saving)
     }
 
     tooltip_string = "";
+    tooltip_rect = XYRect(-1,-1,-1,-1);
     bool hover_rulemaker = false;
     XYSet hover_squares_highlight;
     int hover_rulemaker_bits = 0;
@@ -1881,7 +1889,7 @@ void GameState::render(bool saving)
             }
             std::vector<RenderCmd> cmds;
             grid->render_square(pos, grid_pitch, cmds);
-            SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
+            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
             for (RenderCmd& cmd : cmds)
             {
                 FOR_XY(r, wrap_start, wrap_end)
@@ -1898,7 +1906,7 @@ void GameState::render(bool saving)
                     SDL_Point rot_center = {cmd.center.x, cmd.center.y};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
                     if (cmd.bg)
-                        SDL_SetTextureColorMod(sdl_texture, 192, 192, 192);
+                        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
 
 
                 }
@@ -2211,6 +2219,14 @@ void GameState::render(bool saving)
         }
         render_number(rule_count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
+    {
+        SDL_Rect src_rect = {1920, 384, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        dst_rect.w *= 2;
+        add_tooltip(dst_rect, "Current Level", false);
+        render_number(current_level_index, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+    }
 
     {
         if (display_scores)
@@ -2271,6 +2287,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_clickable_highlight(dst_rect);
     }
 
     for (int i = 0; i < 5; i++)
@@ -2306,6 +2323,8 @@ void GameState::render(bool saving)
         else if (c)
         {
             render_number(level_progress[current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
+            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+            add_clickable_highlight(dst_rect);
         }
         else
         {
@@ -2313,6 +2332,7 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
+
 //        render_number(level_progress[i].counts[1], pos + XYPos(button_size /2, button_size / 12), XYPos(button_size /2, button_size / 3));
 //        render_number(level_progress[i].counts[2], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size /2, button_size / 3));
 //        render_number(level_progress[i].counts[3], pos + XYPos(0, button_size / 2 + button_size / 12), XYPos(button_size, button_size / 3));
@@ -2801,6 +2821,7 @@ void GameState::render(bool saving)
     if (display_help)
     {
         tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
         int sq_size = panel_size.y / 9;
         XYPos help_image_size = XYPos(right_panel_offset.x + panel_size.x - left_panel_offset.x, panel_size.y);
         XYPos help_image_offset = left_panel_offset;
@@ -2838,6 +2859,7 @@ void GameState::render(bool saving)
     if (display_menu)
     {
         tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
         {
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
@@ -2891,6 +2913,7 @@ void GameState::render(bool saving)
     if (display_reset_confirm)
     {
         tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
         {
             std::string t = display_reset_confirm_levels_only ? translate("Reset Levels") : translate("Reset Game");
@@ -2914,6 +2937,7 @@ void GameState::render(bool saving)
     if (display_language_chooser)
     {
         tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 10 * button_size), button_size/4, 1);
         int index = 0;
         std::string orig_lang = language;
