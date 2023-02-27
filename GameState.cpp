@@ -496,7 +496,7 @@ void GameState::advance(int steps)
                     {
                         if (current_level_index == 0)
                         {
-                            current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size() - 1;
+                            current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size();
                         }
                         current_level_index--;
                     }
