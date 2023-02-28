@@ -974,14 +974,16 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             {
                 set_region_colour(sdl_texture, region.type.value, region.colour, opac);
                 SDL_Point rot_center = {0, line_thickness * 2};
-                double f = (frame / 5 + pos.x) % 1024;
-                SDL_Rect src_rect = {int(f), 2528, int(dist / line_thickness), 32};
+                double f = (frame / 5 + pos.x);
+                SDL_Rect src_rect1 = {int(f)% 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
+                f = (frame / 8 + pos.x);
+                SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
                 FOR_XY(r, wrap_start, wrap_end)
                 {
                     SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + pos.x, wrap_size.y * r.y + scaled_grid_offset.y + pos.y - line_thickness * 2, int(dist), line_thickness * 4};
-                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect1, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect2, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                 }
-
             }
 
             if ((disp_type == 0) || ((disp_type == 2) && selected))
