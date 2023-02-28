@@ -239,7 +239,7 @@ public:
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_number_string(std::string str, XYPos pos, XYPos siz);
-    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz, bool selected = false);
+    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);
     void grid_click(XYPos pos, int clicks, int btn);

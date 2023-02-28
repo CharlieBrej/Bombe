@@ -1293,9 +1293,17 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
 
 }
 
-void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, unsigned siz, bool selected)
+void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected)
 {
     set_region_colour(sdl_texture, type.value, colour, 255);
+    if (selected)
+    {
+        int margin = siz / 8;
+        SDL_Rect src_rect = {512, 1728, 192, 192};
+        SDL_Point rot_center = {siz / 2 + margin, siz / 2 + margin};
+        SDL_Rect dst_rect = {pos.x - margin, pos.y - margin, siz + margin * 2, siz + margin * 2};
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (double(frame) / 10000) * 360, &rot_center, SDL_FLIP_NONE);
+    }   
     SDL_Rect src_rect = {64, 512, 192, 192};
     SDL_Rect dst_rect = {pos.x, pos.y, int(siz), int(siz)};
     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1492,13 +1500,13 @@ void GameState::render(bool saving)
     {
         GridRegionCause rule_cause = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? GridRegionCause(&constructed_rule, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]) : inspected_rule;
 
-        if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 1)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(0 * button_size, 1 * button_size) + XYPos(button_size / 3, button_size / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             hover_rulemaker_region_base_index = 0;
-        if ((mouse - (right_panel_offset + XYPos(2 * button_size, button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 2)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(2 * button_size, 1 * button_size) + XYPos((button_size * 2) / 3, button_size / 3 + button_size / 12))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             hover_rulemaker_region_base_index = 1;
-        if ((mouse - (right_panel_offset + XYPos(4 * button_size, 3 * button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 3)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(4 * button_size, 3 * button_size) + XYPos((button_size * 2) / 3, button_size / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             hover_rulemaker_region_base_index = 2;
-        if ((mouse - (right_panel_offset + XYPos(4 * button_size, 5 * button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 4)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(4 * button_size, 5 * button_size) + XYPos((button_size * 2) / 3 + button_size / 12, (button_size * 2) / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             hover_rulemaker_region_base_index = 3;
 
         if (hover_rulemaker_region_base_index >= 0)
@@ -2494,10 +2502,10 @@ void GameState::render(bool saving)
             render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
         }
 
-        set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, 255);
         {
+            set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, 255);
             render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(1 * button_size, 2 * button_size), button_size / 2);
-            render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3);
+            render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0);
         }
         SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
         if (hover_rulemaker)
@@ -2599,19 +2607,19 @@ void GameState::render(bool saving)
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[0]) ? rule_gen_region[0]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[0].value, colour, 255);
             render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
-            render_region_bubble(rule.region_type[0], colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3);
+            render_region_bubble(rule.region_type[0], colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0);
 
         }
         if (rule.region_count >= 2)
         {
-            XYPos siz = XYPos(2,2);
+            XYPosFloat siz = XYPos(2,2);
             if (rule.region_count >= 3) siz.y = 3;
-            if (rule.region_count >= 4) siz.y = 5;
+            if (rule.region_count >= 4) siz.y = 5 - 1.0 / 12;
 
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[1]) ? rule_gen_region[1]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[1].value, colour, 255);
             render_box(right_panel_offset + XYPos(1 * button_size, 1 * button_size + button_size / 12), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
-            render_region_bubble(rule.region_type[1], colour, right_panel_offset + XYPos(2 * button_size + button_size / 3, 1 * button_size +button_size / 12), button_size * 2 / 3);
+            render_region_bubble(rule.region_type[1], colour, right_panel_offset + XYPos(2 * button_size + button_size / 3, 1 * button_size +button_size / 12), button_size * 2 / 3, hover_rulemaker_region_base_index == 1);
 
         }
 
@@ -2622,7 +2630,7 @@ void GameState::render(bool saving)
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[2]) ? rule_gen_region[2]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[2].value, colour, 255);
             render_box(right_panel_offset + XYPos(0 * button_size, 3 * button_size), XYPos(siz.x * button_size, siz.y * button_size), button_size / 2);
-            render_region_bubble(rule.region_type[2], colour, right_panel_offset + XYPos(4 * button_size + button_size / 3, 3 * button_size), button_size * 2 / 3);
+            render_region_bubble(rule.region_type[2], colour, right_panel_offset + XYPos(4 * button_size + button_size / 3, 3 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 2);
         }
 
         if (rule.region_count >= 4)
@@ -2630,7 +2638,7 @@ void GameState::render(bool saving)
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[3]) ? rule_gen_region[3]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[3].value, colour, 255);
             render_box(right_panel_offset + XYPos(button_size / 12, 4 * button_size), XYPos(5 * button_size, 2 * button_size), button_size / 2);
-            render_region_bubble(rule.region_type[3], colour, right_panel_offset + XYPos(button_size / 12 + 4 * button_size + button_size / 3, 5 * button_size + button_size / 3), button_size * 2 / 3);
+            render_region_bubble(rule.region_type[3], colour, right_panel_offset + XYPos(button_size / 12 + 4 * button_size + button_size / 3, 5 * button_size + button_size / 3), button_size * 2 / 3, hover_rulemaker_region_base_index == 3);
         }
 
         if (rule.apply_region_type.type == RegionType::VISIBILITY)
@@ -2746,7 +2754,7 @@ void GameState::render(bool saving)
 
                 render_region_type(new_region_type, p, button_size);
             }
-            else
+            else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
             {
                 XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
 
