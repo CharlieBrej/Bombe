@@ -2846,6 +2846,20 @@ void GameState::render(bool saving)
                     add_tooltip(dst_rect, "OK");
                 }
             }
+            if (rule.region_count >= 1 && !constructed_rule_undo.empty())
+            {
+                SDL_Rect src_rect = { 1856, 768, 192, 192 };
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Undo");
+            }
+            if (rule.region_count >= 1 && !constructed_rule_redo.empty())
+            {
+                SDL_Rect src_rect = { 1856, 960, 192, 192 };
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Redo");
+            }
         }
         if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
         {
@@ -3471,6 +3485,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size, button_size)))
         {
             reset_rule_gen_region();
+        }
+        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
+            rule_gen_undo();
+        }
+        if ((pos - XYPos(button_size * 4, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
+            rule_gen_redo();
         }
     }
 }
