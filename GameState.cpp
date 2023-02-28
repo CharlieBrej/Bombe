@@ -671,17 +671,20 @@ void GameState::advance(int steps)
                     r.vis_cause = GridRegionCause();
                     GridVisLevel prev = r.vis_level;
                     r.vis_level = GRID_VIS_LEVEL_SHOW;
-                    for (GridRule& rule : rules)
+                    for (int i = 1; i < 3; i++)
                     {
-                        if (rule.deleted)
-                            continue;
-                        if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                        for (GridRule& rule : rules)
                         {
-                            grid->apply_rule(rule, &r);
+                            if (rule.deleted)
+                                continue;
+                            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                            {
+                                grid->apply_rule(rule, &r);
+                            }
                         }
-                        if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
-                            r.stale = false;
                     }
+                    if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
+                        r.stale = false;
                 }
             }
             if (sound_frame_index > 50)
@@ -737,15 +740,18 @@ void GameState::advance(int steps)
             {
                 if (!region.stale)
                 {
-                    for (GridRule& rule : rules)
+                    for (int i = 1; i < 3; i++)
                     {
-                        if (rule.deleted)
-                            continue;
-                        if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                        for (GridRule& rule : rules)
                         {
-                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
-                            if (resp == Grid::APPLY_RULE_RESP_NONE)
-                                rule.stale = true;
+                            if (rule.deleted)
+                                continue;
+                            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                            {
+                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
+                                if (resp == Grid::APPLY_RULE_RESP_NONE)
+                                    rule.stale = true;
+                            }
                         }
                     }
                 }
@@ -1560,8 +1566,8 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Score");
         }
         {
-            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 192};
-            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width};
+            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 96};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width/2};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Close");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -1705,8 +1711,8 @@ void GameState::render(bool saving)
                 col_click = 6;
         }
         {
-            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 192};
-            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width};
+            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 96};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width / 2};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Close");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
