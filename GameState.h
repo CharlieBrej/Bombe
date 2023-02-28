@@ -75,6 +75,7 @@ public:
         }
         mouse_mode = MOUSE_MODE_NONE;
     SDL_SystemCursor mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
+    SDL_SystemCursor prev_mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
     enum {
         RIGHT_MENU_NONE,
         RIGHT_MENU_REGION,
@@ -122,7 +123,7 @@ public:
                                                 RegionType(RegionType::MORE, 1),
                                                 RegionType(RegionType::XOR2, 0),
                                                 RegionType(RegionType::XOR22, 0),
-                                                RegionType(RegionType::VISIBILITY, 0)};
+                                                RegionType(RegionType::NONE, 0)};
     const RegionType menu_region_types2[5] = {  RegionType(RegionType::NOTEQUAL, 1),
                                                 RegionType(RegionType::LESS, 1),
                                                 RegionType(RegionType::XOR3, 0),

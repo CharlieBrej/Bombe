@@ -1151,10 +1151,13 @@ void GameState::render_tooltip()
         std::string t = translate(tooltip_string);
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
-
-    SDL_Cursor* cursor;
-    cursor = SDL_CreateSystemCursor(mouse_cursor);
-    SDL_SetCursor(cursor);
+    if (mouse_cursor != prev_mouse_cursor)
+    {
+        prev_mouse_cursor = mouse_cursor;
+        SDL_Cursor* cursor;
+        cursor = SDL_CreateSystemCursor(mouse_cursor);
+        SDL_SetCursor(cursor);
+    }
 }
 
 void GameState::add_clickable_highlight(SDL_Rect& dst_rect)
@@ -2391,17 +2394,13 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-        {
-            SDL_Rect src_rect = {384, 864, 128, 128};
-            SDL_Rect dst_rect = {right_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
         for (int i = 0; i < 5; i++)
         {
             SDL_Rect src_rect = {512, (region_menu == i) ? 1152 : 1344, 192, 192};
             SDL_Rect dst_rect = {right_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_clickable_highlight(dst_rect);
+            if (i < 4)
+                add_clickable_highlight(dst_rect);
         }
 
         RegionType r_type = menu_region_types1[region_menu];
@@ -2436,28 +2435,48 @@ void GameState::render(bool saving)
         }
 
         {
+            if (region_type.type == RegionType::NONE)
+                render_box(right_panel_offset + XYPos(button_size * 0, button_size * 6), XYPos(button_size, button_size), button_size/4);
+            SDL_Rect src_rect = {896, 192, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Don't Care");
+        }
+
+        {
             if (region_type == RegionType(RegionType::SET, 0))
                 render_box(right_panel_offset + XYPos(button_size * 1, button_size * 6), XYPos(button_size, button_size), button_size/4);
             SDL_Rect src_rect = {512, 192, 192, 192};
             SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Clear");
-
+        }
+        {
             if (region_type == RegionType(RegionType::SET, 1))
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 6), XYPos(button_size, button_size), button_size/4);
-            src_rect = {320, 192, 192, 192};
-            dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_Rect src_rect = {320, 192, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Bomb");
         }
 
+
         {
-            if (region_type.type == RegionType::NONE)
-                render_box(right_panel_offset + XYPos(0, button_size * 6), XYPos(button_size, button_size), button_size/4);
-            SDL_Rect src_rect = {896, 192, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y + button_size * 6, button_size, button_size};
+            if (region_type == RegionType(RegionType::VISIBILITY, 1))
+                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 6), XYPos(button_size, button_size), button_size/4);
+            SDL_Rect src_rect = {896, 384, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, "Don't Care");
+            add_tooltip(dst_rect, "Hidden");
+        }
+
+        {
+            if (region_type == RegionType(RegionType::VISIBILITY, 2))
+                render_box(right_panel_offset + XYPos(button_size * 4, button_size * 6), XYPos(button_size, button_size), button_size/4);
+            SDL_Rect src_rect = {512, 768, 192, 192};
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Trash");
         }
     }
 
@@ -3318,14 +3337,18 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
+        if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size,button_size)))
+            region_type = RegionType(RegionType::NONE, 0);
         if ((pos - XYPos(button_size * 1, button_size * 6)).inside(XYPos(button_size,button_size)))
             region_type = RegionType(RegionType::SET, 0);
         if ((pos - XYPos(button_size * 2, button_size * 6)).inside(XYPos(button_size,button_size)))
             region_type = RegionType(RegionType::SET, 1);
-        if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size,button_size)))
-            region_type = RegionType(RegionType::NONE, 0);
+        if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size,button_size)))
+            region_type = RegionType(RegionType::VISIBILITY, 1);
+        if ((pos - XYPos(button_size * 4, button_size * 6)).inside(XYPos(button_size,button_size)))
+            region_type = RegionType(RegionType::VISIBILITY, 2);
 
-        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(5 * button_size,1 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(4 * button_size,1 * button_size)))
         {
             region_menu = pos.x / button_size;
         }
