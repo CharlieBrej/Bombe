@@ -66,7 +66,9 @@ public:
     char key_held = 0;
 
     bool dragging_speed = false;
+    bool dragging_volume = false;
     double speed_dial = 0.25;
+    double volume = 0.50;
 
     XYPos mouse;
     enum {

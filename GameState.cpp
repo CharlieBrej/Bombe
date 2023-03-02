@@ -87,6 +87,8 @@ GameState::GameState(std::string& load_data, bool json)
                 show_row_clues = omap->get_num("show_row_clues");
             if (omap->has_key("speed_dial"))
                 speed_dial = double(omap->get_num("speed_dial")) / 1000;
+            if (omap->has_key("volume"))
+                volume = double(omap->get_num("volume")) / 1000;
 
 
             SaveObjectList* rlist = omap->get_item("rules")->get_list();
@@ -191,7 +193,7 @@ GameState::GameState(std::string& load_data, bool json)
     sounds[5] = Mix_LoadWAV( "snd/plop5.wav" );
     sounds[6] = Mix_LoadWAV( "snd/plop6.wav" );
     sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
-    Mix_Volume(-1, 40);
+    Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
 
 
 //    font = TTF_OpenFont("font-en.ttf", 32);
@@ -249,6 +251,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("level_set_index", current_level_set_index);
     omap->add_num("show_row_clues", show_row_clues);
     omap->add_num("speed_dial", speed_dial * 1000);
+    omap->add_num("volume", volume * 1000);
     return omap;
 }
 
@@ -2953,6 +2956,17 @@ void GameState::render(bool saving)
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.2 * button_size), t);
         }
         {
+            SDL_Rect src_rect = {2048, 576, 192, 576};
+            SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Volume", false);
+
+            src_rect = {2048, 1152, 192, 64};
+            dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 2 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+
+        {
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -3513,6 +3527,7 @@ bool GameState::events()
                         display_rules_click_drag = false;
                         grid_dragging = false;
                         dragging_speed = false;
+                        dragging_volume = false;
                     }
 
                     default:
@@ -3658,6 +3673,12 @@ bool GameState::events()
                     double p = double(mouse.x - left_panel_offset.x - (button_size / 6)) / (button_size * 2.6666);
                     speed_dial = std::clamp(p, 0.0, 1.0);
                 }
+                if (dragging_volume)
+                {
+                    double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
+                    volume = std::clamp(p, 0.0, 1.0);
+                    Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                }
                 break;
             }
             case SDL_MOUSEBUTTONUP:
@@ -3665,6 +3686,7 @@ bool GameState::events()
                 display_rules_click_drag = false;
                 grid_dragging = false;
                 dragging_speed = false;
+                dragging_volume = false;
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
                 break;
@@ -3736,7 +3758,7 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x >= 0 && p.y >= 0 && p.x < 8)
+                    if (p.x == 0 && p.y >= 0)
                     {
                         if (p.y == 0)
                         {
@@ -3762,9 +3784,16 @@ bool GameState::events()
                         }
                         if (p.y == 6)
                             quit = true;
-                        if (p.y == 7 && p.x == 7)
-                            display_menu = false;
                     }
+                    if (p.x == 7 && p.y >= 0 && p.y <= 3)
+                    {
+                        dragging_volume = true;
+                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
+                        volume = std::clamp(p, 0.0, 1.0);
+                        Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                    }
+                    if (p == XYPos(7,7))
+                        display_menu = false;
                     break;
                 }
                 if (display_help)

@@ -14,6 +14,7 @@
             "Clear" :                       "Clear",
             "Clear Filter" :                "Clear Filter",
             "Close":                        "Close",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "Don't Care",
             "Duplicate Rule" :              "Duplicate Rule",
             "Edit Rule" :                   "Edit Rule",
@@ -29,6 +30,7 @@
             "Player Name" :                 "Player Name",
             "OK" :                          "OK",
             "Quit" :                        "Quit",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "Refresh Regions",
             "Region Inspector" :            "Region Inspector",
             "Regions" :                     "Regions",
@@ -51,7 +53,8 @@
             "Trash" :                       "Trash",
             "Visible" :                     "Visible",
             "Visibility set by User" :      "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Update Rule" :                 "Update Rule",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
@@ -110,6 +113,7 @@
             "Clear" :                       "Aufdecken",
             "Clear Filter" :                "Filter zurücksetzen",
             "Close" :                       "Schließen",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "Egal",
             "Duplicate Rule" :              "Regel verdoppeln",
             "Edit Rule" :                   "Regel bearbeiten",
@@ -125,6 +129,7 @@
             "Player Name" :                 "Spieler Name",
             "OK" :                          "OK",
             "Quit" :                        "Beenden",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "Regionen neuberechnen",
             "Region Inspector" :            "Region",
             "Regions" :                     "Regionen",
@@ -147,7 +152,8 @@
             "Trash" :                       "Müll",
             "Visible" :                     "Sichtbar",
             "Visibility set by User"  :     "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Update Rule" :                 "Update Rule",
+            "Undo" :                        "Undo"
         },
         "tutorial": [
             [
@@ -206,6 +212,7 @@
             "Clear" :                       "Temiz",
             "Clear Filter" :                "Filitreyi Temizle",
             "Close":                        "Kapat",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "Umursama",
             "Duplicate Rule" :              "Kuralı Çoğalt",
             "Edit Rule" :                   "Kuralı Düzenle",
@@ -221,6 +228,7 @@
             "Player Name" :                 "Oyuncu İsmi",
             "OK" :                          "Tamam",
             "Quit" :                        "Çık",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "Bölgeleri Yenile",
             "Region Inspector" :            "Bölge Denetleyicisi",
             "Regions" :                     "Bölgeler",
@@ -243,7 +251,8 @@
             "Trash" :                       "Çöp",
             "Visible" :                     "Görünür",
             "Visibility set by User" :      "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Update Rule" :                 "Update Rule",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
@@ -304,6 +313,7 @@
             "Clear" :                       "清除",
             "Clear Filter" :                "清除篩選",
             "Close":                        "關閉",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "任意數值",
             "Duplicate Rule" :              "複製規則",
             "Edit Rule" :                   "編輯規則",
@@ -319,6 +329,7 @@
             "Player Name" :                 "玩家",
             "OK" :                          "確認",
             "Quit" :                        "退出遊戲",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "刷新區域",
             "Region Inspector" :            "區域檢視器",
             "Regions" :                     "區域數",
@@ -342,7 +353,8 @@
             "Trash" :                       "無效",
             "Visible" :                     "可見的",
             "Visibility set by User" :      "玩家設定的可見性",
-            "Update Rule" :                 "更新規則"
+            "Update Rule" :                 "更新規則",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
@@ -403,6 +415,7 @@
             "Clear" :                       "清除",
             "Clear Filter" :                "清除筛选",
             "Close":                        "关闭",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "任意数值",
             "Duplicate Rule" :              "复制规则",
             "Edit Rule" :                   "编辑规则",
@@ -418,6 +431,7 @@
             "Player Name" :                 "玩家",
             "OK" :                          "确认",
             "Quit" :                        "退出游戏",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "刷新区域",
             "Region Inspector" :            "区域检视器",
             "Regions" :                     "区域数",
@@ -441,7 +455,8 @@
             "Trash" :                       "无效",
             "Visible" :                     "可见的",
             "Visibility set by User" :      "玩家设定的可见性",
-            "Update Rule" :                 "更新规则"
+            "Update Rule" :                 "更新规则",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
@@ -502,6 +517,7 @@
 		    "Clear":                        "クリア",
 		    "Clear Filter":                 "フィルターをクリア",
             "Close":                        "Close",
+            "Current Level":                "Current Level",
 		    "Don't Care":                   "どうでもいい",
 		    "Duplicate Rule":               "ルールの重複",
 		    "Edit Rule":                    "ルールを編集",
@@ -517,6 +533,7 @@
             "Player Name" :                 "Player Name",
 		    "OK":                           "わかった",
             "Quit" :                        "Quit",
+            "Redo" :                        "Redo",
 		    "Refresh Regions":              "地域をリフレッシュ",
             "Region Inspector" :            "Region Inspector",
             "Regions" :                     "Regions",
@@ -539,7 +556,8 @@
 		    "Trash":                        "ごみ",
 		    "Visible":                      "見える",
             "Visibility set by User" :      "Visibility set by User",
-            "Update Rule" :                 "Update Rule"
+            "Update Rule" :                 "Update Rule",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
@@ -600,6 +618,7 @@
             "Clear" :                       "Despejar",
             "Clear Filter" :                "Borrar filtro",
             "Close":                        "Cerrar",
+            "Current Level":                "Current Level",
             "Don't Care" :                  "Cualquier número",
             "Duplicate Rule" :              "Duplicar regla",
             "Edit Rule" :                   "Editar regla",
@@ -615,6 +634,7 @@
             "Player Name" :                 "Nombre del jugador",
             "OK" :                          "ACEPTAR",
             "Quit" :                        "Salir",
+            "Redo" :                        "Redo",
             "Refresh Regions" :             "Actualizar regiones",
             "Region Inspector" :            "Inspector de region",
             "Regions" :                     "Regiones",
@@ -638,7 +658,8 @@
             "Trash" :                       "Eliminadas",
             "Visible" :                     "Visibles",
             "Visibility set by User" :      "Visibilidad definida por el usuario",
-            "Update Rule" :                 "Actualizar regla"
+            "Update Rule" :                 "Actualizar regla",
+            "Undo" :                        "Undo"
         },
         "tutorial":
         [
