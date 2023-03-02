@@ -285,8 +285,14 @@ GameState::~GameState()
 
 bool GameState::level_is_accessible(unsigned set)
 {
-    if (IS_DEMO && set > 5 && (set % 5))
-        return false;
+    if (IS_DEMO)
+    {
+        int r = set % 5 + set / 5;
+        if (r > 3)
+            return false;
+        if (current_level_group_index > 2)
+            return false;
+    }
     if (set == 0)
         return true;
     if (set >= 5 && level_progress[current_level_group_index][set - 5].count_todo < 150)
@@ -2321,8 +2327,12 @@ void GameState::render(bool saving)
     {
         SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+        if (IS_DEMO && i >= 2)
+            src_rect = {1088, 192, 192, 192};
+        else
+            add_clickable_highlight(dst_rect);
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        add_clickable_highlight(dst_rect);
+        
     }
 
     for (int i = 0; i < 5; i++)
@@ -2920,12 +2930,25 @@ void GameState::render(bool saving)
             }
         }
         {
-            SDL_Rect src_rect = {704, 1344, 192*3, 192};
-            SDL_Rect dst_rect = {help_image_offset.x + help_image_size.x - sq_size * 3, help_image_offset.y + help_image_size.y - sq_size, sq_size * 3, sq_size};
-            if (tutorial_index)
+            SDL_Rect src_rect = {704, 1344, 192, 192};
+            SDL_Rect dst_rect = {help_image_offset.x + help_image_size.x - sq_size * 3, help_image_offset.y + help_image_size.y - sq_size, sq_size, sq_size};
+            if (!tutorial_index)
                 src_rect.y += 192;
+            else
+                add_clickable_highlight(dst_rect);
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+            dst_rect.x += sq_size;
+            src_rect = {704 + 192, 1344, 192, 192};
+            add_clickable_highlight(dst_rect);
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+            dst_rect.x += sq_size;
+            src_rect = {704 + 192 * 2, 1344, 192, 192};
             if (tutorial_index >= (tut_texture_count - 1))
                 src_rect.y += 192;
+            else
+                add_clickable_highlight(dst_rect);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
     }
@@ -2938,6 +2961,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Full Screen");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 2.2 * button_size), t);
         }
@@ -2945,6 +2969,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1280, 1344, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Select Language");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 3.2 * button_size), t);
         }
@@ -2952,6 +2977,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1664, show_row_clues ? 576 : 768, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Show Row Clues");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.2 * button_size), t);
         }
@@ -2970,6 +2996,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Levels");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
         }
@@ -2977,6 +3004,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Game");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.2 * button_size), t);
         }
@@ -2984,6 +3012,7 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1280, 1728, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
             std::string t = translate("Quit");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 8.2 * button_size), t);
         }
@@ -3174,7 +3203,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * GLBAL_LEVEL_SETS, button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
-        if (x >= 0 && x < GLBAL_LEVEL_SETS)
+        if (x >= 0 && x < GLBAL_LEVEL_SETS && (!IS_DEMO || x < 2))
         {
             current_level_group_index = x;
             current_level_set_index = 0;
