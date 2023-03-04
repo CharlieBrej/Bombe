@@ -266,6 +266,7 @@ void GameState::save(std::ostream& outfile, bool lite)
 GameState::~GameState()
 {
 //    Mix_FreeMusic(music);
+    delete grid;
     delete lang_data;
     for (const auto& [key, value] : fonts)
         TTF_CloseFont(value);
@@ -601,14 +602,6 @@ void GameState::advance(int steps)
                     clue_solves = new_clue_solves;
                     return;
                 }
-            }
-        }
-        if (!get_hint)
-        {
-            for (GridRegion& r : grid->regions)
-            {
-                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
-                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
             }
         }
     }
@@ -3184,6 +3177,20 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         display_help = true;
     if ((pos - XYPos(button_size * 2, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
+        if (btn == 2)
+        {
+            for (GridRegion& r : grid->regions)
+                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+                {
+                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
+                    r.vis_level = GRID_VIS_LEVEL_SHOW;
+                }
+            return;
+        }
+        for (GridRegion& r : grid->regions)
+            if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+                r.visibility_force = GridRegion::VIS_FORCE_NONE;
+
         clue_solves.clear();
         XYSet grid_squares = grid->get_squares();
         FOR_XY_SET(pos, grid_squares)
@@ -3290,7 +3297,11 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         if ((pos - XYPos(button_size * 1, button_size * 4)).inside(XYPos(button_size, button_size)))
         {
-            if(inspected_region->vis_cause.rule)
+            if(inspected_region->visibility_force == GridRegion::VIS_FORCE_USER)
+            {
+                inspected_region->visibility_force = GridRegion::VIS_FORCE_NONE;
+            }
+            else if(inspected_region->vis_cause.rule)
             {
                 right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                 inspected_rule = inspected_region->vis_cause;
@@ -3307,18 +3318,21 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
             inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->vis_cause.rule = NULL;
             inspected_region->stale = false;
         }
         if ((pos - XYPos(button_size * 3, button_size * 4)).inside(XYPos(button_size, button_size)))
         {
             inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
             inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->vis_cause.rule = NULL;
             inspected_region->stale = false;
         }
         if ((pos - XYPos(button_size * 3, button_size * 5)).inside(XYPos(button_size, button_size)))
         {
             inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
             inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+            inspected_region->vis_cause.rule = NULL;
             inspected_region->stale = false;
         }
 
