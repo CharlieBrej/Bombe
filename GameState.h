@@ -44,7 +44,7 @@ public:
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
 
     std::string steam_session_string;
-    bool achievement[10] = {};
+    std::set <std::string> achievements;
     std::string steam_username = "dummy";
     uint64_t steam_id = 0;
     std::set<uint64_t> steam_friends;
@@ -185,6 +185,7 @@ public:
     class LevelProgress
     {
     public:
+        unsigned current_index = 0;
         unsigned count_todo = 0;
         std::vector<bool> level_status;
     };

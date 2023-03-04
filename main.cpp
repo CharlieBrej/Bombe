@@ -25,8 +25,6 @@
 #endif
 #ifdef STEAM
 
-static const char* const achievement_names[] = {NULL};
-
 class SteamGameManager
 {
 private:
@@ -35,7 +33,7 @@ private:
     STEAM_CALLBACK( SteamGameManager, OnGetAuthSessionTicketResponse, GetAuthSessionTicketResponse_t, m_OnGetAuthSessionTicketResponse);
     ISteamUserStats *m_pSteamUserStats;
     bool stats_ready = false;
-    bool achievement_got[10] = {false};
+    std::set <std::string> achievements;
     bool needs_send = false;
     bool auth_buffer_ready = false;
     uint32 auth_buffer_size;
@@ -49,20 +47,16 @@ public:
     {
         m_pSteamUserStats = SteamUserStats();
         m_pSteamUserStats->RequestCurrentStats();
-
-
-	{
 		HAuthTicket handle = SteamUser()->GetAuthSessionTicket(auth_buffer, 1024, &auth_buffer_size);
-	}
-
-
     };
-    void set_achievements(unsigned index)
+    void set_achievements(std::string name)
     {
-        if (achievement_got[index])
+        if (!stats_ready || !auth_buffer_ready)
             return;
-        achievement_got[index] = true;
-        m_pSteamUserStats->SetAchievement(achievement_names[index]);
+        if (achievements.count(name))
+            return;
+        achievements.insert(name);
+        m_pSteamUserStats->SetAchievement(name.c_str());
         needs_send = true;
     }
     void update_achievements(GameState* game_state);
@@ -70,9 +64,15 @@ public:
 
 void SteamGameManager::OnUserStatsReceived( UserStatsReceived_t *pCallback )
 {
+    needs_send = false;
+    for (const std::string& name : achievements)
+    {
+        bool rep;
+        m_pSteamUserStats->GetAchievement(name.c_str(), &rep);
+        if (!rep)
+            achievements.erase(name);
+    }
     stats_ready = true;
-    for (int i = 0; achievement_names[i]; i++)
-        m_pSteamUserStats->GetAchievement( achievement_names[i], &achievement_got[i]);
 }
 
 void SteamGameManager::OnGameOverlayActivated( GameOverlayActivated_t* pCallback )
@@ -86,14 +86,14 @@ void SteamGameManager::OnGetAuthSessionTicketResponse( GetAuthSessionTicketRespo
 
 void SteamGameManager::update_achievements(GameState* game_state)
 {
-    for (int i = 0; i < 10; i++)
+    for (const std::string& name : game_state->achievements)
     {
-        if (game_state->achievement[i])
-            set_achievements(i);
+        set_achievements(name);
     }
 
     if (needs_send)
     {
+        std::cout << "sdfgsdfg" << std::endl;
         m_pSteamUserStats->StoreStats();
         needs_send = false;
     }

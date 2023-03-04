@@ -481,6 +481,30 @@ void GameState::advance(int steps)
     deal_with_scores();
     if (server_timeout)
         server_timeout-=steps;
+    
+
+    const std::string ach_set_names[] = {"HEXAGON", "SQUARE", "TRIANGLE", "GRID"};
+    for (int s = 0; s < GLBAL_LEVEL_SETS; s++)
+    {
+        int count = 0;
+        for (int i = 0; i < level_progress[s].size(); i++)
+        {
+            LevelProgress& prog = level_progress[s][i];
+            for (bool b : prog.level_status)
+                if (b)
+                    count++;
+        }
+        int ach_sizes[] = {2000, 3000, 4000, 5000, 5500};
+        int ach_cnt = *(&ach_sizes + 1) - ach_sizes;
+        for (int i = 0; i < ach_cnt; i++)
+        {
+            if (count >= ach_sizes[i])
+            {
+                std::string name = ach_set_names[s] + std::to_string(ach_sizes[i]);
+                achievements.insert(name);
+            }
+        }
+    }
 
     if (grid->is_solved() || skip_level)
     {
@@ -3345,13 +3369,13 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         GridRegionCause rule_cause = (right_panel_mode == RIGHT_MENU_RULE_GEN) ? GridRegionCause(&constructed_rule, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]) : inspected_rule;
 
         int region_index = -1;
-        if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 1)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(0 * button_size, 1 * button_size) + XYPos(button_size / 3, button_size / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             region_index = 0;
-        if ((mouse - (right_panel_offset + XYPos(2 * button_size, button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 2)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(2 * button_size, 1 * button_size) + XYPos((button_size * 2) / 3, button_size / 3 + button_size / 12))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             region_index = 1;
-        if ((mouse - (right_panel_offset + XYPos(4 * button_size, 3 * button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 3)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(4 * button_size, 3 * button_size) + XYPos((button_size * 2) / 3, button_size / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             region_index = 2;
-        if ((mouse - (right_panel_offset + XYPos(4 * button_size, 5 * button_size))).inside(XYPos(button_size, button_size)) && rule_cause.rule->region_count >= 4)
+        if (XYPosFloat(mouse - (right_panel_offset + XYPos(4 * button_size, 5 * button_size) + XYPos((button_size * 2) / 3 + button_size / 12, (button_size * 2) / 3))).distance() < (button_size / 3) && rule_cause.rule->region_count >= 1)
             region_index = 3;
 
         if (region_index >= 0)
