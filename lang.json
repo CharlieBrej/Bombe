@@ -313,7 +313,7 @@
             "Clear" :                       "清除",
             "Clear Filter" :                "清除篩選",
             "Close":                        "關閉",
-            "Current Level":                "Current Level",
+            "Current Level":                "完成關卡",
             "Don't Care" :                  "任意數值",
             "Duplicate Rule" :              "複製規則",
             "Edit Rule" :                   "編輯規則",
@@ -329,7 +329,7 @@
             "Player Name" :                 "玩家",
             "OK" :                          "確認",
             "Quit" :                        "退出遊戲",
-            "Redo" :                        "Redo",
+            "Redo" :                        "取消復原",
             "Refresh Regions" :             "刷新區域",
             "Region Inspector" :            "區域檢視器",
             "Regions" :                     "區域數",
@@ -353,8 +353,9 @@
             "Trash" :                       "無效",
             "Visible" :                     "可見的",
             "Visibility set by User" :      "玩家設定的可見性",
+            "Volume" :			    "音量",
             "Update Rule" :                 "更新規則",
-            "Undo" :                        "Undo"
+            "Undo" :                        "復原"
         },
         "tutorial":
         [
@@ -415,7 +416,7 @@
             "Clear" :                       "清除",
             "Clear Filter" :                "清除筛选",
             "Close":                        "关闭",
-            "Current Level":                "Current Level",
+            "Current Level":                "完成关卡",
             "Don't Care" :                  "任意数值",
             "Duplicate Rule" :              "复制规则",
             "Edit Rule" :                   "编辑规则",
@@ -431,7 +432,7 @@
             "Player Name" :                 "玩家",
             "OK" :                          "确认",
             "Quit" :                        "退出游戏",
-            "Redo" :                        "Redo",
+            "Redo" :                        "取消復原",
             "Refresh Regions" :             "刷新区域",
             "Region Inspector" :            "区域检视器",
             "Regions" :                     "区域数",
@@ -455,8 +456,9 @@
             "Trash" :                       "无效",
             "Visible" :                     "可见的",
             "Visibility set by User" :      "玩家设定的可见性",
+            "Volume" :			    "音量",
             "Update Rule" :                 "更新规则",
-            "Undo" :                        "Undo"
+            "Undo" :                        "復原"
         },
         "tutorial":
         [
