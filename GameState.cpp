@@ -3192,7 +3192,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             return;
         }
         for (GridRegion& r : grid->regions)
-            if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+            if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
                 r.visibility_force = GridRegion::VIS_FORCE_NONE;
 
         clue_solves.clear();
@@ -3829,7 +3829,7 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x == 0 && p.y >= 0)
+                    if (p.x >= 0 && p.x <= 6 && p.y >= 0)
                     {
                         if (p.y == 0)
                         {
