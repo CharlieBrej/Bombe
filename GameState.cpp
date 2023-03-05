@@ -2785,6 +2785,7 @@ void GameState::render(bool saving)
                 }
 
                 render_region_type(new_region_type, p, button_size);
+                mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
             }
             else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
             {
@@ -2809,6 +2810,7 @@ void GameState::render(bool saving)
                 {
                     render_region_type(region_type, p, button_size);
                 }
+                mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
             }
         }
         if (hover_rulemaker_region_base && right_panel_mode == RIGHT_MENU_RULE_GEN)
@@ -2821,6 +2823,7 @@ void GameState::render(bool saving)
                     SDL_Rect dst_rect = {p.x + button_size * 3 / 4 , p.y, button_size / 2, button_size / 2};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     render_region_type(region_type, p, button_size);
+                    mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
                 }
             }
             else if ((region_type.type != RegionType::NONE) && (region_type.type < 50))
@@ -2829,8 +2832,9 @@ void GameState::render(bool saving)
                     SDL_Rect src_rect = {384, 992, 64, 64};
                     SDL_Rect dst_rect = {p.x + button_size * 3 / 4 , p.y, button_size / 2, button_size / 2};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                }
                     render_region_bubble(region_type, 0, p, button_size);
+                    mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                }
             }
         }
 
