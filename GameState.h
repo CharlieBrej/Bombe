@@ -155,6 +155,12 @@ public:
     XYPos scaled_grid_offset;
     int scaled_grid_size;
 
+    struct WrapPos
+    {
+        XYPos pos;
+        double size;
+    };
+
     EdgePos best_edge_pos;
 
     bool full_screen = false;
@@ -232,8 +238,8 @@ public:
     void reset_rule_gen_region();
     void update_constructed_rule_pre();
     void update_constructed_rule();
-    void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type = 0);
-    void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type = 0);
+    void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
+    void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
     void render_text_box(XYPos pos, std::string& s, bool left = false);
     std::string translate(std::string s);
     void render_tooltip();

@@ -512,7 +512,7 @@ RegionType GridRule::get_region_sorted(int index)
     return region_type[(sort_perm >> (index * 2)) & 0x3];
 }
 
-void Grid::randomize(XYPos size_, bool wrapped_, int merged_count, int row_percent)
+void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_percent)
 {
     size = size_;
     wrapped = wrapped_;
@@ -573,7 +573,7 @@ void Grid::from_string(std::string s)
     size.y = a;
 
     a = s[2] - 'A';
-    wrapped = a;
+    wrapped = WrapType(a);
 
     int i = 3;
     while (s[i] == '#')
@@ -2040,6 +2040,8 @@ XYSet SquareGrid::get_squares()
     XYSet rep;
     FOR_XY(pos, XYPos(), size)
         rep.set(pos);
+    if (wrapped == WRAPPED_IN)
+        rep.clear(innie_pos);
     for ( const auto &m_reg : merged )
     {
         FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
@@ -2089,7 +2091,7 @@ void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 XYPos SquareGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
     XYPos rep(pos / grid_pitch);
-    if (wrapped)
+    if (wrapped == WRAPPED_SIDE)
         rep = rep % size;
     if (rep.inside(size))
         return rep;
@@ -2101,36 +2103,95 @@ XYSet SquareGrid::get_neighbors(XYPos p)
     XYSet rep;
     XYPos s = get_square_size(p);
 
-    for (int y = -1; y <= s.y; y++)
+    FOR_XY(o, XYPos(-1, -1), XYPos(2, 2))
     {
-        XYPos t;
-        t = p + XYPos(-1, y);
-        if (wrapped)
-            t = t % size;
-        if (t.inside(size))
+        if (o == XYPos(0,0))
+            continue;
+        XYPos t = p + o;
+        if (wrapped == WRAPPED_SIDE)
+        {
+            rep.set(get_base_square(t % size));
+        }
+        else if (wrapped == WRAPPED_IN)
+        {
+            if (t.inside(size))
+            {
+                XYPos tb = get_base_square(t);
+                if (tb == innie_pos)
+                {
+                    XYPos tbs = get_square_size(tb);
+                    XYPos chunk_size = size / tbs;
+                    if (o.x && o.y)                     // diagonal 
+                    {
+                        XYPos corner_pos = (t - tb) * chunk_size;
+                        if (o.x == -1)
+                            corner_pos.x += chunk_size.x - 1;
+                        if (o.y == -1)
+                            corner_pos.y += chunk_size.y - 1;
+                        rep.set(get_base_square(corner_pos));
+                    }
+                    else
+                    {
+                        XYPos sq_pos = (t - tb) * chunk_size;
+                        if (o.x == 1)
+                            for (int i = 0; i < chunk_size.y; i++)
+                                rep.set(get_base_square(sq_pos + XYPos(0, i)));
+                        else if (o.x == -1)
+                            for (int i = 0; i < chunk_size.y; i++)
+                                rep.set(get_base_square(sq_pos + XYPos(chunk_size.x - 1, i)));
+                        else if (o.y == 1)
+                            for (int i = 0; i < chunk_size.x; i++)
+                                rep.set(get_base_square(sq_pos + XYPos(i, 0)));
+                        else if (o.y == -1)
+                            for (int i = 0; i < chunk_size.y; i++)
+                                rep.set(get_base_square(sq_pos + XYPos(i, chunk_size.y - 1)));
+                        else
+                            assert(0);
+                    }
+                }
+                else
+                    rep.set(tb);
+            }
+            else
+            {
+                XYPos tbs = get_square_size(innie_pos);
+                XYPos chunk_size = size / tbs;
+                XYPos op = innie_pos + t / chunk_size;
+                rep.set(get_base_square(op));
+            }
+        }
+        else if (t.inside(size))
             rep.set(get_base_square(t));
-        t = p + XYPos(s.x, y);
-        if (wrapped)
-            t = t % size;
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        rep.set(p);
     }
-    for (int x = 0; x < s.x; x++)
-    {
-        XYPos t;
-        t = p + XYPos(x, -1);
-        if (wrapped)
-            t = t % size;
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        t = p + XYPos(x, s.y);
-        if (wrapped)
-            t = t % size;
-        if (t.inside(size))
-            rep.set(get_base_square(t));
-        rep.set(p);
-    }
+
+    // for (int y = -1; y <= s.y; y++)
+    // {
+    //     XYPos t;
+    //     t = p + XYPos(-1, y);
+    //     if (wrapped == WRAPPED_SIDE)
+    //         t = t % size;
+    //     if (t.inside(size))
+    //         rep.set(get_base_square(t));
+    //     t = p + XYPos(s.x, y);
+    //     if (wrapped == WRAPPED_SIDE)
+    //         t = t % size;
+    //     if (t.inside(size))
+    //         rep.set(get_base_square(t));
+    // }
+    // for (int x = 0; x < s.x; x++)
+    // {
+    //     XYPos t;
+    //     t = p + XYPos(x, -1);
+    //     if (wrapped == WRAPPED_SIDE)
+    //         t = t % size;
+    //     if (t.inside(size))
+    //         rep.set(get_base_square(t));
+    //     t = p + XYPos(x, s.y);
+    //     if (wrapped == WRAPPED_SIDE)
+    //         t = t % size;
+    //     if (t.inside(size))
+    //         rep.set(get_base_square(t));
+    // }
     return rep;
 }
 
@@ -2173,33 +2234,18 @@ void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCm
         XYRect dst(pos * grid_pitch, grid_pitch * s);
         cmds.push_back({src,dst, true});
     }
-    if (s == XYPos(1,1))
     {
-        XYRect src(64, 256, 192, 192);
-        XYRect dst(pos * grid_pitch, grid_pitch);
-        cmds.push_back({src,dst});
-    }
-    else
-    {
-        XYPos si(64, 256);
-        XYPos di(pos * grid_pitch);
-        {
-            XYPos ls = s - XYPos(1,1);
-            cmds.push_back(RenderCmd(XYRect(si + XYPos( 0,  0), XYPos(96, 96)), XYRect(di, grid_pitch / 2)));
-            cmds.push_back(RenderCmd(XYRect(si + XYPos(96,  0), XYPos(96, 96)), XYRect(di + XYPos(grid_pitch.x * ls.x + grid_pitch.x / 2, 0), grid_pitch / 2)));
-            cmds.push_back(RenderCmd(XYRect(si + XYPos( 0, 96), XYPos(96, 96)), XYRect(di + XYPos(0, grid_pitch.y * ls.y + grid_pitch.y / 2), grid_pitch / 2)));
-            cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(96, 96)), XYRect(di + XYPos(grid_pitch.x * ls.x + grid_pitch.x / 2, grid_pitch.y * ls.y + grid_pitch.y / 2), grid_pitch / 2)));
-            if (ls.x)
-            {
-                cmds.push_back(RenderCmd(XYRect(si + XYPos(96,  0), XYPos(1, 96)), XYRect(di + XYPos(grid_pitch.x / 2, 0), XYPos(ls.x * grid_pitch.x, grid_pitch.y / 2))));
-                cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(1, 96)), XYRect(di + XYPos(grid_pitch.x / 2, ls.y * grid_pitch.y + grid_pitch.x / 2), XYPos(ls.x * grid_pitch.x, grid_pitch.y / 2))));
-            }
-            if (ls.y)
-            {
-                cmds.push_back(RenderCmd(XYRect(si + XYPos(0,  96), XYPos(96, 1)), XYRect(di + XYPos(0, grid_pitch.x / 2), XYPos(grid_pitch.y / 2, ls.y * grid_pitch.y))));
-                cmds.push_back(RenderCmd(XYRect(si + XYPos(96, 96), XYPos(96, 1)), XYRect(di + XYPos(ls.x * grid_pitch.x + grid_pitch.x / 2, grid_pitch.x / 2), XYPos(grid_pitch.y / 2, ls.y * grid_pitch.y))));
-            }
-        }
+        XYRect src(5, 1024, 1, 1);
+        XYRect dst;
+
+        dst = XYRect ((pos + XYPos(0,   0)  ) * grid_pitch, XYPos(grid_pitch.x * s.x, grid_pitch.x / 24 + 1));
+        cmds.push_back(RenderCmd(src, dst, 0,   XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(s.x, 0)  ) * grid_pitch, XYPos(grid_pitch.y * s.y, grid_pitch.x / 24 + 1));
+        cmds.push_back(RenderCmd(src, dst, 90,  XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(s.x, s.y)) * grid_pitch, XYPos(grid_pitch.x * s.x, grid_pitch.x / 24 + 1));
+        cmds.push_back(RenderCmd(src, dst, 180, XYPos(0,1)));
+        dst = XYRect ((pos + XYPos(0,   s.y)) * grid_pitch, XYPos(grid_pitch.y * s.y, grid_pitch.x / 24 + 1));
+        cmds.push_back(RenderCmd(src, dst, 270, XYPos(0,1)));
     }
 }
 void SquareGrid::add_random_merged(int merged_count)
@@ -2243,13 +2289,12 @@ XYPos SquareGrid::get_base_square(XYPos p)
         if ((p - m_reg.first).inside(m_reg.second))
             return m_reg.first;
     }
+    assert (p.inside(size));
     return p;
 }
 
 XYPos SquareGrid::get_wrapped_size(XYPos grid_pitch)
 {
-    if (!wrapped)
-        return XYPos();
     return size * grid_pitch;
 }
 
@@ -2328,7 +2373,7 @@ XYSet TriangleGrid::base_get_neighbors(XYPos pos)
         if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
         if (offset == XYPos(2, downwards ? 1 : -1)) continue;
         XYPos t = pos + offset;
-        if (wrapped)
+        if (wrapped == WRAPPED_SIDE)
             t = t % size;
         if (!t.inside(size))
             continue;
@@ -2385,7 +2430,7 @@ XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
     rem.x = rem.x * std::sqrt(3);
     if (rem.y > rem.x)
         rep.x--;
-    if (wrapped)
+    if (wrapped == WRAPPED_SIDE)
         rep = rep % size;
     if (rep.inside(size))
         return rep;
@@ -2579,8 +2624,6 @@ XYPos TriangleGrid::get_base_square(XYPos p)
 
 XYPos TriangleGrid::get_wrapped_size(XYPos grid_pitch)
 {
-    if (!wrapped)
-        return XYPos();
     return size * grid_pitch;
 }
 
@@ -2649,7 +2692,7 @@ XYSet HexagonGrid::get_neighbors(XYPos pos)
         if (downstep && offset.y == -1 && offset.x) continue;
         if (!downstep && offset.y == 1 && offset.x) continue;
         XYPos t = pos + offset;
-        if (wrapped)
+        if (wrapped == WRAPPED_SIDE)
             t = t % size;
         if (t.inside(size))
             rep.set(t);
@@ -2786,7 +2829,5 @@ void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderC
 }
 XYPos HexagonGrid::get_wrapped_size(XYPos grid_pitch)
 {
-    if (!wrapped)
-        return XYPos();
     return XYPos(size.x * 3, size.y * 2) * grid_pitch;
 }

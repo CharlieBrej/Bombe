@@ -255,11 +255,17 @@ class Grid
 {
 public:
     XYPos size;
-    bool wrapped = false;
+    enum WrapType
+    {
+        WRAPPED_NOT,
+        WRAPPED_SIDE,
+        WRAPPED_IN,
+    } wrapped = WRAPPED_NOT;
     bool big_regions_to_add = false;
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
+    XYPos innie_pos = XYPos(1,1);
     std::list<GridRegion> regions;
     std::set<GridRegion*, GridRegionCompare> regions_set;
     std::list<GridRegion> regions_to_add;
@@ -271,7 +277,7 @@ protected:
 
 public:
     virtual ~Grid(){};
-    void randomize(XYPos size_, bool wrapped, int merged_count, int row_percent);
+    void randomize(XYPos size_, WrapType wrapped, int merged_count, int row_percent);
     void from_string(std::string s);
 
     static Grid* Load(std::string s);

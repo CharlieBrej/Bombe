@@ -250,6 +250,12 @@ public:
         return XYPos(x * other, y * other);
     }
 
+    XYPos operator*(const double& other) const
+    {
+        return XYPos(x * other, y * other);
+    }
+
+
     XYPos operator*(const Direction& other) const
     {
         switch (other)
@@ -297,6 +303,12 @@ public:
     {
         x += other.x;
         y += other.y;
+    }
+
+    void operator*=(double mul)
+    {
+        x *= mul;
+        y *= mul;
     }
 
     void operator*=(int mul)

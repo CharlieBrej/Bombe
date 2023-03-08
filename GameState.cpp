@@ -909,12 +909,10 @@ static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned 
     SDL_SetTextureColorMod(sdl_texture, r, g, b);
 }
 
-void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
+void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type)
 {
     std::vector<XYPos> elements;
     std::vector<int> element_sizes;
-    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
-    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
 
     unsigned anim_prog = grid_regions_animation[&region];
     unsigned max_anim_frame = 500;
@@ -928,9 +926,9 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
         elements.push_back(n);
         element_sizes.push_back(std::min(d.size.x, d.size.y));
         taken[pos]++;
-        FOR_XY(r, wrap_start, wrap_end)
+        for(WrapPos r : wraps)
         {
-            if (XYPosFloat(mouse - wrap_size * r - scaled_grid_offset - d.pos - d.size / 2).distance() <= (d.size.x / 2))
+            if (XYPosFloat(mouse - r.pos - (d.pos + d.size / 2) * r.size).distance() <= (d.size.x / 2 * r.size))
             {
                 if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
                 {
@@ -941,12 +939,14 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             }
         }
     }
+    if (region.elements.count() <= 1)
+        return;
 
     bool selected = (&region == mouse_hover_region);
     int siz = elements.size();
 
     std::vector<int> group;
-    std::vector<std::vector<std::pair<double, XYPos>>> distances;
+    std::vector<std::vector<std::pair<double, WrapPos*>>> distances;
     distances.resize(siz);
     group.resize(siz);
 
@@ -957,12 +957,20 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
         distances[i].resize(siz);
         for (int j = 0; j < siz; j++)
         {
-            distances[i][j] = std::make_pair(std::numeric_limits<double>::infinity(), XYPos());
-            FOR_XY(p, wrap_start, wrap_end)
+            if (i == j)
+                continue;
+            distances[i][j] = std::make_pair(std::numeric_limits<double>::infinity(), (WrapPos*)NULL);
+            for(WrapPos& r : wraps)
             {
-                double dist = XYPosFloat(elements[i]).distance(XYPosFloat(elements[j]) + p * wrap_size);
+                // if (&r != &wraps[0])
+                //     continue;
+                if (r.size > 1)
+                    continue;
+                double dist = (XYPosFloat(elements[j] * r.size + r.pos) - (elements[i] + wraps[0].pos)).distance() / sqrt(r.size);
                 if (dist < distances[i][j].first)
-                    distances[i][j] = std::make_pair(dist, p);
+                {
+                    distances[i][j] = std::make_pair(dist, &r);
+                }
 
             }
         }
@@ -971,7 +979,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
     while (true)
     {
         XYPos best_con;
-        XYPos best_grid;
+        WrapPos* best_wrap = NULL;
         double best_distance = std::numeric_limits<double>::infinity();
         for (int i = 0; i < siz; i++)
         {
@@ -983,30 +991,32 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 {
                     best_distance = distances[i][j].first;
                     best_con = XYPos(i,j);
-                    best_grid = distances[i][j].second;
+                    best_wrap = distances[i][j].second;
                 }
             }
         }
+//        best_wrap = &wraps[0];
         {
+            assert(best_wrap);
             XYPos pos = elements[best_con.x];
-            XYPos last = elements[best_con.y] + best_grid * wrap_size;
-            double dist = XYPosFloat(pos).distance(XYPosFloat(last));
+            XYPos last = elements[best_con.y] * best_wrap->size + best_wrap->pos - wraps[0].pos;
+            double dist = XYPosFloat(pos - last).distance();
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
-            int s = std::min(element_sizes[best_con.x], element_sizes[best_con.y]);
+            int s = std::min(element_sizes[best_con.x], int(element_sizes[best_con.y] * best_wrap->size));
             int line_thickness = std::min(s/4, (scaled_grid_size / std::min(grid->size.x, grid->size.y)) / 32);
 
 
             if ((disp_type == 1) && selected)
             {
                 set_region_colour(sdl_texture, region.type.value, region.colour, opac);
-                SDL_Point rot_center = {0, line_thickness * 2};
                 double f = (frame / 5 + pos.x);
                 SDL_Rect src_rect1 = {int(f)% 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
                 f = (frame / 8 + pos.x);
                 SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
-                FOR_XY(r, wrap_start, wrap_end)
+                for(WrapPos r : wraps)
                 {
-                    SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + pos.x, wrap_size.y * r.y + scaled_grid_offset.y + pos.y - line_thickness * 2, int(dist), line_thickness * 4};
+                    SDL_Point rot_center = {0, int(line_thickness * 2 * r.size)};
+                    SDL_Rect dst_rect = {r.pos.x + int(pos.x * r.size), r.pos.y + int((pos.y - line_thickness * 2) * r.size), int(dist * r.size), int(line_thickness * 4 * r.size)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect1, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect2, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                 }
@@ -1015,11 +1025,11 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             if ((disp_type == 0) || ((disp_type == 2) && selected))
             {
                 set_region_colour(sdl_texture, region.type.value, region.colour, opac);
-                SDL_Point rot_center = {0, line_thickness};
                 SDL_Rect src_rect = {160, 608, 1, 1};
-                FOR_XY(r, wrap_start, wrap_end)
+                for(WrapPos r : wraps)
                 {
-                    SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + pos.x, wrap_size.y * r.y + scaled_grid_offset.y + pos.y - line_thickness, int(dist), line_thickness * 2};
+                    SDL_Point rot_center = {0, int(line_thickness * r.size)};
+                    SDL_Rect dst_rect = {r.pos.x + int(pos.x * r.size), r.pos.y + int((pos.y - line_thickness) * r.size), int(dist * r.size), int(line_thickness * 2 * r.size)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                 }
             }
@@ -1043,10 +1053,8 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
     SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
 }
 
-void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, XYPos wrap_size, int disp_type)
+void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type)
 {
-    XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
-    XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
     bool selected = (&region == mouse_hover_region);
 
     unsigned anim_prog = grid_regions_animation[&region];
@@ -1072,10 +1080,10 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
             set_region_colour(sdl_texture, region.type.value, region.colour, opac);
             XYPos margin = d.size / 8;
             SDL_Rect src_rect = {512, 1728, 192, 192};
-            SDL_Point rot_center = {d.size.x / 2 + margin.x, d.size.y / 2 + margin.x};
-            FOR_XY(r, wrap_start, wrap_end)
+            for(WrapPos r : wraps)
             {
-                SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + d.pos.x - margin.x, wrap_size.y * r.y + scaled_grid_offset.y + d.pos.y - margin.y, d.size.x + margin.x * 2, d.size.y + margin.x * 2};
+                SDL_Point rot_center = {int((d.size.x / 2 + margin.x) * r.size), int((d.size.y / 2 + margin.x) * r.size)};
+                SDL_Rect dst_rect = {r.pos.x + int((d.pos.x - margin.x) * r.size), r.pos.y + int((d.pos.y - margin.y) * r.size), int((d.size.x + margin.x * 2) * r.size), int((d.size.y + margin.x * 2) * r.size)};
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (double(frame) / 10000) * 360, &rot_center, SDL_FLIP_NONE);
             }
         }
@@ -1083,16 +1091,16 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
         {
             set_region_colour(sdl_texture, region.type.value, region.colour, opac);
             SDL_Rect src_rect = {64, 512, 192, 192};
-            FOR_XY(r, wrap_start, wrap_end)
+            for(WrapPos r : wraps)
             {
-                SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + d.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + d.pos.y, d.size.x, d.size.y};
+                SDL_Rect dst_rect = {r.pos.x + int(d.pos.x * r.size), r.pos.y + int(d.pos.y * r.size), int(d.size.x * r.size), int(d.size.y * r.size)};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
 
             SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-            FOR_XY(r, wrap_start, wrap_end)
+            for(WrapPos r : wraps)
             {
-                render_region_type(region.type, wrap_size * r + scaled_grid_offset + d.pos, d.size.x);
+                render_region_type(region.type, r.pos + d.pos * r.size, d.size.x * r.size);
             }
         }
     }
@@ -1475,7 +1483,7 @@ void GameState::render(bool saving)
         scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
         grid_pitch = grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size));
 
-        if (!grid->wrapped)
+        if (grid->wrapped == Grid::WRAPPED_NOT)
         {
             scaled_grid_offset.x = std::min(scaled_grid_offset.x, grid_offset.x);
             scaled_grid_offset.y = std::min(scaled_grid_offset.y, grid_offset.y);
@@ -1926,8 +1934,28 @@ void GameState::render(bool saving)
     {
         XYSet grid_squares = grid->get_squares();
         XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
-        XYPos wrap_start = (wrap_size == XYPos()) ? XYPos(0, 0) : XYPos(-2, -2);
-        XYPos wrap_end = (wrap_size == XYPos()) ? XYPos(1, 1) : XYPos(5, 5);
+
+        std::vector<WrapPos> wraps;
+
+        wraps.push_back(WrapPos{scaled_grid_offset, 1.0});
+        if (grid->wrapped == Grid::WRAPPED_IN)
+        {
+            XYPos s = grid->size;
+            wrap_size = grid->get_wrapped_size(grid_pitch);
+            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch, 1.0 / s.x});
+            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch + grid_pitch / s, 1.0 / s.x / s.x});
+            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch + grid_pitch / s.x + grid_pitch / s.x/s.x, 1.0 / s.x/s.x/s.x});
+            wraps.push_back(WrapPos{scaled_grid_offset - grid_pitch * s.x, 1.0 * s.x});
+            // wraps.push_back((WrapPos){scaled_grid_offset - wrap_size * 6, 1.0 * 5 * 5});
+        }
+        else if (grid->wrapped == Grid::WRAPPED_SIDE)
+        {
+            FOR_XY(r, XYPos(-2, -2), XYPos(5, 5))
+            if (r != XYPos(0, 0))
+                wraps.push_back(WrapPos{scaled_grid_offset + wrap_size * r, 1.0});
+        }
+
+
 
         FOR_XY_SET(pos, grid_squares)
         {
@@ -1951,7 +1979,7 @@ void GameState::render(bool saving)
             grid->render_square(pos, grid_pitch, cmds);
             for (RenderCmd& cmd : cmds)
             {
-                FOR_XY(r, wrap_start, wrap_end)
+                for(WrapPos r : wraps)
                 {
                     if (cmd.bg)
                     {
@@ -1961,8 +1989,8 @@ void GameState::render(bool saving)
 
                     }
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
-                    SDL_Rect dst_rect = {wrap_size.x * r.x + scaled_grid_offset.x + cmd.dst.pos.x, wrap_size.y * r.y + scaled_grid_offset.y + cmd.dst.pos.y, cmd.dst.size.x, cmd.dst.size.y};
-                    SDL_Point rot_center = {cmd.center.x, cmd.center.y};
+                    SDL_Rect dst_rect = {r.pos.x + int(cmd.dst.pos.x * r.size), r.pos.y + int(cmd.dst.pos.y * r.size), int(cmd.dst.size.x * r.size), int(ceil(cmd.dst.size.y * r.size))};
+                    SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.center.y * r.size)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
                     if (cmd.bg)
                         SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
@@ -2013,12 +2041,12 @@ void GameState::render(bool saving)
             {
                 std::map<XYPos, int> taken;
                 for (GridRegion* region : display_regions)
-                    render_region_bg(*region, taken, total_taken, wrap_size, i);
+                    render_region_bg(*region, taken, total_taken, wraps, i);
             }
             {
                 std::map<XYPos, int> taken;
                 for (GridRegion* region : display_regions)
-                    render_region_fg(*region, taken, total_taken, wrap_size, i);
+                    render_region_fg(*region, taken, total_taken, wraps, i);
             }
         }
 
@@ -2050,20 +2078,20 @@ void GameState::render(bool saving)
                 sq_pos.size += XYPosFloat(sq_pos.size) * (wob);
 
                 int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
-                XYPos gpos = scaled_grid_offset + sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
+                XYPos gpos = sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
                 SDL_SetTextureAlphaMod(sdl_texture, 255.0 * (1.0 - pow(fade, 0.5)));
-                FOR_XY(r, wrap_start, wrap_end)
+                for(WrapPos r : wraps)
                 {
-                    XYPos mgpos = gpos + wrap_size * r;
+                    XYPos mgpos = gpos * r.size + r.pos;
                     if (place.bomb)
                     {
                         SDL_Rect src_rect = {320, 192, 192, 192};
-                        SDL_Rect dst_rect = {mgpos.x, mgpos.y, icon_width, icon_width};
+                        SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(icon_width * r.size), int(icon_width * r.size)};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     }
                     else
                     {
-                        render_region_type(place.clue, mgpos, icon_width);
+                        render_region_type(place.clue, mgpos, icon_width * r.size);
                     }
                 }
                 SDL_SetTextureAlphaMod(sdl_texture, 255);
@@ -3244,6 +3272,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             current_level_set_index = 0;
             current_level_index = 0;
             skip_level = 1;
+            auto_progress = false;
         }
     }
 

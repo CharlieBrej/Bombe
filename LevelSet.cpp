@@ -103,7 +103,6 @@ void LevelSet::save_global()
             std::ofstream outfile ("levels.data");
 #endif
    
-    omap->save(outfile);
     std::string out_data = compress_string(omap->to_string());
     outfile << out_data;
     delete omap;

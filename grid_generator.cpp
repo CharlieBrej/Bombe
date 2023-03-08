@@ -149,7 +149,7 @@ void* exec(void* dummy)
                     g = new TriangleGrid ();
                 else
                     assert(0);
-                g->randomize(XYPos(params[i][3], params[i][4]), (params[i][9] < 0), params[i][5], params[i][9] > 0 ? params[i][9] : 0);
+                g->randomize(XYPos(params[i][3], params[i][4]), Grid::WrapType((params[i][9] < 0) ? Grid::WrapType(-params[i][9]) : 0), params[i][5], params[i][9] > 0 ? params[i][9] : 0);
 
                 g->make_harder(params[i][6], params[i][7], params[i][8]);
                 std::string s = g->to_string();
@@ -182,7 +182,7 @@ void* exec(void* dummy)
 
 int main( int argc, char* argv[] )
 {
-    int TNUM = 8;
+    int TNUM = 4;
     pthread_t thread[TNUM];
     void* dummy;
 
