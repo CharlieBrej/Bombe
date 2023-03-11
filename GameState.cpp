@@ -506,46 +506,49 @@ void GameState::advance(int steps)
             }
         }
     }
+    if (grid->is_solved() && !current_level_is_temp)
+    {
+        if (!level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index])
+        {
+            level_progress[current_level_group_index][current_level_set_index].count_todo--;
+            level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
+            skip_level = 1;
+        }
+    }
 
-    if (grid->is_solved() || skip_level)
+    if (load_level || skip_level)
     {
         clue_solves.clear();
-        if (!skip_level && !current_level_is_temp)
-        {
-            bool o = level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index];
-            if (!o)
-            {
-                level_progress[current_level_group_index][current_level_set_index].count_todo--;
-                level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
-            }
-        }
-
         if (level_progress[current_level_group_index][current_level_set_index].count_todo)
         {
-            if (!current_level_is_temp || level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index])
+            do 
             {
-                do
+                if (load_level)
                 {
-                    if (skip_level < 0)
+                    load_level = false;
+                    continue;
+                }
+                else if (skip_level < 0)
+                {
+                    if (current_level_index == 0)
                     {
-                        if (current_level_index == 0)
-                        {
-                            current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size();
-                        }
-                        current_level_index--;
+                        current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size();
+                        if (!level_progress[current_level_group_index][current_level_set_index].count_todo)
+                            break;
                     }
-                    else
+                    current_level_index--;
+                }
+                else
+                {
+                    current_level_index++;
+                    if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
                     {
-                        current_level_index++;
-                        if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
-                        {
-                            auto_progress = false;
-                            current_level_index = 0;
-                        }
+                        current_level_index = 0;
+                        auto_progress = false;
                     }
                 }
-                while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
             }
+            while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
 
             std::string& s = global_level_sets[current_level_group_index][current_level_set_index]->levels[current_level_index];
             delete grid;
@@ -556,8 +559,35 @@ void GameState::advance(int steps)
             grid_regions_fade.clear();
             current_level_is_temp = false;
         }
+        else
+            auto_progress = false;
         skip_level = 0;
     }
+
+    if (auto_progress_all && !auto_progress)
+    {
+        auto_progress = true;
+        while (true)
+        {
+            current_level_set_index++;
+            if (level_progress[current_level_group_index].size() <= current_level_set_index)
+            {
+                current_level_set_index = 0;
+                auto_progress_all = false;
+                auto_progress = false;
+                load_level = true;
+                break;
+            }
+            if (level_is_accessible(current_level_set_index))
+            {
+                load_level = true;
+                current_level_index = 0;
+                break;
+            }
+        }
+    }
+
+
 
     if(clue_solves.empty())
         get_hint = false;
@@ -2007,7 +2037,8 @@ void GameState::render(bool saving)
         if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
         {
             mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - scaled_grid_offset, grid_pitch);
-            mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
+            if (mouse_filter_pos != XYPos(-1,-1))
+                mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
         }
         {
             bool has_hover = false;
@@ -3271,8 +3302,11 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             current_level_group_index = x;
             current_level_set_index = 0;
             current_level_index = 0;
-            skip_level = 1;
+            load_level = 1;
             auto_progress = false;
+
+            auto_progress_all = (clicks > 1);
+            auto_progress = (clicks > 1);
         }
     }
 
@@ -3286,8 +3320,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         {
             current_level_set_index = idx;
             current_level_index = 0;
-            skip_level = 1;
+            load_level = 1;
             auto_progress =  (clicks > 1);
+            auto_progress_all = false;
         }
     }
 }
@@ -3825,7 +3860,7 @@ bool GameState::events()
                             current_level_group_index = 1;
                             current_level_set_index = 0;
                             current_level_index = 0;
-                            skip_level = 1;
+                            load_level = 1;
                             if (!display_reset_confirm_levels_only)
                                 rules.clear();
                             else

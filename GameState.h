@@ -168,7 +168,9 @@ public:
     XYRect tooltip_rect;
 
     int skip_level = 0;
+    bool load_level = true;
     bool auto_progress = false;
+    bool auto_progress_all = false;
     double steps_had = 0;
 
     unsigned server_timeout = 0;

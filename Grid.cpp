@@ -2107,61 +2107,78 @@ XYSet SquareGrid::get_neighbors(XYPos p)
     {
         if (o == XYPos(0,0))
             continue;
-        XYPos t = p + o;
-        if (wrapped == WRAPPED_SIDE)
+        XYPos start = XYPos(-1, -1);
+        XYPos end;
+
+        if (o.x == 1)
+            start.x = o.x + s.x - 1;
+        if (o.y == 1)
+            start.y = o.y + s.y - 1;
+        end = start + XYPos(1, 1);
+        if (o.x == 0)
+            end.x = o.x + s.x;
+        if (o.y == 0)
+            end.y = o.y + s.y;
+
+        start += p;
+        end += p;
+        FOR_XY(t, start, end)
         {
-            rep.set(get_base_square(t % size));
-        }
-        else if (wrapped == WRAPPED_IN)
-        {
-            if (t.inside(size))
+            if (wrapped == WRAPPED_SIDE)
             {
-                XYPos tb = get_base_square(t);
-                if (tb == innie_pos)
+                rep.set(get_base_square(t % size));
+            }
+            else if (wrapped == WRAPPED_IN)
+            {
+                if (t.inside(size))
                 {
-                    XYPos tbs = get_square_size(tb);
-                    XYPos chunk_size = size / tbs;
-                    if (o.x && o.y)                     // diagonal 
+                    XYPos tb = get_base_square(t);
+                    if (tb == innie_pos)
                     {
-                        XYPos corner_pos = (t - tb) * chunk_size;
-                        if (o.x == -1)
-                            corner_pos.x += chunk_size.x - 1;
-                        if (o.y == -1)
-                            corner_pos.y += chunk_size.y - 1;
-                        rep.set(get_base_square(corner_pos));
+                        XYPos tbs = get_square_size(tb);
+                        XYPos chunk_size = size / tbs;
+                        if (o.x && o.y)                     // diagonal 
+                        {
+                            XYPos corner_pos = (t - tb) * chunk_size;
+                            if (o.x == -1)
+                                corner_pos.x += chunk_size.x - 1;
+                            if (o.y == -1)
+                                corner_pos.y += chunk_size.y - 1;
+                            rep.set(get_base_square(corner_pos));
+                        }
+                        else
+                        {
+                            XYPos sq_pos = (t - tb) * chunk_size;
+                            if (o.x == 1)
+                                for (int i = 0; i < chunk_size.y; i++)
+                                    rep.set(get_base_square(sq_pos + XYPos(0, i)));
+                            else if (o.x == -1)
+                                for (int i = 0; i < chunk_size.y; i++)
+                                    rep.set(get_base_square(sq_pos + XYPos(chunk_size.x - 1, i)));
+                            else if (o.y == 1)
+                                for (int i = 0; i < chunk_size.x; i++)
+                                    rep.set(get_base_square(sq_pos + XYPos(i, 0)));
+                            else if (o.y == -1)
+                                for (int i = 0; i < chunk_size.y; i++)
+                                    rep.set(get_base_square(sq_pos + XYPos(i, chunk_size.y - 1)));
+                            else
+                                assert(0);
+                        }
                     }
                     else
-                    {
-                        XYPos sq_pos = (t - tb) * chunk_size;
-                        if (o.x == 1)
-                            for (int i = 0; i < chunk_size.y; i++)
-                                rep.set(get_base_square(sq_pos + XYPos(0, i)));
-                        else if (o.x == -1)
-                            for (int i = 0; i < chunk_size.y; i++)
-                                rep.set(get_base_square(sq_pos + XYPos(chunk_size.x - 1, i)));
-                        else if (o.y == 1)
-                            for (int i = 0; i < chunk_size.x; i++)
-                                rep.set(get_base_square(sq_pos + XYPos(i, 0)));
-                        else if (o.y == -1)
-                            for (int i = 0; i < chunk_size.y; i++)
-                                rep.set(get_base_square(sq_pos + XYPos(i, chunk_size.y - 1)));
-                        else
-                            assert(0);
-                    }
+                        rep.set(tb);
                 }
                 else
-                    rep.set(tb);
+                {
+                    XYPos tbs = get_square_size(innie_pos);
+                    XYPos chunk_size = size / tbs;
+                    XYPos op = innie_pos + t / chunk_size;
+                    rep.set(get_base_square(op));
+                }
             }
-            else
-            {
-                XYPos tbs = get_square_size(innie_pos);
-                XYPos chunk_size = size / tbs;
-                XYPos op = innie_pos + t / chunk_size;
-                rep.set(get_base_square(op));
-            }
+            else if (t.inside(size))
+                rep.set(get_base_square(t));
         }
-        else if (t.inside(size))
-            rep.set(get_base_square(t));
     }
 
     // for (int y = -1; y <= s.y; y++)
