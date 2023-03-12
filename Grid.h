@@ -10,6 +10,9 @@
 
 void grid_set_rnd(int a = 0);
 
+void global_mutex_lock();
+void global_mutex_unlock();
+
 class XYSet
 {
     static const unsigned WIDTH = 16;

@@ -45,10 +45,23 @@ static void DisplayWebsite(const char* url)
 
 }
 
+static SDL_mutex* global_mutex;
+
+void global_mutex_lock()
+{
+    SDL_LockMutex(global_mutex);
+}
+
+void global_mutex_unlock()
+{
+    SDL_UnlockMutex(global_mutex);
+}
+
 static Rand rnd(1);
 
 GameState::GameState(std::string& load_data, bool json)
 {
+    global_mutex = SDL_CreateMutex();
     LevelSet::init_global();
     bool load_was_good = false;
 
@@ -1508,32 +1521,62 @@ void GameState::render(bool saving)
             grid_offset += XYPos(edge_clue_border, edge_clue_border);
             grid_size -= edge_clue_border * 2;
         }
-        if (!grid->wrapped && grid_zoom < 0)
-            grid_zoom = 0;
-        scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
+
+        if ((grid->wrapped == Grid::WRAPPED_NOT) && grid_zoom < 1)
+            grid_zoom = 1;
+        if ((grid->wrapped == Grid::WRAPPED_IN) && grid_zoom < 1.5)
+        {
+            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)));
+            double mag = double(scaled_grid_size) / double(sq_pos.size.x);
+            grid_zoom *= mag;
+            scaled_grid_offset = scaled_grid_offset - sq_pos.pos * mag;
+        }
+        if ((grid->wrapped == Grid::WRAPPED_IN) && grid_zoom >= 10)
+        {
+            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)));
+            sq_pos.pos += scaled_grid_offset;
+            if (sq_pos.pos.x < 0 && sq_pos.pos.y < 0 && (sq_pos.pos.x + sq_pos.size.x) >= grid_size && (sq_pos.pos.y + sq_pos.size.y) >= grid_size)
+            {
+                double mag = double(sq_pos.size.x) / double(scaled_grid_size);
+                scaled_grid_offset = sq_pos.pos;
+                grid_zoom *= mag;
+            }
+        }
+        scaled_grid_size = grid_size * grid_zoom;
         grid_pitch = grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size));
 
         if (grid->wrapped == Grid::WRAPPED_NOT)
         {
-            scaled_grid_offset.x = std::min(scaled_grid_offset.x, grid_offset.x);
-            scaled_grid_offset.y = std::min(scaled_grid_offset.y, grid_offset.y);
-            int d = (scaled_grid_offset.x + scaled_grid_size) - (grid_offset.x + grid_size);
+            scaled_grid_offset.x = std::min(scaled_grid_offset.x, 0);
+            scaled_grid_offset.y = std::min(scaled_grid_offset.y, 0);
+            int d = (scaled_grid_offset.x + scaled_grid_size) - grid_size;
             if (d < 0)
                 scaled_grid_offset.x -= d;
-            d = (scaled_grid_offset.y + scaled_grid_size) - (grid_offset.y + grid_size);
+            d = (scaled_grid_offset.y + scaled_grid_size) - grid_size;
+            if (d < 0)
+                scaled_grid_offset.y -= d;
+        }
+        else if (grid->wrapped == Grid::WRAPPED_IN)
+        {
+            scaled_grid_offset.x = std::min(scaled_grid_offset.x, 0);
+            scaled_grid_offset.y = std::min(scaled_grid_offset.y, 0);
+            int d = (scaled_grid_offset.x + scaled_grid_size) - grid_size;
+            if (d < 0)
+                scaled_grid_offset.x -= d;
+            d = (scaled_grid_offset.y + scaled_grid_size) - grid_size;
             if (d < 0)
                 scaled_grid_offset.y -= d;
         }
         else
         {
             XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
-            while ((scaled_grid_offset.x - grid_offset.x) > wrap_size.x)
+            while (scaled_grid_offset.x > wrap_size.x)
                 scaled_grid_offset.x -= wrap_size.x;
-            while ((scaled_grid_offset.y - grid_offset.y) > wrap_size.y)
+            while (scaled_grid_offset.y > wrap_size.y)
                 scaled_grid_offset.y -= wrap_size.y;
-            while ((scaled_grid_offset.x - grid_offset.x) < 0 )
+            while (scaled_grid_offset.x < 0 )
                 scaled_grid_offset.x += wrap_size.x;
-            while ((scaled_grid_offset.y - grid_offset.y) < 0)
+            while (scaled_grid_offset.y < 0)
                 scaled_grid_offset.y += wrap_size.y;
         }
 
@@ -1963,26 +2006,32 @@ void GameState::render(bool saving)
     else
     {
         XYSet grid_squares = grid->get_squares();
-        XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
 
         std::vector<WrapPos> wraps;
 
-        wraps.push_back(WrapPos{scaled_grid_offset, 1.0});
+        wraps.push_back(WrapPos{grid_offset + scaled_grid_offset, 1.0});
         if (grid->wrapped == Grid::WRAPPED_IN)
         {
-            XYPos s = grid->size;
-            wrap_size = grid->get_wrapped_size(grid_pitch);
-            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch, 1.0 / s.x});
-            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch + grid_pitch / s, 1.0 / s.x / s.x});
-            wraps.push_back(WrapPos{scaled_grid_offset + grid_pitch + grid_pitch / s.x + grid_pitch / s.x/s.x, 1.0 / s.x/s.x/s.x});
-            wraps.push_back(WrapPos{scaled_grid_offset - grid_pitch * s.x, 1.0 * s.x});
-            // wraps.push_back((WrapPos){scaled_grid_offset - wrap_size * 6, 1.0 * 5 * 5});
+            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)));
+            double mag = double(scaled_grid_size) / double(sq_pos.size.x);
+
+            wraps.push_back(WrapPos{grid_offset + scaled_grid_offset - sq_pos.pos * mag, 1.0 * mag});
+
+            double z = 1.0;
+            XYPos p;
+            for (int i = 0; i < 10; i++)
+            {
+                p += sq_pos.pos * z;
+                z /= mag;
+                wraps.push_back(WrapPos{grid_offset + scaled_grid_offset + p, z});
+            }
         }
         else if (grid->wrapped == Grid::WRAPPED_SIDE)
         {
+            XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
             FOR_XY(r, XYPos(-2, -2), XYPos(5, 5))
             if (r != XYPos(0, 0))
-                wraps.push_back(WrapPos{scaled_grid_offset + wrap_size * r, 1.0});
+                wraps.push_back(WrapPos{grid_offset + scaled_grid_offset + wrap_size * r, 1.0});
         }
 
 
@@ -2034,9 +2083,9 @@ void GameState::render(bool saving)
         std::list<GridRegion*> display_regions;
 
         XYPos mouse_filter_pos(-1,-1);
-        if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
+        if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - grid_offset - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
         {
-            mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - scaled_grid_offset, grid_pitch);
+            mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - grid_offset - scaled_grid_offset, grid_pitch);
             if (mouse_filter_pos != XYPos(-1,-1))
                 mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
         }
@@ -2158,7 +2207,7 @@ void GameState::render(bool saving)
             {
                 int arrow_size = edge_clue_border * 82 / 100;
                 int bubble_margin = arrow_size / 16;
-                XYPosFloat epos = grid_offset - scaled_grid_offset + XYPosFloat(0.1,0.1);
+                XYPosFloat epos = -scaled_grid_offset + XYPosFloat(0.1,0.1);
 
                 double p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (epos.x) - epos.y;
                 if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(0,1).angle())
@@ -3164,7 +3213,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
     }
     else if (mouse_mode == MOUSE_MODE_FILTER)
     {
-        XYPos gpos = grid->get_square_from_mouse_pos(pos - scaled_grid_offset, grid_pitch);
+        XYPos gpos = grid->get_square_from_mouse_pos(pos - grid_offset - scaled_grid_offset, grid_pitch);
         gpos = grid->get_base_square(gpos);
         if (gpos.x >= 0)
             filter_pos.flip(gpos);
@@ -3990,10 +4039,13 @@ bool GameState::events()
                     rules_list_offset -= e.wheel.y;
                     break;
                 }
-                grid_zoom += e.wheel.y;
-                grid_zoom = std::clamp(grid_zoom, -10, 20);
-                int new_scaled_grid_size = grid_size * std::pow(1.1, grid_zoom);
-                scaled_grid_offset -= (mouse - scaled_grid_offset) * (new_scaled_grid_size - scaled_grid_size) / scaled_grid_size;
+                if (e.wheel.y > 0)
+                    grid_zoom *= 1.1;
+                else
+                    grid_zoom /= 1.1;
+                grid_zoom = std::clamp(grid_zoom, 0.4, 12.0);
+                int new_scaled_grid_size = grid_size * grid_zoom;
+                scaled_grid_offset -= (mouse - grid_offset - scaled_grid_offset) * (new_scaled_grid_size - scaled_grid_size) / scaled_grid_size;
                 scaled_grid_size = new_scaled_grid_size;
 
                 break;

@@ -1,7 +1,7 @@
 #include "Grid.h"
 #include "LevelSet.h"
 
-pthread_mutex_t glob_mutex;
+static pthread_mutex_t glob_mutex;
 
 void* exec(void* dummy)
 {
@@ -104,17 +104,17 @@ void* exec(void* dummy)
         { 200, 3,  0,   4, 4, 0,  1, 1,  1, -1},
         { 200, 3,  1,   4, 4, 0,  1, 1,  1, -1},
         { 200, 3,  2,   4, 4, 0,  1, 1,  1, -1},
-        {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
+        { 200, 3,  1,   4, 4, 1,  1, 1,  1, -2},
         {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
         { 200, 3,  0,   6, 6, 0,  1, 1,  1, -1},
         { 200, 3,  1,   6, 6, 0,  1, 1,  1, -1},
         { 200, 3,  2,   6, 6, 0,  1, 1,  1, -1},
-        {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
+        { 200, 3,  1,   6, 6, 1,  1, 1,  1, -2},
         {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
         { 200, 3,  0,   8, 8, 0,  1, 1,  1, -1},
         { 200, 3,  1,   8, 8, 0,  1, 1,  1, -1},
         { 200, 3,  2,   8, 8, 0,  1, 1,  1, -1},
-        {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
+        { 200, 3,  1,   8, 8, 1,  1, 1,  1, -2},
         {   0, 3,  0,   4, 4, 0,  1, 1,  1, -1},
 
 
@@ -180,9 +180,21 @@ void* exec(void* dummy)
 }
 
 
+void global_mutex_lock()
+{
+    pthread_mutex_lock(&glob_mutex);
+}
+
+void global_mutex_unlock()
+{
+    pthread_mutex_unlock(&glob_mutex);
+}
+
+
 int main( int argc, char* argv[] )
 {
-    int TNUM = 4;
+    //grid_set_rnd(1);
+    int TNUM = 8;
     pthread_t thread[TNUM];
     void* dummy;
 
