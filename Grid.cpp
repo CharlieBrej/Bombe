@@ -131,6 +131,23 @@ void GridRegion::next_colour()
     colour = colours_used[type.value]++;
 }
 
+bool GridRegion::has_ancestor(GridRegion* other)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (gen_cause.regions[0])
+        {
+            if (gen_cause.regions[0] == other)
+                return true;
+            if (gen_cause.regions[0]->has_ancestor(other))
+                return true;
+        }
+    }
+    return false;
+}
+
+
+
 GridRule::GridRule(SaveObject* sobj, int version)
 {
     SaveObjectMap* omap = sobj->get_map();
@@ -2017,11 +2034,13 @@ void Grid::add_new_regions()
     regions_to_add_multiset.clear();
 }
 
-bool Grid::add_one_new_region()
+bool Grid::add_one_new_region(GridRegion* r)
 {
-    std::list<GridRegion>::iterator it;
-    while ((it = regions_to_add.begin()) != regions_to_add.end())
+    std::list<GridRegion>::iterator it = regions_to_add.begin();
+    for (std::list<GridRegion>::iterator it = regions_to_add.begin(); it != regions_to_add.end(); it++)
     {
+        if (r && !(*it).has_ancestor(r))
+            continue;
         GridRegionCause c = (*it).gen_cause;
         if (regions_set.count(&*it) ||
             (
@@ -2031,7 +2050,7 @@ bool Grid::add_one_new_region()
             (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN)))
         {
             remove_from_regions_to_add_multiset(&(*it));
-            regions_to_add.erase(it);
+            it = regions_to_add.erase(it);
         }
         else
         {
@@ -2041,6 +2060,8 @@ bool Grid::add_one_new_region()
             return true;
         }
     }
+    if (r)
+        return add_one_new_region(NULL);
     return false;
 }
 

@@ -189,6 +189,7 @@ public:
         return false;
     }
     void next_colour();
+    bool has_ancestor(GridRegion* other);
 
 };
 
@@ -330,7 +331,7 @@ public:
     ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
-    bool add_one_new_region();
+    bool add_one_new_region(GridRegion* r);
     void clear_regions();
 };
 

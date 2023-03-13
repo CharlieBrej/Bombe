@@ -571,6 +571,9 @@ void GameState::advance(int steps)
             grid_regions_animation.clear();
             grid_regions_fade.clear();
             current_level_is_temp = false;
+            grid_zoom = 1;
+            scaled_grid_offset = XYPos(0,0);
+            scaled_grid_size = grid_size;
         }
         else
             auto_progress = false;
@@ -803,7 +806,7 @@ void GameState::advance(int steps)
         for (GridRegion& r : grid->regions)
             r.stale = true;
         
-        if (grid->add_one_new_region())
+        if (grid->add_one_new_region(right_panel_mode == RIGHT_MENU_REGION ? inspected_region : NULL))
         {
             for (GridRegion& region : grid->regions)
             {
