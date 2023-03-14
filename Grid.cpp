@@ -20,6 +20,10 @@ void grid_set_rnd(int a)
 template<class RESP, class IN>
 RESP RegionType::apply_rule(IN in)
 {
+    if (type == NONE)
+    {
+        return (in  != (value - 1000));
+    }
     if (type == EQUAL)
     {
         return in == value;
@@ -1943,7 +1947,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
     {
         for (int i = 0; i < rule.region_count; i++)
         {
-            if (unstale_region->type == rule.region_type[i])
+            if (unstale_region->type == rule.region_type[i] || rule.region_type[i].type == RegionType::NONE)
                 places_for_reg |= 1 << i;
         }
         if (!places_for_reg)
@@ -1961,7 +1965,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
         {
             for (GridRegion& r : regions)
             {
-                if (r.type != rule.region_type[i])
+                if (r.type != rule.region_type[i] && rule.region_type[i].type != RegionType::NONE)
                     continue;
                 if (r.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
                     continue;

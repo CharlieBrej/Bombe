@@ -2937,7 +2937,7 @@ void GameState::render(bool saving)
                     mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
                 }
             }
-            else if ((region_type.type != RegionType::NONE) && (region_type.type < 50))
+            else if (region_type.type < 50)
             {
                 {
                     SDL_Rect src_rect = {384, 992, 64, 64};
@@ -3541,7 +3541,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 } 
                 if (region_type != constructed_rule.region_type[region_index])
                 {
-                    if ((region_type.type == RegionType::NONE) || (region_type.type > 50))
+                    if (region_type.type > 50)
                         return;
                     update_constructed_rule_pre();
                     constructed_rule.region_type[region_index] = region_type;
