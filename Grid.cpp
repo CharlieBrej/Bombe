@@ -396,10 +396,8 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
     }
 }
 
-bool GridRule::is_legal()
+GridRule::IsLogicalRep GridRule::is_legal()
 {
-    if (apply_region_type.type == RegionType::VISIBILITY)
-        return true;
     z3::context c;
     z3::solver s(c);
 
@@ -440,13 +438,19 @@ bool GridRule::is_legal()
         s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15]));
         s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15]));
     }
-
+    if (s.check() != z3::sat)
+    {
+        return IMPOSSIBLE;
+    }
+    
+    if (apply_region_type.type == RegionType::VISIBILITY)
+        return OK;
 
     z3::expr e = c.int_val(0);
     int tot = 0;
 
     if (!apply_region_bitmap)
-        return false;
+        return OK;
 
     for (int i = 1; i < (1 << region_count); i++)
     {
@@ -455,14 +459,12 @@ bool GridRule::is_legal()
             e = e + vec[i];
             int m = square_counts[i].max();
             if ((m < 0) && (apply_region_type == RegionType(RegionType::SET,1)))
-                return false;
+                return ILLOGICAL;
             tot += m;
         }
     }
 
-    if (apply_region_type.type == RegionType::VISIBILITY)
-        return true;
-    else if (apply_region_type.type == RegionType::SET)
+    if (apply_region_type.type == RegionType::SET)
     {
         if (apply_region_type.value)
             s.add(e != tot);
@@ -482,14 +484,11 @@ bool GridRule::is_legal()
             z3::model m = s.get_model();
             std::cout << "B" << i << ":" << m.eval(vec[i]) << "\n";
         }
-
-
-
-        return false;
+        return ILLOGICAL;
     }
     else
     {
-        return true;
+        return OK;
     }
 }
 

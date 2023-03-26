@@ -133,7 +133,7 @@ public:
                                                 RegionType(RegionType::NONE, 0)};
 
 
-    bool constructed_rule_is_logical = false;
+    GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule* constructed_rule_is_already_present = NULL;
 
     GridRegion* mouse_hover_region = NULL;
