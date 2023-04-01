@@ -2137,12 +2137,18 @@ void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 
 XYPos SquareGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
-    XYPos rep(pos / grid_pitch);
+    if (grid_pitch == XYPos(0, 0))
+        return XYPos(-1,-1);
+    XYPos rep((pos / grid_pitch));
     if (wrapped == WRAPPED_SIDE)
         rep = rep % size;
-    if (rep.inside(size))
-        return rep;
-    return XYPos(-1,-1);
+    if (!rep.inside(size))
+        return XYPos(-1,-1);
+
+    rep = get_base_square(rep);
+    if (wrapped == WRAPPED_IN && rep == innie_pos)
+        return get_square_from_mouse_pos(pos - innie_pos * grid_pitch, grid_pitch * get_square_size(innie_pos) / size);
+    return rep;
 }
 
 XYSet SquareGrid::get_neighbors(XYPos p)
