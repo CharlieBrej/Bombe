@@ -1056,6 +1056,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             if ((disp_type == 1) && selected)
             {
+                line_thickness *= 2;
                 set_region_colour(sdl_texture, region.type.value, region.colour, opac);
                 double f = (frame / 5 + pos.x);
                 SDL_Rect src_rect1 = {int(f)% 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
@@ -1065,13 +1066,13 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 {
                     XYPos s = r.pos + pos * r.size;
                     XYPos e = r.pos + last * r.size;
-                    if (s.x < 0 && e.x < 0) continue;
-                    if (s.y < 0 && e.y < 0) continue;
-                    if (s.x > grid_size && e.x > grid_size) continue;
-                    if (s.y > grid_size && e.y > grid_size) continue;
+                    if (s.x < -line_thickness && e.x < -line_thickness) continue;
+                    if (s.y < -line_thickness && e.y < -line_thickness) continue;
+                    if (s.x > grid_size + line_thickness && e.x > grid_size + line_thickness) continue;
+                    if (s.y > grid_size + line_thickness && e.y > grid_size + line_thickness) continue;
                     s += grid_offset;
-                    SDL_Point rot_center = {0, int(line_thickness * 2 * r.size)};
-                    SDL_Rect dst_rect = {s.x, s.y - int(line_thickness * 2 * r.size), int(dist * r.size), int(line_thickness * 4 * r.size)};
+                    SDL_Point rot_center = {0, int(line_thickness * r.size)};
+                    SDL_Rect dst_rect = {s.x, s.y - int(line_thickness * r.size), int(dist * r.size), int(line_thickness * 2 * r.size)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect1, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect2, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
                 }
@@ -1085,10 +1086,10 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 {
                     XYPos s = r.pos + pos * r.size;
                     XYPos e = r.pos + last * r.size;
-                    if (s.x < 0 && e.x < 0) continue;
-                    if (s.y < 0 && e.y < 0) continue;
-                    if (s.x > grid_size && e.x > grid_size) continue;
-                    if (s.y > grid_size && e.y > grid_size) continue;
+                    if (s.x < -line_thickness && e.x < -line_thickness) continue;
+                    if (s.y < -line_thickness && e.y < -line_thickness) continue;
+                    if (s.x > grid_size + line_thickness && e.x > grid_size + line_thickness) continue;
+                    if (s.y > grid_size + line_thickness && e.y > grid_size + line_thickness) continue;
                     s += grid_offset;
 
                     SDL_Point rot_center = {0, int(line_thickness * r.size)};
@@ -2201,7 +2202,7 @@ void GameState::render(bool saving)
             GridPlace place = grid->get(pos);
             if (place.revealed)
             {
-                XYRect sq_pos = grid->get_square_pos(pos, grid_pitch);
+                XYRect sq_pos = grid->get_icon_pos(pos, grid_pitch);
                 unsigned anim_prog = grid_cells_animation[pos];
                 unsigned max_anim_frame = 500;
                 grid_cells_animation[pos] = std::min(anim_prog + frame_step, max_anim_frame);

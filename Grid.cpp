@@ -1648,21 +1648,25 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         if ((rule.apply_region_bitmap & 1) && r1->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r1->vis_level = vis_level;
+            r1->visibility_force = GridRegion::VIS_FORCE_NONE;
             r1->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 2) && r2->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r2->vis_level = vis_level;
+            r2->visibility_force = GridRegion::VIS_FORCE_NONE;
             r2->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 4) && r3->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r3->vis_level = vis_level;
+            r3->visibility_force = GridRegion::VIS_FORCE_NONE;
             r3->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         if ((rule.apply_region_bitmap & 8) && r4->visibility_force != GridRegion::VIS_FORCE_USER)
         {
             r4->vis_level = vis_level;
+            r4->visibility_force = GridRegion::VIS_FORCE_NONE;
             r4->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
         }
         return APPLY_RULE_RESP_NONE;
@@ -2283,6 +2287,11 @@ XYRect SquareGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
     return XYRect(pos * grid_pitch, get_square_size(pos) * grid_pitch);
 }
 
+XYRect SquareGrid::get_icon_pos(XYPos pos, XYPos grid_pitch)
+{
+    return XYRect(pos * grid_pitch, get_square_size(pos) * grid_pitch);
+}
+
 XYRect SquareGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
 {
     XYPos size = get_square_size(pos);
@@ -2380,6 +2389,31 @@ XYPos SquareGrid::get_wrapped_size(XYPos grid_pitch)
     return size * grid_pitch;
 }
 
+bool TriangleGrid::is_inside(XYPos pos)
+{
+    if (wrapped == WRAPPED_IN)
+    {
+        XYPos p = pos;
+        int side = size.y / 2;
+        XYPos cnt = XYPos(side * 2 - 1, side);
+        XYPos s = XYPos(side * 4 - 1, side * 2);
+        if (!(side & 1))
+            p.x --;
+        if (p.x >= cnt.x)
+            p.x = s.x - p.x - 1;
+        if (p.y >= cnt.y)
+            p.y = s.y - p.y - 1;
+        if ((p.x + p.y) < (side - 1))
+            return false;
+        if (p.x < 0)
+            return false;
+        if (p.y < 0)
+            return false;
+        return true;
+    }
+    return pos.inside(size);
+}
+
 std::string TriangleGrid::to_string()
 {
     return "B" + Grid::to_string();
@@ -2389,7 +2423,11 @@ XYSet TriangleGrid::get_squares()
 {
     XYSet rep;
     FOR_XY(pos, XYPos(), size)
+    {
+        if (!is_inside(pos))
+            continue;
         rep.set(pos);
+    }
     for ( const auto &m_reg : merged )
     {
         FOR_XY(pos, m_reg.first, m_reg.first + m_reg.second)
@@ -2399,6 +2437,8 @@ XYSet TriangleGrid::get_squares()
             rep.clear(pos);
         }
     }
+    if (wrapped == WRAPPED_IN)
+        rep.clear(innie_pos);
 
     return rep;
 }
@@ -2444,23 +2484,164 @@ XYSet TriangleGrid::get_row(unsigned type, int index)
     }
     return rep;
 }
+XYSet TriangleGrid::base_get_neighbors_of_point(XYPos pos)
+{
+    XYSet rep;
+    FOR_XY(offset, XYPos(-1,-1), XYPos(2,1))
+    {
+        XYPos t = pos + offset;
+        if (wrapped == WRAPPED_SIDE)
+            t = t % size;
+        if (wrapped == WRAPPED_IN)
+        {
+            if (!is_inside(t))
+                continue;
+            if (get_base_square(t) == innie_pos)
+                continue;
+        }
+        else if (!is_inside(t))
+            continue;
+        rep.set(get_base_square(t));
+    }
+    return rep;
+
+}
+
+XYSet TriangleGrid::get_neighbors_of_point(XYPos pos)
+{
+
+    assert(!((pos.x ^ pos.y) & 1));
+    XYSet rep;
+    
+    if (wrapped == WRAPPED_IN)
+    {
+        int side = size.y / 2;
+
+        XYPos n = pos - (innie_pos + XYPos(1,1));
+        XYPos an = XYPos(abs(n.x), abs(n.y));
+        if (an == XYPos(1,1))
+        {
+            XYPos k = XYPos((side / 2) * 2, 0);
+            if (n.x > 0)
+                k.x += side * 2;
+            if (n.y > 0)
+                k.y += side * 2;
+            rep = rep | base_get_neighbors_of_point(k);
+        }
+        if (an == XYPos(2,0))
+        {
+            XYPos k = XYPos(((n.x > 0) ? side * 4 : 0) - (side & 1), side);
+            rep = rep | base_get_neighbors_of_point(k);
+        }
+
+
+        XYPos p = pos;
+        XYPos cnt = XYPos(side * 2, side);
+        XYPos s = XYPos(side * 4 - 2, side * 2);
+        XYPos r = innie_pos;
+        XYPos rs = innie_pos - XYPos(1,0);
+        if (!(side & 1))
+            p.x --;
+        if (p.x >= cnt.x)
+        {
+            r.x += 2;
+            rs.x += 4;
+            p.x = s.x - p.x;
+        }
+        if (p.y >= cnt.y)
+        {
+            r.y += 2;
+            rs.y += 1;
+            p.y = s.y - p.y;
+        }
+        bool ts = ((p.x + p.y) <= (side - 1));
+
+        if (ts)
+            rep.set(rs);
+        if (p.y == 0)
+        {
+            if (pos.y == 0)
+                rep.set(innie_pos + XYPos(1, -1));
+            else
+                rep.set(innie_pos + XYPos(1, 2));
+        }
+        if (ts && (p.y == 0))
+        {
+            rep = rep | base_get_neighbors_of_point(r);
+        }
+    }
+    rep = rep | base_get_neighbors_of_point(pos);
+    return rep;
+}
 
 XYSet TriangleGrid::base_get_neighbors(XYPos pos)
 {
     bool downwards = (pos.x ^ pos.y) & 1;
     XYSet rep;
 
-    FOR_XY(offset, XYPos(-2,-1), XYPos(3,2))
+    if (!downwards)
     {
-        if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
-        if (offset == XYPos(2, downwards ? 1 : -1)) continue;
-        XYPos t = pos + offset;
-        if (wrapped == WRAPPED_SIDE)
-            t = t % size;
-        if (!t.inside(size))
-            continue;
-        rep.set(get_base_square(t));
+        rep = rep | get_neighbors_of_point(pos + XYPos(0, 0));
+        rep = rep | get_neighbors_of_point(pos + XYPos(1, 1));
+        rep = rep | get_neighbors_of_point(pos + XYPos(-1, 1));
     }
+    else
+    {
+        rep = rep | get_neighbors_of_point(pos + XYPos(0, 1));
+        rep = rep | get_neighbors_of_point(pos + XYPos(1, 0));
+        rep = rep | get_neighbors_of_point(pos + XYPos(-1, 0));
+    }
+
+
+    if (wrapped == WRAPPED_IN)
+    {
+        int side = size.y / 2;
+        XYPos k = pos - (innie_pos + XYPos(1,0));
+        XYPos ak = XYPos(abs(k.x), k.y);
+        if (ak.x == 2 && (ak.y == 0 || ak.y == 1))
+        {
+            for (int i = 0; i < side; i++)
+            {
+                XYPos t;
+                t.x = (k.x > 0) ? 4 * side - 3 - i : i;
+                t.x += (!(side & 1));
+                t.y = k.y ? side + i : side - i - 1;
+                rep.set(get_base_square(t));
+                t.x++;
+                rep.set(get_base_square(t));
+            }
+        }
+        if (k.x == 0 && (k.y == -1 || k.y == 2))
+        {
+            for (int i = side; i < side * 3; i++)
+            {
+                XYPos t;
+                t.x = i;
+                t.y = (k.y > 0) ?  side * 2 - 1: 0;
+                rep.set(get_base_square(t));
+            }
+        }
+    }
+
+
+    // FOR_XY(offset, XYPos(-2,-1), XYPos(3,2))
+    // {
+    //     if (offset == XYPos(-2, downwards ? 1 : -1)) continue;
+    //     if (offset == XYPos(2, downwards ? 1 : -1)) continue;
+    //     XYPos t = pos + offset;
+    //     if (wrapped == WRAPPED_SIDE)
+    //         t = t % size;
+    //     if (wrapped == WRAPPED_IN)
+    //     {
+    //         if (get_base_square(t) == innie_pos)
+    //             continue;
+    //         if (!is_inside(t))
+    //             continue;
+    //     }
+    //     else if (!is_inside(t))
+    //         continue;
+    //     rep.set(get_base_square(t));
+    // }
 
     return rep;
 }
@@ -2514,14 +2695,14 @@ XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
         rep.x--;
     if (wrapped == WRAPPED_SIDE)
         rep = rep % size;
-    if (rep.inside(size))
+    if (is_inside(rep))
         return rep;
     return XYPos(-1,-1);
 }
 
 XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)
 {
-    XYPosFloat gsize((size.x + 1.0) / 2, size.y * std::sqrt(3) / 2);
+    XYPosFloat gsize((size.x + ((wrapped == WRAPPED_IN) ? 0.0 : 1.0)) / 2, size.y * std::sqrt(3) / 2);
     int s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
     return XYPos(s / 2, std::sqrt(3) * s / 2);
 }
@@ -2529,15 +2710,27 @@ XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)
 XYRect TriangleGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
 {
     XYPos sq_size = get_square_size(pos);
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x--;
+    return XYRect(pos * grid_pitch, (sq_size + XYPos(1,0)) * grid_pitch);
+}
+
+XYRect TriangleGrid::get_icon_pos(XYPos pos, XYPos grid_pitch)
+{
+    XYPos sq_size = get_square_size(pos);
     if (sq_size == XYPos(3,2))
     {
         int s = grid_pitch.x * 3;
         XYPos siz = XYPos(s,s);
         XYPos off = ((grid_pitch * XYPos(4,2)) - siz) / 2;
+        if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+            pos.x--;
         return XYRect(pos * grid_pitch + off, siz);
     }
     bool downwards = (pos.x ^ pos.y) & 1;
     XYPos border(grid_pitch.x / 2, grid_pitch.y / 6);
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x--;
     return XYRect(pos * grid_pitch + XYPos(border.x, downwards ? 0 : border.y * 2), XYPos((grid_pitch.x - border.x) * 2, grid_pitch.y - border.y * 2));
 }
 
@@ -2570,6 +2763,8 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         }
 
         XYPos p(grid_pitch.x  + gpos.x * bsize - gpos.y * bsize / 2 - bsize / 2 + bsize / (std::sqrt(3) * 2), gpos.y * std::sqrt(3) * bsize / 2);
+        if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+            pos.x--;
         return XYRect(pos * grid_pitch + p, XYPos(bsize, bsize));
     }
 
@@ -2590,6 +2785,8 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
     gpos.x = index;
 
     XYPos p(bsize * std::sqrt(3) / 2 - (bsize / 2) + gpos.x * bsize + gpos.y * bsize / 2, gpos.y * std::sqrt(3) * bsize / 2);
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x--;
 
     if (downwards)
         return XYRect(pos * grid_pitch + p, XYPos(bsize, bsize));
@@ -2603,8 +2800,8 @@ void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<Render
     XYPos line_seg(grid_pitch.x * 2, grid_pitch.x / 16 + 1);
     if (sq_size == XYPos(3,2))
     {
-
-        
+        if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+            pos.x--;
         {
             XYRect src(64, 1984 , 384, 384);
             XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 4, grid_pitch.y * 2));
@@ -2628,6 +2825,8 @@ void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<Render
 
     }
     bool downwards = (pos.x ^ pos.y) & 1;
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x--;
     {
         XYRect src(256, downwards ? 1344 : 1152 , 192, 192);
         XYRect dst(pos * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y));
@@ -2662,6 +2861,7 @@ void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<Render
 
 void TriangleGrid::add_random_merged(int merged_count)
 {
+    bool done_innie = (wrapped != WRAPPED_IN);
     for (int i = 0; i < merged_count;)
     {
         XYPos m_pos(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
@@ -2669,10 +2869,23 @@ void TriangleGrid::add_random_merged(int merged_count)
 
         if ((m_pos.x ^ m_pos.y) & 1)
             continue;
-        if (!(m_size + m_pos - XYPos(1,1)).inside(size))
+        if (!is_inside(m_size + m_pos - XYPos(1,1)))
             continue;
+        if (!is_inside(m_pos))
+            continue;
+        if(!done_innie)
+        {
+            if (!is_inside(m_pos - XYPos(1,0)))
+                continue;
+            if (!is_inside(m_pos - XYPos(0,1)))
+                continue;
+            if (!is_inside(m_pos + XYPos(3,0)))
+                continue;
+            if (!is_inside(m_pos + XYPos(0,2)))
+                continue;
+        }
         bool bad = false;
-        for ( const auto &m_reg : merged )
+        for ( const auto &m_reg : merged)
         {
             if ( (std::min(m_reg.first.x + m_reg.second.x, m_pos.x + m_size.x) > std::max(m_reg.first.x, m_pos.x)) &&
                  (std::min(m_reg.first.y + m_reg.second.y, m_pos.y + m_size.y) > std::max(m_reg.first.y, m_pos.y)) )
@@ -2680,6 +2893,11 @@ void TriangleGrid::add_random_merged(int merged_count)
         }
         if (bad)
             continue;
+        if (!done_innie)
+        {
+            done_innie = true;
+            innie_pos = m_pos;
+        }
         merged[m_pos] = m_size;
         i++;
     }
@@ -2842,6 +3060,16 @@ XYPos HexagonGrid::get_grid_pitch(XYPos grid_size)
 }
 
 XYRect HexagonGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
+{
+    int downstep = pos.x & 1;
+    int s = grid_pitch.x * 3;
+    XYPos siz = XYPos(s,s);
+    XYPos off = ((grid_pitch * XYPos(4,2)) - siz) / 2;
+    XYRect dst((pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch + off, siz);
+    return dst;
+}
+
+XYRect HexagonGrid::get_icon_pos(XYPos pos, XYPos grid_pitch)
 {
     int downstep = pos.x & 1;
     int s = grid_pitch.x * 3;

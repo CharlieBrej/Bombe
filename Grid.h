@@ -300,6 +300,7 @@ public:
 
     virtual XYPos get_grid_pitch(XYPos grid_size) = 0;
     virtual XYRect get_square_pos(XYPos pos, XYPos grid_pitch) = 0;
+    virtual XYRect get_icon_pos(XYPos pos, XYPos grid_pitch) = 0;
     virtual XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total) = 0;
     virtual void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd) = 0;
     virtual void add_random_merged(int count) {}
@@ -366,6 +367,7 @@ public:
 
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_icon_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     void add_random_merged(int count);
@@ -380,11 +382,15 @@ public:
     TriangleGrid() {}
     TriangleGrid(std::string s) {from_string(s);}
 
+    bool is_inside(XYPos p);
+
     std::string to_string();
     Grid* dup() {return new TriangleGrid(*this);}
     XYSet get_squares();
     XYSet get_row(unsigned type, int index);
 private:
+    XYSet base_get_neighbors_of_point(XYPos pos);
+    XYSet get_neighbors_of_point(XYPos pos);
     XYSet base_get_neighbors(XYPos pos);
 public:
     XYSet get_neighbors(XYPos p);
@@ -394,6 +400,7 @@ public:
 
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_icon_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     void add_random_merged(int count);
@@ -419,6 +426,7 @@ public:
 
     XYPos get_grid_pitch(XYPos grid_size);
     XYRect get_square_pos(XYPos pos, XYPos grid_pitch);
+    XYRect get_icon_pos(XYPos pos, XYPos grid_pitch);
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     XYPos get_wrapped_size(XYPos grid_pitch);
