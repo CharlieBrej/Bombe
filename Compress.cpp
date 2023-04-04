@@ -617,7 +617,7 @@ std::string compress_string_zstd(const std::string& str, int level)
     char* buf = (char*) malloc(buf_size);
     
     ZSTD_CCtx* const cctx = ZSTD_createCCtx();
-    ZSTD_CDict* const cdict = ZSTD_createCDict(dictionary, dictionary_len, ZSTD_maxCLevel());
+    ZSTD_CDict* const cdict = ZSTD_createCDict(dictionary, dictionary_len, level);
     
     size_t got_size = ZSTD_compress_usingCDict(cctx, buf, buf_size, str.c_str(), str.size(), cdict);
     std::string outstring;

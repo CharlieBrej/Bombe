@@ -550,8 +550,8 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
         {
             int cnt = 0;
             XYSet neigh = get_neighbors(p);
-            FOR_XY_SET(p, neigh)
-                cnt += get(p).bomb;
+            FOR_XY_SET(t, neigh)
+                cnt += get(t).bomb;
 
             vals[p].clue.type = RegionType::EQUAL;
             vals[p].clue.value = cnt;
@@ -2557,13 +2557,13 @@ XYSet TriangleGrid::get_neighbors_of_point(XYPos pos)
         bool ts = ((p.x + p.y) <= (side - 1));
 
         if (ts)
-            rep.set(rs);
+            rep.set(get_base_square(rs));
         if (p.y == 0)
         {
             if (pos.y == 0)
-                rep.set(innie_pos + XYPos(1, -1));
+                rep.set(get_base_square(innie_pos + XYPos(1, -1)));
             else
-                rep.set(innie_pos + XYPos(1, 2));
+                rep.set(get_base_square(innie_pos + XYPos(1, 2)));
         }
         if (ts && (p.y == 0))
         {
@@ -2881,6 +2881,8 @@ void TriangleGrid::add_random_merged(int merged_count)
                 continue;
             if (!is_inside(m_pos + XYPos(3,0)))
                 continue;
+            if (!is_inside(m_pos + XYPos(3,1)))
+                continue;
             if (!is_inside(m_pos + XYPos(0,2)))
                 continue;
         }
@@ -2914,6 +2916,7 @@ XYPos TriangleGrid::get_square_size(XYPos p)
 }
 XYPos TriangleGrid::get_base_square(XYPos p)
 {
+    assert(is_inside(p));
     for (const auto &m_reg : merged)
     {
         if ((p - m_reg.first).inside(m_reg.second))

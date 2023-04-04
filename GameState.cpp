@@ -2120,14 +2120,20 @@ void GameState::render(bool saving)
                         if (bg_col == Colour(0, 0, 0))
                             continue;
                         SDL_SetTextureColorMod(sdl_texture, bg_col.r,  bg_col.g, bg_col.b);
-
+                    }
+                    else if (grid->wrapped == Grid::WRAPPED_IN)
+                    {
+                        double d = log(grid_pitch.y * r.size / grid_size);
+                        uint8_t r = ((sin(d) + 1) / 2) * 100 + 155;
+                        uint8_t g = ((sin(d+2) + 1) / 2) * 100 + 155;
+                        uint8_t b = ((sin(d+4) + 1) / 2) * 100 + 155;
+                        SDL_SetTextureColorMod(sdl_texture, r, g, b);
                     }
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {grid_offset.x + r.pos.x + int(cmd.dst.pos.x * r.size), grid_offset.y + r.pos.y + int(cmd.dst.pos.y * r.size), int(cmd.dst.size.x * r.size), int(ceil(cmd.dst.size.y * r.size))};
-                    SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.center.y * r.size)};
+                    SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.center.y)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
-                    if (cmd.bg)
-                        SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
 
 
                 }
