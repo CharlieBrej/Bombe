@@ -149,7 +149,8 @@ public:
     XYPos left_panel_offset;
     XYPos right_panel_offset;
     XYPos grid_offset;
-    double grid_zoom = 0;
+    double grid_zoom = 1;
+    double target_grid_zoom = 1;
     bool grid_dragging = false;
     XYPos grid_dragging_last_pos;
     XYPos scaled_grid_offset;

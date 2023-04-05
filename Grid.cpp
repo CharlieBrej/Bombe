@@ -2300,9 +2300,9 @@ XYRect SquareGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, u
     unsigned s = 2 + min;
     while (total > (s * s))
         s++;
-    XYPos p = (XYPos((index / s + index % s) % s, index % s) * grid_pitch) * min / s;
-    return XYRect(pos * grid_pitch + offset * grid_pitch / 2 + p, XYPos(grid_pitch.x * min / s, grid_pitch.y * min / s));
-
+    XYPos border = grid_pitch / 24;
+    XYPos p = XYPos((index / s + index % s) % s, index % s) * (grid_pitch * min - border * 2) / s;
+    return XYRect(pos * grid_pitch + offset * grid_pitch / 2 + p + border, (grid_pitch * min - border * 2) / s);
 }
 
 void SquareGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
@@ -2686,6 +2686,8 @@ void TriangleGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 
 XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x += grid_pitch.x;
     XYPos rep(pos / grid_pitch);
     XYPos rem(pos % grid_pitch);
     if (!((rep.x ^ rep.y) & 1))
@@ -2695,16 +2697,21 @@ XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
         rep.x--;
     if (wrapped == WRAPPED_SIDE)
         rep = rep % size;
-    if (is_inside(rep))
-        return rep;
-    return XYPos(-1,-1);
+    if (!is_inside(rep))
+        return XYPos(-1,-1);
+
+    rep = get_base_square(rep);
+    if (wrapped == WRAPPED_IN && rep == innie_pos)
+        return get_square_from_mouse_pos(pos - innie_pos * grid_pitch, (grid_pitch * (get_square_size(innie_pos) + XYPos(1,0))) / size);
+
+    return rep;
 }
 
 XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)
 {
     XYPosFloat gsize((size.x + ((wrapped == WRAPPED_IN) ? 0.0 : 1.0)) / 2, size.y * std::sqrt(3) / 2);
-    int s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
-    return XYPos(s / 2, std::sqrt(3) * s / 2);
+    double s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
+    return XYPos(ceil(s / 2.0), ceil(std::sqrt(3) * s / 2.0));
 }
 
 XYRect TriangleGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
@@ -2742,8 +2749,9 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         unsigned s = 3;
         while (total > (1 + 3 * (s * (s - 1))))
             s++;
+        XYPos border = grid_pitch / 16;
 
-        double bsize = double(grid_pitch.x * 2) / (s - 1 + 1 / std::sqrt(3));
+        double bsize = double(grid_pitch.x * 2 - border.x * 2) / (s - 1 + 1 / std::sqrt(3));
 
         XYPos gpos = XYPos(0,0);
         while (true)
@@ -2765,16 +2773,15 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         XYPos p(grid_pitch.x  + gpos.x * bsize - gpos.y * bsize / 2 - bsize / 2 + bsize / (std::sqrt(3) * 2), gpos.y * std::sqrt(3) * bsize / 2);
         if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
             pos.x--;
-        return XYRect(pos * grid_pitch + p, XYPos(bsize, bsize));
+        return XYRect(pos * grid_pitch + p + border, XYPos(bsize, bsize));
     }
 
-
-
+    XYPos border = grid_pitch / 16;
     bool downwards = (pos.x ^ pos.y) & 1;
     unsigned s = 3;
     while (total > ((s * (s + 1)) / 2))
         s++;
-    double bsize = double(grid_pitch.x * 2) / (std::sqrt(3) + s - 1);
+    double bsize = double(grid_pitch.x * 2 - border.x * 6) / (std::sqrt(3) + s - 1);
 
     XYPos gpos = XYPos(0,0);
     while (index >= (s - gpos.y))
@@ -2784,7 +2791,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
     }
     gpos.x = index;
 
-    XYPos p(bsize * std::sqrt(3) / 2 - (bsize / 2) + gpos.x * bsize + gpos.y * bsize / 2, gpos.y * std::sqrt(3) * bsize / 2);
+    XYPos p(bsize * std::sqrt(3) / 2 - (bsize / 2) + gpos.x * bsize + gpos.y * bsize / 2 + border.x * 3, gpos.y * std::sqrt(3) * bsize / 2 + border.y);
     if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
         pos.x--;
 
@@ -2797,7 +2804,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
 void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
     XYPos sq_size = get_square_size(pos);
-    XYPos line_seg(grid_pitch.x * 2, grid_pitch.x / 16 + 1);
+    XYPos line_seg(grid_pitch.x * 2, grid_pitch.y / 16 + 1);
     if (sq_size == XYPos(3,2))
     {
         if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
@@ -3084,12 +3091,13 @@ XYRect HexagonGrid::get_icon_pos(XYPos pos, XYPos grid_pitch)
 
 XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
 {
+    XYPos border = grid_pitch / 10;
     int downstep = pos.x & 1;
     unsigned s = 2;
     while (total > (1 + 3 * (s * (s - 1))))
         s++;
 
-    double bsize = double(grid_pitch.x * 2) / (s - 1 + 1 / std::sqrt(3));
+    double bsize = double(grid_pitch.x * 2 - border.x * 2) / (s - 1 + 1 / std::sqrt(3));
 
     XYPos gpos = XYPos(0,0);
     while (true)
@@ -3109,7 +3117,7 @@ XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, 
     }
 
     XYPos p(grid_pitch.x  + gpos.x * bsize - gpos.y * bsize / 2 - bsize / 2 + bsize / (std::sqrt(3) * 2), gpos.y * std::sqrt(3) * bsize / 2);
-    XYPos ppos = (pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch;
+    XYPos ppos = (pos * XYPos(3, 2) + XYPos(0, downstep)) * grid_pitch + border;
 
     return XYRect(ppos + p, XYPos(bsize, bsize));
 }
@@ -3126,17 +3134,17 @@ void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderC
     {
         XYRect src(5, 1024, 1, 1);
         XYRect dst;
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(1, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(1, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 0, XYPos(0,1)));
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(3, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(3, 0)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 60, XYPos(0,1)));
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(4, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(4, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 120, XYPos(0,1)));
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(3, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(3, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 180, XYPos(0,1)));
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(1, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(1, 2)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 240, XYPos(0,1)));
-        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(0, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.x / 6 + 1));
+        dst = XYRect ((pos * XYPos(3, 2) + XYPos(0, downstep) + XYPos(0, 1)) * grid_pitch, XYPos(grid_pitch.x * 2, grid_pitch.y / 10 + 1));
         cmds.push_back(RenderCmd(src, dst, 300, XYPos(0,1)));
     }
 }
