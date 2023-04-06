@@ -154,7 +154,7 @@ public:
     bool grid_dragging = false;
     XYPos grid_dragging_last_pos;
     XYPos scaled_grid_offset;
-    int scaled_grid_size;
+    int scaled_grid_size = 1;
 
     struct WrapPos
     {
