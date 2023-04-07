@@ -197,6 +197,7 @@ public:
         unsigned current_index = 0;
         unsigned count_todo = 0;
         std::vector<bool> level_status;
+        std::vector<uint64_t> level_stats;
     };
 
     std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS];

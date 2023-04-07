@@ -27,11 +27,18 @@ const int LEVEL_TYPES = 4;
 
 typedef int64_t Score;
 
+struct LevelStats
+{
+    uint32_t completed = 0;
+    uint32_t total = 0;
+};
+
 class ScoreTable
 {
 public:
     std::multimap<Score, int64_t> sorted_scores;
     std::map<uint64_t, Score> user_score;
+    LevelStats stats[30][200];
     
     ~ScoreTable()
     {
@@ -39,6 +46,7 @@ public:
     }
     SaveObject* save()
     {
+        SaveObjectMap* obj = new SaveObjectMap;
         SaveObjectList* score_list = new SaveObjectList;
         for(auto const &score : sorted_scores)
         {
@@ -47,16 +55,51 @@ public:
             score_map->add_num("score", user_score[score.second]);
             score_list->add_item(score_map);
         }
-        return score_list;
+        obj->add_item("scores", score_list);
+
+        SaveObjectList* stats_list = new SaveObjectList;
+        for (int i=0; i<30; i++)
+        {
+            SaveObjectList* sub_stats_list = new SaveObjectList;
+            for (int j = 0; j < 200; j++)
+            {
+                SaveObjectList* stat = new SaveObjectList;
+                SaveObjectNumber* comp = new SaveObjectNumber(stats[i][j].completed);
+                SaveObjectNumber* total = new SaveObjectNumber(stats[i][j].total);
+                stat->add_item(comp);
+                stat->add_item(total);
+                sub_stats_list->add_item(stat);
+            }
+            stats_list->add_item(sub_stats_list);
+        }
+        obj->add_item("stats", stats_list);
+
+        return obj;
     }
     void load(SaveObject* sobj)
     {
-        SaveObjectList* score_list = sobj->get_list();
+        SaveObjectMap* smap = sobj->get_map();
+
+        SaveObjectList* score_list = smap->get_item("scores")->get_list();
         for (unsigned i = 0; i < score_list->get_count(); i++)
         {
             SaveObjectMap* omap = score_list->get_item(i)->get_map();
             add_score(omap->get_num("id"), omap->get_num("score"));
         }
+
+        SaveObjectList* stats_list = smap->get_item("stats")->get_list();
+        for (int i=0; i<30; i++)
+        {
+            SaveObjectList* sub_stats_list = stats_list->get_item(i)->get_list();
+            for (int j = 0; j < 200; j++)
+            {
+                SaveObjectList* stat = sub_stats_list->get_item(j)->get_list();
+                stats[i][j].completed = stat->get_item(0)->get_num();
+                stats[i][j].total = stat->get_item(1)->get_num();
+            }
+        }
+
+
     }
 
     void add_score(uint64_t steam_id, Score score)
@@ -176,6 +219,28 @@ public:
             top_list->add_item(score_list);
         }
         resp->add_item("scores", top_list);
+
+        SaveObjectList* top_slist = new SaveObjectList;
+        for (int l = 0; l < LEVEL_TYPES; l++)
+        {
+            SaveObjectList* stats_list = new SaveObjectList;
+            for (int i=0; i<30; i++)
+            {
+                SaveObjectList* sub_stats_list = new SaveObjectList;
+                for (int j = 0; j < 200; j++)
+                {
+                    uint64_t t = 0;
+                    if (scores[l].stats[i][j].total)
+                        t = ((uint64_t)scores[l].stats[i][j].completed * 10000) / scores[l].stats[i][j].total;
+                    SaveObjectNumber* stat = new SaveObjectNumber(t);
+                    sub_stats_list->add_item(stat);
+                }
+                stats_list->add_item(sub_stats_list);
+            }
+            top_slist->add_item(stats_list);
+        }
+       resp->add_item("stats", top_slist);
+
         return resp;
     }
 
@@ -341,17 +406,32 @@ public:
                         omap->save(std::cout);
                         std::cout << "\n";
 
-                        SaveObjectList* progress_list = omap->get_item("scores")->get_list();
+                        SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES; lset++)
                         {
-                            Score s = progress_list->get_num(lset);
-                            if (steam_id == 76561198083927051ull)
-                                continue;
-                            if (steam_id == 1337420ull)
-                                continue;
-                            db.scores[lset].add_score(steam_id, s);
+                            // if (steam_id == 76561198083927051ull)
+                            //     continue;
+                            // if (steam_id == 1337420ull)
+                            //     continue;
+                            unsigned score = 0;
+                            SaveObjectList* l = progress_list->get_item(lset)->get_list();
+                            for (int lgrp = 0; lgrp < l->get_count() && lgrp < 30; lgrp++)
+                            {
+                                std::string s = l->get_item(lgrp)->get_string();
+                                for (int i = 0; i < s.length() && i < 200; i++)
+                                {
+                                    bool c = (s[i] == '1');
+                                    db.scores[lset].stats[lgrp][i].total++;
+                                    if (c)
+                                    {
+                                        db.scores[lset].stats[lgrp][i].completed++;
+                                        score++;
+                                    }
+                                }
+                            }
+                            db.scores[lset].add_score(steam_id, score);
                         }
-                        std::set<uint64_t> friends;
+                       std::set<uint64_t> friends;
                         if (omap->has_key("friends"))
                         {
                             SaveObjectList* friend_list = omap->get_item("friends")->get_list();

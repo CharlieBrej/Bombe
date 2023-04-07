@@ -72,6 +72,7 @@ GameState::GameState(std::string& load_data, bool json)
         {
             level_progress[j][i].level_status.resize(global_level_sets[j][i]->levels.size());
             level_progress[j][i].count_todo = global_level_sets[j][i]->levels.size();
+            level_progress[j][i].level_stats.resize(global_level_sets[j][i]->levels.size());
         }
     }
     {
@@ -458,17 +459,21 @@ void GameState::fetch_scores()
     SaveObjectList* pplist = new SaveObjectList;
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        int count = 0;
-        for (int i = 0; i < level_progress[j].size(); i++)
+        SaveObjectList* plist = new SaveObjectList;
+        for (LevelProgress& prog : level_progress[j])
         {
-            LevelProgress& prog = level_progress[j][i];
-            for (bool b : prog.level_status)
-                if (b)
-                    count++;
+            std::string sstr;
+            for (bool stat : prog.level_status)
+            {
+                char c = '0' + stat;
+                sstr += c;
+            }
+            plist->add_item(new SaveObjectString(sstr));
         }
-        pplist->add_num(count);
+        pplist->add_item(plist);
     }
-    omap->add_item("scores", pplist);
+    omap->add_item("level_progress", pplist);
+
     SaveObjectList* slist = new SaveObjectList;
     for (uint64_t f : steam_friends)
         slist->add_num(f);
@@ -1353,26 +1358,21 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
 void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
 {
     int width = 0;
-    bool first_dig = true;
 
     for(char& c : digits)
     {
         if (c == '+' || c == '-')
-        {
             width += 3;
-        }
         else if (c == '!' )
-        {
             width += 2;
-        }
+        else if (c == '%' )
+            width += 6;
+        else if (c == '.' )
+            width += 2;
+        else if (c == '1')
+            width += 2;
         else
-        {
-            if (first_dig && c == '1')
-                width += 2;
-            else
-                width += 4;
-        }
-        first_dig = false;
+            width += 4;
     }
 
     XYPos t_size;
@@ -1383,7 +1383,6 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
 
     pos += (siz - t_size) / 2;
     XYPos digit_size = XYPos((t_size.y * 2) / 3, t_size.y);
-    first_dig = true;
     for(char& c : digits)
     {
         int digit = c - '0';
@@ -1404,14 +1403,23 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
             dst_rect.w = digit_size.x * 3 / 4;
             src_rect = {432, 512, 96, 192};
         }
-        if (first_dig && c == '1')
+        if (c == '1')
         {
             dst_rect.w = digit_size.x / 2;
             src_rect = {256, 0, 64, 192};
         }
+        if (c == '%')
+        {
+            dst_rect.w = digit_size.x * 6 / 4;
+            src_rect = {1952, 0, 192, 192};
+        }
+        if (c == '.')
+        {
+            dst_rect.w = digit_size.x / 2;
+            src_rect = {2144, 0, 64, 192};
+        }
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         pos.x += dst_rect.w;
-        first_dig = false;
     }
 
 }
@@ -2467,7 +2475,27 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         dst_rect.w *= 2;
         add_tooltip(dst_rect, "Current Level", false);
-        render_number(current_level_index, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+        unsigned rep = level_progress[current_level_group_index][current_level_set_index].level_stats[current_level_index];
+
+        std::string digits;
+        if (rep == 0)
+        {
+            digits = "0%";
+        }
+        else if (rep < 100)
+        {
+            digits = "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+        }
+        else if (rep < 1000)
+        {
+            digits = std::to_string((rep / 100) % 10) + "." + std::to_string((rep / 10) % 10) + "%";
+        }
+        else 
+        {
+            digits = std::to_string((rep / 1000) % 10) + std::to_string((rep / 100) % 10) + "%";
+        }
+
+        render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
 
     {
@@ -4273,6 +4301,20 @@ void GameState::deal_with_scores()
                         if (score->has_key("hidden"))
                             hidden = score->get_num("hidden");
                         score_tables[i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score")), is_friend, hidden));
+                    }
+                }
+                lvls = omap->get_item("stats")->get_list();
+                for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
+                {
+                    SaveObjectList* stats1 = lvls->get_item(i)->get_list();
+                    for (int j = 0; j < stats1->get_count() && j < level_progress[i].size(); j++)
+                    {
+                        SaveObjectList* stats2 = stats1->get_item(j)->get_list();
+                        for (int k = 0; k < stats2->get_count() && k < level_progress[i][j].level_stats.size(); k++)
+                        {
+                            int64_t s = stats2->get_item(k)->get_num();
+                            level_progress[i][j].level_stats[k] = s;
+                        }
                     }
                 }
             }

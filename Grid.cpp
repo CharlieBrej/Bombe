@@ -404,6 +404,8 @@ GridRule::IsLogicalRep GridRule::is_legal()
     z3::expr_vector vec(c);
 
     vec.push_back(c.bool_const("DUMMY"));
+    if (region_count == 0)
+        return IMPOSSIBLE;
 
     for (int i = 1; i < (1 << region_count); i++)
     {
@@ -2749,7 +2751,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         unsigned s = 3;
         while (total > (1 + 3 * (s * (s - 1))))
             s++;
-        XYPos border = grid_pitch / 16;
+        XYPos border = grid_pitch / 24;
 
         double bsize = double(grid_pitch.x * 2 - border.x * 2) / (s - 1 + 1 / std::sqrt(3));
 
@@ -2776,7 +2778,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         return XYRect(pos * grid_pitch + p + border, XYPos(bsize, bsize));
     }
 
-    XYPos border = grid_pitch / 16;
+    XYPos border = grid_pitch / 24;
     bool downwards = (pos.x ^ pos.y) & 1;
     unsigned s = 3;
     while (total > ((s * (s + 1)) / 2))
@@ -2804,7 +2806,7 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
 void TriangleGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
 {
     XYPos sq_size = get_square_size(pos);
-    XYPos line_seg(grid_pitch.x * 2, grid_pitch.y / 16 + 1);
+    XYPos line_seg(grid_pitch.x * 2, grid_pitch.y / 24 + 1);
     if (sq_size == XYPos(3,2))
     {
         if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
