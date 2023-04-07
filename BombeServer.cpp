@@ -409,10 +409,10 @@ public:
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES; lset++)
                         {
-                            // if (steam_id == 76561198083927051ull)
-                            //     continue;
-                            // if (steam_id == 1337420ull)
-                            //     continue;
+                            if (steam_id == 76561198083927051ull)
+                                continue;
+                            if (steam_id == 1337420ull)
+                                continue;
                             unsigned score = 0;
                             SaveObjectList* l = progress_list->get_item(lset)->get_list();
                             for (int lgrp = 0; lgrp < l->get_count() && lgrp < 30; lgrp++)

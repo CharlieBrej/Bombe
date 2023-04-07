@@ -95,6 +95,7 @@ public:
     bool display_rules_sort_dir = true;
     int display_rules_sort_col_2nd = 1;
     bool display_rules_sort_dir_2nd = true;
+    bool display_rules_level = false;
 
     struct ConstructedRuleState
     {

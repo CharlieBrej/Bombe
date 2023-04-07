@@ -1634,6 +1634,7 @@ static void add_clear_count(GridRegion* region, int count)
     if (region->gen_cause.rule)
     {
         region->gen_cause.rule->clear_count += count;
+        region->gen_cause.rule->level_clear_count += count;
         for (int i = 0; i < 4; i++)
             add_clear_count(region->gen_cause.regions[i], count);
     }
@@ -1725,7 +1726,10 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
             c++;
         }
         rule.used_count++;
+        rule.level_used_count++;
+
         rule.clear_count += c;
+        rule.level_clear_count += c;
         add_clear_count(r1, c);
         add_clear_count(r2, c);
         add_clear_count(r3, c);

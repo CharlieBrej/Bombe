@@ -205,6 +205,8 @@ public:
     bool deleted = false;
     unsigned used_count = 0;
     unsigned clear_count = 0;
+    unsigned level_used_count = 0;
+    unsigned level_clear_count = 0;
     uint8_t sort_perm = 0;
 
 

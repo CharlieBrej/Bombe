@@ -580,6 +580,11 @@ void GameState::advance(int steps)
             target_grid_zoom = 1;
             scaled_grid_offset = XYPos(0,0);
             scaled_grid_size = grid_size;
+            for (GridRule& rule : rules)
+            {
+                rule.level_used_count = 0;
+                rule.level_clear_count = 0;
+            }
         }
         else
             auto_progress = false;
@@ -1893,6 +1898,14 @@ void GameState::render(bool saving)
                 col_click = 3;
         }
         {
+            SDL_Rect src_rect = {display_rules_level ? 1408 : 1600, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                display_rules_level = !display_rules_level;
+        }
+        {
             SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1950,8 +1963,9 @@ void GameState::render(bool saving)
         {
             int col = 0;
             bool descend = false;
-            RuleDiplaySort(int col_, bool descend_):
-                col(col_), descend(descend_)
+            bool cur_level = false;
+            RuleDiplaySort(int col_, bool descend_, bool cur_level_):
+                col(col_), descend(descend_), cur_level(cur_level_)
             {};
             bool operator() (RuleDiplay a_,RuleDiplay b_)
             {
@@ -1975,9 +1989,15 @@ void GameState::render(bool saving)
                     return (a.rule->region_count < b.rule->region_count);
                 }
                 if (col == 5)
-                    return (a.rule->used_count < b.rule->used_count);
+                    if (cur_level)
+                        return (a.rule->level_used_count < b.rule->level_used_count);
+                    else
+                        return (a.rule->used_count < b.rule->used_count);
                 if (col == 6)
-                    return (a.rule->clear_count < b.rule->clear_count);
+                    if (cur_level)
+                        return (a.rule->level_clear_count < b.rule->level_clear_count);
+                    else
+                        return (a.rule->clear_count < b.rule->clear_count);
                 return (a.index < b.index);
             }
         };
@@ -1992,8 +2012,8 @@ void GameState::render(bool saving)
             i++;
         }
 
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd));
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level));
 
         if (rules_list_offset + row_count > rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
@@ -2023,8 +2043,8 @@ void GameState::render(bool saving)
                 render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
 
-            render_number(rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
-            render_number(rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(display_rules_level ? rule.level_used_count : rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(display_rules_level ? rule.level_clear_count : rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
 
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
@@ -3668,6 +3688,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             constructed_rule = *inspected_rule.rule;
             constructed_rule.used_count = 0;
             constructed_rule.clear_count = 0;
+            constructed_rule.level_used_count = 0;
+            constructed_rule.level_clear_count = 0;
 
             rule_gen_region[0] = inspected_rule.regions[0];
             rule_gen_region[1] = inspected_rule.regions[1];
@@ -4120,6 +4142,8 @@ bool GameState::events()
                                 {
                                     rule.used_count = 0;
                                     rule.clear_count = 0;
+                                    rule.level_used_count = 0;
+                                    rule.level_clear_count = 0;
                                 }
                             }
                             for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
