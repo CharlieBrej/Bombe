@@ -231,7 +231,7 @@ public:
                 {
                     uint64_t t = 0;
                     if (scores[l].stats[i][j].total)
-                        t = ((uint64_t)scores[l].stats[i][j].completed * 10000) / scores[l].stats[i][j].total;
+                        t = ceil(((double)scores[l].stats[i][j].completed * 10000) / scores[l].stats[i][j].total);
                     SaveObjectNumber* stat = new SaveObjectNumber(t);
                     sub_stats_list->add_item(stat);
                 }
