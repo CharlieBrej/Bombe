@@ -6,6 +6,7 @@
 
 bool IS_DEMO = false;
 bool IS_PLAYTEST = false;
+bool SHUTDOWN = false;
 static std::random_device rd;
 static Rand rnd(rd());
 //static Rand rnd(1);
@@ -1126,11 +1127,10 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
-void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
+void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, bool exc)
 {
 
     XYSet grid_squares = get_squares();
-
     {
         std::vector<XYPos> tgt;
         FOR_XY_SET(p, grid_squares)
@@ -1143,6 +1143,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
 
         for (XYPos p : tgt)
         {
+            if (SHUTDOWN) return;
             LocalGrid tst = *this;
             tst->vals[p].revealed = false;
             if (tst->is_solveable())
@@ -1170,6 +1171,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
 
         for (XYPos p : tgt)
         {
+            if (SHUTDOWN) return;
             LocalGrid tst;
             {
                 tst = *this;
@@ -1180,7 +1182,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
                     continue;
                 }
             }
-            if (misc)
+            if (exc)
             {
                 if (rnd % 10 < 4)
                 {
@@ -1226,7 +1228,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool misc)
                         continue;
                     }
                 }
-
+            }
+            if (x_y_z)
+            {
                 if (rnd % 10 < 2 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
@@ -1747,7 +1751,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         bool added = add_region(reg);
         if (added)
         {
-            rule.used_count++;
             return APPLY_RULE_RESP_HIT;
         }
         else
@@ -2042,7 +2045,14 @@ void Grid::remove_from_regions_to_add_multiset(GridRegion* r)
 void Grid::add_new_regions()
 {
     for (GridRegion& r :regions_to_add)
+    {
+        if (r.gen_cause.rule)
+        {
+            r.gen_cause.rule->used_count++;
+            r.gen_cause.rule->level_used_count++;
+        }
         regions_set.insert(&r);
+    }
     regions.splice(regions.end(), regions_to_add);
     regions_to_add_multiset.clear();
 }
@@ -2067,6 +2077,12 @@ bool Grid::add_one_new_region(GridRegion* r)
         }
         else
         {
+            if ((*it).gen_cause.rule)
+            {
+                (*it).gen_cause.rule->used_count++;
+                (*it).gen_cause.rule->level_used_count++;
+            }
+
             remove_from_regions_to_add_multiset(&(*it));
             regions_set.insert(&(*it));
             regions.splice(regions.end(), regions_to_add, it);

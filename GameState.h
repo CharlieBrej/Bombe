@@ -195,13 +195,14 @@ public:
     class LevelProgress
     {
     public:
-        unsigned current_index = 0;
         unsigned count_todo = 0;
         std::vector<bool> level_status;
         std::vector<uint64_t> level_stats;
     };
+    std::vector<std::vector<std::string>> server_levels;
+    int server_levels_version = 0;
 
-    std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS];
+    std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS + 1];
     class PlayerScore
     {
     public:
@@ -215,12 +216,17 @@ public:
         {}
     };
 
-    std::vector<PlayerScore> score_tables[GLBAL_LEVEL_SETS];
+    std::vector<PlayerScore> score_tables[GLBAL_LEVEL_SETS + 1];
 
     unsigned current_level_group_index = 1;
     unsigned current_level_set_index = 0;
     int current_level_index = 0;
     bool current_level_is_temp = true;
+
+    SDL_mutex* level_gen_mutex;
+    SDL_Thread* level_gen_thread = NULL;
+    std::string level_gen_req;
+    std::string level_gen_resp;
 
 
     GameState(std::string& lost_data, bool json);

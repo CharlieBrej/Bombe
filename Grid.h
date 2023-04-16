@@ -8,6 +8,8 @@
 #include <bitset>
 #include <array>
 
+extern bool SHUTDOWN;
+
 void grid_set_rnd(int a = 0);
 
 void global_mutex_lock();
@@ -315,7 +317,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
 //    bool has_solution(void);
-    void make_harder(bool plus_minus, bool x_y, bool misc);
+    void make_harder(bool plus_minus, bool x_y, bool x_y_z, bool exc);
     void reveal(XYPos p);
     bool is_solved(void);
 
