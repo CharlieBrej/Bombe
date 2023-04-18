@@ -1503,39 +1503,48 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
     XYPos digit_size = XYPos((t_size.y * 2) / 3, t_size.y);
     for(char& c : digits)
     {
-        int digit = c - '0';
-        SDL_Rect src_rect = {32 + (digit) * 192, 0, 128, 192};
+        SDL_Rect src_rect;
         SDL_Rect dst_rect = {pos.x, pos.y, digit_size.x, digit_size.y};
-        if (c == '!')
-        {
-            dst_rect.w = digit_size.x / 2;
-            src_rect = {1280, 384, 64, 192};
-        }
-        if (c == '-')
-        {
-            dst_rect.w = digit_size.x * 3 / 4;
-            src_rect = {304, 512, 96, 192};
-        }
-        if (c == '+')
-        {
-            dst_rect.w = digit_size.x * 3 / 4;
-            src_rect = {432, 512, 96, 192};
-        }
         if (c == '1')
         {
             dst_rect.w = digit_size.x / 2;
             src_rect = {256, 0, 64, 192};
         }
-        if (c == '%')
+        else if (c >= '0' && c <= '9')
+        {
+            src_rect = {32 + (c - '0') * 192, 0, 128, 192};
+        }
+        else if (c >= 'a' && c <= 'f')
+        {
+            src_rect = {2208 + (c - 'a') * 128, 0, 128, 192};
+        }
+        else if (c == '!')
+        {
+            dst_rect.w = digit_size.x / 2;
+            src_rect = {1280, 384, 64, 192};
+        }
+        else if (c == '-')
+        {
+            dst_rect.w = digit_size.x * 3 / 4;
+            src_rect = {304, 512, 96, 192};
+        }
+        else if (c == '+')
+        {
+            dst_rect.w = digit_size.x * 3 / 4;
+            src_rect = {432, 512, 96, 192};
+        }
+        else if (c == '%')
         {
             dst_rect.w = digit_size.x * 6 / 4;
             src_rect = {1952, 0, 192, 192};
         }
-        if (c == '.')
+        else if (c == '.')
         {
             dst_rect.w = digit_size.x / 2;
             src_rect = {2144, 0, 64, 192};
         }
+        else
+            assert(0);
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         pos.x += dst_rect.w;
     }
@@ -1579,9 +1588,9 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     if (reg.type == RegionType::XOR22)
     {
         XYPos numsiz = XYPos(siz * 0.9 * 2 / 8, siz * 0.9 * 3 / 8);
-        render_number(reg.value,     pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
-        render_number(reg.value + 2, pos - (numsiz / 2) + XYPos(int(siz) * 4 / 8,int(siz) * 4 / 8), numsiz);
-        render_number(reg.value + 4, pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
+        render_number_string(reg.val_as_str(0),     pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+        render_number_string(reg.val_as_str(2), pos - (numsiz / 2) + XYPos(int(siz) * 4 / 8,int(siz) * 4 / 8), numsiz);
+        render_number_string(reg.val_as_str(4), pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
         SDL_Rect src_rect = {384, 736, 128, 128};
         SDL_Rect dst_rect = {pos.x + int(siz) / 4 + int(siz) / 20, pos.y + int(siz) * 2 / 8,  int(siz / 6), int(siz / 3)};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1592,10 +1601,10 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     else if (reg.type == RegionType::XOR222)
     {
         XYPos numsiz = XYPos(siz * 5 / 16, siz * 5 / 16);
-        render_number(reg.value,     pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
-        render_number(reg.value + 2, pos + XYPos(int(siz) * 9 / 16,int(siz) / 8), numsiz);
-        render_number(reg.value + 4, pos + XYPos(int(siz) / 8,int(siz) * 9 / 16), numsiz);
-        render_number(reg.value + 6, pos + XYPos(int(siz) * 9 / 16,int(siz) * 9 / 16), numsiz);
+        render_number_string(reg.val_as_str(0), pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+        render_number_string(reg.val_as_str(2), pos + XYPos(int(siz) * 9 / 16,int(siz) / 8), numsiz);
+        render_number_string(reg.val_as_str(4), pos + XYPos(int(siz) / 8,int(siz) * 9 / 16), numsiz);
+        render_number_string(reg.val_as_str(6), pos + XYPos(int(siz) * 9 / 16,int(siz) * 9 / 16), numsiz);
         SDL_Rect src_rect = {1344, 384, 192, 192};
         SDL_Rect dst_rect = {pos.x + int(siz) / 8, pos.y + int(siz) / 8,  int(siz * 6 / 8), int(siz * 6 / 8)};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -1604,8 +1613,8 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     {
         XYPos numsiz = XYPos(siz * 2 * 1.35 / 8, siz * 3 * 1.35 / 8);
 
-        render_number(reg.value, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
-        render_number(reg.value + (reg.type == RegionType::XOR3 ? 3 : 2), pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
+        render_number_string(reg.val_as_str(0), pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+        render_number_string(reg.val_as_str(reg.type == RegionType::XOR3 ? 3 : 2), pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
 
         SDL_Rect src_rect = {384, 736, 128, 128};
         SDL_Rect dst_rect = {pos.x + int(siz) / 3, pos.y + int(siz) / 4,  int(siz / 3), int(siz / 2)};
@@ -1617,7 +1626,7 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     {
         XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
 
-        std::string digits = std::to_string(reg.value);
+        std::string digits = reg.val_as_str();
         if (reg.type == RegionType::MORE)
             digits += '+';
         if (reg.type == RegionType::LESS)
@@ -1628,7 +1637,7 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     else if (reg.type == RegionType::EQUAL)
     {
         XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
-        render_number(reg.value, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+        render_number_string(reg.val_as_str(0), pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
 
     }
     else if (reg.type == RegionType::NONE)
@@ -1642,7 +1651,7 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     else if (reg.type == RegionType::NOTEQUAL)
     {
         XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
-        std::string digits = "!" + std::to_string(reg.value);
+        std::string digits = "!" + reg.val_as_str(0);
         render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
     }
     else if (reg.type == RegionType::VISIBILITY)
@@ -2814,6 +2823,22 @@ void GameState::render(bool saving)
 
             }
         }
+        else
+        {
+            r_type.var = true;
+            r_type.value = 0;
+            FOR_XY(pos, XYPos(), XYPos(5, 2))
+            {
+                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 8);
+                r_type.type = menu_region_n_types[pos.y][pos.x];
+                if (region_type == r_type)
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+                render_region_type(r_type, bpos, button_size);
+                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
+
+            }
+        }
 
         r_type = menu_region_types2[region_menu];
         if (r_type.type != RegionType::NONE)
@@ -3916,7 +3941,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 4, button_size * 6)).inside(XYPos(button_size,button_size)))
             region_type = RegionType(RegionType::VISIBILITY, 2);
 
-        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(4 * button_size,1 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(5 * button_size,1 * button_size)))
         {
             region_menu = pos.x / button_size;
         }
@@ -3926,6 +3951,13 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             XYPos region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
             region_type = menu_region_types1[region_menu];
             region_type.value += region_item_selected.x + region_item_selected.y * 5;
+            if (region_type.type == RegionType::NONE)
+            {
+                region_type.type = menu_region_n_types[region_item_selected.y][region_item_selected.x];
+                region_type.value = 0;
+                region_type.var = true;
+            }
+                
         }
 
         if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))

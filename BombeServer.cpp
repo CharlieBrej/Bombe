@@ -124,7 +124,7 @@ public:
     //  0            1  2  3     4       5    6    7    8      9
     //  A            8  8  0     2       0    0    0    0      1
 
-static const char* server_level_types[] = {"A880200001", NULL};
+static const char* server_level_types[] = {"A880200001", "B880200001","C880200001",NULL};
 
 class Database
 {
@@ -251,6 +251,11 @@ public:
         {
             if (req == server_level_types[i] && next_server_levels[i].size() < 200)
             {
+                for (std::string& s : next_server_levels[i])
+                {
+                    if (s == resp)
+                        return;
+                }
                 next_server_levels[i].push_back(resp);
                 break;
             }

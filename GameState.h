@@ -133,6 +133,8 @@ public:
                                                 RegionType(RegionType::XOR222, 0),
                                                 RegionType(RegionType::NONE, 0)};
 
+    const RegionType::Type menu_region_n_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::NONE},
+                                                        {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::NONE}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule* constructed_rule_is_already_present = NULL;

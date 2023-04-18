@@ -18,95 +18,89 @@ void grid_set_rnd(int a)
     rnd.gen.seed(a);
 }
 
-template<class RESP, class IN>
-RESP RegionType::apply_rule(IN in)
+template<class RESP, class IN, class OTHER>
+RESP RegionType::apply_rule_imp(IN in, OTHER other)
 {
     if (type == NONE)
     {
-        return (in  != (value - 1000));
+        return (in  != (other - 1000));
     }
     if (type == EQUAL)
     {
-        return in == value;
+        return in == other;
     }
     if (type == NOTEQUAL)
     {
-        return in != value;
+        return in != other;
     }
     if (type == LESS)
     {
-        return in <= value;
+        return in <= other;
     }
     if (type == MORE)
     {
-        return in >= value;
+        return in >= other;
     }
     if (type == XOR2)
     {
-        return (in == value) || (in == (value + 2));
+        return (in == other) || (in == (other + 2));
     }
     if (type == XOR3)
     {
-        return (in == value) || (in == (value + 3));
+        return (in == other) || (in == (other + 3));
     }
     if (type == XOR22)
     {
-        return (in == value) || (in == (value + 2)) || (in == (value + 4));
+        return (in == other) || (in == (other + 2)) || (in == (other + 4));
     }
     if (type == XOR222)
     {
-        return (in == value) || (in == (value + 2)) || (in == (value + 4)) || (in == (value + 6));
+        return (in == other) || (in == (other + 2)) || (in == (other + 4)) || (in == (other + 6));
     }
     assert(0);
 }
-z3::expr RegionType::apply_z3_rule(z3::expr in)
+
+template<class RESP, class IN, class VAR_ARR>
+RESP RegionType::apply_rule(IN in, VAR_ARR& vars)
 {
-    return apply_rule<z3::expr,z3::expr>(in);
+    if (var)
+        return apply_rule_imp<RESP,IN, IN>(in, vars[0]);
+    else
+        return apply_rule_imp<RESP,IN, int8_t>(in, value);
+
+}
+
+z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
+{
+    return apply_rule<z3::expr,z3::expr, z3::expr_vector>(in, var_vect);
 }
 
 bool RegionType::apply_int_rule(unsigned in)
 {
-    return apply_rule<bool,unsigned>(in);
+    unsigned dummy[4]= {10000,10000,10000,10000};
+    return apply_rule<bool,unsigned, unsigned[4]>(in, dummy);
 }
 
 int RegionType::max()
 {
     if (type == NONE)
-    {
         return -1;
-    }
     if (type == EQUAL)
-    {
-        return value;
-    }
+        return 0;
     if (type == NOTEQUAL)
-    {
         return -1;
-    }
     if (type == LESS)
-    {
-        return value;
-    }
+        return 0;
     if (type == MORE)
-    {
         return -1;
-    }
     if (type == XOR2)
-    {
-        return value + 2;
-    }
+        return 2;
     if (type == XOR3)
-    {
-        return value + 3;
-    }
+        return 3;
     if (type == XOR22)
-    {
-        return value + 4;
-    }
+        return 4;
     if (type == XOR222)
-    {
-        return value + 6;
-    }
+        return 6;
     assert(0);
 }
 
@@ -203,6 +197,7 @@ GridRule::GridRule(SaveObject* sobj, int version)
         used_count = omap->get_num("used_count");
     if (omap->has_key("clear_count"))
         clear_count = omap->get_num("clear_count");
+//    assert(is_legal() == GridRule::OK);
 }
 
 SaveObject* GridRule::save()
@@ -403,6 +398,15 @@ GridRule::IsLogicalRep GridRule::is_legal()
     z3::solver s(c);
 
     z3::expr_vector vec(c);
+    z3::expr_vector var_vec(c);
+
+    for (int i = 0; i < 3; i++)
+    {
+        std::stringstream x_name;
+        x_name << char('a' + i);
+        var_vec.push_back(c.int_const(x_name.str().c_str()));
+        s.add(var_vec[i] >= 0);
+    }
 
     vec.push_back(c.bool_const("DUMMY"));
     if (region_count == 0)
@@ -416,30 +420,36 @@ GridRule::IsLogicalRep GridRule::is_legal()
         s.add(vec[i] >= 0);
         int m = square_counts[i].max();
         if (m >= 0)
-            s.add(vec[i] <= int(m));
+        {
+            if (square_counts[i].var)
+                s.add(vec[i] <= var_vec[0] + m);
+            else
+                s.add(vec[i] <= int(square_counts[i].value + m));
+
+        }
     }
 
     if (region_count == 1)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1]));
+        s.add(region_type[0].apply_z3_rule(vec[1], var_vec));
     }
     if (region_count == 2)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3]));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3]));
+        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec));
+        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec));
     }
     if (region_count == 3)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7]));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7]));
-        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7]));
+        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec));
+        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec));
+        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7], var_vec));
     }
     if (region_count == 4)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15]));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15]));
-        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15]));
-        s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15]));
+        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec));
+        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec));
+        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+        s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
     }
     if (s.check() != z3::sat)
     {
@@ -450,7 +460,7 @@ GridRule::IsLogicalRep GridRule::is_legal()
         return OK;
 
     z3::expr e = c.int_val(0);
-    int tot = 0;
+    z3::expr tot = c.int_val(0);
 
     if (!apply_region_bitmap)
         return OK;
@@ -463,7 +473,10 @@ GridRule::IsLogicalRep GridRule::is_legal()
             int m = square_counts[i].max();
             if ((m < 0) && (apply_region_type == RegionType(RegionType::SET,1)))
                 return ILLOGICAL;
-            tot += m;
+            if (square_counts[i].var)
+                tot = tot + var_vec[0] + m;
+            else
+                tot = tot + int(square_counts[i].value + m);
         }
     }
 
@@ -476,16 +489,20 @@ GridRule::IsLogicalRep GridRule::is_legal()
     }
     else
     {
-        s.add(!apply_region_type.apply_z3_rule(e));
+        s.add(!apply_region_type.apply_z3_rule(e, var_vec));
     }
 
     if (s.check() == z3::sat)
     {
         printf("sat\n");
+        z3::model m = s.get_model();
         for (int i = 1; i < (1 << region_count); i++)
         {
-            z3::model m = s.get_model();
             std::cout << "B" << i << ":" << m.eval(vec[i]) << "\n";
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            std::cout << char('A'+ i) << ":" << m.eval(var_vec[i]) << "\n";
         }
         return ILLOGICAL;
     }
@@ -714,54 +731,54 @@ RegionType& Grid::get_clue(XYPos p)
     return vals[p].clue;
 }
 
-static std::list<GridRule> global_rules;
+//static std::list<GridRule> global_rules;
 
-void Grid::solve_easy()
-{
-    if (global_rules.empty())
-    {
-        std::string sin = "[]";
-        SaveObject* sobj = SaveObject::load(sin);
-        SaveObjectList* rlist = sobj->get_list();
-        for (int i = 0; i < rlist->get_count(); i++)
-        {
-            global_rules.push_back(GridRule(rlist->get_item(i), 3));
-        }
-        for (GridRule& rule : global_rules)
-        {
-            rule.stale = true;
-        }
-    }
+// void Grid::solve_easy()
+// {
+//     if (global_rules.empty())
+//     {
+//         std::string sin = "[]";
+//         SaveObject* sobj = SaveObject::load(sin);
+//         SaveObjectList* rlist = sobj->get_list();
+//         for (int i = 0; i < rlist->get_count(); i++)
+//         {
+//             global_rules.push_back(GridRule(rlist->get_item(i), 3));
+//         }
+//         for (GridRule& rule : global_rules)
+//         {
+//             rule.stale = true;
+//         }
+//     }
 
-    bool rep = true;
+//     bool rep = true;
 
-    while (rep)
-    {
-        rep = false;
-    	while (add_regions(-1)) {}
-        add_new_regions();
-        if (regions.size() > 1000)
-            return;
-        for (GridRule& rule : global_rules)
-        {
-            if (rule.apply_region_type.type == RegionType::VISIBILITY)
-            {
-                apply_rule(rule);
-            }
-        }
-        for (GridRule& rule : global_rules)
-        {
-            if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                continue;
-            while (apply_rule(rule) != APPLY_RULE_RESP_NONE)
-                rep = true;
-        }
-        for (GridRegion& r : regions)
-        {
-            r.stale = true;
-        }
-    }
-}
+//     while (rep)
+//     {
+//         rep = false;
+//     	while (add_regions(-1)) {}
+//         add_new_regions();
+//         if (regions.size() > 1000)
+//             return;
+//         for (GridRule& rule : global_rules)
+//         {
+//             if (rule.apply_region_type.type == RegionType::VISIBILITY)
+//             {
+//                 apply_rule(rule);
+//             }
+//         }
+//         for (GridRule& rule : global_rules)
+//         {
+//             if (rule.apply_region_type.type == RegionType::VISIBILITY)
+//                 continue;
+//             while (apply_rule(rule) != APPLY_RULE_RESP_NONE)
+//                 rep = true;
+//         }
+//         for (GridRegion& r : regions)
+//         {
+//             r.stale = true;
+//         }
+//     }
+// }
 
 bool Grid::is_solveable()
 {
@@ -773,7 +790,7 @@ bool Grid::is_solveable()
     while (rep && !is_solved())
     {
         rep = false;
-        solve_easy();
+//        solve_easy();
 
         unsigned hidden  = 0;
         XYSet grid_squares = get_squares();
@@ -791,7 +808,7 @@ bool Grid::is_solveable()
                 {
                     reveal(p);
                     rep = true;
-                    solve_easy();
+//                    solve_easy();
                 }
             }
         }
@@ -881,6 +898,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     {
         set_size[value]++;
     }
+    z3::expr_vector dummy_vec(c);
 
     z3::expr_vector vec(c);
     vec.push_back(c.bool_const("DUMMY"));
@@ -913,7 +931,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
                 uid += std::to_string(si) + ",";
             }
         }
-        s.add(r.type.apply_z3_rule(e));
+        s.add(r.type.apply_z3_rule(e, dummy_vec));
         uid += std::to_string(r.type.as_int());
     }
 
@@ -1830,122 +1848,122 @@ static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRe
 }
 
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
-{
-    if (rule.deleted)
-        return APPLY_RULE_RESP_NONE;
-    std::set<GridRegion*> unstale_regions;
-    for (GridRegion& r : regions)
-    {
-        if (!r.stale)
-            unstale_regions.insert(&r);
-    }
-    if (unstale_regions.empty() && rule.stale && !force)
-        return APPLY_RULE_RESP_NONE;
+// Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, bool force)
+// {
+//     if (rule.deleted)
+//         return APPLY_RULE_RESP_NONE;
+//     std::set<GridRegion*> unstale_regions;
+//     for (GridRegion& r : regions)
+//     {
+//         if (!r.stale)
+//             unstale_regions.insert(&r);
+//     }
+//     if (unstale_regions.empty() && rule.stale && !force)
+//         return APPLY_RULE_RESP_NONE;
 
-    bool ignore_bin = (rule.apply_region_type.type == RegionType::VISIBILITY);
-    assert(rule.region_count);
-    for (GridRegion& r1 : regions)
-    {
-        if (r1.type != rule.region_type[0])
-            continue;
-        if (r1.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
-            continue;
-        if (rule.region_count == 1)
-        {
-            if (rule.stale && r1.stale && !force)
-                continue;
-            if (rule.matches(&r1, NULL, NULL, NULL))
-            {
-                ApplyRuleResp resp = apply_rule(rule, &r1, NULL, NULL, NULL);
-                if (resp != APPLY_RULE_RESP_NONE)
-                    return resp;
-            }
-        }
-        else
-        {
-            for (GridRegion& r2 : regions)
-            {
-                if (r2.type != rule.region_type[1])
-                    continue;
-                if (r2 == r1)
-                    continue;
-                if (r2.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
-                    continue;
-                if (rule.region_count == 2)
-                {
-                    if (rule.stale && r1.stale && r2.stale && !force)
-                        continue;
-                    if (!r1.overlaps(r2))
-                        continue;
-                    if (rule.matches(&r1, &r2, NULL, NULL))
-                    {
-                        ApplyRuleResp resp = apply_rule(rule, &r1, &r2, NULL, NULL);
-                        if (resp != APPLY_RULE_RESP_NONE)
-                            return resp;
-                    }
-                }
-                else
-                {
-                    for (GridRegion& r3 : regions)
-                    {
-                        if (r3.type != rule.region_type[2])
-                            continue;
-                        if ((r3 == r1) || (r3 == r2))
-                            continue;
-                        if (r3.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
-                            continue;
-                        if(rule.region_count == 3)
-                        {
-                            if (rule.stale && r1.stale && r2.stale && r3.stale && !force)
-                                continue;
-                            unsigned connected = 1;
-                            find_connected(&r1, connected, &r1, &r2, &r3, NULL);
-                            if (connected != 0x7)
-                                continue;
-                            if (rule.matches(&r1, &r2, &r3, NULL))
-                            {
-                                ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, NULL);
-                                if (resp != APPLY_RULE_RESP_NONE)
-                                    return resp;
-                            }
-                        }
-                        else
-                        {
+//     bool ignore_bin = (rule.apply_region_type.type == RegionType::VISIBILITY);
+//     assert(rule.region_count);
+//     for (GridRegion& r1 : regions)
+//     {
+//         if (r1.type != rule.region_type[0])
+//             continue;
+//         if (r1.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+//             continue;
+//         if (rule.region_count == 1)
+//         {
+//             if (rule.stale && r1.stale && !force)
+//                 continue;
+//             if (rule.matches(&r1, NULL, NULL, NULL))
+//             {
+//                 ApplyRuleResp resp = apply_rule(rule, &r1, NULL, NULL, NULL);
+//                 if (resp != APPLY_RULE_RESP_NONE)
+//                     return resp;
+//             }
+//         }
+//         else
+//         {
+//             for (GridRegion& r2 : regions)
+//             {
+//                 if (r2.type != rule.region_type[1])
+//                     continue;
+//                 if (r2 == r1)
+//                     continue;
+//                 if (r2.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+//                     continue;
+//                 if (rule.region_count == 2)
+//                 {
+//                     if (rule.stale && r1.stale && r2.stale && !force)
+//                         continue;
+//                     if (!r1.overlaps(r2))
+//                         continue;
+//                     if (rule.matches(&r1, &r2, NULL, NULL))
+//                     {
+//                         ApplyRuleResp resp = apply_rule(rule, &r1, &r2, NULL, NULL);
+//                         if (resp != APPLY_RULE_RESP_NONE)
+//                             return resp;
+//                     }
+//                 }
+//                 else
+//                 {
+//                     for (GridRegion& r3 : regions)
+//                     {
+//                         if (r3.type != rule.region_type[2])
+//                             continue;
+//                         if ((r3 == r1) || (r3 == r2))
+//                             continue;
+//                         if (r3.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+//                             continue;
+//                         if(rule.region_count == 3)
+//                         {
+//                             if (rule.stale && r1.stale && r2.stale && r3.stale && !force)
+//                                 continue;
+//                             unsigned connected = 1;
+//                             find_connected(&r1, connected, &r1, &r2, &r3, NULL);
+//                             if (connected != 0x7)
+//                                 continue;
+//                             if (rule.matches(&r1, &r2, &r3, NULL))
+//                             {
+//                                 ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, NULL);
+//                                 if (resp != APPLY_RULE_RESP_NONE)
+//                                     return resp;
+//                             }
+//                         }
+//                         else
+//                         {
 
-                            for (GridRegion& r4 : regions)
-                            {
-                                if (r4.type != rule.region_type[3])
-                                    continue;
-                                if ((r4 == r1) || (r4 == r2) || (r4 == r3))
-                                    continue;
-                                if (r4.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
-                                    continue;
-                                assert (rule.region_count == 4);
-                                {
-                                    if (rule.stale && r1.stale && r2.stale && r3.stale && r4.stale && !force)
-                                        continue;
-                                    unsigned connected = 1;
-                                    find_connected(&r1, connected, &r1, &r2, &r3, &r4);
-                                    if (connected != 0xF)
-                                        continue;
-                                    if (rule.matches(&r1, &r2, &r3, &r4))
-                                    {
-                                        ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, &r4);
-                                        if (resp != APPLY_RULE_RESP_NONE)
-                                            return resp;
-                                    }
-                                }
-                            }
+//                             for (GridRegion& r4 : regions)
+//                             {
+//                                 if (r4.type != rule.region_type[3])
+//                                     continue;
+//                                 if ((r4 == r1) || (r4 == r2) || (r4 == r3))
+//                                     continue;
+//                                 if (r4.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+//                                     continue;
+//                                 assert (rule.region_count == 4);
+//                                 {
+//                                     if (rule.stale && r1.stale && r2.stale && r3.stale && r4.stale && !force)
+//                                         continue;
+//                                     unsigned connected = 1;
+//                                     find_connected(&r1, connected, &r1, &r2, &r3, &r4);
+//                                     if (connected != 0xF)
+//                                         continue;
+//                                     if (rule.matches(&r1, &r2, &r3, &r4))
+//                                     {
+//                                         ApplyRuleResp resp = apply_rule(rule, &r1, &r2, &r3, &r4);
+//                                         if (resp != APPLY_RULE_RESP_NONE)
+//                                             return resp;
+//                                     }
+//                                 }
+//                             }
 
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return APPLY_RULE_RESP_NONE;
-}
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     return APPLY_RULE_RESP_NONE;
+// }
 
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
 {
@@ -1959,14 +1977,14 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
     {
         for (int i = 0; i < rule.region_count; i++)
         {
-            if (unstale_region->type == rule.region_type[i] || rule.region_type[i].type == RegionType::NONE)
+            if (unstale_region->type == rule.region_type[i] || rule.region_type[i].type == RegionType::NONE || (rule.region_type[i].var && (unstale_region->type.type == rule.region_type[i].type)))
                 places_for_reg |= 1 << i;
         }
         if (!places_for_reg)
             return APPLY_RULE_RESP_NONE;
     }
     else
-        places_for_reg = 1;
+        places_for_reg = 0xF;
 
     std::vector<GridRegion*> pos_regions[4];
     for (int i = 0; i < 4; i++)
@@ -1977,7 +1995,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
         {
             for (GridRegion& r : regions)
             {
-                if (r.type != rule.region_type[i] && rule.region_type[i].type != RegionType::NONE)
+                if (r.type != rule.region_type[i] && rule.region_type[i].type != RegionType::NONE && !(rule.region_type[i].var && (r.type.type == rule.region_type[i].type)))
                     continue;
                 if (r.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
                     continue;

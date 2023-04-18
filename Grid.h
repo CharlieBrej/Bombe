@@ -88,19 +88,24 @@ public:
         VISIBILITY = 101,
     } type = NONE;
     int8_t value = 0;
+    bool var = false;
 
 
     RegionType() : type (NONE), value(0) {}
     RegionType(char dummy, unsigned t) : type (Type(t >> 8)), value(t & 255) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
 
-    bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value); }
+    bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value) && (var == other.var); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
     unsigned as_int() const { return (int(type) << 8 | value); }
+    std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); std::string rep = "a"; if (offset) rep = "+" + std::to_string(offset); return rep; }
 
-    template<class RESP, class IN> RESP apply_rule(IN in);
-    z3::expr apply_z3_rule(z3::expr in);
+    template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
+    template<class RESP, class IN, class VAR_ARR> RESP apply_rule(IN in, VAR_ARR& vars);
+
+    z3::expr apply_z3_rule(z3::expr in, z3::expr_vector& var_vect);
+
     bool apply_int_rule(unsigned in);
 
     int max();
@@ -311,7 +316,7 @@ public:
     virtual XYPos get_base_square(XYPos p) {return p;}
     virtual XYPos get_wrapped_size(XYPos grid_pitch) = 0;
 
-    void solve_easy();
+//    void solve_easy();
     bool is_solveable();
 
     bool is_determinable(XYPos q);
@@ -334,7 +339,7 @@ public:
 
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region);
-    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
+//    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
     bool add_one_new_region(GridRegion* r);
