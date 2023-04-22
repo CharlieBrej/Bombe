@@ -122,6 +122,7 @@ public:
     
     RegionType region_type = RegionType(RegionType::SET, 0);
     int region_menu = 0;
+    int region_type_var_value = 0;
     const RegionType menu_region_types1[5] = {  RegionType(RegionType::EQUAL, 1),
                                                 RegionType(RegionType::MORE, 1),
                                                 RegionType(RegionType::XOR2, 0),
@@ -260,7 +261,7 @@ public:
     void add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
-    void render_number_string(std::string str, XYPos pos, XYPos siz);
+    void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render(bool saving = false);

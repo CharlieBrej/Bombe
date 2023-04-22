@@ -99,7 +99,7 @@ public:
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
     unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
-    std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); std::string rep = "a"; if (offset) rep = "+" + std::to_string(offset); return rep; }
+    std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); return std::string(1, char('a' + (value + offset)));}
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
     template<class RESP, class IN, class VAR_ARR> RESP apply_rule(IN in, VAR_ARR& vars);

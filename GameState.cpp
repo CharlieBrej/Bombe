@@ -1473,7 +1473,7 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
     std::string digits = std::to_string(num);
     render_number_string(digits, pos, siz);
 }
-void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
+void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, XYPos style)
 {
     int width = 0;
 
@@ -1499,7 +1499,15 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
     else
         t_size = XYPos(width * siz.y / 6, siz.y);
 
-    pos += (siz - t_size) / 2;
+    if (style.x > 0)
+        pos.x += (siz.x - t_size.x);
+    else if (style.x == 0)
+        pos.x += (siz.x - t_size.x) / 2;
+    if (style.y > 0)
+        pos.y += (siz.y - t_size.y);
+    else if (style.y == 0)
+        pos.y += (siz.y - t_size.y) / 2;
+
     XYPos digit_size = XYPos((t_size.y * 2) / 3, t_size.y);
     for(char& c : digits)
     {
@@ -1514,9 +1522,17 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz)
         {
             src_rect = {32 + (c - '0') * 192, 0, 128, 192};
         }
-        else if (c >= 'a' && c <= 'f')
+        else if (c >= 'a' && c <= 'z')
         {
-            src_rect = {2208 + (c - 'a') * 128, 0, 128, 192};
+            src_rect = {2208, 0, 128, 192};
+            if (c > 'a')
+            {
+                render_number_string("+" + std::to_string(c - 'a'), XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, -1));
+                dst_rect.w -= digit_size.x / 5;
+                dst_rect.h -= digit_size.y / 5;
+                dst_rect.y += digit_size.y / 5;
+                pos.x += digit_size.x / 5;
+            }
         }
         else if (c == '!')
         {
@@ -2826,8 +2842,8 @@ void GameState::render(bool saving)
         else
         {
             r_type.var = true;
-            r_type.value = 0;
-            FOR_XY(pos, XYPos(), XYPos(5, 2))
+            r_type.value = region_type_var_value;
+            FOR_XY(pos, XYPos(), XYPos(4, 2))
             {
                 XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 8);
                 r_type.type = menu_region_n_types[pos.y][pos.x];
@@ -2850,6 +2866,21 @@ void GameState::render(bool saving)
                     render_box(bpos, XYPos(button_size, button_size), button_size/4);
                 render_region_type(r_type, bpos, button_size);
                 r_type.value ++;
+                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
+            }
+        }
+        else
+        {
+            r_type.var = true;
+            r_type.type = region_type.var ? region_type.type : RegionType::EQUAL;
+            FOR_XY(pos, XYPos(), XYPos(5, 2))
+            {
+                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
+                r_type.value = pos.x + pos.y * 5;
+                if (r_type.value == region_type_var_value)
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+                render_region_type(r_type, bpos, button_size);
                 SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
                 add_clickable_highlight(dst_rect);
             }
@@ -3953,7 +3984,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             region_menu = pos.x / button_size;
         }
 
-        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(5 * button_size,2 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(4 * button_size,2 * button_size)))
         {
             XYPos region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
             region_type = menu_region_types1[region_menu];
@@ -3961,7 +3992,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if (region_type.type == RegionType::NONE)
             {
                 region_type.type = menu_region_n_types[region_item_selected.y][region_item_selected.x];
-                region_type.value = 0;
+                region_type.value = region_type_var_value;
                 region_type.var = true;
             }
                 
@@ -3970,8 +4001,17 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))
         {
             XYPos region_item_selected = (pos - XYPos(0, button_size * 10 + button_size / 2)) / button_size;
-            region_type = menu_region_types2[region_menu];
-            region_type.value += region_item_selected.x + (region_item_selected.y) * 5;
+            if (menu_region_types2[region_menu].type == RegionType::NONE)
+            {
+                region_type_var_value = region_item_selected.x + (region_item_selected.y) * 5;
+                if (region_type.var)
+                    region_type.value = region_type_var_value;
+            }
+            else
+            {
+                region_type = menu_region_types2[region_menu];
+                region_type.value += region_item_selected.x + (region_item_selected.y) * 5;
+            }
         }
         if (region_type.type == RegionType::VISIBILITY && region_type.value > 2)
             region_type = RegionType(RegionType::VISIBILITY, 0);
