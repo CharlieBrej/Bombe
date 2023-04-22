@@ -3334,6 +3334,13 @@ void GameState::render(bool saving)
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Illogical");
                     }
+                    else if (constructed_rule_is_logical == GridRule::UNBOUNDED)
+                    {
+                        SDL_Rect src_rect = {896, 576, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Unbounded");
+                    }
                     else if (constructed_rule_is_already_present)
                     {
                         SDL_Rect src_rect = {1088, 768, 192, 192};

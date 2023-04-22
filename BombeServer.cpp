@@ -98,15 +98,13 @@ public:
                 stats[i][j].total = stat->get_item(1)->get_num();
             }
         }
-
-
     }
 
     void add_score(uint64_t steam_id, Score score)
     {
         if ((user_score.count(steam_id)) && (score <= user_score[steam_id]))
             return;
-
+        
         for (auto it = sorted_scores.begin(); it != sorted_scores.end(); )
         {
            if (it->second == steam_id)
@@ -485,7 +483,7 @@ public:
                         std::string steam_username;
                         omap->get_string("steam_username", steam_username);
                         db.update_name(steam_id, steam_username);
-                        printf("scores: %s %lld\n", steam_username.c_str(), steam_id);
+                        printf("scores: %s %lld ", steam_username.c_str(), steam_id);
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (int lset = 0; lset < progress_list->get_count() && lset <= LEVEL_TYPES; lset++)
@@ -515,8 +513,10 @@ public:
                                 }
                             }
                             db.scores[lset].add_score(steam_id, score);
+                            printf("%lld ", score);
                         }
-                       std::set<uint64_t> friends;
+                        printf("\n");
+                        std::set<uint64_t> friends;
                         if (omap->has_key("friends"))
                         {
                             SaveObjectList* friend_list = omap->get_item("friends")->get_list();

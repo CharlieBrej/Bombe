@@ -92,13 +92,13 @@ public:
 
 
     RegionType() : type (NONE), value(0) {}
-    RegionType(char dummy, unsigned t) : type (Type(t >> 8)), value(t & 255) {}
+    RegionType(char dummy, unsigned t) : var((t >> 16) & 0xFF), type (Type((t >> 8) & 0xFF)), value(t & 255) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
 
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value) && (var == other.var); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
-    unsigned as_int() const { return (int(type) << 8 | value); }
+    unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
     std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); std::string rep = "a"; if (offset) rep = "+" + std::to_string(offset); return rep; }
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
@@ -106,7 +106,7 @@ public:
 
     z3::expr apply_z3_rule(z3::expr in, z3::expr_vector& var_vect);
 
-    bool apply_int_rule(unsigned in);
+    bool apply_int_rule(unsigned in, int vars[4]);
 
     int max();
 };
@@ -224,9 +224,9 @@ public:
 
     GridRule permute(std::vector<int>& p);
     bool covers(GridRule& other);
-    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
+    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
-    typedef enum {OK, ILLOGICAL, IMPOSSIBLE} IsLogicalRep;
+    typedef enum {OK, ILLOGICAL, IMPOSSIBLE, UNBOUNDED} IsLogicalRep;
     IsLogicalRep is_legal();
     void remove_region(int index);
     void resort_region();
@@ -337,7 +337,7 @@ public:
         APPLY_RULE_RESP_ERROR
     };
 
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4]);
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region);
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
