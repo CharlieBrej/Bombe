@@ -1543,11 +1543,19 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         {
             dst_rect.w = digit_size.x * 3 / 4;
             src_rect = {304, 512, 96, 192};
+            if (dst_rect.h <= 32)
+                src_rect = {1856, 224, 16, 32};
+            if (dst_rect.h <= 16)
+                src_rect = {1856, 272, 8, 16};
         }
         else if (c == '+')
         {
             dst_rect.w = digit_size.x * 3 / 4;
             src_rect = {432, 512, 96, 192};
+            if (dst_rect.h < 32)
+                src_rect = {1872, 224, 16, 32};
+            if (dst_rect.h <= 16)
+                src_rect = {1864, 272, 8, 16};
         }
         else if (c == '%')
         {
@@ -1561,6 +1569,24 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         }
         else
             assert(0);
+        if (dst_rect.h <= 16 && src_rect.y == 0)
+        {
+            src_rect.y = 256;
+            src_rect.x = src_rect.x / 12 + 1856;
+            src_rect.h /= 12;
+            src_rect.w = src_rect.w / 12 + 1;
+            dst_rect.w++;
+            dst_rect.h++;
+        }
+        else if (dst_rect.h <= 32 && src_rect.y == 0)
+        {
+            src_rect.y = 192;
+            src_rect.x = src_rect.x / 6 + 1856;
+            src_rect.h /= 6;
+            src_rect.w /= 6;
+            dst_rect.w++;
+            dst_rect.h++;
+        }
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         pos.x += dst_rect.w;
     }
@@ -3984,16 +4010,22 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             region_menu = pos.x / button_size;
         }
 
-        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(4 * button_size,2 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(5 * button_size,2 * button_size)))
         {
             XYPos region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
-            region_type = menu_region_types1[region_menu];
-            region_type.value += region_item_selected.x + region_item_selected.y * 5;
-            if (region_type.type == RegionType::NONE)
+            if (menu_region_types1[region_menu].type == RegionType::NONE)
             {
-                region_type.type = menu_region_n_types[region_item_selected.y][region_item_selected.x];
-                region_type.value = region_type_var_value;
-                region_type.var = true;
+                if (region_item_selected.x < 4)
+                {
+                    region_type.type = menu_region_n_types[region_item_selected.y][region_item_selected.x];
+                    region_type.value = region_type_var_value;
+                    region_type.var = true;
+                }
+            }
+            else
+            {
+                region_type = menu_region_types1[region_menu];
+                region_type.value += region_item_selected.x + region_item_selected.y * 5;
             }
                 
         }
