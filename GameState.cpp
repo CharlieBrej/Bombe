@@ -112,6 +112,8 @@ GameState::GameState(std::string& load_data, bool json)
                 speed_dial = double(omap->get_num("speed_dial")) / 1000;
             if (omap->has_key("volume"))
                 volume = double(omap->get_num("volume")) / 1000;
+            if (omap->has_key("game_mode"))
+                game_mode = omap->get_num("game_mode");
             if (omap->has_key("server_levels"))
             {
                 SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
@@ -295,6 +297,8 @@ SaveObject* GameState::save(bool lite)
         m_list->add_item(omap);
     }
     omap->add_item("modes", m_list);
+    omap->add_num("game_mode", game_mode);
+
     omap->add_string("language", language);
     omap->add_num("level_group_index", current_level_group_index);
     omap->add_num("level_set_index", current_level_set_index);
@@ -352,6 +356,37 @@ GameState::~GameState()
         level_gen_thread = NULL;
     }
 
+}
+void GameState::reset_levels()
+{
+    current_level_group_index = 0;
+    current_level_set_index = 0;
+    current_level_index = 0;
+    load_level = 1;
+
+    for (GridRule& rule : rules[game_mode])
+    {
+        rule.used_count = 0;
+        rule.clear_count = 0;
+        rule.level_used_count = 0;
+        rule.level_clear_count = 0;
+    }
+    for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
+    {
+        level_progress[game_mode][j].resize(global_level_sets[j].size());
+        for (int i = 0; i < global_level_sets[j].size(); i++)
+        {
+            level_progress[game_mode][j][i].level_status.clear();
+            level_progress[game_mode][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
+            level_progress[game_mode][j][i].count_todo = global_level_sets[j][i]->levels.size();
+        }
+    }
+    for (int i = 0; i < server_levels.size(); i++)
+    {
+        level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
+        level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
+        level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = server_levels[i].size();
+    }
 }
 
 bool GameState::level_is_accessible(unsigned set)
@@ -1062,13 +1097,26 @@ void GameState::update_constructed_rule()
         GridRule prule = constructed_rule.permute(order);
         for (GridRule& rule : rules[game_mode])
         {
-            if (rule.covers(prule))
+            if (!rule.deleted && rule.covers(prule))
             {
                 constructed_rule_is_already_present = &rule;
             }
         }
     }
     while(std::next_permutation(order.begin(),order.end()));
+    if (constructed_rule_is_logical == GridRule::OK && constructed_rule.apply_region_type.type != RegionType::VISIBILITY)
+    {
+        int rule_cnt = 0;
+        for (GridRule& rule : rules[game_mode])
+        {
+            if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
+                rule_cnt++;
+        }
+        if (game_mode == 2 && rule_cnt >= 100)
+            constructed_rule_is_logical = GridRule::LIMIT;
+        if (game_mode == 3 && rule_cnt >= 300)
+            constructed_rule_is_logical = GridRule::LIMIT;
+    }
 }
 
 static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned col, unsigned fade)
@@ -2673,6 +2721,12 @@ void GameState::render(bool saving)
         render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
     }
     {
+        SDL_Rect src_rect = {2240, 576 + game_mode * 192, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Game Mode");
+    }
+    {
         SDL_Rect src_rect = {1920, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -3004,6 +3058,7 @@ void GameState::render(bool saving)
             render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
 
         }
+        if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
         {
             SDL_Rect src_rect = { 1088, 576, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + 1 * button_size, button_size, button_size};
@@ -3412,6 +3467,13 @@ void GameState::render(bool saving)
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Unbounded");
                     }
+                    else if (constructed_rule_is_logical == GridRule::LIMIT)
+                    {
+                        SDL_Rect src_rect = {1856, 1344, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Rule Count Limit");
+                    }
                     else if (constructed_rule_is_already_present)
                     {
                         SDL_Rect src_rect = {1088, 768, 192, 192};
@@ -3477,6 +3539,30 @@ void GameState::render(bool saving)
             }
         }
     }
+    if (display_modes)
+    {
+        tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
+        for (int i = 0; i < GAME_MODES; i++)
+        {
+            static const char* mode_names[4] = {"Regular", "Three region rules", "Max 100 rules", "No variables, max 300 rules"};
+            std::string name = mode_names[i];
+            {
+                SDL_Rect src_rect = {2240, 576 + (i * 192), 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i), button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, name.c_str());
+
+            }
+
+            if (i == game_mode)
+                SDL_SetTextureColorMod(sdl_texture, 0,255, 0);
+            render_text_box(left_panel_offset + XYPos(button_size * 3, button_size * (2 + i)), name);
+            SDL_SetTextureColorMod(sdl_texture, 255,255, 255);
+        }
+    }
+
     if (display_help)
     {
         tooltip_string = "";
@@ -3643,6 +3729,7 @@ void GameState::render(bool saving)
         set_language(orig_lang);
     }
 
+
     render_tooltip();
     SDL_RenderPresent(sdl_renderer);
 }
@@ -3672,7 +3759,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                 if ((!key_held) && (clicks >= 2))
                 {
                     right_panel_mode = RIGHT_MENU_RULE_GEN;
-                    if (constructed_rule.region_count < 4)
+                    if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
                     {
                         bool found = false;
                         for (int i = 0; i < constructed_rule.region_count; i++)
@@ -3694,13 +3781,6 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                     right_panel_mode = RIGHT_MENU_REGION;
                     inspected_region = mouse_hover_region;
                 }
-
-                // if (rule_gen_region_count < 3)
-                // {
-                //     rule_gen_region[rule_gen_region_count] = mouse_hover_region;
-                //     rule_gen_region_count++;
-                //     update_constructed_rule();
-                // }
             }
         }
     }
@@ -3790,6 +3870,11 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         if (display_scores) display_rules = false;
     }
 
+    if ((pos - XYPos(button_size * 2, button_size * 2)).inside(XYPos(button_size, button_size)))
+    {
+        display_modes = true;
+    }
+
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * (GLBAL_LEVEL_SETS + 1), button_size)))
     {
         int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
@@ -3831,9 +3916,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
     {
         if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size, button_size)))
         {
-            right_panel_mode = RIGHT_MENU_RULE_GEN;
-            if (constructed_rule.region_count < 4)
+            if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
             {
+                right_panel_mode = RIGHT_MENU_RULE_GEN;
                 bool found = false;
                 for (int i = 0; i < constructed_rule.region_count; i++)
                 {
@@ -3908,6 +3993,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             inspected_rule.rule->deleted = true;
             right_panel_mode = RIGHT_MENU_NONE;
+            if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY)
+                reset_levels();
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
@@ -4021,7 +4108,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
         if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(5 * button_size,1 * button_size)))
         {
-            region_menu = pos.x / button_size;
+            int idx = pos.x / button_size;
+            if (!(game_mode == 3 && idx == 4))
+                region_menu = idx;
         }
 
         if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(5 * button_size,2 * button_size)))
@@ -4131,7 +4220,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             if (constructed_rule.region_count && constructed_rule.apply_region_bitmap)
             {
-                if (constructed_rule.is_legal() == GridRule::OK)
+                if (constructed_rule_is_logical == GridRule::OK)
                 {
                     if (constructed_rule_is_already_present)
                     {
@@ -4141,7 +4230,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     else
                     {
                         if (replace_rule)
+                        {
+                            if (game_mode == 2 || game_mode == 3)
+                            {
+                                if (replace_rule->apply_region_type.type != RegionType::VISIBILITY)
+                                    reset_levels();
+                            }
                             *replace_rule = constructed_rule;
+                        }
                         else
                             rules[game_mode].push_back(constructed_rule);
 
@@ -4379,39 +4475,9 @@ bool GameState::events()
                     {
                         if (p == XYPos(1, 4))
                         {
-                            current_level_group_index = 1;
-                            current_level_set_index = 0;
-                            current_level_index = 0;
-                            load_level = 1;
+                            reset_levels();
                             if (!display_reset_confirm_levels_only)
                                 rules[game_mode].clear();
-                            else
-                            {
-                                for (GridRule& rule : rules[game_mode])
-                                {
-                                    rule.used_count = 0;
-                                    rule.clear_count = 0;
-                                    rule.level_used_count = 0;
-                                    rule.level_clear_count = 0;
-                                }
-                            }
-                            for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
-                            {
-                                level_progress[game_mode][j].resize(global_level_sets[j].size());
-                                for (int i = 0; i < global_level_sets[j].size(); i++)
-                                {
-                                    level_progress[game_mode][j][i].level_status.clear();
-                                    level_progress[game_mode][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
-                                    level_progress[game_mode][j][i].count_todo = global_level_sets[j][i]->levels.size();
-                                }
-                            }
-                            for (int i = 0; i < server_levels.size(); i++)
-                            {
-                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
-                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
-                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = server_levels[i].size();
-                            }
-                            server_levels_version = 0;
 
                             display_reset_confirm = false;
                         }
@@ -4479,6 +4545,28 @@ bool GameState::events()
                     if ((mouse - help_image_offset - help_image_size + XYPos(sq_size * 1, sq_size)).inside(XYPos(sq_size, sq_size)))
                         if (tutorial_index < (tut_texture_count - 1))
                             tutorial_index++;
+                    break;
+                }
+                if (display_modes)
+                {
+                    XYPos p = (mouse - left_panel_offset) / button_size;
+                    p -= XYPos(2,2);
+                    if (p.x >= 0 && p.y >= 0 && p.x < 5 && p.y < GAME_MODES)
+                    {
+                        int index = p.y;
+                        if (index != game_mode)
+                        {
+                            current_level_group_index = 0;
+                            current_level_set_index = 0;
+                            current_level_index = 0;
+                            load_level = 1;
+                            region_type = RegionType(RegionType::SET, 0);
+                            region_menu = 0;
+                            region_type_var_value = 0;
+                            game_mode = index;
+                        }
+                        display_modes = false;
+                    }
                     break;
                 }
 

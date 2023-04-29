@@ -52,7 +52,7 @@ public:
     Mix_Chunk* sounds[8];
     int sound_frame_index = 0;
 
-    static const int GAME_MODES = 3;
+    static const int GAME_MODES = 4;
     int game_mode = 0;
 
 
@@ -66,6 +66,7 @@ public:
     bool display_reset_confirm_levels_only = false;
     bool display_rules = false;
     bool display_scores = false;
+    bool display_modes = false;
 
     char key_held = 0;
 
@@ -222,7 +223,7 @@ public:
 
     std::vector<PlayerScore> score_tables[GLBAL_LEVEL_SETS + 1];
 
-    unsigned current_level_group_index = 1;
+    unsigned current_level_group_index = 0;
     unsigned current_level_set_index = 0;
     int current_level_index = 0;
     bool current_level_is_temp = true;
@@ -237,6 +238,7 @@ public:
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
     ~GameState();
+    void reset_levels();
     bool level_is_accessible(unsigned set);
     void post_to_server(SaveObject* send, bool sync);
     void fetch_from_server(SaveObject* send, ServerResp* resp);
