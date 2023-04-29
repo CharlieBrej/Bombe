@@ -24,6 +24,7 @@
 
 bool power_down = false;
 const int LEVEL_TYPES = 4;
+const int GAME_MODE_TYPES = 4;
 
 typedef int64_t Score;
 
@@ -128,7 +129,7 @@ class Database
 {
 public:
     std::map<uint64_t, std::string> players;
-    ScoreTable scores[LEVEL_TYPES + 1];
+    ScoreTable scores[GAME_MODE_TYPES][LEVEL_TYPES + 1];
     std::map<std::string, uint64_t> steam_sessions;
     std::vector<std::vector<std::string>> server_levels;
     std::vector<std::vector<std::string>> next_server_levels;
@@ -158,10 +159,14 @@ public:
             omap->get_string("steam_username", name);
             update_name(id, name);
         }
-        SaveObjectList* score_list = omap->get_item("scores")->get_list();
-        for (int i = 0; (i <= LEVEL_TYPES) && (i < score_list->get_count()); i++)
+        SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
+        for (int j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
         {
-            scores[i].load(score_list->get_item(i));
+            SaveObjectList* score_list = score_list2->get_item(j)->get_list();
+            for (int i = 0; (i <= LEVEL_TYPES) && (i < score_list->get_count()); i++)
+            {
+                scores[j][i].load(score_list->get_item(i));
+            }
         }
 
         SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
@@ -208,12 +213,17 @@ public:
         }
         omap->add_item("players", player_list);
 
-        SaveObjectList* score_list = new SaveObjectList;
-        for (int i = 0; i <= LEVEL_TYPES; i++)
+        SaveObjectList* score_list2 = new SaveObjectList;
+        for (int j = 0; j < GAME_MODE_TYPES; j++)
         {
-            score_list->add_item(scores[i].save());
+            SaveObjectList* score_list = new SaveObjectList;
+            for (int i = 0; i <= LEVEL_TYPES; i++)
+            {
+                score_list->add_item(scores[j][i].save());
+            }
+            score_list2->add_item(score_list);
         }
-        omap->add_item("scores", score_list);
+        omap->add_item("scores", score_list2);
         
         SaveObjectList* sl_list = new SaveObjectList;
         for (std::vector<std::string>& lvl_set : server_levels)
@@ -260,7 +270,7 @@ public:
         }
     }
 
-    SaveObjectMap* get_scores(uint64_t user_id, std::set<uint64_t> friends)
+    SaveObjectMap* get_scores(int mode, uint64_t user_id, std::set<uint64_t> friends)
     {
         SaveObjectMap* resp = new SaveObjectMap();
         SaveObjectList* top_list = new SaveObjectList();
@@ -269,7 +279,7 @@ public:
             SaveObjectList* score_list = new SaveObjectList();
             int pos = 0;
             int prevpos = 0;
-            for (std::multimap<Score, int64_t>::iterator rit = scores[i].sorted_scores.begin(); rit != scores[i].sorted_scores.end(); rit++)
+            for (std::multimap<Score, int64_t>::iterator rit = scores[mode][i].sorted_scores.begin(); rit != scores[mode][i].sorted_scores.end(); rit++)
             {
                 pos++;
                 int fr = friends.count(rit->second);
@@ -289,7 +299,7 @@ public:
                 SaveObjectMap* score_map = new SaveObjectMap();
                 score_map->add_num("pos", pos);
                 score_map->add_string("name", players[rit->second]);
-                score_map->add_num("score", scores[i].user_score[rit->second]);
+                score_map->add_num("score", scores[mode][i].user_score[rit->second]);
                 if (fr)
                     score_map->add_num("friend", fr);
                 score_list->add_item(score_map);
@@ -309,8 +319,8 @@ public:
                 for (int j = 0; j < 200; j++)
                 {
                     uint64_t t = 0;
-                    if (scores[l].stats[i][j].total)
-                        t = ceil(((double)scores[l].stats[i][j].completed * 10000) / scores[l].stats[i][j].total);
+                    if (scores[mode][l].stats[i][j].total)
+                        t = ceil(((double)scores[mode][l].stats[i][j].completed * 10000) / scores[mode][l].stats[i][j].total);
                     SaveObjectNumber* stat = new SaveObjectNumber(t);
                     sub_stats_list->add_item(stat);
                 }
@@ -484,6 +494,9 @@ public:
                         omap->get_string("steam_username", steam_username);
                         db.update_name(steam_id, steam_username);
                         printf("scores: %s %lld ", steam_username.c_str(), steam_id);
+                        int mode = 0;
+                        if (omap->has_key("game_mode"))
+                            mode = omap->get_num("game_mode");
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (int lset = 0; lset < progress_list->get_count() && lset <= LEVEL_TYPES; lset++)
@@ -504,15 +517,15 @@ public:
                                 for (int i = 0; i < s.length() && i < 200; i++)
                                 {
                                     bool c = (s[i] == '1');
-                                    db.scores[lset].stats[lgrp][i].total++;
+                                    db.scores[mode][lset].stats[lgrp][i].total++;
                                     if (c)
                                     {
-                                        db.scores[lset].stats[lgrp][i].completed++;
+                                        db.scores[mode][lset].stats[lgrp][i].completed++;
                                         score++;
                                     }
                                 }
                             }
-                            db.scores[lset].add_score(steam_id, score);
+                            db.scores[mode][lset].add_score(steam_id, score);
                             printf("%lld ", score);
                         }
                         printf("\n");
@@ -532,7 +545,8 @@ public:
                             std::string resp = omap->get_string("level_gen_resp");
                             db.add_server_level(req, resp);
                         }
-                        SaveObjectMap* scr = db.get_scores(steam_id, friends);
+
+                        SaveObjectMap* scr = db.get_scores(mode, steam_id, friends);
 
                         if(omap->has_key("server_levels_version"))
                         {

@@ -52,8 +52,12 @@ public:
     Mix_Chunk* sounds[8];
     int sound_frame_index = 0;
 
+    static const int GAME_MODES = 3;
+    int game_mode = 0;
+
+
     Grid *grid;
-    std::list<GridRule> rules;
+    std::list<GridRule> rules[GAME_MODES];
 
     bool display_menu = false;
     bool display_help = false;
@@ -184,15 +188,12 @@ public:
 
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     GridVisLevel vis_mode = GRID_VIS_LEVEL_HIDE;
-    bool xor_is_3 = false;
 
     bool show_row_clues = true;
 
-    bool auto_region = true;
     bool get_hint = false;
     std::set<XYPos> clue_solves;
 
-    std::list<Grid*> levels;
     ServerResp scores_from_server;
 
     class LevelProgress
@@ -205,7 +206,7 @@ public:
     std::vector<std::vector<std::string>> server_levels;
     int server_levels_version = 0;
 
-    std::vector<LevelProgress> level_progress[GLBAL_LEVEL_SETS + 1];
+    std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
     class PlayerScore
     {
     public:

@@ -88,7 +88,7 @@ public:
         VISIBILITY = 101,
     } type = NONE;
     int8_t value = 0;
-    bool var = false;
+    uint8_t var = 0;
 
 
     RegionType() : type (NONE), value(0) {}
@@ -99,7 +99,10 @@ public:
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
     unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
-    std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); return std::string(1, char('a' + (value + offset)));}
+    std::string val_as_str(int offset = 0){if (!var) return std::to_string(value + offset); if (var == 1) return std::string(1, char('a' + (value + offset)));
+                                                                                            if (var == 2) return std::string(1, char('A' + (value + offset)));
+                                                                                            if (var == 3) return std::string(1, char('A' + (value + offset)));
+                                                                                            assert(0);}
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
     template<class RESP, class IN, class VAR_ARR> RESP apply_rule(IN in, VAR_ARR& vars);

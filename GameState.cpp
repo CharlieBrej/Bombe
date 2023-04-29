@@ -66,19 +66,23 @@ GameState::GameState(std::string& load_data, bool json)
     LevelSet::init_global();
     bool load_was_good = false;
 
+    for (int k = 0; k < GAME_MODES; k++)
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        level_progress[j].resize(global_level_sets[j].size());
+        level_progress[k][j].resize(global_level_sets[j].size());
         for (int i = 0; i < global_level_sets[j].size(); i++)
         {
-            level_progress[j][i].level_status.resize(global_level_sets[j][i]->levels.size());
-            level_progress[j][i].count_todo = global_level_sets[j][i]->levels.size();
-            level_progress[j][i].level_stats.resize(global_level_sets[j][i]->levels.size());
+            level_progress[k][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
+            level_progress[k][j][i].count_todo = global_level_sets[j][i]->levels.size();
+            level_progress[k][j][i].level_stats.resize(global_level_sets[j][i]->levels.size());
         }
     }
     {
         server_levels.resize(1);
         server_levels[0].push_back("ABBA!");
+        for (int m = 0; m < GAME_MODES; m++)
+            level_progress[m][GLBAL_LEVEL_SETS].resize(1);
+
     }
     {
         std::ifstream loadfile("lang.json");
@@ -112,14 +116,18 @@ GameState::GameState(std::string& load_data, bool json)
             {
                 SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
                 server_levels.resize(lvl_sets->get_count());
-                level_progress[GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+                for (int m = 0; m < GAME_MODES; m++)
+                    level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
                 for (int k = 0; k < lvl_sets->get_count(); k++)
                 {
                     SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
                     server_levels[k].clear();
-                    level_progress[GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
-                    level_progress[GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
-                    level_progress[GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
+                    for (int m = 0; m < GAME_MODES; m++)
+                    {
+                        level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
+                        level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
+                        level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
+                    }
                     for (int i = 0; i < plist->get_count(); i++)
                     {
                         std::string s = plist->get_string(i);
@@ -129,53 +137,48 @@ GameState::GameState(std::string& load_data, bool json)
                 server_levels_version = omap->get_num("server_levels_version");
             }
 
-            SaveObjectList* rlist = omap->get_item("rules")->get_list();
-            for (int i = 0; i < rlist->get_count(); i++)
-            {
-                GridRule r(rlist->get_item(i), version);
-//                if (r.is_legal())
-                rules.push_back(r);
-            }
+            std::list<SaveObjectMap*> modes;
 
-            if (version == 4)
+            if (omap->has_key("modes"))
             {
-                SaveObjectList* plist = omap->get_item("level_progress")->get_list();
-                for (int i = 0; i < plist->get_count() && i < level_progress[1].size(); i++)
-                {
-                    std::string s = plist->get_string(i);
-                    int lim = std::min(s.size(), level_progress[1][i].level_status.size());
-                    for (int j = 0; j < lim; j++)
-                    {
-                        char c = s[j];
-                        int stat = c - '0';
-                        level_progress[1][i].level_status[j] = stat;
-                        if (stat)
-                            level_progress[1][i].count_todo--;
-                    }
-                }
+                SaveObjectList* mode_lists = omap->get_item("modes")->get_list();
+                for (int k = 0; k < mode_lists->get_count(); k++)
+                    modes.push_back(mode_lists->get_item(k)->get_map());
             }
-            if (version >= 5)
+            else
+                modes.push_back(omap);
+            int mode = 0;
+            for (SaveObjectMap* omap : modes)
             {
-                SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
-                for (int k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
+                SaveObjectList* rlist = omap->get_item("rules")->get_list();
+                for (int i = 0; i < rlist->get_count(); i++)
                 {
-                    SaveObjectList* plist = pplist->get_item(k)->get_list();
-                    for (int i = 0; i < plist->get_count() && i < level_progress[k].size(); i++)
+                    GridRule r(rlist->get_item(i), version);
+    //                if (r.is_legal())
+                    rules[mode].push_back(r);
+                }
+
+                {
+                    SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
+                    for (int k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
                     {
-                        if (version == 5 && k == 0 && i >= 20)
-                            continue;
-                        std::string s = plist->get_string(i);
-                        int lim = std::min(s.size(), level_progress[k][i].level_status.size());
-                        for (int j = 0; j < lim; j++)
+                        SaveObjectList* plist = pplist->get_item(k)->get_list();
+                        for (int i = 0; i < plist->get_count() && i < level_progress[mode][k].size(); i++)
                         {
-                            char c = s[j];
-                            int stat = c - '0';
-                            level_progress[k][i].level_status[j] = stat;
-                            if (stat)
-                                level_progress[k][i].count_todo--;
+                            std::string s = plist->get_string(i);
+                            int lim = std::min(s.size(), level_progress[mode][k][i].level_status.size());
+                            for (int j = 0; j < lim; j++)
+                            {
+                                char c = s[j];
+                                int stat = c - '0';
+                                level_progress[mode][k][i].level_status[j] = stat;
+                                if (stat)
+                                    level_progress[mode][k][i].count_todo--;
+                            }
                         }
                     }
                 }
+                mode++;
             }
 
             delete omap;
@@ -259,31 +262,39 @@ SaveObject* GameState::save(bool lite)
     SaveObjectMap* omap = new SaveObjectMap;
     omap->add_num("version", game_version);
 
-    SaveObjectList* rlist = new SaveObjectList;
-    for (GridRule& rule : rules)
-    {
-        if (!rule.deleted)
-            rlist->add_item(rule.save());
-    }
-    omap->add_item("rules", rlist);
+    SaveObjectList* m_list = new SaveObjectList;
 
-    SaveObjectList* pplist = new SaveObjectList;
-    for (int j = 0; j <= GLBAL_LEVEL_SETS; j++)
+    for (int mode = 0; mode < GAME_MODES; mode++)
     {
-        SaveObjectList* plist = new SaveObjectList;
-        for (LevelProgress& prog : level_progress[j])
+        SaveObjectMap* omap = new SaveObjectMap;
+        SaveObjectList* rlist = new SaveObjectList;
+        for (GridRule& rule : rules[mode])
         {
-            std::string sstr;
-            for (bool stat : prog.level_status)
-            {
-                char c = '0' + stat;
-                sstr += c;
-            }
-            plist->add_item(new SaveObjectString(sstr));
+            if (!rule.deleted)
+                rlist->add_item(rule.save());
         }
-        pplist->add_item(plist);
+        omap->add_item("rules", rlist);
+
+        SaveObjectList* pplist = new SaveObjectList;
+        for (int j = 0; j <= GLBAL_LEVEL_SETS; j++)
+        {
+            SaveObjectList* plist = new SaveObjectList;
+            for (LevelProgress& prog : level_progress[mode][j])
+            {
+                std::string sstr;
+                for (bool stat : prog.level_status)
+                {
+                    char c = '0' + stat;
+                    sstr += c;
+                }
+                plist->add_item(new SaveObjectString(sstr));
+            }
+            pplist->add_item(plist);
+        }
+        omap->add_item("level_progress", pplist);
+        m_list->add_item(omap);
     }
-    omap->add_item("level_progress", pplist);
+    omap->add_item("modes", m_list);
     omap->add_string("language", language);
     omap->add_num("level_group_index", current_level_group_index);
     omap->add_num("level_set_index", current_level_set_index);
@@ -355,9 +366,9 @@ bool GameState::level_is_accessible(unsigned set)
     }
     if (set == 0)
         return true;
-    if (set >= 5 && level_progress[current_level_group_index][set - 5].count_todo < 150)
+    if (set >= 5 && level_progress[game_mode][current_level_group_index][set - 5].count_todo < 150)
         return true;
-    if ((set % 5 >= 1) && level_progress[current_level_group_index][set - 1].count_todo < 150)
+    if ((set % 5 >= 1) && level_progress[game_mode][current_level_group_index][set - 1].count_todo < 150)
         return true;
     return false;
 }
@@ -552,13 +563,14 @@ void GameState::fetch_scores()
     omap->add_num("demo", IS_DEMO);
     omap->add_num("playtest", IS_PLAYTEST);
     omap->add_num("version", game_version);
+    omap->add_num("game_mode", game_mode);
     SaveObjectList* plist = new SaveObjectList;
 
     SaveObjectList* pplist = new SaveObjectList;
     for (int j = 0; j <= GLBAL_LEVEL_SETS; j++)
     {
         SaveObjectList* plist = new SaveObjectList;
-        for (LevelProgress& prog : level_progress[j])
+        for (LevelProgress& prog : level_progress[game_mode][j])
         {
             std::string sstr;
             for (bool stat : prog.level_status)
@@ -617,9 +629,9 @@ void GameState::advance(int steps)
     for (int s = 0; s < GLBAL_LEVEL_SETS; s++)
     {
         int count = 0;
-        for (int i = 0; i < level_progress[s].size(); i++)
+        for (int i = 0; i < level_progress[0][s].size(); i++)
         {
-            LevelProgress& prog = level_progress[s][i];
+            LevelProgress& prog = level_progress[0][s][i];
             for (bool b : prog.level_status)
                 if (b)
                     count++;
@@ -637,10 +649,10 @@ void GameState::advance(int steps)
     }
     if (grid->is_solved() && !current_level_is_temp)
     {
-        if (!level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index])
+        if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
-            level_progress[current_level_group_index][current_level_set_index].count_todo--;
-            level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
+            level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
+            level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             skip_level = 1;
         }
     }
@@ -648,7 +660,7 @@ void GameState::advance(int steps)
     if (load_level || skip_level)
     {
         clue_solves.clear();
-        if (level_progress[current_level_group_index][current_level_set_index].count_todo)
+        if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
         {
             do 
             {
@@ -661,8 +673,8 @@ void GameState::advance(int steps)
                 {
                     if (current_level_index == 0)
                     {
-                        current_level_index = level_progress[current_level_group_index][current_level_set_index].level_status.size();
-                        if (!level_progress[current_level_group_index][current_level_set_index].count_todo)
+                        current_level_index = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
+                        if (!level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
                             break;
                     }
                     current_level_index--;
@@ -670,14 +682,14 @@ void GameState::advance(int steps)
                 else
                 {
                     current_level_index++;
-                    if (current_level_index >= level_progress[current_level_group_index][current_level_set_index].level_status.size())
+                    if (current_level_index >= level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size())
                     {
                         current_level_index = 0;
                         auto_progress = false;
                     }
                 }
             }
-            while (level_progress[current_level_group_index][current_level_set_index].level_status[current_level_index]);
+            while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index]);
 
             std::string& s = (current_level_group_index == GLBAL_LEVEL_SETS) ?
                         server_levels[current_level_set_index][current_level_index] :
@@ -693,7 +705,7 @@ void GameState::advance(int steps)
             target_grid_zoom = 1;
             scaled_grid_offset = XYPos(0,0);
             scaled_grid_size = grid_size;
-            for (GridRule& rule : rules)
+            for (GridRule& rule : rules[game_mode])
             {
                 rule.level_used_count = 0;
                 rule.level_clear_count = 0;
@@ -710,7 +722,7 @@ void GameState::advance(int steps)
         while (true)
         {
             current_level_set_index++;
-            if (level_progress[current_level_group_index].size() <= current_level_set_index)
+            if (level_progress[game_mode][current_level_group_index].size() <= current_level_set_index)
             {
                 current_level_set_index = 0;
                 auto_progress_all = false;
@@ -787,7 +799,7 @@ void GameState::advance(int steps)
     unsigned oldtime = SDL_GetTicks();
     bool cleared_cell = false;
 
-    for (GridRule& rule : rules)
+    for (GridRule& rule : rules[game_mode])
     {
         if (rule.deleted)
             continue;
@@ -823,7 +835,7 @@ void GameState::advance(int steps)
             {
                 if (!region.stale)
                 {
-                    for (GridRule& rule : rules)
+                    for (GridRule& rule : rules[game_mode])
                     {
                         if (rule.deleted)
                             continue;
@@ -869,7 +881,7 @@ void GameState::advance(int steps)
                     r.vis_level = GRID_VIS_LEVEL_SHOW;
                     for (int i = 1; i < 3; i++)
                     {
-                        for (GridRule& rule : rules)
+                        for (GridRule& rule : rules[game_mode])
                         {
                             if (rule.deleted)
                                 continue;
@@ -898,7 +910,7 @@ void GameState::advance(int steps)
             {
                 if (region.vis_level == GRID_VIS_LEVEL_BIN)
                         continue;
-                for (GridRule& rule : rules)
+                for (GridRule& rule : rules[game_mode])
                 {
                     if (rule.deleted)
                         continue;
@@ -938,7 +950,7 @@ void GameState::advance(int steps)
                 {
                     for (int i = 1; i < 3; i++)
                     {
-                        for (GridRule& rule : rules)
+                        for (GridRule& rule : rules[game_mode])
                         {
                             if (rule.deleted)
                                 continue;
@@ -1048,7 +1060,7 @@ void GameState::update_constructed_rule()
     do{
 
         GridRule prule = constructed_rule.permute(order);
-        for (GridRule& rule : rules)
+        for (GridRule& rule : rules[game_mode])
         {
             if (rule.covers(prule))
             {
@@ -2167,7 +2179,7 @@ void GameState::render(bool saving)
         };
         std::vector<RuleDiplay> rules_list;
         unsigned i = 0;
-        for (GridRule& r : rules)
+        for (GridRule& r : rules[game_mode])
         {
             if (r.deleted)
                 continue;
@@ -2647,7 +2659,7 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Rules");
         int rule_count = 0;
         int vis_rule_count = 0;
-        for (GridRule& rule : rules)
+        for (GridRule& rule : rules[game_mode])
         {
             if (!rule.deleted)
             {
@@ -2666,7 +2678,7 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         dst_rect.w *= 2;
         add_tooltip(dst_rect, "Current Level", false);
-        unsigned rep = level_progress[current_level_group_index][current_level_set_index].level_stats[current_level_index];
+        unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_stats[current_level_index];
 
         std::string digits;
         if (rep == 0)
@@ -2698,9 +2710,9 @@ void GameState::render(bool saving)
         dst_rect.w *= 2;
         add_tooltip(dst_rect, "Scores");
         int count = 0;
-        for (int i = 0; i < level_progress[current_level_group_index].size(); i++)
+        for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
         {
-            LevelProgress& prog = level_progress[current_level_group_index][i];
+            LevelProgress& prog = level_progress[game_mode][current_level_group_index][i];
             for (bool b : prog.level_status)
                 if (b)
                     count++;
@@ -2743,10 +2755,12 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Trash");
     }
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 5; i++)
     {
         SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+        if (i == 4)
+            src_rect = {1664, 1536, 192, 192};
         if (IS_DEMO && i >= 2)
             src_rect = {1088, 192, 192, 192};
         else
@@ -2763,7 +2777,7 @@ void GameState::render(bool saving)
     }
 
     XYPos p = XYPos(0,0);
-    for (int i = 0; i < level_progress[current_level_group_index].size(); i++)
+    for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
     {
         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
         if (i == current_level_set_index)
@@ -2778,7 +2792,7 @@ void GameState::render(bool saving)
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
             }
         }
-        int c = level_progress[current_level_group_index][i].count_todo;
+        int c = level_progress[game_mode][current_level_group_index][i].count_todo;
         int cnt = (current_level_group_index == GLBAL_LEVEL_SETS) ?
                         server_levels[i].size() :
                         global_level_sets[current_level_group_index][i]->levels.size();
@@ -2791,7 +2805,7 @@ void GameState::render(bool saving)
         }
         else if (c)
         {
-            render_number(level_progress[current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
+            render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
             add_clickable_highlight(dst_rect);
         }
@@ -3796,9 +3810,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     gpos.y -= 6;
     int idx = gpos.x + gpos.y * 5;
 
-    if ((idx >= 0) && (idx < level_progress[current_level_group_index].size()))
+    if ((idx >= 0) && (idx < level_progress[game_mode][current_level_group_index].size()))
     {
-        if (level_progress[current_level_group_index][idx].level_status.size() && level_is_accessible(idx))
+        if (level_progress[game_mode][current_level_group_index][idx].level_status.size() && level_is_accessible(idx))
         {
             current_level_set_index = idx;
             current_level_index = 0;
@@ -4129,7 +4143,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         if (replace_rule)
                             *replace_rule = constructed_rule;
                         else
-                            rules.push_back(constructed_rule);
+                            rules[game_mode].push_back(constructed_rule);
 
                         reset_rule_gen_region();
                     }
@@ -4370,10 +4384,10 @@ bool GameState::events()
                             current_level_index = 0;
                             load_level = 1;
                             if (!display_reset_confirm_levels_only)
-                                rules.clear();
+                                rules[game_mode].clear();
                             else
                             {
-                                for (GridRule& rule : rules)
+                                for (GridRule& rule : rules[game_mode])
                                 {
                                     rule.used_count = 0;
                                     rule.clear_count = 0;
@@ -4383,19 +4397,19 @@ bool GameState::events()
                             }
                             for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
                             {
-                                level_progress[j].resize(global_level_sets[j].size());
+                                level_progress[game_mode][j].resize(global_level_sets[j].size());
                                 for (int i = 0; i < global_level_sets[j].size(); i++)
                                 {
-                                    level_progress[j][i].level_status.clear();
-                                    level_progress[j][i].level_status.resize(global_level_sets[j][i]->levels.size());
-                                    level_progress[j][i].count_todo = global_level_sets[j][i]->levels.size();
+                                    level_progress[game_mode][j][i].level_status.clear();
+                                    level_progress[game_mode][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
+                                    level_progress[game_mode][j][i].count_todo = global_level_sets[j][i]->levels.size();
                                 }
                             }
                             for (int i = 0; i < server_levels.size(); i++)
                             {
-                                level_progress[GLBAL_LEVEL_SETS][i].level_status.clear();
-                                level_progress[GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
-                                level_progress[GLBAL_LEVEL_SETS][i].count_todo = server_levels[i].size();
+                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
+                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
+                                level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = server_levels[i].size();
                             }
                             server_levels_version = 0;
 
@@ -4574,13 +4588,13 @@ void GameState::deal_with_scores()
                 for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
                 {
                     SaveObjectList* stats1 = lvls->get_item(i)->get_list();
-                    for (int j = 0; j < stats1->get_count() && j < level_progress[i].size(); j++)
+                    for (int j = 0; j < stats1->get_count() && j < level_progress[game_mode][i].size(); j++)
                     {
                         SaveObjectList* stats2 = stats1->get_item(j)->get_list();
-                        for (int k = 0; k < stats2->get_count() && k < level_progress[i][j].level_stats.size(); k++)
+                        for (int k = 0; k < stats2->get_count() && k < level_progress[game_mode][i][j].level_stats.size(); k++)
                         {
                             int64_t s = stats2->get_item(k)->get_num();
-                            level_progress[i][j].level_stats[k] = s;
+                            level_progress[game_mode][i][j].level_stats[k] = s;
                         }
                     }
                 }
@@ -4602,14 +4616,20 @@ void GameState::deal_with_scores()
                     SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
                     server_levels.clear();
                     server_levels.resize(lvl_sets->get_count());
-                    level_progress[GLBAL_LEVEL_SETS].clear();
-                    level_progress[GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+                    for (int m = 0; m < GAME_MODES; m++)
+                    {
+                        level_progress[m][GLBAL_LEVEL_SETS].clear();
+                        level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+                    }
                     for (int k = 0; k < lvl_sets->get_count(); k++)
                     {
                         SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
-                        level_progress[GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
-                        level_progress[GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
-                        level_progress[GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
+                        for (int m = 0; m < GAME_MODES; m++)
+                        {
+                            level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
+                            level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
+                            level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
+                        }
 
                         for (int i = 0; i < plist->get_count(); i++)
                         {
