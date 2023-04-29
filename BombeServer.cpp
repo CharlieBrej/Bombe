@@ -340,9 +340,7 @@ public:
                 break;
             }
         }
-
-
-
+        resp->add_num("game_mode", mode);
         return resp;
     }
 
@@ -493,10 +491,10 @@ public:
                         std::string steam_username;
                         omap->get_string("steam_username", steam_username);
                         db.update_name(steam_id, steam_username);
-                        printf("scores: %s %lld ", steam_username.c_str(), steam_id);
                         int mode = 0;
                         if (omap->has_key("game_mode"))
                             mode = omap->get_num("game_mode");
+                        printf("scores: %s %lld (%d)", steam_username.c_str(), steam_id, mode);
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (int lset = 0; lset < progress_list->get_count() && lset <= LEVEL_TYPES; lset++)

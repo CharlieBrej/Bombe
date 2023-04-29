@@ -126,20 +126,7 @@ public:
 
     
     RegionType region_type = RegionType(RegionType::SET, 0);
-    int region_menu = 0;
-    int region_type_var_value = 0;
-    const RegionType menu_region_types1[5] = {  RegionType(RegionType::EQUAL, 1),
-                                                RegionType(RegionType::MORE, 1),
-                                                RegionType(RegionType::XOR2, 0),
-                                                RegionType(RegionType::XOR22, 0),
-                                                RegionType(RegionType::NONE, 0)};
-    const RegionType menu_region_types2[5] = {  RegionType(RegionType::NOTEQUAL, 1),
-                                                RegionType(RegionType::LESS, 1),
-                                                RegionType(RegionType::XOR3, 0),
-                                                RegionType(RegionType::XOR222, 0),
-                                                RegionType(RegionType::NONE, 0)};
-
-    const RegionType::Type menu_region_n_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::NONE},
+    const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::NONE},
                                                         {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::NONE}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
@@ -221,7 +208,7 @@ public:
         {}
     };
 
-    std::vector<PlayerScore> score_tables[GLBAL_LEVEL_SETS + 1];
+    std::vector<PlayerScore> score_tables[GAME_MODES][GLBAL_LEVEL_SETS + 1];
 
     unsigned current_level_group_index = 0;
     unsigned current_level_set_index = 0;

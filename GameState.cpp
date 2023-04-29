@@ -1969,6 +1969,8 @@ void GameState::render(bool saving)
 
     if (display_scores)
     {
+        if (score_tables[game_mode][0].size() == 0)
+            fetch_scores();
         int row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 7.5;
@@ -2001,15 +2003,15 @@ void GameState::render(bool saving)
                 display_scores = false;
         }
 
-        if (rules_list_offset + row_count > (int)score_tables[current_level_group_index].size())
-            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        if (rules_list_offset + row_count > (int)score_tables[game_mode][current_level_group_index].size())
+            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         for (int score_index = 0; score_index < row_count; score_index++)
         {
-            if (score_index + rules_list_offset >= score_tables[current_level_group_index].size())
+            if (score_index + rules_list_offset >= score_tables[game_mode][current_level_group_index].size())
                 break;
-            PlayerScore& s = score_tables[current_level_group_index][score_index + rules_list_offset];
+            PlayerScore& s = score_tables[game_mode][current_level_group_index][score_index + rules_list_offset];
             if (s.hidden)
                 continue;
 
@@ -2049,13 +2051,13 @@ void GameState::render(bool saving)
                 rules_list_offset++;
         }
 
-        if (rules_list_offset + row_count > score_tables[current_level_group_index].size())
-            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        if (rules_list_offset + row_count > score_tables[game_mode][current_level_group_index].size())
+            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         {
             int full_size = cell_width * 5.5;
-            int all_count = score_tables[current_level_group_index].size();
+            int all_count = score_tables[game_mode][current_level_group_index].size();
             int box_height = full_size;
             int box_pos = 0;
 
@@ -2074,8 +2076,8 @@ void GameState::render(bool saving)
 
             render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-        if (rules_list_offset + row_count > (int)score_tables[current_level_group_index].size())
-            rules_list_offset = score_tables[current_level_group_index].size() - row_count;
+        if (rules_list_offset + row_count > (int)score_tables[game_mode][current_level_group_index].size())
+            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
         display_rules_click = false;
 
@@ -2889,96 +2891,136 @@ void GameState::render(bool saving)
             render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
         }
 
+        // {
+        //     SDL_Rect src_rect = {544, 544, 128, 128};
+        //     SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+        //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        // }
+        // {
+        //     SDL_Rect src_rect = {128, 864, 128, 128};
+        //     SDL_Rect dst_rect = {right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+        //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        // }
+        // {
+        //     SDL_Rect src_rect = {128, 736, 128, 128};
+        //     SDL_Rect dst_rect = {right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+        //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        // }
+        // {
+        //     SDL_Rect src_rect = {256, 864, 128, 128};
+        //     SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+        //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        // }
+        // for (int i = 0; i < 5; i++)
+        // {
+        //     SDL_Rect src_rect = {512, (region_menu == i) ? 1152 : 1344, 192, 192};
+        //     SDL_Rect dst_rect = {right_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
+        //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        //     if (i < 4)
+        //         add_clickable_highlight(dst_rect);
+        // }
+
+        // RegionType r_type = menu_region_types1[region_menu];
+        // if (r_type.type != RegionType::NONE)
+        // {
+        //     FOR_XY(pos, XYPos(), XYPos(5, 2))
+        //     {
+        //         XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 8);
+        //         if (region_type == r_type)
+        //             render_box(bpos, XYPos(button_size, button_size), button_size/4);
+        //         render_region_type(r_type, bpos, button_size);
+        //         r_type.value ++;
+        //         SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+        //         add_clickable_highlight(dst_rect);
+
+        //     }
+        // }
+        // else
+        // {
+        //     r_type.var = true;
+        //     r_type.value = region_type_var_value;
+        //     FOR_XY(pos, XYPos(), XYPos(4, 2))
+        //     {
+        //         XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 8);
+        //         r_type.type = menu_region_n_types[pos.y][pos.x];
+        //         if (region_type == r_type)
+        //             render_box(bpos, XYPos(button_size, button_size), button_size/4);
+        //         render_region_type(r_type, bpos, button_size);
+        //         SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+        //         add_clickable_highlight(dst_rect);
+
+        //     }
+        // }
+
+        // r_type = menu_region_types2[region_menu];
+        // if (r_type.type != RegionType::NONE)
+        // {
+        //     FOR_XY(pos, XYPos(), XYPos(5, 2))
+        //     {
+        //         XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
+        //         if (region_type == r_type)
+        //             render_box(bpos, XYPos(button_size, button_size), button_size/4);
+        //         render_region_type(r_type, bpos, button_size);
+        //         r_type.value ++;
+        //         SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+        //         add_clickable_highlight(dst_rect);
+        //     }
+        // }
+        // else
+        // {
+        //     r_type.var = true;
+        //     r_type.type = region_type.var ? region_type.type : RegionType::EQUAL;
+        //     FOR_XY(pos, XYPos(), XYPos(5, 2))
+        //     {
+        //         XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
+        //         r_type.value = pos.x + pos.y * 5;
+        //         if (r_type.value == region_type_var_value)
+        //             render_box(bpos, XYPos(button_size, button_size), button_size/4);
+        //         render_region_type(r_type, bpos, button_size);
+        //         SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+        //         add_clickable_highlight(dst_rect);
+        //     }
+        // }
+
+        FOR_XY(pos, XYPos(), XYPos(5, 2))
         {
-            SDL_Rect src_rect = {544, 544, 128, 128};
-            SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {128, 864, 128, 128};
-            SDL_Rect dst_rect = {right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {128, 736, 128, 128};
-            SDL_Rect dst_rect = {right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {256, 864, 128, 128};
-            SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        for (int i = 0; i < 5; i++)
-        {
-            SDL_Rect src_rect = {512, (region_menu == i) ? 1152 : 1344, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 7, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            if (i < 4)
-                add_clickable_highlight(dst_rect);
+            RegionType r_type = region_type;
+            if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
+                r_type.value = 0;
+            XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 7.4);
+            r_type.type = menu_region_types[pos.y][pos.x];
+            if (r_type.type == RegionType::NONE)
+            {
+                if (pos.y)
+                    continue;
+                r_type = RegionType(RegionType::EQUAL, 0);
+                r_type.var = 1;
+                if (region_type.var == (1 << pos.y))
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+            }
+            if (region_type == r_type)
+                render_box(bpos, XYPos(button_size, button_size), button_size/4);
+            render_region_type(r_type, bpos, button_size);
+            SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+            add_clickable_highlight(dst_rect);
         }
 
-        RegionType r_type = menu_region_types1[region_menu];
-        if (r_type.type != RegionType::NONE)
+        FOR_XY(pos, XYPos(), XYPos(5, 2))
         {
-            FOR_XY(pos, XYPos(), XYPos(5, 2))
-            {
-                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 8);
-                if (region_type == r_type)
-                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, bpos, button_size);
-                r_type.value ++;
-                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
-                add_clickable_highlight(dst_rect);
+            RegionType r_type = region_type;
+            if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
+                r_type.type = RegionType::EQUAL;
 
-            }
-        }
-        else
-        {
-            r_type.var = true;
-            r_type.value = region_type_var_value;
-            FOR_XY(pos, XYPos(), XYPos(4, 2))
-            {
-                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 8);
-                r_type.type = menu_region_n_types[pos.y][pos.x];
-                if (region_type == r_type)
-                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, bpos, button_size);
-                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
-                add_clickable_highlight(dst_rect);
-
-            }
+            XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 9.8);
+            r_type.value = pos.y * 5 + pos.x;
+            if (region_type == r_type)
+                render_box(bpos, XYPos(button_size, button_size), button_size/4);
+            render_region_type(r_type, bpos, button_size);
+            SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+            add_clickable_highlight(dst_rect);
         }
 
-        r_type = menu_region_types2[region_menu];
-        if (r_type.type != RegionType::NONE)
-        {
-            FOR_XY(pos, XYPos(), XYPos(5, 2))
-            {
-                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
-                if (region_type == r_type)
-                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, bpos, button_size);
-                r_type.value ++;
-                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
-                add_clickable_highlight(dst_rect);
-            }
-        }
-        else
-        {
-            r_type.var = true;
-            r_type.type = region_type.var ? region_type.type : RegionType::EQUAL;
-            FOR_XY(pos, XYPos(), XYPos(5, 2))
-            {
-                XYPos bpos = right_panel_offset+ pos * button_size + XYPos(0, button_size * 10 + button_size/2);
-                r_type.value = pos.x + pos.y * 5;
-                if (r_type.value == region_type_var_value)
-                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
-                render_region_type(r_type, bpos, button_size);
-                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
-                add_clickable_highlight(dst_rect);
-            }
-        }
+
 
         {
             if (region_type.type == RegionType::NONE)
@@ -4106,48 +4148,46 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 4, button_size * 6)).inside(XYPos(button_size,button_size)))
             region_type = RegionType(RegionType::VISIBILITY, 2);
 
-        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(5 * button_size,1 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 7.4)).inside(XYPos(5 * button_size, 2 * button_size)))
         {
-            int idx = pos.x / button_size;
-            if (!(game_mode == 3 && idx == 4))
-                region_menu = idx;
-        }
-
-        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(5 * button_size,2 * button_size)))
-        {
-            XYPos region_item_selected = (pos - XYPos(0, button_size * 8)) / button_size;
-            if (menu_region_types1[region_menu].type == RegionType::NONE)
+            XYPos region_item_selected = (pos - XYPos(0, button_size * 7.4)) / button_size;
+            RegionType::Type t = menu_region_types[region_item_selected.y][region_item_selected.x];
+            if (t == RegionType::NONE)
             {
-                if (region_item_selected.x < 4)
-                {
-                    region_type.type = menu_region_n_types[region_item_selected.y][region_item_selected.x];
-                    region_type.value = region_type_var_value;
-                    region_type.var = true;
-                }
+                region_type.var ^= 1;
+//                region_type.var ^= (1 << region_item_selected.y);
             }
             else
             {
-                region_type = menu_region_types1[region_menu];
-                region_type.value += region_item_selected.x + region_item_selected.y * 5;
+                if (region_type.type == RegionType::NONE || region_type.type == RegionType::SET || region_type.type == RegionType::VISIBILITY)
+                    region_type.value = 0;
+                region_type.type = t;
             }
-                
         }
 
-        if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))
+        if ((pos - XYPos(button_size * 0, button_size * 9.8)).inside(XYPos(5 * button_size, 2 * button_size)))
         {
-            XYPos region_item_selected = (pos - XYPos(0, button_size * 10 + button_size / 2)) / button_size;
-            if (menu_region_types2[region_menu].type == RegionType::NONE)
-            {
-                region_type_var_value = region_item_selected.x + (region_item_selected.y) * 5;
-                if (region_type.var)
-                    region_type.value = region_type_var_value;
-            }
-            else
-            {
-                region_type = menu_region_types2[region_menu];
-                region_type.value += region_item_selected.x + (region_item_selected.y) * 5;
-            }
+            XYPos region_item_selected = (pos - XYPos(0, button_size * 9.8)) / button_size;
+            region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
+            if (region_type.type == RegionType::NONE || region_type.type == RegionType::SET || region_type.type == RegionType::VISIBILITY)
+                region_type.type = RegionType::EQUAL;
         }
+
+        // if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))
+        // {
+        //     XYPos region_item_selected = (pos - XYPos(0, button_size * 10 + button_size / 2)) / button_size;
+        //     if (menu_region_types2[region_menu].type == RegionType::NONE)
+        //     {
+        //         region_type_var_value = region_item_selected.x + (region_item_selected.y) * 5;
+        //         if (region_type.var)
+        //             region_type.value = region_type_var_value;
+        //     }
+        //     else
+        //     {
+        //         region_type = menu_region_types2[region_menu];
+        //         region_type.value += region_item_selected.x + (region_item_selected.y) * 5;
+        //     }
+        // }
         if (region_type.type == RegionType::VISIBILITY && region_type.value > 2)
             region_type = RegionType(RegionType::VISIBILITY, 0);
         if ((pos - XYPos(0, button_size * 2)).inside(XYPos(button_size * 4, button_size * 4)))
@@ -4561,8 +4601,6 @@ bool GameState::events()
                             current_level_index = 0;
                             load_level = 1;
                             region_type = RegionType(RegionType::SET, 0);
-                            region_menu = 0;
-                            region_type_var_value = 0;
                             game_mode = index;
                         }
                         display_modes = false;
@@ -4659,7 +4697,8 @@ void GameState::deal_with_scores()
                 for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
                 {
                     SaveObjectList* scores = lvls->get_item(i)->get_list();
-                    score_tables[i].clear();
+                    int mode = omap->get_num("game_mode");
+                    score_tables[mode][i].clear();
                     for (int j = 0; j < scores->get_count(); j++)
                     {
                         SaveObjectMap* score = scores->get_item(j)->get_map();
@@ -4669,7 +4708,7 @@ void GameState::deal_with_scores()
                         unsigned hidden = 0;
                         if (score->has_key("hidden"))
                             hidden = score->get_num("hidden");
-                        score_tables[i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score")), is_friend, hidden));
+                        score_tables[mode][i].push_back(PlayerScore(unsigned(score->get_num("pos")), score->get_string("name"), unsigned(score->get_num("score")), is_friend, hidden));
                     }
                 }
                 lvls = omap->get_item("stats")->get_list();
