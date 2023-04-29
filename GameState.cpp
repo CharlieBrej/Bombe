@@ -2984,7 +2984,7 @@ void GameState::render(bool saving)
 
         FOR_XY(pos, XYPos(), XYPos(5, 2))
         {
-            RegionType r_type = region_type;
+            RegionType r_type = select_region_type;
             if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
                 r_type.value = 0;
             XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 7.4);
@@ -3007,7 +3007,7 @@ void GameState::render(bool saving)
 
         FOR_XY(pos, XYPos(), XYPos(5, 2))
         {
-            RegionType r_type = region_type;
+            RegionType r_type = select_region_type;
             if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
                 r_type.type = RegionType::EQUAL;
 
@@ -4154,23 +4154,22 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             RegionType::Type t = menu_region_types[region_item_selected.y][region_item_selected.x];
             if (t == RegionType::NONE)
             {
-                region_type.var ^= 1;
+                select_region_type.var ^= 1;
+                region_type = select_region_type;
 //                region_type.var ^= (1 << region_item_selected.y);
             }
             else
             {
-                if (region_type.type == RegionType::NONE || region_type.type == RegionType::SET || region_type.type == RegionType::VISIBILITY)
-                    region_type.value = 0;
-                region_type.type = t;
+                select_region_type.type = t;
+                region_type = select_region_type;
             }
         }
 
         if ((pos - XYPos(button_size * 0, button_size * 9.8)).inside(XYPos(5 * button_size, 2 * button_size)))
         {
             XYPos region_item_selected = (pos - XYPos(0, button_size * 9.8)) / button_size;
-            region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
-            if (region_type.type == RegionType::NONE || region_type.type == RegionType::SET || region_type.type == RegionType::VISIBILITY)
-                region_type.type = RegionType::EQUAL;
+            select_region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
+            region_type = select_region_type;
         }
 
         // if ((pos - XYPos(button_size * 0, button_size * 10 + button_size / 2)).inside(XYPos(5 * button_size, 2 * button_size)))
