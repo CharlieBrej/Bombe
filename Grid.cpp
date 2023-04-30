@@ -368,15 +368,27 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
         }
     }
     if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
+    {
         var_counts[2] = var_counts[0] + var_counts[1];
+    }
     if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+    {
         var_counts[0] = var_counts[2] - var_counts[1];
+        if (var_counts[0] < 0)
+            return false;
+    }
     if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
+    {
         var_counts[1] = var_counts[2] - var_counts[0];
+        if (var_counts[1] < 0)
+            return false;
+    }
 
     if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+    {
         if (var_counts[2] != var_counts[0] + var_counts[1])
             return false;
+    }
 
     for (int i = 1; i < (1 << region_count); i++)
     {
