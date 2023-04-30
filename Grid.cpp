@@ -64,10 +64,8 @@ template<class RESP, class IN, class VAR_ARR>
 RESP RegionType::apply_rule(IN in, VAR_ARR& vars)
 {
     if (var)
-        return apply_rule_imp<RESP,IN, IN>(in, vars[0] + value);
-    else
-        return apply_rule_imp<RESP,IN, int8_t>(in, value);
-
+        return apply_rule_imp<RESP,IN, IN>(in, vars[var - 1] + value);
+    return apply_rule_imp<RESP,IN, int8_t>(in, value);
 }
 
 z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
@@ -77,16 +75,17 @@ z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
 
 bool RegionType::apply_int_rule(unsigned in, int vars[4])
 {
-    if (var)
+    unsigned v = 0;
+    for (unsigned i = 0; i < 2; i++)
     {
-        if (vars[0] == -1)
-            return false;
-        return apply_rule_imp<bool,unsigned>(in, vars[0] + value);
+        if ((var >> i) & 1)
+        {
+            if (vars[i] == -1)
+                return false;
+            v += vars[i];
+        }
     }
-    else
-        return apply_rule_imp<bool,unsigned>(in, value);
-
-    return apply_rule_imp<bool,unsigned>(in, value);
+    return apply_rule_imp<bool,unsigned>(in, v + value);
 }
 
 int RegionType::max()
@@ -353,20 +352,31 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
             assert(region_type[i].type == grid_regions[i]->type.type);
         if (region_type[i].var)
         {
-            if (var_counts[0] == -1)
+            int vi = region_type[i].var - 1;
+            if (var_counts[vi] < 0)
             {
                 int v = grid_regions[i]->type.value - region_type[i].value;
                 if (v < 0)
                     return false;
-                var_counts[0] = v;
+                var_counts[vi] = v;
             }
             else
             {
-                if (var_counts[0] != (grid_regions[i]->type.value - region_type[i].value))
+                if (var_counts[vi] != (grid_regions[i]->type.value - region_type[i].value))
                     return false;
             }
         }
     }
+    if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
+        var_counts[2] = var_counts[0] + var_counts[1];
+    if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+        var_counts[0] = var_counts[2] - var_counts[1];
+    if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
+        var_counts[1] = var_counts[2] - var_counts[0];
+
+    if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+        if (var_counts[2] != var_counts[0] + var_counts[1])
+            return false;
 
     for (int i = 1; i < (1 << region_count); i++)
     {
@@ -431,13 +441,12 @@ GridRule::IsLogicalRep GridRule::is_legal()
     z3::expr_vector vec(c);
     z3::expr_vector var_vec(c);
 
-    for (int i = 0; i < 3; i++)
-    {
-        std::stringstream x_name;
-        x_name << char('a' + i);
-        var_vec.push_back(c.int_const(x_name.str().c_str()));
-        s.add(var_vec[i] >= 0);
-    }
+    var_vec.push_back(c.int_const("a"));
+    s.add(var_vec[0] >= 0);
+    var_vec.push_back(c.int_const("b"));
+    s.add(var_vec[1] >= 0);
+    var_vec.push_back(c.int_const("a+b"));
+    s.add(var_vec[2] == var_vec[0] + var_vec[1]);
 
     vec.push_back(c.bool_const("DUMMY"));
     if (region_count == 0)
@@ -453,7 +462,7 @@ GridRule::IsLogicalRep GridRule::is_legal()
         if (m >= 0)
         {
             if (square_counts[i].var)
-                s.add(vec[i] <= var_vec[0] + square_counts[i].value + m);
+                s.add(vec[i] <= var_vec[square_counts[i].var - 1] + square_counts[i].value + m);
             else
                 s.add(vec[i] <= int(square_counts[i].value + m));
 
@@ -505,7 +514,7 @@ GridRule::IsLogicalRep GridRule::is_legal()
             if ((m < 0) && (apply_region_type == RegionType(RegionType::SET,1)))
                 return ILLOGICAL;
             if (square_counts[i].var)
-                tot = tot + var_vec[0] + square_counts[i].value + m;
+                tot = tot + var_vec[square_counts[i].var-1] + square_counts[i].value + m;
             else
                 tot = tot + int(square_counts[i].value + m);
         }
@@ -531,9 +540,9 @@ GridRule::IsLogicalRep GridRule::is_legal()
         {
             std::cout << "B" << i << ":" << m.eval(vec[i]) << "\n";
         }
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 2; i++)
         {
-            std::cout << char('a'+ i) << ":" << m.eval(var_vec[0]) << "\n";
+            std::cout << char('a'+ i) << ":" << m.eval(var_vec[i]) << "\n";
         }
         return ILLOGICAL;
     }
@@ -1753,7 +1762,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         RegionType typ = rule.apply_region_type;
         if (typ.var)
         {
-            typ.value += var_counts[0];
+            typ.value += var_counts[typ.var - 1];
             typ.var = false;
         }
         GridRegion reg(typ);

@@ -1537,8 +1537,15 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
 {
     int width = 0;
 
-    for(char& c : digits)
+    for (int i = 0; i < digits.size(); i++)
     {
+        if (digits[i] == '^')
+        {
+            do i++;
+            while (digits[i] != '^');
+            continue;
+        }
+        char c = digits[i];
         if (c == '+' || c == '-')
             width += 3;
         else if (c == '!' )
@@ -1549,8 +1556,12 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
             width += 2;
         else if (c == '1')
             width += 2;
-        else
+        else if (c >= '0' && c <= '9')
             width += 4;
+        else if (c >= 'a' && c <= 'z')
+            width += 4;
+        else
+            assert(0);
     }
 
     XYPos t_size;
@@ -1569,8 +1580,10 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         pos.y += (siz.y - t_size.y) / 2;
 
     XYPos digit_size = XYPos((t_size.y * 2) / 3, t_size.y);
-    for(char& c : digits)
+    
+    for (int i = 0; i < digits.size(); i++)
     {
+        char c = digits[i];
         SDL_Rect src_rect;
         SDL_Rect dst_rect = {pos.x, pos.y, digit_size.x, digit_size.y};
         if (c == '1')
@@ -1584,10 +1597,18 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         }
         else if (c >= 'a' && c <= 'z')
         {
-            src_rect = {2208, 0, 128, 192};
-            if (c > 'a')
+            int ltr = c - 'a';
+            src_rect = {2208 + ltr * 128, 0, 128, 192};
+            if (digits[i+1] == '^')
             {
-                render_number_string("+" + std::to_string(c - 'a'), XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, -1));
+                i+=2;
+                std::string s = "";
+                while (digits[i] != '^')
+                {
+                    s += digits[i];
+                    i++;
+                }
+                render_number_string(s, XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, -1));
                 dst_rect.w -= digit_size.x / 5;
                 dst_rect.h -= digit_size.y / 5;
                 dst_rect.y += digit_size.y / 5;
@@ -2993,11 +3014,9 @@ void GameState::render(bool saving)
             {
                 if (game_mode == 3)
                     continue;
-                if (pos.y)
-                    continue;
                 r_type = RegionType(RegionType::EQUAL, 0);
-                r_type.var = 1;
-                if (region_type.var == (1 << pos.y))
+                r_type.var = (1 << pos.y);
+                if (region_type.var & (1 << pos.y))
                     render_box(bpos, XYPos(button_size, button_size), button_size/4);
             }
             if (region_type == r_type)
@@ -4158,9 +4177,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 if (game_mode != 3)
                 {
-                    select_region_type.var ^= 1;
+                    select_region_type.var ^= (1 << region_item_selected.y);
                     region_type = select_region_type;
-//                region_type.var ^= (1 << region_item_selected.y);
                 }
             }
             else
