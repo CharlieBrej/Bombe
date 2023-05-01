@@ -156,7 +156,9 @@ GameState::GameState(std::string& load_data, bool json)
                 for (int i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i), version);
-    //                if (r.is_legal())
+                    // if (r.is_legal() != GridRule::OK)
+                    //     printf("Error\n");
+
                     rules[mode].push_back(r);
                 }
 
@@ -3016,7 +3018,7 @@ void GameState::render(bool saving)
                     continue;
                 r_type = RegionType(RegionType::EQUAL, 0);
                 r_type.var = (1 << pos.y);
-                if (region_type.var & (1 << pos.y))
+                if (select_region_type.var & (1 << pos.y))
                     render_box(bpos, XYPos(button_size, button_size), button_size/4);
             }
             if (region_type == r_type)

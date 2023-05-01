@@ -367,6 +367,28 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
             }
         }
     }
+    if (0)
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+        if ((square_counts[i].type == RegionType::EQUAL) && square_counts[i].var)
+        {
+            XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+            if (r2)
+                s = s & ((i & 2) ? r2->elements : ~r2->elements);
+            if (r3)
+                s = s & ((i & 4) ? r3->elements : ~r3->elements);
+            if (r4)
+                s = s & ((i & 8) ? r4->elements : ~r4->elements);
+
+            int vi = square_counts[i].var - 1;
+            int v = s.count() - square_counts[i].value;
+            if (v < 0)
+                return false;
+            if (var_counts[vi] < 0)
+                var_counts[vi] = v;
+        }
+    }
+
     if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
     {
         var_counts[2] = var_counts[0] + var_counts[1];
@@ -562,12 +584,22 @@ GridRule::IsLogicalRep GridRule::is_legal()
     {
         // if (!apply_region_type.var)
         //     return OK;
+        unsigned seen = 0;
         for (int i = 0; i < region_count; i++)
             if (region_type[i].var)
-                return OK;
+                seen |= 1 << region_type[i].var;
         for (int i = 1; i < (1 << region_count); i++)
-            if (square_counts[i].var)
-                return UNBOUNDED;
+            if (square_counts[i].var && square_counts[i].type == RegionType::EQUAL)
+                seen |= 1 << square_counts[i].var;
+        if (seen == 6 || seen == 10 || seen == 12)
+            return OK;
+        for (int i = 1; i < (1 << region_count); i++)
+            if (square_counts[i].var && square_counts[i].type != RegionType::EQUAL)
+                if (!(seen >> square_counts[i].var & 1))
+                    return UNBOUNDED;
+        if (apply_region_type.var)
+            if (!(seen >> apply_region_type.var & 1))
+                    return UNBOUNDED;
         return OK;
     }
 }
