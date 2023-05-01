@@ -1702,7 +1702,6 @@ static void add_clear_count(GridRegion* region, int count)
         return;
     if (region->gen_cause.rule)
     {
-        region->gen_cause.rule->clear_count += count;
         region->gen_cause.rule->level_clear_count += count;
         for (int i = 0; i < 4; i++)
             add_clear_count(region->gen_cause.regions[i], count);
@@ -1794,10 +1793,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
             reveal(pos);
             c++;
         }
-        rule.used_count++;
         rule.level_used_count++;
-
-        rule.clear_count += c;
         rule.level_clear_count += c;
         add_clear_count(r1, c);
         add_clear_count(r2, c);
@@ -2005,7 +2001,6 @@ void Grid::add_new_regions()
     {
         if (r.gen_cause.rule)
         {
-            r.gen_cause.rule->used_count++;
             r.gen_cause.rule->level_used_count++;
         }
         regions_set.insert(&r);
@@ -2017,10 +2012,13 @@ void Grid::add_new_regions()
 bool Grid::add_one_new_region(GridRegion* r)
 {
     std::list<GridRegion>::iterator it = regions_to_add.begin();
-    for (std::list<GridRegion>::iterator it = regions_to_add.begin(); it != regions_to_add.end(); it++)
+    while (it != regions_to_add.end())
     {
         if (r && !(*it).has_ancestor(r))
+        {
+            it++;
             continue;
+        }
         GridRegionCause c = (*it).gen_cause;
         if (regions_set.count(&*it) ||
             (
@@ -2036,7 +2034,6 @@ bool Grid::add_one_new_region(GridRegion* r)
         {
             if ((*it).gen_cause.rule)
             {
-                (*it).gen_cause.rule->used_count++;
                 (*it).gen_cause.rule->level_used_count++;
             }
 
@@ -2048,6 +2045,7 @@ bool Grid::add_one_new_region(GridRegion* r)
     }
     if (r)
         return add_one_new_region(NULL);
+    assert(regions_to_add.empty());
     return false;
 }
 

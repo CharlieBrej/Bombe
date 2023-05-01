@@ -709,11 +709,7 @@ void GameState::advance(int steps)
                 else if (skip_level < 0)
                 {
                     if (current_level_index == 0)
-                    {
                         current_level_index = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
-                        if (!level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
-                            break;
-                    }
                     current_level_index--;
                 }
                 else
@@ -744,6 +740,8 @@ void GameState::advance(int steps)
             scaled_grid_size = grid_size;
             for (GridRule& rule : rules[game_mode])
             {
+                rule.used_count += rule.level_used_count;
+                rule.clear_count += rule.level_clear_count;
                 rule.level_used_count = 0;
                 rule.level_clear_count = 0;
             }
@@ -755,13 +753,13 @@ void GameState::advance(int steps)
 
     if (auto_progress_all && !auto_progress)
     {
-        auto_progress = true;
         while (true)
         {
             current_level_set_index++;
             if (level_progress[game_mode][current_level_group_index].size() <= current_level_set_index)
             {
                 current_level_set_index = 0;
+                current_level_index = 0;
                 auto_progress_all = false;
                 auto_progress = false;
                 load_level = true;
@@ -771,6 +769,7 @@ void GameState::advance(int steps)
             {
                 load_level = true;
                 current_level_index = 0;
+                auto_progress = true;
                 break;
             }
         }
