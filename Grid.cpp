@@ -359,7 +359,7 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
             }
         }
     }
-    if (0)
+
     for (int i = 1; i < (1 << region_count); i++)
     {
         if ((square_counts[i].type == RegionType::EQUAL) && square_counts[i].var)
