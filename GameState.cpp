@@ -4120,7 +4120,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (game_mode == 2 || game_mode == 3))
                 reset_levels();
         }
-        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
+        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
             reset_rule_gen_region();
             constructed_rule = *inspected_rule.rule;
