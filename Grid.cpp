@@ -598,8 +598,12 @@ GridRule::IsLogicalRep GridRule::is_legal()
                 if (!(seen >> square_counts[i].var & 1))
                     return UNBOUNDED;
         if (apply_region_type.var)
+        {
+            if (seen == 8)
+                return UNBOUNDED;
             if (!(seen >> apply_region_type.var & 1))
-                    return UNBOUNDED;
+                return UNBOUNDED;
+        }
         return OK;
     }
 }
@@ -1806,8 +1810,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         RegionType typ = rule.apply_region_type;
         if (typ.var)
         {
+            assert(var_counts[typ.var - 1] >= 0);
             typ.value += var_counts[typ.var - 1];
             typ.var = false;
+            if (typ.value > 32)
+                return APPLY_RULE_RESP_NONE;
         }
         GridRegion reg(typ);
         FOR_XY_SET(pos, to_reveal)
