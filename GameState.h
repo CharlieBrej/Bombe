@@ -55,7 +55,6 @@ public:
     static const int GAME_MODES = 4;
     int game_mode = 0;
 
-
     Grid *grid;
     std::list<GridRule> rules[GAME_MODES];
 
@@ -123,6 +122,16 @@ public:
 
     std::list<ConstructedRuleState> constructed_rule_undo;
     std::list<ConstructedRuleState> constructed_rule_redo;
+
+    int clipboard_check = 0;
+    enum {
+        CLIPBOARD_HAS_NONE,
+        CLIPBOARD_HAS_RULE
+        }
+        clipboard_has_item = CLIPBOARD_HAS_NONE;
+
+    std::string clipboard_last;
+    GridRule clipboard_rule;
 
     
     RegionType region_type = RegionType(RegionType::SET, 0);
@@ -261,4 +270,5 @@ public:
     void right_panel_click(XYPos pos, int clicks, int btn);
     bool events();
     void deal_with_scores();
+    void check_clipboard();
 };

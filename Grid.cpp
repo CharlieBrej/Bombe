@@ -154,7 +154,7 @@ bool GridRegion::has_ancestor(GridRegion* other)
 
 
 
-GridRule::GridRule(SaveObject* sobj, int version)
+GridRule::GridRule(SaveObject* sobj)
 {
     SaveObjectMap* omap = sobj->get_map();
     region_count = omap->get_num("region_count");
@@ -189,16 +189,7 @@ GridRule::GridRule(SaveObject* sobj, int version)
     for (int i = 0; i < rlist->get_count(); i++)
     {
         int v = rlist->get_num(i);
-        if (version >= 3)
-            square_counts[i] = RegionType('a',v);
-        else
-        {
-            int8_t v2 = v;
-            if (v2 < 0)
-                square_counts[i] = RegionType(RegionType::NONE, 0);
-            else
-                square_counts[i] = RegionType(RegionType::EQUAL, v2);
-        }
+        square_counts[i] = RegionType('a',v);
     }
     if (omap->has_key("used_count"))
         used_count = omap->get_num("used_count");
@@ -207,7 +198,7 @@ GridRule::GridRule(SaveObject* sobj, int version)
 //    assert(is_legal() == GridRule::OK);
 }
 
-SaveObject* GridRule::save()
+SaveObject* GridRule::save(bool lite)
 {
     SaveObjectMap* omap = new SaveObjectMap;
     omap->add_num("region_count", region_count);
@@ -223,10 +214,11 @@ SaveObject* GridRule::save()
     for (int i = 0; i < (1<<region_count); i++)
         square_counts_list->add_num(square_counts[i].as_int());
     omap->add_item("square_counts", square_counts_list);
-    omap->add_num("used_count", used_count);
-    omap->add_num("clear_count", clear_count);
-
-
+    if (!lite)
+    {
+        omap->add_num("used_count", used_count);
+        omap->add_num("clear_count", clear_count);
+    }
     return omap;
 }
 

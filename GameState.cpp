@@ -114,6 +114,8 @@ GameState::GameState(std::string& load_data, bool json)
                 volume = double(omap->get_num("volume")) / 1000;
             if (omap->has_key("game_mode"))
                 game_mode = omap->get_num("game_mode");
+            if (omap->has_key("full_screen"))
+                full_screen = omap->get_num("full_screen");
             if (omap->has_key("server_levels"))
             {
                 SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
@@ -155,7 +157,7 @@ GameState::GameState(std::string& load_data, bool json)
                 SaveObjectList* rlist = omap->get_item("rules")->get_list();
                 for (int i = 0; i < rlist->get_count(); i++)
                 {
-                    GridRule r(rlist->get_item(i), version);
+                    GridRule r(rlist->get_item(i));
                     // if (r.is_legal() != GridRule::OK)
                     //     printf("Error\n");
 
@@ -202,6 +204,14 @@ GameState::GameState(std::string& load_data, bool json)
 
     sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (full_screen)
+    {
+        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+        SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+        SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+        SDL_SetWindowInputFocus(sdl_window);
+    }
+
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 0);
 	sdl_texture = loadTexture("texture.png");
 
@@ -307,6 +317,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("show_row_clues", show_row_clues);
     omap->add_num("speed_dial", speed_dial * 1000);
     omap->add_num("volume", volume * 1000);
+    omap->add_num("full_screen", full_screen);
 
     SaveObjectList* sl_list = new SaveObjectList;
     for (std::vector<std::string>& lvl_set : server_levels)
@@ -657,9 +668,15 @@ void GameState::advance(int steps)
     frame = frame + steps;
     frame_step = steps;
     sound_frame_index = std::min(sound_frame_index + steps, 500);
+    clipboard_check -= steps;
+    if (clipboard_check < 0)
+    {
+        clipboard_check = 1000;
+        check_clipboard();
+    }
     deal_with_scores();
     if (server_timeout)
-        server_timeout-=steps;
+        server_timeout -= std::min(unsigned(steps), server_timeout);
     
 
     const std::string ach_set_names[] = {"HEXAGON", "SQUARE", "TRIANGLE", "GRID"};
@@ -2751,6 +2768,13 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Game Mode");
     }
+    if (clipboard_has_item != CLIPBOARD_HAS_NONE)
+    {
+        SDL_Rect src_rect = {2048, 1536, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Import Clipboard");
+    }
     {
         SDL_Rect src_rect = {1920, 384, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
@@ -3123,10 +3147,16 @@ void GameState::render(bool saving)
             render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
 
         }
+        {
+            SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Cancel");
+        }
         if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
         {
             SDL_Rect src_rect = { 1088, 576, 192, 192 };
-            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + 1 * button_size, button_size, button_size};
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + 1 * button_size, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Add to Rule Constructor");
         }
@@ -3504,7 +3534,6 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Cancel");
-
             }
 
             if (rule.region_count >= 1)
@@ -3583,6 +3612,12 @@ void GameState::render(bool saving)
                 std::string t = translate("Rule Inspector");
                 render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
             }
+            {
+                SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Cancel");
+            }
             if (!inspected_rule.rule->deleted)
             {
                 SDL_Rect src_rect = {1664, 960, 192, 192};
@@ -3601,6 +3636,12 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Duplicate Rule");
+            }
+            {
+                SDL_Rect src_rect = {1856, 1536, 192, 192};
+                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Copy Rule to Clipboard");
             }
         }
     }
@@ -3939,6 +3980,16 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     {
         display_modes = true;
     }
+    if ((pos - XYPos(button_size * 2, button_size * 3)).inside(XYPos(button_size, button_size)))
+    {
+        if (clipboard_has_item == CLIPBOARD_HAS_RULE)
+        {
+            reset_rule_gen_region();
+            constructed_rule = clipboard_rule;
+            right_panel_mode = RIGHT_MENU_RULE_GEN;
+            update_constructed_rule();
+        }
+    }
 
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * (GLBAL_LEVEL_SETS + 1), button_size)))
     {
@@ -3979,7 +4030,11 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
     if (right_panel_mode == RIGHT_MENU_REGION)
     {
-        if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size, button_size)))
+        if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size * 2, button_size)))
+        {
+            right_panel_mode = RIGHT_MENU_NONE;
+        }
+        if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)))
         {
             if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
             {
@@ -4054,6 +4109,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
     if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
     {
+        if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size, button_size)))
+        {
+            right_panel_mode = RIGHT_MENU_NONE;
+        }
         if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)) && !inspected_rule.rule->deleted)
         {
             inspected_rule.rule->deleted = true;
@@ -4061,7 +4120,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (game_mode == 2 || game_mode == 3))
                 reset_levels();
         }
-        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
+        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
         {
             reset_rule_gen_region();
             constructed_rule = *inspected_rule.rule;
@@ -4082,6 +4141,38 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             }
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
+        }
+        if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
+        {
+            SaveObjectMap* omap = new SaveObjectMap;
+            omap->add_item("rule", inspected_rule.rule->save(true));
+            std::ostringstream stream;
+            omap->save(stream);
+            
+            std::string comp = compress_string_zstd(stream.str());
+            std::u32string s32;
+            std::string reply = "Bombe Rule: ";
+
+            s32 += 0x1F4A3;                 // unicode Bomb 
+            unsigned spaces = 2;
+            for(char& c : comp)
+            {
+                if (spaces >= 80)
+                {
+                    s32 += '\n';
+                    spaces = 0;
+                }
+                spaces++;
+                s32 += uint32_t(0x2800 + (unsigned char)(c));
+
+            } 
+            s32 += 0x1F6D1;                 // stop sign
+            std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+            reply += conv.to_bytes(s32);
+            reply += "\n";
+            
+            SDL_SetClipboardText(reply.c_str());
+
         }
     }
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
@@ -4810,4 +4901,66 @@ void GameState::deal_with_scores()
         else
             server_timeout = 1000;
     }
+}
+
+void GameState::check_clipboard()
+{
+    if (!SDL_HasClipboardText())
+    {
+        clipboard_has_item = CLIPBOARD_HAS_NONE;
+        return;
+    }
+    std::string new_value;
+    std::string comp;
+
+    char* new_clip = SDL_GetClipboardText();
+    new_value = new_clip;
+    SDL_free(new_clip);
+    if (new_value == clipboard_last)
+        return;
+    clipboard_last = new_value;
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    std::u32string s32 = conv.from_bytes(std::string(new_value));
+
+    clipboard_has_item = CLIPBOARD_HAS_NONE;
+
+    for(uint32_t c : s32)
+    {
+        if ((c & 0xFF00) == 0x2800)
+        {
+            char asc = c & 0xFF;
+            comp += asc;
+        }
+    }
+    SaveObjectMap* omap = NULL;
+    try 
+    {
+        std::string decomp;
+        if (!comp.empty())
+        {
+            decomp = decompress_string(comp);
+        }
+        else
+        {
+            decomp = new_value;
+            while (!decomp.empty() && decomp[0] != '{')
+                decomp.erase(0, 1);
+        }
+        if (!decomp.empty())
+        {
+            std::istringstream decomp_stream(decomp);
+            omap = SaveObject::load(decomp_stream)->get_map();
+            if (omap->has_key("rule"))
+            {
+                clipboard_rule = GridRule(omap->get_item("rule"));
+                clipboard_has_item = CLIPBOARD_HAS_RULE;
+            }
+        }
+    }
+    catch (const std::runtime_error& error)
+    {
+        std::cerr << error.what() << "\n";
+    }
+    delete omap;
+
 }

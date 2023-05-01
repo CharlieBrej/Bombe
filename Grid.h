@@ -171,7 +171,6 @@ public:
     
 };
 
-
 class GridRegion
 {
 public:
@@ -228,8 +227,8 @@ public:
 
 
     GridRule(){};
-    GridRule(SaveObject* sob, int version);
-    SaveObject* save();
+    GridRule(SaveObject* sob);
+    SaveObject* save(bool lite = false);
     static void get_square_counts(uint8_t square_counts[16], GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
 
     GridRule permute(std::vector<int>& p);
