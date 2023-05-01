@@ -1610,7 +1610,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
                     s += digits[i];
                     i++;
                 }
-                render_number_string(s, XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, -1));
+                render_number_string(s, XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, 1));
                 dst_rect.w -= digit_size.x / 5;
                 dst_rect.h -= digit_size.y / 5;
                 dst_rect.y += digit_size.y / 5;
@@ -1810,6 +1810,9 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 void GameState::render(bool saving)
 {
+    if (score_tables[game_mode][0].size() == 0)
+        fetch_scores();
+
     mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
     if (grid_dragging)
         mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
@@ -1992,8 +1995,6 @@ void GameState::render(bool saving)
 
     if (display_scores)
     {
-        if (score_tables[game_mode][0].size() == 0)
-            fetch_scores();
         int row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 7.5;
@@ -4301,11 +4302,17 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                                     reset_levels();
                             }
                             *replace_rule = constructed_rule;
+                            inspected_rule = GridRegionCause(replace_rule, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                            reset_rule_gen_region();
+                            right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                         }
                         else
+                        {
                             rules[game_mode].push_back(constructed_rule);
-
-                        reset_rule_gen_region();
+                            inspected_rule = GridRegionCause(&rules[game_mode].back(), rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                            reset_rule_gen_region();
+                            right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                        }
                     }
                 }
             }
