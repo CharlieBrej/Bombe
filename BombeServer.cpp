@@ -287,6 +287,8 @@ public:
                     fr = 2;
                 if (pos > 100 && fr == 0)
                     continue;
+                if (scores[mode][i].user_score[rit->second] == 0 && fr == 0)
+                    continue;
                 if ((prevpos + 1) < pos)
                 {
                     SaveObjectMap* score_map = new SaveObjectMap();

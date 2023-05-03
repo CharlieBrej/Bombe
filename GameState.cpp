@@ -1104,6 +1104,21 @@ void GameState::update_constructed_rule_pre()
 
 void GameState::update_constructed_rule()
 {
+
+    if (game_mode == 1 && constructed_rule.region_count == 4)
+        reset_rule_gen_region();
+    if (game_mode == 3)
+    {
+        for (int i = 0; i < constructed_rule.region_count; i++)
+            if (constructed_rule.region_type[i].var)
+                reset_rule_gen_region();
+        for (int i = 0; i < (1 << constructed_rule.region_count); i++)
+            if (constructed_rule.square_counts[i].var)
+                reset_rule_gen_region();
+        if (constructed_rule.apply_region_bitmap && constructed_rule.apply_region_type.var)
+            reset_rule_gen_region();
+    } 
+
     constructed_rule_is_logical = constructed_rule.is_legal();
     constructed_rule_is_already_present = NULL;
 
@@ -3556,7 +3571,7 @@ void GameState::render(bool saving)
                     }
                     else if (constructed_rule_is_logical == GridRule::UNBOUNDED)
                     {
-                        SDL_Rect src_rect = {896, 576, 192, 192};
+                        SDL_Rect src_rect = {2048, 1344, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Unbounded");
