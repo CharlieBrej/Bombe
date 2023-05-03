@@ -151,7 +151,7 @@ void* exec(void* dummy)
                     assert(0);
                 g->randomize(XYPos(params[i][3], params[i][4]), Grid::WrapType((params[i][9] < 0) ? Grid::WrapType(-params[i][9]) : 0), params[i][5], params[i][9] > 0 ? params[i][9] : 0);
 
-                g->make_harder(params[i][6], params[i][7], params[i][8], params[i][8]);
+                g->make_harder(params[i][6], params[i][7], params[i][7], params[i][8], params[i][8]);
                 std::string s = g->to_string();
                 {
                     Grid* gt = Grid::Load(s);

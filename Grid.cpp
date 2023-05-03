@@ -1184,7 +1184,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
-void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, bool exc)
+void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool exc)
 {
 
     XYSet grid_squares = get_squares();
@@ -1364,7 +1364,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, bool exc)
                     }
                 }
             }
-            if (x_y)
+            if (x_y3)
             {
                 if (rnd % 10 < 2)
                 {
@@ -1388,7 +1388,10 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y_z, bool exc)
                         continue;
                     }
                 }
+            }
 
+            if (x_y)
+            {
                 if (rnd % 10 < 2)
                 {
                     tst = *this;

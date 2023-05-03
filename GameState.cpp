@@ -471,11 +471,12 @@ static int level_gen_thread_func(void *ptr)
     int rows = req[5] - '0';
     int pm = req[6] - '0';
     int xy = req[7] - '0';
-    int xyz = req[8] - '0';
-    int exc = req[9] - '0';
+    int xy3 = req[8] - '0';
+    int xyz = req[9] - '0';
+    int exc = req[10] - '0';
 
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10);
-    g->make_harder(pm, xy, xyz, exc);
+    g->make_harder(pm, xy, xy3, xyz, exc);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
     game_state->level_gen_resp = g->to_string();
