@@ -285,4 +285,6 @@ public:
     void export_all_rules_to_clipboard();
     void send_to_clipboard(SaveObject* obj);
     void check_clipboard();
+    void import_all_rules();
+
 };

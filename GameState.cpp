@@ -2179,29 +2179,45 @@ void GameState::render(bool saving)
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                 col_click = 3;
         }
+        if (display_clipboard_rules)
         {
-            SDL_Rect src_rect = {display_rules_level ? 1408 : 1600, 2144, 192, 192};
-            SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
-            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
-                display_rules_level = !display_rules_level;
+            {
+                SDL_Rect src_rect = {1856, 1728, 192, 192};
+                SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Import all Rules");
+                if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                {
+                    import_all_rules();
+                }
+            }
         }
+        else
         {
-            SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
-            SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, "Times Applied");
-            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
-                col_click = 5;
-        }
-        {
-            SDL_Rect src_rect = {512, 192, 192, 192};
-            SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, "Cells Cleared");
-            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
-                col_click = 6;
+            {
+                SDL_Rect src_rect = {display_rules_level ? 1408 : 1600, 2144, 192, 192};
+                SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
+                if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                    display_rules_level = !display_rules_level;
+            }
+            {
+                SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
+                SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Times Applied");
+                if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                    col_click = 5;
+            }
+            {
+                SDL_Rect src_rect = {512, 192, 192, 192};
+                SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Cells Cleared");
+                if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                    col_click = 6;
+            }
         }
         {
             SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 96};
@@ -2336,9 +2352,11 @@ void GameState::render(bool saving)
             {
                 render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
-
-            render_number(display_rules_level ? rule.level_used_count : rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
-            render_number(display_rules_level ? rule.level_clear_count : rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
+            {
+                render_number(display_rules_level ? rule.level_used_count : rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+                render_number(display_rules_level ? rule.level_clear_count : rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            }
 
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
@@ -5037,5 +5055,10 @@ void GameState::check_clipboard()
         std::cerr << error.what() << "\n";
     }
     delete omap;
+
+}
+
+void GameState::import_all_rules()
+{
 
 }
