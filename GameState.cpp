@@ -2209,7 +2209,19 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Close");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+            {
                 display_rules = false;
+                display_clipboard_rules = false;
+            }
+        }
+        if (!display_clipboard_rules)
+        {
+            SDL_Rect src_rect = {1856, 1536, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y + cell_width / 2, cell_width / 2, cell_width / 2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Copy Rules to Clipboard");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                export_all_rules_to_clipboard();
         }
         if (col_click >= 0)
         {
@@ -2285,7 +2297,7 @@ void GameState::render(bool saving)
         };
         std::vector<RuleDiplay> rules_list;
         unsigned i = 0;
-        for (GridRule& r : rules[game_mode])
+        for (GridRule& r : display_clipboard_rules ? clipboard_rule_set : rules[game_mode])
         {
             if (r.deleted)
                 continue;
@@ -2331,8 +2343,19 @@ void GameState::render(bool saving)
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
-                right_panel_mode = RIGHT_MENU_RULE_INSPECT;
-                inspected_rule = GridRegionCause(&rule, NULL, NULL, NULL, NULL);
+                if (!display_clipboard_rules)
+                {
+                    right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                    inspected_rule = GridRegionCause(&rule, NULL, NULL, NULL, NULL);
+                }
+                else
+                {
+                    reset_rule_gen_region();
+                    constructed_rule = rule;
+                    right_panel_mode = RIGHT_MENU_RULE_GEN;
+                    update_constructed_rule();
+                }
+
             }
                 
 
@@ -3984,12 +4007,14 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     if ((pos - XYPos(button_size * 0, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
     {
         display_rules = !display_rules;
+        display_clipboard_rules = false;
         if (display_rules) display_scores = false;
     }
     if ((pos - XYPos(button_size * 0, button_size * 4)).inside(XYPos(button_size * 2, button_size)))
     {
         display_scores = !display_scores;
         if (display_scores) display_rules = false;
+        display_clipboard_rules = false;
     }
 
     if ((pos - XYPos(button_size * 2, button_size * 2)).inside(XYPos(button_size, button_size)))
@@ -4004,6 +4029,11 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             constructed_rule = clipboard_rule;
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
+        }
+         if (clipboard_has_item == CLIPBOARD_HAS_RULE_SET)
+        {
+            display_rules = true;
+            display_clipboard_rules = true;
         }
     }
 
@@ -4162,33 +4192,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             SaveObjectMap* omap = new SaveObjectMap;
             omap->add_item("rule", inspected_rule.rule->save(true));
-            std::ostringstream stream;
-            omap->save(stream);
-            
-            std::string comp = compress_string_zstd(stream.str());
-            std::u32string s32;
-            std::string reply = "Bombe Rule: ";
-
-            s32 += 0x1F4A3;                 // unicode Bomb 
-            unsigned spaces = 2;
-            for(char& c : comp)
-            {
-                if (spaces >= 80)
-                {
-                    s32 += '\n';
-                    spaces = 0;
-                }
-                spaces++;
-                s32 += uint32_t(0x2800 + (unsigned char)(c));
-
-            } 
-            s32 += 0x1F6D1;                 // stop sign
-            std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-            reply += conv.to_bytes(s32);
-            reply += "\n";
-            
-            SDL_SetClipboardText(reply.c_str());
-
+            send_to_clipboard(omap);
+            delete omap;
         }
     }
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
@@ -4919,6 +4924,49 @@ void GameState::deal_with_scores()
     }
 }
 
+void GameState::export_all_rules_to_clipboard()
+{
+    SaveObjectMap* omap = new SaveObjectMap;
+    SaveObjectList* rlist = new SaveObjectList;
+    for (GridRule& rule : rules[game_mode])
+    {
+        rlist->add_item(rule.save(true));
+    }
+    omap->add_item("rules", rlist);
+    send_to_clipboard(omap);
+    delete omap;
+}
+
+void GameState::send_to_clipboard(SaveObject* obj)
+{
+    std::ostringstream stream;
+    obj->save(stream);
+    std::string str = stream.str();
+
+    std::string comp = compress_string_zstd(str);
+    std::u32string s32;
+    std::string reply = "";
+
+    s32 += 0x1F4A3;                 // unicode Bomb 
+    unsigned spaces = 2;
+    for(char& c : comp)
+    {
+        if (spaces >= 80)
+        {
+            s32 += '\n';
+            spaces = 0;
+        }
+        spaces++;
+        s32 += uint32_t(0x2800 + (unsigned char)(c));
+
+    } 
+    s32 += 0x1F6D1;                 // stop sign
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    reply += conv.to_bytes(s32);
+    reply += "\n";
+    SDL_SetClipboardText(reply.c_str());
+}
+
 void GameState::check_clipboard()
 {
     if (!SDL_HasClipboardText())
@@ -4970,6 +5018,17 @@ void GameState::check_clipboard()
             {
                 clipboard_rule = GridRule(omap->get_item("rule"));
                 clipboard_has_item = CLIPBOARD_HAS_RULE;
+            }
+            if (omap->has_key("rules"))
+            {
+                clipboard_rule_set.clear();
+                SaveObjectList* rlist = omap->get_item("rules")->get_list();
+                for (int i = 0; i < rlist->get_count(); i++)
+                {
+                    GridRule r(rlist->get_item(i));
+                    clipboard_rule_set.push_back(r);
+                }
+                clipboard_has_item = CLIPBOARD_HAS_RULE_SET;
             }
         }
     }

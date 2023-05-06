@@ -64,6 +64,7 @@ public:
     bool display_reset_confirm = false;
     bool display_reset_confirm_levels_only = false;
     bool display_rules = false;
+    bool display_clipboard_rules = false;
     bool display_scores = false;
     bool display_modes = false;
 
@@ -101,6 +102,15 @@ public:
     bool display_rules_sort_dir_2nd = true;
     bool display_rules_level = false;
 
+    struct AnimationStarBurst
+    {
+        XYPos pos;
+        int progress;
+        int random;
+    };
+    std::list<AnimationStarBurst> star_burst_animations;
+
+
     struct ConstructedRuleState
     {
         GridRule rule;
@@ -126,12 +136,14 @@ public:
     int clipboard_check = 0;
     enum {
         CLIPBOARD_HAS_NONE,
-        CLIPBOARD_HAS_RULE
+        CLIPBOARD_HAS_RULE,
+        CLIPBOARD_HAS_RULE_SET
         }
         clipboard_has_item = CLIPBOARD_HAS_NONE;
 
     std::string clipboard_last;
     GridRule clipboard_rule;
+    std::list<GridRule> clipboard_rule_set;
 
     
     RegionType region_type = RegionType(RegionType::SET, 0);
@@ -270,5 +282,7 @@ public:
     void right_panel_click(XYPos pos, int clicks, int btn);
     bool events();
     void deal_with_scores();
+    void export_all_rules_to_clipboard();
+    void send_to_clipboard(SaveObject* obj);
     void check_clipboard();
 };
