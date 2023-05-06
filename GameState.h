@@ -105,8 +105,15 @@ public:
     struct AnimationStarBurst
     {
         XYPos pos;
+        XYPos size;
         int progress;
-        int random;
+        bool lock;
+        AnimationStarBurst (XYPos pos_, XYPos size_, int progress_, bool lock_):
+            pos(pos_),
+            size(size_),
+            progress(progress_),
+            lock(lock_)
+            {}
     };
     std::list<AnimationStarBurst> star_burst_animations;
 

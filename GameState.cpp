@@ -268,7 +268,6 @@ GameState::GameState(std::string& load_data, bool json)
 //         Grid t = *grid;
 //         t.solve(1000000);
 //     }
-
 }
 
 SaveObject* GameState::save(bool lite)
@@ -706,9 +705,27 @@ void GameState::advance(int steps)
     {
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
+            uint64_t prev = 0;
+            for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+                if (level_is_accessible(i))
+                    prev |= 1 << i;
+
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
             level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             skip_level = 1;
+            if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo == 0)
+            {
+                XYPos pos = left_panel_offset + XYPos(button_size * (current_level_set_index % 5), button_size * (current_level_set_index / 5 + 6));
+                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, false));
+            }
+            for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+            {
+                if (!((prev >> i) & 1) && level_is_accessible(i))
+                {
+                    XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
+                    star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, true));
+                }
+            }
         }
     }
 
@@ -3702,6 +3719,81 @@ void GameState::render(bool saving)
             }
         }
     }
+    {
+        std::list<AnimationStarBurst>::iterator it = star_burst_animations.begin();
+        while (it != star_burst_animations.end())
+        {
+            AnimationStarBurst& burst = *it;
+            burst.progress += frame_step;
+            if (burst.progress > 5000)
+            {
+                it = star_burst_animations.erase(it);
+                continue;
+            }
+
+            if (burst.progress < 1000 && burst.lock)
+            {
+                int size = burst.size.x;
+                SDL_Rect src_rect = {1088, 192, 192, 192};
+                SDL_Rect dst_rect = {burst.pos.x, burst.pos.y + burst.progress * burst.size.x / 500, size, size};
+                SDL_Point rot_center = {size / 2, size / 2};
+                double star_angle = burst.progress / 1000.0;
+                SDL_SetTextureAlphaMod(sdl_texture, std::min (255, 1000 - burst.progress));
+
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+            }
+
+            if (burst.progress < 1000)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    int size = burst.size.x * burst.progress / 500;
+                    double angle = i;
+                    XYPosFloat pos (Angle (angle), size);
+                    pos.y += burst.progress * burst.progress * size / 1000000;
+                    SDL_Rect src_rect = {512, 960, 192, 192};
+                    SDL_Rect dst_rect = {burst.pos.x + burst.size.x / 2 - size / 2 + int(pos.x), burst.pos.y + burst.size.y / 2 - size / 2 + int(pos.y), size, size};
+                    SDL_Point rot_center = {size / 2, size / 2};
+                    double star_angle = burst.progress / 100.0;
+                    SDL_SetTextureAlphaMod(sdl_texture, 250 - burst.progress / 4);
+
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+                }
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                int size = burst.size.x / 10;
+                int p = int(i * 1000 / 4 + burst.progress) % 1000;
+                SDL_Rect src_rect = {512, 960, 192, 192};
+                SDL_Rect dst_rect = {0, 0, size, size};
+                SDL_Point rot_center = {size / 2, size / 2};
+                double star_angle = burst.progress / 300.0;
+                XYPos pos(burst.pos.x - size / 2, burst.pos.y - size / 2);
+
+                double t = (sin((i * 77) % 100 + burst.progress / 100) + 1) / 2;
+                if (burst.progress > 4000)
+                    t *= 1.0 - (burst.progress - 4000.0) / 1000;
+                SDL_SetTextureAlphaMod(sdl_texture, t * 255);
+
+                dst_rect.x = pos.x + (p * burst.size.x) / 1000;
+                dst_rect.y = pos.y;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+                dst_rect.x = pos.x + burst.size.x;
+                dst_rect.y = pos.y + (p * burst.size.y) / 1000;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+                dst_rect.x = pos.x + burst.size.x - (p * burst.size.x) / 1000;
+                dst_rect.y = pos.y + burst.size.y;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+                dst_rect.x = pos.x;
+                dst_rect.y = pos.y + burst.size.y - (p * burst.size.y) / 1000;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+            }
+
+            it++;
+        }
+        SDL_SetTextureAlphaMod(sdl_texture, 255);
+    }
+
     if (display_modes)
     {
         tooltip_string = "";
@@ -3830,7 +3922,7 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_clickable_highlight(dst_rect);
-            std::string t = translate("Reset Game");
+            std::string t = translate("Reset Rules");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.2 * button_size), t);
         }
         {
@@ -4948,7 +5040,8 @@ void GameState::export_all_rules_to_clipboard()
     SaveObjectList* rlist = new SaveObjectList;
     for (GridRule& rule : rules[game_mode])
     {
-        rlist->add_item(rule.save(true));
+        if (!rule.deleted)
+            rlist->add_item(rule.save(true));
     }
     omap->add_item("rules", rlist);
     send_to_clipboard(omap);
@@ -5060,5 +5153,30 @@ void GameState::check_clipboard()
 
 void GameState::import_all_rules()
 {
+    for (GridRule& new_rule : clipboard_rule_set)
+    {
+        bool seen = false;
+        std::vector<int> order;
+        for(int i = 0; i < new_rule.region_count; i++)
+            order.push_back(i);
+        do{
 
+            GridRule prule = new_rule.permute(order);
+            for (GridRule& rule : rules[game_mode])
+            {
+                if (!rule.deleted && rule.covers(prule))
+                {
+                    seen = true;
+                    break;
+                }
+            }
+            if (seen)
+                break;
+        }
+        while(std::next_permutation(order.begin(),order.end()));
+        if (!seen)
+        {
+            rules[game_mode].push_back(new_rule);
+        }
+    }
 }
