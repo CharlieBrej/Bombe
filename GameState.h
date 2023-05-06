@@ -117,7 +117,6 @@ public:
     };
     std::list<AnimationStarBurst> star_burst_animations;
 
-
     struct ConstructedRuleState
     {
         GridRule rule;
@@ -224,6 +223,35 @@ public:
     int server_levels_version = 0;
 
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
+    int max_stars = 0;
+    int cur_stars = 0;
+
+    enum {
+        PROG_LOCK_HEX,
+        PROG_LOCK_SQUARE,
+        PROG_LOCK_TRIANGLE,
+        PROG_LOCK_GRID,
+        PROG_LOCK_SERVER,
+
+        PROG_LOCK_NUMBER_TYPES,
+        PROG_LOCK_VISIBILITY,
+        PROG_LOCK_VISIBILITY2,
+        PROG_LOCK_VISIBILITY3,
+        PROG_LOCK_VISIBILITY4,
+
+        PROG_LOCK_GAME_MODE,
+
+        PROG_LOCK_VARS1,
+        PROG_LOCK_VARS2,
+
+        PROG_LOCK_FILTER,
+
+        PROG_LOCK_TOTAL
+        };
+        
+    int prog_stars[PROG_LOCK_TOTAL]= {};
+    bool prog_seen[PROG_LOCK_TOTAL]= {};
+
     class PlayerScore
     {
     public:
@@ -283,6 +311,7 @@ public:
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
+    bool render_lock(int lock_type, XYPos pos, int size);
     void render(bool saving = false);
     void grid_click(XYPos pos, int clicks, int btn);
     void left_panel_click(XYPos pos, int clicks, int btn);
