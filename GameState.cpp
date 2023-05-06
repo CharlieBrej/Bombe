@@ -271,6 +271,8 @@ GameState::GameState(std::string& load_data, bool json)
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         prog_seen[i] = (prog_stars[i] <= max_stars);
+    if (!prog_seen[PROG_LOCK_GAME_MODE])
+        game_mode = 0;
 }
 
 SaveObject* GameState::save(bool lite)
