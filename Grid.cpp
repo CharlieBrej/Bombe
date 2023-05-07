@@ -459,13 +459,16 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
     }
 }
 
-GridRule::IsLogicalRep GridRule::is_legal()
+GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
 {
     z3::context c;
     z3::solver s(c);
 
     z3::expr_vector vec(c);
     z3::expr_vector var_vec(c);
+    why = *this;
+//    why.apply_region_bitmap = 0;
+
 
     var_vec.push_back(c.int_const("a"));
     s.add(var_vec[0] >= 0);
@@ -537,8 +540,14 @@ GridRule::IsLogicalRep GridRule::is_legal()
         {
             e = e + vec[i];
             int m = square_counts[i].max();
-            if ((m < 0) && (apply_region_type == RegionType(RegionType::SET,1)))
+            if ((m < 0) && (apply_region_type == RegionType(RegionType::SET, 1)))
+            {
+                for (int i = 1; i < (1 << region_count); i++)
+                    why.square_counts[i] = RegionType(RegionType::NONE, 0);
+
+                why.square_counts[i] = RegionType(RegionType::SET, 1);
                 return ILLOGICAL;
+            }
             if (square_counts[i].var)
                 tot = tot + var_vec[square_counts[i].var-1] + square_counts[i].value + m;
             else
@@ -564,7 +573,9 @@ GridRule::IsLogicalRep GridRule::is_legal()
         z3::model m = s.get_model();
         for (int i = 1; i < (1 << region_count); i++)
         {
-            std::cout << "B" << i << ":" << m.eval(vec[i]) << "\n";
+            int v = m.eval(vec[i]).get_numeral_int();
+            why.square_counts[i] = RegionType(RegionType::EQUAL ,v);
+            std::cout << "B" << i << ":" << v << " " << m.eval(vec[i]) << "\n";
         }
         for (int i = 0; i < 2; i++)
         {

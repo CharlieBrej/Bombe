@@ -160,9 +160,6 @@ GameState::GameState(std::string& load_data, bool json)
                 for (int i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
-                    // if (r.is_legal() != GridRule::OK)
-                    //     printf("Error\n");
-
                     rules[mode].push_back(r);
                 }
 
@@ -1159,7 +1156,7 @@ void GameState::update_constructed_rule()
             reset_rule_gen_region();
     } 
 
-    constructed_rule_is_logical = constructed_rule.is_legal();
+    constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason);
     constructed_rule_is_already_present = NULL;
 
     std::vector<int> order;
@@ -1548,7 +1545,7 @@ void GameState::add_clickable_highlight(SDL_Rect& dst_rect)
         tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
 }
 
-void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable)
+bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable)
 {
     if ((mouse.x >= dst_rect.x) &&
         (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -1558,7 +1555,9 @@ void GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
         tooltip_string = text;
         if (clickable)
             tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
+        return true;
     }
+    return false;
 }
 
 void GameState::render_box(XYPos pos, XYPos size, int corner_size, int style)
@@ -3604,7 +3603,11 @@ void GameState::render(bool saving)
                         SDL_Rect src_rect = {896, 576, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                        add_tooltip(dst_rect, "Illogical");
+                        if (add_tooltip(dst_rect, "Illogical"))
+                        {
+                            render_box(right_panel_offset + XYPos(-6 * button_size, button_size / 2), XYPos(6 * button_size, 6 * button_size), button_size/2, 1);
+                            render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1);
+                        }
                     }
                     else if (constructed_rule_is_logical == GridRule::UNBOUNDED)
                     {
@@ -3657,6 +3660,7 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Redo");
             }
+        
         }
         if (right_panel_mode == RIGHT_MENU_RULE_INSPECT)
         {

@@ -158,6 +158,7 @@ public:
                                                         {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::NONE}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
+    GridRule rule_illogical_reason;
     GridRule* constructed_rule_is_already_present = NULL;
 
     GridRegion* mouse_hover_region = NULL;
@@ -305,7 +306,7 @@ public:
     std::string translate(std::string s);
     void render_tooltip();
     void add_clickable_highlight(SDL_Rect& dst_rect);
-    void add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
+    bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
