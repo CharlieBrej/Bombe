@@ -14,13 +14,13 @@ EXTRA_SRC =
 
 if LINUX
     EXTRA_FLAGS += -DTARGET_LINUX 
-    EXTRA_SRC +=
+    EXTRA_SRC += clip/clip_x11.cpp
     EXTRA_LDADD += @XCB_LIBS@ -lX11
 endif
 
 if MACOS
     EXTRA_FLAGS += -DTARGET_MACOS
-    EXTRA_SRC +=
+    EXTRA_SRC += clip/clip_osx.mm
     EXTRA_LD_FLAGS += -framework Cocoa
 endif
 
@@ -32,7 +32,8 @@ Bombe_SOURCES =     main.cpp \
                     GameState.cpp GameState.h \
                     SaveState.cpp SaveState.h \
                     LevelSet.cpp LevelSet.h \
-                    Compress.cpp Compress.h
+                    Compress.cpp Compress.h \
+                    clip/clip.cpp clip/image.cpp $(EXTRA_SRC)
 
 Bombe_CXXFLAGS = @CXXFLAGS@ @SDL2_CFLAGS@ @SDL2_image_CFLAGS@ @SDL2_mixer_CFLAGS@ @SDL2_net_CFLAGS@ @SDL2_ttf_CFLAGS@ @ZSTD_CFLAGS@ @Z3_CFLAGS@ -I. $(STEAM_FLAGS) $(EXTRA_FLAGS)
 Bombe_LDADD=@SDL2_LIBS@ @SDL2_image_LIBS@ @SDL2_mixer_LIBS@ @SDL2_net_LIBS@ @SDL2_ttf_LIBS@ @ZSTD_LIBS@ @Z3_LIBS@ $(STEAM_LDADD) $(EXTRA_LDADD) -lpthread
