@@ -1687,27 +1687,27 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
     double cs = s;
     if (s < 1)
         return;
-    else if (s < 2.5)
+    else if (s <= 2)
     {
         cs = 2;
         s = 2;
         texture_char_width = 2;
-        texture_char_pos = 2873;
+        texture_char_pos = 2874;
     }
-    else if (s < 4)
+    else if (s <= 3)
     {
         cs = 3;
         s = 3;
         texture_char_width = 3;
         texture_char_pos = 2862;
     }
-    else if (s < 6)
-    {
-        cs = 4;
-        s = 4;
-        texture_char_width = 4;
-        texture_char_pos = 2848;
-    }
+    // else if (s < 5)
+    // {
+    //     cs = 4;
+    //     s = 4;
+    //     texture_char_width = 4;
+    //     texture_char_pos = 2848;
+    // }
     else if (s < 8)
     {
         texture_char_width = 8;
@@ -1741,7 +1741,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
                 substr += digits[i];
                 i++;
             }
-            render_number_string(substr, XYPos(pos.x, pos.y), XYPos(w * s, s * 1), XYPos(-1, -1));
+            render_number_string(substr, XYPos(pos.x, pos.y), XYPos(w * s, s * 1), XYPos(1, -1));
         }
         pos.x += w * s;
     }
