@@ -720,7 +720,7 @@ void GameState::advance(int steps)
     if (max_stars < totcount)
         max_stars = totcount;
 
-    if (grid->is_solved() && !current_level_is_temp)
+    if (!(load_level || skip_level) && grid->is_solved() && !current_level_is_temp)
     {
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
@@ -1313,9 +1313,9 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 line_thickness *= 2;
                 set_region_colour(sdl_texture, region.type.value, region.colour, opac);
                 double f = (frame / 5 + pos.x);
-                SDL_Rect src_rect1 = {int(f)% 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
+                SDL_Rect src_rect1 = {int(f)% 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                 f = (frame / 8 + pos.x);
-                SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
+                SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                 for(WrapPos r : wraps)
                 {
                     XYPos s = r.pos + pos * r.size;
@@ -1605,6 +1605,50 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
     std::string digits = std::to_string(num);
     render_number_string(digits, pos, siz);
 }
+
+
+static void get_char_texture(char c, int& pos, int &width)
+{
+    if (c == '0')
+    {
+        pos = 0; width = 2;
+    }
+    else if (c == '1')
+    {
+        pos = 2; width = 1;
+    }
+    else if (c >= '2' && c <= '9')
+    {
+        pos = (c - '2') * 2 + 3; width = 2;
+    }
+    else if (c == '.' )
+    {
+        pos = 19; width = 1;
+    }
+    else if (c == '%' )
+    {
+        pos = 20; width = 3;
+    }
+    else if (c == '!' )
+    {
+        pos = 23; width = 1;
+    }
+    else if (c == '+' )
+    {
+        pos = 24; width = 2;
+    }
+    else if (c == '-' )
+    {
+        pos = 26; width = 2;
+    }
+    else if (c >= 'a' && c <= 'z')
+    {
+        pos = 28 + (c - 'a') * 2; width = 2;
+    }
+    else
+        assert(0);
+}
+
 void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, XYPos style)
 {
     int width = 0;
@@ -1618,29 +1662,15 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
             continue;
         }
         char c = digits[i];
-        if (c == '+' || c == '-')
-            width += 3;
-        else if (c == '!' )
-            width += 2;
-        else if (c == '%' )
-            width += 6;
-        else if (c == '.' )
-            width += 2;
-        else if (c == '1')
-            width += 2;
-        else if (c >= '0' && c <= '9')
-            width += 4;
-        else if (c >= 'a' && c <= 'z')
-            width += 4;
-        else
-            assert(0);
+        int p;
+        int w;
+        get_char_texture(c, p, w);
+        width += w;
     }
 
-    XYPos t_size;
-    if ((width * siz.y / 6) > siz.x)
-        t_size = XYPos(siz.x, (siz.x * 6) / width);
-    else
-        t_size = XYPos(width * siz.y / 6, siz.y);
+    double s = std::min(double(siz.x) / width, siz.y / 3.0);
+    XYPos t_size(s * width, s * 3);
+
 
     if (style.x > 0)
         pos.x += (siz.x - t_size.x);
@@ -1651,97 +1681,69 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
     else if (style.y == 0)
         pos.y += (siz.y - t_size.y) / 2;
 
-    XYPos digit_size = XYPos((t_size.y * 2) / 3, t_size.y);
-    
+    int texture_char_width = 64;
+    int texture_char_pos = 2560;
+
+    double cs = s;
+    if (s < 1)
+        return;
+    else if (s < 2.5)
+    {
+        cs = 2;
+        s = 2;
+        texture_char_width = 2;
+        texture_char_pos = 2873;
+    }
+    else if (s < 4)
+    {
+        cs = 3;
+        s = 3;
+        texture_char_width = 3;
+        texture_char_pos = 2862;
+    }
+    else if (s < 6)
+    {
+        cs = 4;
+        s = 4;
+        texture_char_width = 4;
+        texture_char_pos = 2848;
+    }
+    else if (s < 8)
+    {
+        texture_char_width = 8;
+        texture_char_pos = 2816;
+    }
+    else if (s < 24)
+    {
+        texture_char_width = 16;
+        texture_char_pos = 2752;
+    }
+
+
     for (int i = 0; i < digits.size(); i++)
     {
         char c = digits[i];
-        SDL_Rect src_rect;
-        SDL_Rect dst_rect = {pos.x, pos.y, digit_size.x, digit_size.y};
-        if (c == '1')
-        {
-            dst_rect.w = digit_size.x / 2;
-            src_rect = {256, 0, 64, 192};
-        }
-        else if (c >= '0' && c <= '9')
-        {
-            src_rect = {32 + (c - '0') * 192, 0, 128, 192};
-        }
-        else if (c >= 'a' && c <= 'z')
-        {
-            int ltr = c - 'a';
-            src_rect = {2208 + ltr * 128, 0, 128, 192};
-            if (digits[i+1] == '^')
-            {
-                i+=2;
-                std::string s = "";
-                while (digits[i] != '^')
-                {
-                    s += digits[i];
-                    i++;
-                }
-                render_number_string(s, XYPos(pos.x, pos.y), XYPos(digit_size.x, digit_size.y / 2.4), XYPos(1, 1));
-                dst_rect.w -= digit_size.x / 5;
-                dst_rect.h -= digit_size.y / 5;
-                dst_rect.y += digit_size.y / 5;
-                pos.x += digit_size.x / 5;
-            }
-        }
-        else if (c == '!')
-        {
-            dst_rect.w = digit_size.x / 2;
-            src_rect = {1280, 384, 64, 192};
-        }
-        else if (c == '-')
-        {
-            dst_rect.w = digit_size.x * 3 / 4;
-            src_rect = {304, 512, 96, 192};
-            if (dst_rect.h <= 32)
-                src_rect = {1856, 224, 16, 32};
-            if (dst_rect.h <= 16)
-                src_rect = {1856, 272, 8, 16};
-        }
-        else if (c == '+')
-        {
-            dst_rect.w = digit_size.x * 3 / 4;
-            src_rect = {432, 512, 96, 192};
-            if (dst_rect.h < 32)
-                src_rect = {1872, 224, 16, 32};
-            if (dst_rect.h <= 16)
-                src_rect = {1864, 272, 8, 16};
-        }
-        else if (c == '%')
-        {
-            dst_rect.w = digit_size.x * 6 / 4;
-            src_rect = {1952, 0, 192, 192};
-        }
-        else if (c == '.')
-        {
-            dst_rect.w = digit_size.x / 2;
-            src_rect = {2144, 0, 64, 192};
-        }
-        else
-            assert(0);
-        if (dst_rect.h <= 16 && src_rect.y == 0)
-        {
-            src_rect.y = 256;
-            src_rect.x = src_rect.x / 12 + 1856;
-            src_rect.h /= 12;
-            src_rect.w = src_rect.w / 12 + 1;
-            dst_rect.w++;
-            dst_rect.h++;
-        }
-        else if (dst_rect.h <= 32 && src_rect.y == 0)
-        {
-            src_rect.y = 192;
-            src_rect.x = src_rect.x / 6 + 1856;
-            src_rect.h /= 6;
-            src_rect.w /= 6;
-            dst_rect.w++;
-            dst_rect.h++;
-        }
+        int p;
+        int w;
+        get_char_texture(c, p, w);
+        
+        SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, w * texture_char_width, 3 * texture_char_width};
+        SDL_Rect dst_rect = {pos.x, pos.y, w * cs, 3 * cs};
+
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        pos.x += dst_rect.w;
+
+        if ((i + 1) < digits.size() && digits[i+1] == '^')
+        {
+            i+=2;
+            std::string substr = "";
+            while (i < digits.size() && digits[i] != '^')
+            {
+                substr += digits[i];
+                i++;
+            }
+            render_number_string(substr, XYPos(pos.x, pos.y), XYPos(w * s, s * 1), XYPos(-1, -1));
+        }
+        pos.x += w * s;
     }
 
 }
@@ -2048,9 +2050,9 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 {
                     set_region_colour(sdl_texture, rule.apply_region_type.value, 0, 255);
                     double f = (frame / 5 + pos.x);
-                    SDL_Rect src_rect1 = {int(f)% 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
+                    SDL_Rect src_rect1 = {int(f)% 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                     f = (frame / 8 + pos.x);
-                    SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2688, std::min(int(dist / line_thickness * 10), 1024), 32};
+                    SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                     SDL_Point rot_center = {0, int(line_thickness * 2)};
                     SDL_Rect dst_rect = {r_pos.x + int(pos.x), r_pos.y + int((pos.y - line_thickness * 2)), int(dist), int(line_thickness * 4)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect1, &dst_rect, degrees(angle), &rot_center, SDL_FLIP_NONE);
