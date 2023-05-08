@@ -1714,7 +1714,7 @@ static void add_clear_count(GridRegion* region, int count)
     }
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4])
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[4])
 {
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
@@ -1722,59 +1722,41 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
     if (rule.apply_region_type.type == RegionType::VISIBILITY)
     {
         GridVisLevel vis_level =  GridVisLevel(rule.apply_region_type.value);
-        if ((rule.apply_region_bitmap & 1) && r1->visibility_force != GridRegion::VIS_FORCE_USER)
+        for (int i = 0; i < 4; i++)
         {
-            r1->vis_level = vis_level;
-            r1->visibility_force = GridRegion::VIS_FORCE_NONE;
-            r1->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
-        }
-        if ((rule.apply_region_bitmap & 2) && r2->visibility_force != GridRegion::VIS_FORCE_USER)
-        {
-            r2->vis_level = vis_level;
-            r2->visibility_force = GridRegion::VIS_FORCE_NONE;
-            r2->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
-        }
-        if ((rule.apply_region_bitmap & 4) && r3->visibility_force != GridRegion::VIS_FORCE_USER)
-        {
-            r3->vis_level = vis_level;
-            r3->visibility_force = GridRegion::VIS_FORCE_NONE;
-            r3->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
-        }
-        if ((rule.apply_region_bitmap & 8) && r4->visibility_force != GridRegion::VIS_FORCE_USER)
-        {
-            r4->vis_level = vis_level;
-            r4->visibility_force = GridRegion::VIS_FORCE_NONE;
-            r4->vis_cause = GridRegionCause(&rule, r1, r2, r3, r4);
+            if (((rule.apply_region_bitmap >> i) & 1) && (r[i]->visibility_force != GridRegion::VIS_FORCE_USER))
+            {
+                if (r[i]->vis_level < vis_level)
+                {
+                    r[i]->vis_level = vis_level;
+                    r[i]->visibility_force = GridRegion::VIS_FORCE_NONE;
+                    r[i]->vis_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+                }
+            }
         }
         return APPLY_RULE_RESP_NONE;
     }
 
     XYSet itter_elements;
     GridRegion* itter = NULL;
-    FOR_XY_SET(pos, r1->elements)
-        itter_elements.insert(pos);
-    if (r2)
-        FOR_XY_SET(pos, r2->elements)
-            itter_elements.insert(pos);
-    if (r3)
-        FOR_XY_SET(pos, r3->elements)
-            itter_elements.insert(pos);
-    if (r4)
-        FOR_XY_SET(pos, r4->elements)
-            itter_elements.insert(pos);
+    for (int i = 0; i < 4; i++)
+    {
+        if (r[i])
+            itter_elements = itter_elements | r[i]->elements;
+    }
 
     XYSet to_reveal;
 
     FOR_XY_SET(pos, itter_elements)
     {
         unsigned m = 0;
-        if (r1->elements.get(pos))
+        if (r[0]->elements.get(pos))
             m |= 1;
-        if (r2 && (r2->elements.get(pos)))
+        if (r[1] && (r[1]->elements.get(pos)))
             m |= 2;
-        if (r3 && (r3->elements.get(pos)))
+        if (r[2] && (r[2]->elements.get(pos)))
             m |= 4;
-        if (r4 && (r4->elements.get(pos)))
+        if (r[3] && (r[3]->elements.get(pos)))
             m |= 8;
         if ((rule.apply_region_bitmap >> m) & 1)
             to_reveal.set(pos);
@@ -1801,10 +1783,10 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         }
         rule.level_used_count++;
         rule.level_clear_count += c;
-        add_clear_count(r1, c);
-        add_clear_count(r2, c);
-        add_clear_count(r3, c);
-        add_clear_count(r4, c);
+        add_clear_count(r[0], c);
+        add_clear_count(r[1], c);
+        add_clear_count(r[2], c);
+        add_clear_count(r[3], c);
         return APPLY_RULE_RESP_HIT;
     }
     else
@@ -1823,7 +1805,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r1, GridRegion*
         {
             reg.elements.set(pos);
         }
-        reg.gen_cause = GridRegionCause(&rule, r1, r2, r3, r4);
+        reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
         bool added = add_region(reg);
         if (added)
         {
@@ -1965,6 +1947,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                         std::vector<GridRegion*>& set3 = (nonstale_rep_index == 3) ? unstale_regions : pos_regions[3];
                         for (GridRegion* r3 : set3)
                         {
+                            GridRegion* regions[4] = {r0, r1, r2, r3};
                             if (r1 && ((r0 == r1) || (r2 == r1) || (r3 == r1))) continue;
                             if (r2 && ((r0 == r2) || (r1 == r2) || (r3 == r2))) continue;
                             if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
@@ -1972,7 +1955,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                             int var_counts[4]={-1, -1, -1, -1};
                             if (rule.matches(r0, r1, r2, r3, var_counts))
                             {
-                                ApplyRuleResp resp = apply_rule(rule, r0, r1, r2, r3, var_counts);
+                                ApplyRuleResp resp = apply_rule(rule, regions, var_counts);
                                 if ((resp != APPLY_RULE_RESP_NONE) && (rule.apply_region_type.type == RegionType::SET))
                                     return resp;
                                 if (resp == APPLY_RULE_RESP_HIT)

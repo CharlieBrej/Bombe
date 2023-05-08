@@ -346,7 +346,7 @@ public:
         APPLY_RULE_RESP_ERROR
     };
 
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4]);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[4]);
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region);
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);

@@ -3490,6 +3490,13 @@ void GameState::render(bool saving)
                     SDL_SetTextureColorMod(sdl_texture, 128, 128, 128);
                 render_box(right_panel_offset + p * button_size, XYPos(button_size, button_size), button_size / 4);
                 SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                if (right_panel_mode == RIGHT_MENU_RULE_GEN)
+                {
+                    if (!hover_rulemaker_lower_right)
+                        SDL_SetTextureColorMod(sdl_texture, 128, 128, 128);
+                    render_box(right_panel_offset + p * button_size + XYPos(button_size / 2, button_size / 2), XYPos(button_size / 2, button_size / 2), button_size / 4);
+                    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+                }
             }
         }
 
