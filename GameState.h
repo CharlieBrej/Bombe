@@ -290,6 +290,7 @@ public:
     void fetch_scores();
     SDL_Texture* loadTexture(const char* filename);
 
+    bool rule_is_permitted(GridRule& rule, int mode);
     void advance(int steps);
     void audio();
     void set_language(std::string lang);
@@ -313,7 +314,7 @@ public:
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     bool render_lock(int lock_type, XYPos pos, int size);
-    void render_rule(GridRule& rule, XYPos pos, int size, int hover_rulemaker_region_base_index);
+    void render_rule(GridRule& rule, XYPos pos, int size, int hover_rulemaker_region_base_index, bool reason = false);
     void render(bool saving = false);
     void grid_click(XYPos pos, int clicks, int btn);
     void left_panel_click(XYPos pos, int clicks, int btn);

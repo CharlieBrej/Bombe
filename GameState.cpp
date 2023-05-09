@@ -160,7 +160,8 @@ GameState::GameState(std::string& load_data, bool json)
                 for (int i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
-                    rules[mode].push_back(r);
+                    if (rule_is_permitted(r, mode))
+                        rules[mode].push_back(r);
                 }
 
                 {
@@ -674,6 +675,34 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 	return new_texture;
 }
 
+bool GameState::rule_is_permitted(GridRule& rule, int mode)
+{
+    if (mode == 1 && rule.region_count == 4)
+        return false;
+    if (mode == 3)
+    {
+        for (int i = 0; i < rule.region_count; i++)
+            if (rule.region_type[i].var)
+                return false;
+        for (int i = 0; i < (1 << constructed_rule.region_count); i++)
+            if (constructed_rule.square_counts[i].var)
+                return false;
+        if (constructed_rule.apply_region_bitmap && constructed_rule.apply_region_type.var)
+            return false;
+    }
+    if (rule.apply_region_type.type == RegionType::VISIBILITY && (mode == 2 || mode == 3))
+    {
+        int rule_cnt = 0;
+        for (GridRule& rule : rules[game_mode])
+            if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
+                rule_cnt++;
+        if (game_mode == 2 && rule_cnt >= 100)
+            return false;
+        if (game_mode == 3 && rule_cnt >= 300)
+            return false;
+    }
+    return true;
+}
 
 void GameState::advance(int steps)
 {
@@ -1728,7 +1757,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         get_char_texture(c, p, w);
         
         SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, w * texture_char_width, 3 * texture_char_width};
-        SDL_Rect dst_rect = {pos.x, pos.y, w * cs, 3 * cs};
+        SDL_Rect dst_rect = {pos.x, pos.y, int(w * cs), int(3 * cs)};
 
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
@@ -1743,7 +1772,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
             }
             render_number_string(substr, XYPos(pos.x, pos.y), XYPos(w * s, s * 1), XYPos(1, -1));
         }
-        pos.x += w * s;
+        pos.x += int(w * s);
     }
 
 }
@@ -1901,7 +1930,7 @@ bool GameState::render_lock(int lock_type, XYPos pos, int size)
     return false;
 }
 
-void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_rulemaker_region_base_index)
+void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_rulemaker_region_base_index, bool reason)
 {
         if (rule.region_count >= 1)
         {
@@ -1999,8 +2028,41 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             XYPos p = XYPos(x,y);
 
             RegionType r_type = rule.square_counts[i];
+            if (reason)
+            {
+                XYPos sp = base_pos + p * size;
+                if (r_type.value == 1)
+                {
+                    SDL_Rect src_rect = {320, 192, 192, 192};
+                    SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + size * 1 / 8, (int)(size * 6 / 8), (int)(size * 6 / 8)};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
-            render_region_type(r_type, base_pos + p * size, size);
+                }
+                else if (r_type.value <= 3)
+                {
+                    SDL_Rect src_rect = {320, 192, 192, 192};
+                    SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + int(size * 1 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 1 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    if (r_type.value == 3)
+                    {
+                        dst_rect = {sp.x + int(size * 2.5 / 8), sp.y + int(size * 4 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    }
+                }
+                else if (r_type.value > 2)
+                {
+                    render_number(r_type.value, sp + XYPos(size / 8,size / 8), XYPos(size * 3 / 8, size * 6 / 8));
+
+                    SDL_Rect src_rect = {320, 192, 192, 192};
+                    SDL_Rect dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 2.5 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+                }
+            }
+            else
+                render_region_type(r_type, base_pos + p * size, size);
 
             if (((rule.apply_region_bitmap >> i) & 1) && rule.apply_region_type.type < 50)
             {
@@ -3615,7 +3677,7 @@ void GameState::render(bool saving)
                         if (add_tooltip(dst_rect, "Illogical"))
                         {
                             render_box(right_panel_offset + XYPos(-6 * button_size, button_size / 2), XYPos(6 * button_size, 6 * button_size), button_size/2, 1);
-                            render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1);
+                            render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
                     }
                     else if (constructed_rule_is_logical == GridRule::UNBOUNDED)
@@ -4539,7 +4601,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                             reset_rule_gen_region();
                             right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                         }
-                        else
+                        else if (rule_is_permitted(constructed_rule, game_mode))
                         {
                             rules[game_mode].push_back(constructed_rule);
                             inspected_rule = GridRegionCause(&rules[game_mode].back(), rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
@@ -5301,7 +5363,7 @@ void GameState::import_all_rules()
                 break;
         }
         while(std::next_permutation(order.begin(),order.end()));
-        if (!seen)
+        if (!seen && rule_is_permitted(new_rule, game_mode))
         {
             rules[game_mode].push_back(new_rule);
         }
