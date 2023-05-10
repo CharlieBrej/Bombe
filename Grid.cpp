@@ -467,7 +467,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
     z3::expr_vector vec(c);
     z3::expr_vector var_vec(c);
     why = *this;
-//    why.apply_region_bitmap = 0;
 
 
     var_vec.push_back(c.int_const("a"));
@@ -545,7 +544,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 for (int i = 1; i < (1 << region_count); i++)
                     why.square_counts[i] = RegionType(RegionType::NONE, 0);
 
-                why.square_counts[i] = RegionType(RegionType::SET, 1);
+                why.square_counts[i] = RegionType(RegionType::EQUAL, 99);
                 return ILLOGICAL;
             }
             if (square_counts[i].var)
@@ -577,9 +576,24 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
             why.square_counts[i] = RegionType(RegionType::EQUAL ,v);
             std::cout << "B" << i << ":" << v << " " << m.eval(vec[i]) << "\n";
         }
-        for (int i = 0; i < 2; i++)
+        int vals[3];
+        for (int i = 0; i < 3; i++)
         {
             std::cout << char('a'+ i) << ":" << m.eval(var_vec[i]) << "\n";
+            vals[i] = m.eval(var_vec[i]).get_numeral_int();
+        }
+        for (int i = 0; i < region_count; i++)
+        {
+            if (why.region_type[i].var)
+            {
+                why.region_type[i].value += vals[why.region_type[i].var - 1];
+                why.region_type[i].var = 0;
+            }
+        }
+        if (why.apply_region_type.var)
+        {
+            why.apply_region_type.value += vals[why.apply_region_type.var - 1];
+            why.apply_region_type.var = 0;
         }
         return ILLOGICAL;
     }

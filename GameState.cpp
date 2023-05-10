@@ -2031,7 +2031,10 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             if (reason)
             {
                 XYPos sp = base_pos + p * size;
-                if (r_type.value == 1)
+                if (r_type.value == 0)
+                {
+                }
+                else if (r_type.value == 1)
                 {
                     SDL_Rect src_rect = {320, 192, 192, 192};
                     SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + size * 1 / 8, (int)(size * 6 / 8), (int)(size * 6 / 8)};
@@ -2051,12 +2054,12 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     }
                 }
-                else if (r_type.value > 2)
+                else
                 {
                     render_number(r_type.value, sp + XYPos(size / 8,size / 8), XYPos(size * 3 / 8, size * 6 / 8));
 
                     SDL_Rect src_rect = {320, 192, 192, 192};
-                    SDL_Rect dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 2.5 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
+                    SDL_Rect dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 2 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
                 }
@@ -3676,7 +3679,9 @@ void GameState::render(bool saving)
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         if (add_tooltip(dst_rect, "Illogical"))
                         {
-                            render_box(right_panel_offset + XYPos(-6 * button_size, button_size / 2), XYPos(6 * button_size, 6 * button_size), button_size/2, 1);
+                            render_box(right_panel_offset + XYPos(-6 * button_size, 0), XYPos(6 * button_size, 6.5 * button_size), button_size/2, 1);
+                            std::string t = translate("Why Illogical");
+                            render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
                     }
