@@ -690,7 +690,7 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
 {   
     GridRule why;
-    assert(rule.is_legal(why) == GridRule::OK);
+//    assert(rule.is_legal(why) == GridRule::OK);
     if (mode == 1 && rule.region_count == 4)
         return false;
     if (mode == 3)

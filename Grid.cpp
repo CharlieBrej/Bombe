@@ -676,10 +676,15 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
             why.square_counts[i] = RegionType(RegionType::EQUAL ,v);
             std::cout << "B" << i << ":" << v << " " << m.eval(vec[i]) << "\n";
         }
-        int vals[3];
-        for (int i = 0; i < 3; i++)
+        int vals[32];
+        for (int i = 0; i < 31; i++)
         {
-            std::cout << char('a'+ i) << ":" << m.eval(var_vec[i]) << "\n";
+            // for (int j = 0; j < 5; j++)
+            // {
+            //     if ((i >> j) & 1)
+            //         std::cout << char('a'+ j);
+            // }
+            // std::cout << ":" << m.eval(var_vec[i-1]) << "\n";
             vals[i] = m.eval(var_vec[i]).get_numeral_int();
         }
         for (int i = 0; i < region_count; i++)
