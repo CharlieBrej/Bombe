@@ -119,16 +119,8 @@ z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
 
 bool RegionType::apply_int_rule(unsigned in, int vars[32])
 {
-    unsigned v = 0;
-    for (unsigned i = 0; i < 2; i++)
-    {
-        if ((var >> i) & 1)
-        {
-            if (vars[i] == -1)
-                return false;
-            v += vars[i];
-        }
-    }
+    unsigned v = vars[var - 1];
+    assert(v>=0);
     return apply_rule_imp<bool,unsigned>(in, v + value);
 }
 
