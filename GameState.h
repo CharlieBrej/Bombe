@@ -102,21 +102,6 @@ public:
     bool display_rules_sort_dir_2nd = true;
     bool display_rules_level = false;
 
-    struct AnimationStarBurst
-    {
-        XYPos pos;
-        XYPos size;
-        int progress;
-        bool lock;
-        AnimationStarBurst (XYPos pos_, XYPos size_, int progress_, bool lock_):
-            pos(pos_),
-            size(size_),
-            progress(progress_),
-            lock(lock_)
-            {}
-    };
-    std::list<AnimationStarBurst> star_burst_animations;
-
     struct ConstructedRuleState
     {
         GridRule rule;
@@ -217,6 +202,8 @@ public:
     {
     public:
         unsigned count_todo = 0;
+        int star_anim_prog = 0;
+        int unlock_anim_prog = 0;
         std::vector<bool> level_status;
         std::vector<uint64_t> level_stats;
     };
@@ -226,6 +213,21 @@ public:
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
     int max_stars = 0;
     int cur_stars = 0;
+
+    struct AnimationStarBurst
+    {
+        XYPos pos;
+        XYPos size;
+        int progress;
+        bool lock;
+        AnimationStarBurst (XYPos pos_, XYPos size_, int progress_, bool lock_):
+            pos(pos_),
+            size(size_),
+            progress(progress_),
+            lock(lock_)
+            {}
+    };
+    std::list<AnimationStarBurst> star_burst_animations;
 
     enum {
         PROG_LOCK_HEX,
@@ -252,9 +254,10 @@ public:
 
         PROG_LOCK_TOTAL
         };
-        
+
+    static const int PROG_ANIM_MAX = 5000;
     int prog_stars[PROG_LOCK_TOTAL]= {};
-    bool prog_seen[PROG_LOCK_TOTAL]= {};
+    int prog_seen[PROG_LOCK_TOTAL]= {};
 
     class PlayerScore
     {
@@ -287,7 +290,7 @@ public:
     void save(std::ostream& outfile, bool lite = false);
     ~GameState();
     void reset_levels();
-    bool level_is_accessible(unsigned set);
+    bool level_is_accessible(int mode, int group_index, int  set);
     void post_to_server(SaveObject* send, bool sync);
     void fetch_from_server(SaveObject* send, ServerResp* resp);
     void fetch_scores();
@@ -316,7 +319,7 @@ public:
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
-    bool render_lock(int lock_type, XYPos pos, int size);
+    bool render_lock(int lock_type, XYPos pos, XYPos size);
     void render_rule(GridRule& rule, XYPos pos, int size, int hover_rulemaker_region_base_index, bool reason = false);
     void render(bool saving = false);
     void grid_click(XYPos pos, int clicks, int btn);

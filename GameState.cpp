@@ -181,6 +181,10 @@ GameState::GameState(std::string& load_data, bool json)
                                 if (stat)
                                     level_progress[mode][k][i].count_todo--;
                             }
+                            if (level_progress[mode][k][i].count_todo == 0)
+                                level_progress[mode][k][i].star_anim_prog = PROG_ANIM_MAX;
+                            if (level_is_accessible(mode,k,i))
+                                level_progress[mode][k][i].unlock_anim_prog = PROG_ANIM_MAX;
                         }
                     }
                 }
@@ -279,7 +283,8 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_FILTER] = 5000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
-        prog_seen[i] = (prog_stars[i] <= max_stars);
+        if (prog_stars[i] <= max_stars)
+            prog_seen[i] = PROG_ANIM_MAX;
     if (!prog_seen[PROG_LOCK_GAME_MODE])
         game_mode = 0;
     clip::set_error_handler(NULL);
@@ -407,6 +412,8 @@ void GameState::reset_levels()
             level_progress[game_mode][j][i].level_status.clear();
             level_progress[game_mode][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
             level_progress[game_mode][j][i].count_todo = global_level_sets[j][i]->levels.size();
+            level_progress[game_mode][j][i].star_anim_prog = 0;
+            level_progress[game_mode][j][i].unlock_anim_prog = 0;
         }
     }
     for (int i = 0; i < server_levels.size(); i++)
@@ -414,24 +421,26 @@ void GameState::reset_levels()
         level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
         level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
         level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = server_levels[i].size();
+        level_progress[game_mode][GLBAL_LEVEL_SETS][i].star_anim_prog = 0;
+        level_progress[game_mode][GLBAL_LEVEL_SETS][i].unlock_anim_prog = 0;
     }
 }
 
-bool GameState::level_is_accessible(unsigned set)
+bool GameState::level_is_accessible(int mode, int group_index, int  set)
 {
     if (IS_DEMO)
     {
         int r = set % 5 + set / 5;
         if (r > 3)
             return false;
-        if (current_level_group_index > 2)
+        if (group_index > 2)
             return false;
     }
     if (set == 0)
         return true;
-    if (set >= 5 && level_progress[game_mode][current_level_group_index][set - 5].count_todo <= 100)
+    if (set >= 5 && level_progress[mode][group_index][set - 5].count_todo <= 100)
         return true;
-    if ((set % 5 >= 1) && level_progress[game_mode][current_level_group_index][set - 1].count_todo <= 100)
+    if ((set % 5 >= 1) && level_progress[mode][group_index][set - 1].count_todo <= 100)
         return true;
     return false;
 }
@@ -758,27 +767,27 @@ void GameState::advance(int steps)
     {
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
-            uint64_t prev = 0;
-            for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
-                if (level_is_accessible(i))
-                    prev |= 1 << i;
+            // uint64_t prev = 0;
+            // for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+            //     if (level_is_accessible(i))
+            //         prev |= 1 << i;
 
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
             level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             skip_level = 1;
-            if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo == 0)
-            {
-                XYPos pos = left_panel_offset + XYPos(button_size * (current_level_set_index % 5), button_size * (current_level_set_index / 5 + 6));
-                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, false));
-            }
-            for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
-            {
-                if (!((prev >> i) & 1) && level_is_accessible(i))
-                {
-                    XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
-                    star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, true));
-                }
-            }
+            // if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo == 0)
+            // {
+            //     XYPos pos = left_panel_offset + XYPos(button_size * (current_level_set_index % 5), button_size * (current_level_set_index / 5 + 6));
+            //     star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, false));
+            // }
+            // for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+            // {
+            //     if (!((prev >> i) & 1) && level_is_accessible(i))
+            //     {
+            //         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
+            //         star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, true));
+            //     }
+            // }
         }
     }
 
@@ -853,7 +862,7 @@ void GameState::advance(int steps)
                 load_level = true;
                 break;
             }
-            if (level_is_accessible(current_level_set_index))
+            if (level_is_accessible(game_mode, current_level_group_index, current_level_set_index))
             {
                 load_level = true;
                 current_level_index = 0;
@@ -1914,23 +1923,30 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 }
 
-bool GameState::render_lock(int lock_type, XYPos pos, int size)
+bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
 {
-    if (prog_seen[lock_type])
+    if (prog_seen[lock_type] > PROG_ANIM_MAX)
         return true;
+
     int togo = prog_stars[lock_type] - cur_stars;
-    if (togo <= 0)
+    if (togo <= 0 && prog_seen[lock_type] == 0)
+        prog_seen[lock_type] = 1;
+
+    if (prog_seen[lock_type])
     {
-        prog_seen[lock_type] = true;
-        star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(size,size), 0, true));
+        prog_seen[lock_type] += frame_step;
+        star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
         return true;
     }
+    int min_siz = std::min(size.x, size.y);
+    XYPos offset = XYPos((size.x - min_siz) / 2, (size.y - min_siz) / 2);
+
     SDL_Rect src_rect = {1088, 192, 192, 192};
-    SDL_Rect dst_rect = {pos.x , pos.y, size, size};
+    SDL_Rect dst_rect = {pos.x + offset.x, pos.y + offset.y, min_siz, min_siz};
     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
     SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-    render_number(togo, pos + XYPos(size * 45 / 192 , size * 77 / 192), XYPos(size * 102 / 192, size * 98 / 192));
+    render_number(togo, pos + offset + XYPos(min_siz * 45 / 192 , min_siz * 77 / 192), XYPos(min_siz * 102 / 192, min_siz * 98 / 192));
     SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
     return false;
 }
@@ -3111,7 +3127,7 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
 
-    if (render_lock(PROG_LOCK_FILTER, XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + 1 * button_size), button_size))
+    if (render_lock(PROG_LOCK_FILTER, XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + 1 * button_size), XYPos(button_size, button_size)))
     {
         if (!filter_pos.empty())
         {
@@ -3158,7 +3174,7 @@ void GameState::render(bool saving)
         render_number(rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
         render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
     }
-    if (render_lock(PROG_LOCK_GAME_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + 2 * button_size), button_size))
+    if (render_lock(PROG_LOCK_GAME_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + 2 * button_size), XYPos(button_size, button_size)))
     {
         SDL_Rect src_rect = {2240, 576 + game_mode * 192, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -3220,7 +3236,7 @@ void GameState::render(bool saving)
         render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
     }
 
-    if (render_lock(PROG_LOCK_VISIBILITY, XYPos(left_panel_offset.x + 3 * button_size, left_panel_offset.y + 2 * button_size), 2 * button_size))
+    if (render_lock(PROG_LOCK_VISIBILITY, XYPos(left_panel_offset.x + 3 * button_size, left_panel_offset.y + 2 * button_size), XYPos(2 * button_size, 3 * button_size)))
     {
         int region_vis_counts[3] = {0,0,0};
         for (GridRegion& region : grid->regions)
@@ -3259,7 +3275,7 @@ void GameState::render(bool saving)
 
     for (int i = 0; i < 5; i++)
     {
-        if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5), button_size))
+        if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5), XYPos(button_size, button_size)))
         {
             SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
@@ -3267,9 +3283,10 @@ void GameState::render(bool saving)
                 src_rect = {1664, 1536, 192, 192};
             add_clickable_highlight(dst_rect);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-
-            src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
-            dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
+        }
+        {
+            SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         
@@ -3279,6 +3296,9 @@ void GameState::render(bool saving)
     XYPos p = XYPos(0,0);
     for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
     {
+        p.x = i % 5;
+        p.y = i / 5;
+
         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
         if (i == current_level_set_index)
         {
@@ -3292,18 +3312,46 @@ void GameState::render(bool saving)
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
             }
         }
-        int c = level_progress[game_mode][current_level_group_index][i].count_todo;
         int cnt = (current_level_group_index == GLBAL_LEVEL_SETS) ?
                         server_levels[i].size() :
                         global_level_sets[current_level_group_index][i]->levels.size();
 
-        if (!((current_level_group_index == GLBAL_LEVEL_SETS) ? server_levels[i].size() : global_level_sets[current_level_group_index][i]->levels.size()) || !level_is_accessible(i))
+        if (!cnt || (IS_DEMO && (i % 5 + i / 5) > 3))
         {
             SDL_Rect src_rect = {1088, 192, 192, 192};
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            continue;
         }
-        else if (c)
+
+        int need = 100;
+        if (i >= 5)
+            need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 5].count_todo) - 100);
+        if (i % 5 >= 1)
+            need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 1].count_todo) - 100);
+        if (i && need > 0)
+        {
+            SDL_Rect src_rect = {1088, 192, 192, 192};
+            SDL_Rect dst_rect = {pos.x , pos.y, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+            render_number(need, pos + XYPos(button_size * 45 / 192 , button_size * 77 / 192), XYPos(button_size * 102 / 192, button_size * 98 / 192));
+            SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+            continue;
+        }
+        else
+        {
+            if (level_progress[game_mode][current_level_group_index][i].unlock_anim_prog < PROG_ANIM_MAX)
+            {
+                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].unlock_anim_prog, true));
+                level_progress[game_mode][current_level_group_index][i].unlock_anim_prog += frame_step;
+            }
+            
+        }
+
+        int c = level_progress[game_mode][current_level_group_index][i].count_todo;
+        if (c)
         {
             render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
@@ -3311,17 +3359,16 @@ void GameState::render(bool saving)
         }
         else
         {
+            if (level_progress[game_mode][current_level_group_index][i].star_anim_prog < PROG_ANIM_MAX)
+            {
+                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].star_anim_prog, false));
+                level_progress[game_mode][current_level_group_index][i].star_anim_prog += frame_step;
+            }
             SDL_Rect src_rect = {512, 960, 192, 192};
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
 
-        p.x++;
-        if (p.x >= 5)
-        {
-            p.x = 0;
-            p.y++;
-        }
     }
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
@@ -3332,7 +3379,7 @@ void GameState::render(bool saving)
         }
 
 
-        if (render_lock(PROG_LOCK_NUMBER_TYPES, right_panel_offset + XYPos(0, button_size * 7.3), button_size * 5))
+        if (render_lock(PROG_LOCK_NUMBER_TYPES, right_panel_offset + XYPos(0, button_size * 7.3), XYPos(button_size * 5, button_size * 5)))
         {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
@@ -3372,7 +3419,7 @@ void GameState::render(bool saving)
                 XYPos bpos = right_panel_offset + XYPos(i * button_size, button_size * 11.8);
                 if (game_mode == 3)
                     continue;
-                if (!render_lock(PROG_LOCK_VARS1 + i, bpos, button_size))
+                if (!render_lock(PROG_LOCK_VARS1 + i, bpos, XYPos(button_size, button_size)))
                     continue;
                 RegionType r_type = RegionType(RegionType::EQUAL, 0);
                 r_type.var = (1 << i);
@@ -3415,7 +3462,7 @@ void GameState::render(bool saving)
         }
 
 
-        if (render_lock(PROG_LOCK_VISIBILITY2, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 6 * button_size), button_size))
+        if (render_lock(PROG_LOCK_VISIBILITY2, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 6 * button_size), XYPos(button_size, button_size)))
         {
             if (region_type == RegionType(RegionType::VISIBILITY, 1))
                 render_box(right_panel_offset + XYPos(button_size * 3, button_size * 6), XYPos(button_size, button_size), button_size/4);
@@ -3424,7 +3471,7 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Hidden");
         }
-        if (render_lock(PROG_LOCK_VISIBILITY3, XYPos(right_panel_offset.x + 4 * button_size, left_panel_offset.y + 6 * button_size), button_size))
+        if (render_lock(PROG_LOCK_VISIBILITY3, XYPos(right_panel_offset.x + 4 * button_size, left_panel_offset.y + 6 * button_size), XYPos(button_size, button_size)))
         {
             if (region_type == RegionType(RegionType::VISIBILITY, 2))
                 render_box(right_panel_offset + XYPos(button_size * 4, button_size * 6), XYPos(button_size, button_size), button_size/4);
@@ -3509,7 +3556,7 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Change Colour");
         }
 
-        if (render_lock(PROG_LOCK_VISIBILITY4, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 3 * button_size), button_size))
+        if (render_lock(PROG_LOCK_VISIBILITY4, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 3 * button_size), XYPos(button_size, button_size * 3)))
         {
             {
                 if (inspected_region->vis_level == GRID_VIS_LEVEL_SHOW)
@@ -3810,13 +3857,6 @@ void GameState::render(bool saving)
         while (it != star_burst_animations.end())
         {
             AnimationStarBurst& burst = *it;
-            burst.progress += frame_step;
-            if (burst.progress > 5000)
-            {
-                it = star_burst_animations.erase(it);
-                continue;
-            }
-
             if (burst.progress < 1000 && burst.lock)
             {
                 int size = burst.size.x;
@@ -3877,6 +3917,7 @@ void GameState::render(bool saving)
 
             it++;
         }
+        star_burst_animations.clear();
         SDL_SetTextureAlphaMod(sdl_texture, 255);
     }
 
@@ -4261,7 +4302,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 
     if ((idx >= 0) && (idx < level_progress[game_mode][current_level_group_index].size()))
     {
-        if (level_progress[game_mode][current_level_group_index][idx].level_status.size() && level_is_accessible(idx))
+        if (level_progress[game_mode][current_level_group_index][idx].level_status.size() && level_is_accessible(game_mode, current_level_group_index, idx))
         {
             current_level_set_index = idx;
             current_level_index = 0;
