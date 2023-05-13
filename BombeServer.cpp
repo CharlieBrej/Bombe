@@ -117,6 +117,16 @@ public:
         sorted_scores.insert({-score, steam_id});
         user_score[steam_id] = score;
     }
+    void reset()
+    {
+        sorted_scores.clear();
+        user_score.clear();
+        for (int i = 0; i < 30; i++)
+        for (int j = 0; j < 200; j++)
+            stats[i][j] = {0,0};
+    }
+
+
 };
 
     // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y)(x_y_z)(not)
@@ -700,6 +710,10 @@ int main(int argc, char *argv[])
                 db.next_server_levels.clear();
                 db.server_levels_version++;
                 week = new_week;
+                for (int i = 0; i < GAME_MODE_TYPES; i++)
+                {
+                    db.scores[i][LEVEL_TYPES].reset();
+                }
             }
         }
 

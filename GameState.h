@@ -244,6 +244,9 @@ public:
 
         PROG_LOCK_VARS1,
         PROG_LOCK_VARS2,
+        PROG_LOCK_VARS3,
+        PROG_LOCK_VARS4,
+        PROG_LOCK_VARS5,
 
         PROG_LOCK_FILTER,
 

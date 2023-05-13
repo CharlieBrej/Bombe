@@ -99,24 +99,14 @@ public:
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
     unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
-    std::string val_as_str(int offset = 0)
-    {
-        if (var)
-        {
-            std::string s =  std::string(1, char(var == 2 ? 'b' : 'a'));
-            if (value + offset) s += ((var == 3) ? "^+b+" : "^+") + std::to_string(value + offset) + "^";
-            else if (var == 3) s += "^+b^";
-            return s;
-        }
-        return std::to_string(value + offset);
-    }
+    std::string val_as_str(int offset = 0);
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
     template<class RESP, class IN, class VAR_ARR> RESP apply_rule(IN in, VAR_ARR& vars);
 
     z3::expr apply_z3_rule(z3::expr in, z3::expr_vector& var_vect);
 
-    bool apply_int_rule(unsigned in, int vars[4]);
+    bool apply_int_rule(unsigned in, int vars[32]);
 
     int max();
 };
@@ -233,7 +223,7 @@ public:
 
     GridRule permute(std::vector<int>& p);
     bool covers(GridRule& other);
-    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4]);
+    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     typedef enum {OK, ILLOGICAL, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;
     IsLogicalRep is_legal(GridRule& why);
@@ -346,7 +336,7 @@ public:
         APPLY_RULE_RESP_ERROR
     };
 
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[4]);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[32]);
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region);
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);

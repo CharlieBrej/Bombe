@@ -18,6 +18,50 @@ void grid_set_rnd(int a)
     rnd.gen.seed(a);
 }
 
+std::string RegionType::val_as_str(int offset)
+{
+    std::string s;
+    int dig = 0;
+    for (int i = 0; i <5; i++)
+    {
+        if ((var >> i) & 1)
+        {
+            if (!dig)
+            {
+                s += char('a' + i);
+            }
+            else
+            {
+                if (dig == 1)
+                    s += '^';
+                s += '+';
+                s += char('a' + i);
+            }
+            dig++;
+        }
+    }
+    if (dig)
+    {
+        if (value + offset)
+        {
+            if (dig == 1)
+                s += '^';
+            s += '+';
+            s += std::to_string(value + offset);
+            s += '^';
+        }
+        else if (dig > 1)
+            s += '^';
+    }
+    else
+    {
+        s = std::to_string(value + offset);
+    }
+
+
+    return s;
+}
+
 template<class RESP, class IN, class OTHER>
 RESP RegionType::apply_rule_imp(IN in, OTHER other)
 {
@@ -73,7 +117,7 @@ z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
     return apply_rule<z3::expr,z3::expr, z3::expr_vector>(in, var_vect);
 }
 
-bool RegionType::apply_int_rule(unsigned in, int vars[4])
+bool RegionType::apply_int_rule(unsigned in, int vars[32])
 {
     unsigned v = 0;
     for (unsigned i = 0; i < 2; i++)
@@ -318,7 +362,7 @@ bool GridRule::covers(GridRule& other)
     if (deleted || other.deleted)
         return false;
     if (region_count != other.region_count)
-        return false;
+        return false; 
     for (int i = 0; i < region_count; i++)
         if (region_type[i] != other.region_type[i])
             return false;
@@ -334,7 +378,7 @@ bool GridRule::covers(GridRule& other)
     return true;
 }
 
-bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[4])
+bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
 {
     GridRegion* grid_regions[4] = {r1, r2, r3, r4};
 
@@ -380,29 +424,72 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
                 var_counts[vi] = v;
         }
     }
+    for (int i = 1; i < 32; i++)
+    {
+        if (var_counts[i-1] >= 0)
+        {
+            for (int j = 1; j < 32; j++)
+            {
+                if ((var_counts[j-1] >= 0) && (i != j))
+                {
+                    if ((i & j) == 0)
+                    {
+                        if (var_counts[(i | j) - 1] >= 0)
+                        {
+                            if (var_counts[(i | j) - 1] != var_counts[i - 1] + var_counts[j - 1])
+                                return false;
+                        }
+                        else
+                            var_counts[(i | j) - 1] = var_counts[i - 1] + var_counts[j - 1];
+                    }
+                        
+                    if ((i & j) == i)
+                    {
+                        if (var_counts[(j & ~i) - 1] >= 0)
+                        {
+                            if (var_counts[(j & ~i) - 1] != var_counts[j - 1] - var_counts[i - 1])
+                                return false;
+                        }
+                        else
+                        {
+                            int v = var_counts[j - 1] - var_counts[i - 1];
+                            if (v < 0)
+                                return false;
+                            var_counts[(j & ~i) - 1] = v;
+                            if (i > ((j & ~i) - 1))
+                            {
+                                i = (j & ~i) - 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
-    {
-        var_counts[2] = var_counts[0] + var_counts[1];
-    }
-    if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
-    {
-        var_counts[0] = var_counts[2] - var_counts[1];
-        if (var_counts[0] < 0)
-            return false;
-    }
-    if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
-    {
-        var_counts[1] = var_counts[2] - var_counts[0];
-        if (var_counts[1] < 0)
-            return false;
-    }
+    // if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
+    // {
+    //     var_counts[2] = var_counts[0] + var_counts[1];
+    // }
+    // if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+    // {
+    //     var_counts[0] = var_counts[2] - var_counts[1];
+    //     if (var_counts[0] < 0)
+    //         return false;
+    // }
+    // if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
+    // {
+    //     var_counts[1] = var_counts[2] - var_counts[0];
+    //     if (var_counts[1] < 0)
+    //         return false;
+    // }
 
-    if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
-    {
-        if (var_counts[2] != var_counts[0] + var_counts[1])
-            return false;
-    }
+    // if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+    // {
+    //     if (var_counts[2] != var_counts[0] + var_counts[1])
+    //         return false;
+    // }
 
     for (int i = 1; i < (1 << region_count); i++)
     {
@@ -468,13 +555,26 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
     z3::expr_vector var_vec(c);
     why = *this;
 
-
-    var_vec.push_back(c.int_const("a"));
-    s.add(var_vec[0] >= 0);
-    var_vec.push_back(c.int_const("b"));
-    s.add(var_vec[1] >= 0);
-    var_vec.push_back(c.int_const("a+b"));
-    s.add(var_vec[2] == var_vec[0] + var_vec[1]);
+    for (int v = 1; v < 32; v++)
+    {
+        std::stringstream x_name;
+        x_name << "V" << v;
+        var_vec.push_back(c.int_const(x_name.str().c_str()));
+        if ((v & (v - 1)) == 0)
+        {
+             s.add(var_vec[v - 1] >= 0);
+        }
+        else
+        {
+            z3::expr e = c.int_val(0);
+            for (int i = 0; i < 5; i++)
+            {
+                if ((v >> i) & 1)
+                    e = e + var_vec[(1 << i) - 1];
+            }
+            s.add(var_vec[v - 1] == e);
+        }
+    }
 
     vec.push_back(c.bool_const("DUMMY"));
     if (region_count == 0)
@@ -544,7 +644,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 for (int i = 1; i < (1 << region_count); i++)
                     why.square_counts[i] = RegionType(RegionType::NONE, 0);
 
-                why.square_counts[i] = RegionType(RegionType::EQUAL, 99);
+                why.square_counts[i] = RegionType(RegionType::SET, 0);
                 return ILLOGICAL;
             }
             if (square_counts[i].var)
@@ -601,26 +701,48 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
     {
         // if (!apply_region_type.var)
         //     return OK;
-        unsigned seen = 0;
+        uint64_t seen = 0;
+        uint64_t want = 0;
         for (int i = 0; i < region_count; i++)
-            if (region_type[i].var)
-                seen |= 1 << region_type[i].var;
+            seen |= 1 << region_type[i].var;
         for (int i = 1; i < (1 << region_count); i++)
-            if (square_counts[i].var && square_counts[i].type == RegionType::EQUAL)
+            if (square_counts[i].type == RegionType::EQUAL)
                 seen |= 1 << square_counts[i].var;
-        if (seen == 6 || seen == 10 || seen == 12)
-            return OK;
-        for (int i = 1; i < (1 << region_count); i++)
-            if (square_counts[i].var && square_counts[i].type != RegionType::EQUAL)
-                if (!(seen >> square_counts[i].var & 1))
-                    return UNBOUNDED;
-        if (apply_region_type.var)
+            else
+                want |= 1 << square_counts[i].var;
+        want |= 1 << apply_region_type.var;
+        want &= ~1;
+        seen &= ~1;
+        if (want)
         {
-            if (seen == 8)
-                return UNBOUNDED;
-            if (!(seen >> apply_region_type.var & 1))
-                return UNBOUNDED;
+            for (int i = 1; i < 32; i++)
+            {
+                if ((seen >> i) & 1)
+                {
+                    for (int j = 1; j < 32; j++)
+                    {
+                        if (((seen >> j) & 1) && (i != j))
+                        {
+                            if ((i & j) == 0)
+                                seen |= 1 << (i | j);
+                            if ((i & j) == i)
+                            {
+                                if (((seen >> (j & ~i)) & 1) == 0)
+                                {
+                                    seen |= 1 << (j & ~i);
+                                    if (i > (j & ~i) - 1)
+                                        i = (j & ~i) - 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
         }
+        if (want & ~seen)
+            return UNBOUNDED;
         return OK;
     }
 }
@@ -1728,7 +1850,7 @@ static void add_clear_count(GridRegion* region, int count)
     }
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[4])
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[32])
 {
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
@@ -1966,7 +2088,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                             if (r2 && ((r0 == r2) || (r1 == r2) || (r3 == r2))) continue;
                             if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
                             if (!are_connected(r0, r1, r2, r3)) continue;
-                            int var_counts[4]={-1, -1, -1, -1};
+                            int var_counts[32];
+                            for (int i = 0; i < 32; i++)
+                                var_counts[i] = -1;
                             if (rule.matches(r0, r1, r2, r3, var_counts))
                             {
                                 ApplyRuleResp resp = apply_rule(rule, regions, var_counts);

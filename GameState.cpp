@@ -273,6 +273,9 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_GAME_MODE] = 13000;
     prog_stars[PROG_LOCK_VARS1] = 6000;
     prog_stars[PROG_LOCK_VARS2] = 10000;
+    prog_stars[PROG_LOCK_VARS3] = 14000;
+    prog_stars[PROG_LOCK_VARS4] = 18000;
+    prog_stars[PROG_LOCK_VARS5] = 22000;
     prog_stars[PROG_LOCK_FILTER] = 5000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
@@ -676,7 +679,9 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 }
 
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
-{
+{   
+    GridRule why;
+    assert(rule.is_legal(why) == GridRule::OK);
     if (mode == 1 && rule.region_count == 4)
         return false;
     if (mode == 3)
@@ -2033,6 +2038,12 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 XYPos sp = base_pos + p * size;
                 if (r_type.value == 0)
                 {
+                    if (r_type.type == RegionType::SET)
+                    {
+                        SDL_Rect src_rect = {512, 192, 192, 192};
+                        SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + size * 1 / 8, (int)(size * 6 / 8), (int)(size * 6 / 8)};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    }
                 }
                 else if (r_type.value == 1)
                 {
@@ -3321,25 +3332,18 @@ void GameState::render(bool saving)
         }
 
 
-        if (render_lock(PROG_LOCK_NUMBER_TYPES, right_panel_offset + XYPos(0, button_size * 7.4), button_size * 5))
+        if (render_lock(PROG_LOCK_NUMBER_TYPES, right_panel_offset + XYPos(0, button_size * 7.3), button_size * 5))
         {
             FOR_XY(pos, XYPos(), XYPos(5, 2))
             {
                 RegionType r_type = select_region_type;
                 if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
                     r_type.value = 0;
-                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 7.4);
+                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 7.3);
                 r_type.type = menu_region_types[pos.y][pos.x];
                 if (r_type.type == RegionType::NONE)
                 {
-                    if (game_mode == 3)
-                        continue;
-                    if (!render_lock(PROG_LOCK_VARS1 + pos.y, bpos, button_size))
-                        continue;
-                    r_type = RegionType(RegionType::EQUAL, 0);
-                    r_type.var = (1 << pos.y);
-                    if (select_region_type.var & (1 << pos.y))
-                        render_box(bpos, XYPos(button_size, button_size), button_size/4);
+                    continue;
                 }
                 if (region_type == r_type)
                     render_box(bpos, XYPos(button_size, button_size), button_size/4);
@@ -3354,7 +3358,7 @@ void GameState::render(bool saving)
                 if (r_type.type == RegionType::NONE || r_type.type == RegionType::SET || r_type.type == RegionType::VISIBILITY)
                     r_type.type = RegionType::EQUAL;
 
-                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 9.8);
+                XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 9.6);
                 r_type.value = pos.y * 5 + pos.x;
                 if (region_type == r_type)
                     render_box(bpos, XYPos(button_size, button_size), button_size/4);
@@ -3362,6 +3366,24 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
                 add_clickable_highlight(dst_rect);
             }
+
+            for (int i = 0; i < 5; i++)
+            {
+                XYPos bpos = right_panel_offset + XYPos(i * button_size, button_size * 11.8);
+                if (game_mode == 3)
+                    continue;
+                if (!render_lock(PROG_LOCK_VARS1 + i, bpos, button_size))
+                    continue;
+                RegionType r_type = RegionType(RegionType::EQUAL, 0);
+                r_type.var = (1 << i);
+                if (select_region_type.var & (1 << i))
+                    render_box(bpos, XYPos(button_size, button_size), button_size/4);
+
+                render_region_type(r_type, bpos, button_size);
+                SDL_Rect dst_rect = {bpos.x, bpos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
+            }
+
         }
 
 
@@ -4473,17 +4495,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         if(prog_seen[PROG_LOCK_NUMBER_TYPES])
         {
-            if ((pos - XYPos(button_size * 0, button_size * 7.4)).inside(XYPos(5 * button_size, 2 * button_size)))
+            if ((pos - XYPos(button_size * 0, button_size * 7.3)).inside(XYPos(5 * button_size, 2 * button_size)))
             {
-                XYPos region_item_selected = (pos - XYPos(0, button_size * 7.4)) / button_size;
+                XYPos region_item_selected = (pos - XYPos(0, button_size * 7.3)) / button_size;
                 RegionType::Type t = menu_region_types[region_item_selected.y][region_item_selected.x];
                 if (t == RegionType::NONE)
                 {
-                    if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1 + region_item_selected.y])
-                    {
-                        select_region_type.var ^= (1 << region_item_selected.y);
-                        region_type = select_region_type;
-                    }
                 }
                 else
                 {
@@ -4492,11 +4509,20 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 }
             }
 
-            if ((pos - XYPos(button_size * 0, button_size * 9.8)).inside(XYPos(5 * button_size, 2 * button_size)))
+            if ((pos - XYPos(button_size * 0, button_size * 9.6)).inside(XYPos(5 * button_size, 2 * button_size)))
             {
-                XYPos region_item_selected = (pos - XYPos(0, button_size * 9.8)) / button_size;
+                XYPos region_item_selected = (pos - XYPos(0, button_size * 9.6)) / button_size;
                 select_region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
                 region_type = select_region_type;
+            }
+            if ((pos - XYPos(button_size * 0, button_size * 11.8)).inside(XYPos(5 * button_size, 1 * button_size)))
+            {
+                int i =  pos.x / button_size;
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1 + i])
+                {
+                    select_region_type.var ^= (1 << i);
+                    region_type = select_region_type;
+                }
             }
         }
 
