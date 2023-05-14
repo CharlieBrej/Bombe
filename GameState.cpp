@@ -280,6 +280,9 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_VARS3] = 14000;
     prog_stars[PROG_LOCK_VARS4] = 18000;
     prog_stars[PROG_LOCK_VARS5] = 22000;
+    // prog_stars[PROG_LOCK_VARS3] = 10000;
+    // prog_stars[PROG_LOCK_VARS4] = 10000;
+    // prog_stars[PROG_LOCK_VARS5] = 10000;
     prog_stars[PROG_LOCK_FILTER] = 5000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
@@ -388,7 +391,7 @@ GameState::~GameState()
         SDL_WaitThread(level_gen_thread, NULL);
         level_gen_thread = NULL;
     }
-
+    Z3_finalize_memory();
 }
 void GameState::reset_levels()
 {
@@ -1925,17 +1928,14 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
 
 bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
 {
-    if (prog_seen[lock_type] > PROG_ANIM_MAX)
+    if (prog_seen[lock_type] >= PROG_ANIM_MAX)
         return true;
 
     int togo = prog_stars[lock_type] - cur_stars;
-    if (togo <= 0 && prog_seen[lock_type] == 0)
-        prog_seen[lock_type] = 1;
-
-    if (prog_seen[lock_type])
+    if (togo <= 0)
     {
-        prog_seen[lock_type] += frame_step;
         star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
+        prog_seen[lock_type] += frame_step;
         return true;
     }
     int min_siz = std::min(size.x, size.y);
@@ -2710,6 +2710,38 @@ void GameState::render(bool saving)
                 render_number(display_rules_level ? rule.level_clear_count : rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
             }
 
+            if (!display_clipboard_rules && display_rules_click_drag && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
+            {
+                if (inspected_rule.rule != &rule)
+                {
+                    if ((display_rules_sort_col != 0) || (display_rules_sort_dir != true))
+                    {
+                        display_rules_sort_col = 0;
+                        display_rules_sort_dir = true;
+                    }
+                    else
+                    {
+                        std::list<GridRule>::iterator from, to = rules[game_mode].end();
+
+                        for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
+                        {
+                            if (&(*it) == &rule)
+                            {
+                                to = it;
+                                to++;
+                            }
+                            if (&(*it) == inspected_rule.rule)
+                            {
+                                from = it;
+                                to--;
+                            }
+                        }
+                        rules[game_mode].splice(to, rules[game_mode], from);
+                    }
+                }
+                
+
+            }
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
@@ -4773,26 +4805,26 @@ bool GameState::events()
                     case SDL_SCANCODE_E:
                         key_held = 'E';
                         break;
-                    // case SDL_SCANCODE_C:
-                    // {
-                    //     std::string s = grid->to_string();
-                    //     SDL_SetClipboardText(s.c_str());
-                    //     break;
-                    // }
-                    // case SDL_SCANCODE_V:
-                    // {
-                    //     char* s = SDL_GetClipboardText();
-                    //     clue_solves.clear();
-                    //     reset_rule_gen_region();
-                    //     delete grid;
-                    //     grid = Grid::Load(s);
-                    //     SDL_free(s);
-                    //     grid_cells_animation.clear();
-                    //     grid_regions_animation.clear();
-                    //     grid_regions_fade.clear();
-                    //     current_level_is_temp = true;
-                    //     break;
-                    // }
+                    case SDL_SCANCODE_C:
+                    {
+                        std::string s = grid->to_string();
+                        SDL_SetClipboardText(s.c_str());
+                        break;
+                    }
+                    case SDL_SCANCODE_V:
+                    {
+                        char* s = SDL_GetClipboardText();
+                        clue_solves.clear();
+                        reset_rule_gen_region();
+                        delete grid;
+                        grid = Grid::Load(s);
+                        SDL_free(s);
+                        grid_cells_animation.clear();
+                        grid_regions_animation.clear();
+                        grid_regions_fade.clear();
+                        current_level_is_temp = true;
+                        break;
+                    }
                     case SDL_SCANCODE_ESCAPE:
                         display_menu = true;
                         break;

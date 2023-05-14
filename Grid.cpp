@@ -776,7 +776,9 @@ void GridRule::resort_region()
     for(int i=0;i<region_count;i++)
         idx.push_back(i);
     std::sort (idx.begin(), idx.end(), sorter);
-    sort_perm = idx[0] | (idx[1] << 2) | (idx[2] << 4) | (idx[3] << 6);
+    sort_perm = 0;
+    for(int i = 0; i < region_count; i++)
+        sort_perm = idx[i] << (i * 2);
 }
 
 RegionType GridRule::get_region_sorted(int index)
