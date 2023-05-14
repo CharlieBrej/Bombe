@@ -398,7 +398,8 @@ void GameState::reset_levels()
     current_level_group_index = 0;
     current_level_set_index = 0;
     current_level_index = 0;
-    load_level = 1;
+    load_level = true;
+    force_load_level = false;
 
     for (GridRule& rule : rules[game_mode])
     {
@@ -766,7 +767,7 @@ void GameState::advance(int steps)
     if (max_stars < totcount)
         max_stars = totcount;
 
-    if (!(load_level || skip_level) && grid->is_solved() && !current_level_is_temp)
+    if (!(load_level || skip_level) && !force_load_level && grid->is_solved() && !current_level_is_temp)
     {
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
@@ -797,32 +798,33 @@ void GameState::advance(int steps)
     if (load_level || skip_level)
     {
         clue_solves.clear();
-        if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
+        if (force_load_level || level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
         {
-            do 
-            {
-                if (load_level)
+            if (!force_load_level)
+                do
                 {
-                    load_level = false;
-                    continue;
-                }
-                else if (skip_level < 0)
-                {
-                    if (current_level_index == 0)
-                        current_level_index = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
-                    current_level_index--;
-                }
-                else
-                {
-                    current_level_index++;
-                    if (current_level_index >= level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size())
+                    if (load_level)
                     {
-                        current_level_index = 0;
-                        auto_progress = false;
+                        load_level = false;
+                        continue;
+                    }
+                    else if (skip_level < 0)
+                    {
+                        if (current_level_index == 0)
+                            current_level_index = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
+                        current_level_index--;
+                    }
+                    else
+                    {
+                        current_level_index++;
+                        if (current_level_index >= level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size())
+                        {
+                            current_level_index = 0;
+                            auto_progress = false;
+                        }
                     }
                 }
-            }
-            while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index]);
+                while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index]);
 
             std::string& s = (current_level_group_index == GLBAL_LEVEL_SETS) ?
                         server_levels[current_level_set_index][current_level_index] :
@@ -849,6 +851,7 @@ void GameState::advance(int steps)
         else
             auto_progress = false;
         skip_level = 0;
+        load_level = false;
     }
 
     if (auto_progress_all && !auto_progress)
@@ -2507,7 +2510,7 @@ void GameState::render(bool saving)
                 col_click = 0;
         }
         {
-            SDL_Rect src_rect = {704 + 1 * 192, 2144, 192, 192};
+            SDL_Rect src_rect = {1792, 2144, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Pass Rate");
@@ -2515,7 +2518,7 @@ void GameState::render(bool saving)
                 col_click = 1;
         }
         {
-            SDL_Rect src_rect = {704 + 2 * 192, 2144, 192, 192};
+            SDL_Rect src_rect = {896, 2336, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 2 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Solved");
@@ -2615,7 +2618,7 @@ void GameState::render(bool saving)
                 }
                 else if (rep < 100)
                 {
-                    digits = "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+                    digits = "0." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
                 }
                 else if (rep < 1000)
                 {
@@ -2635,6 +2638,12 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
 
+            if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + level_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
+            {
+                current_level_index = index;
+                force_load_level = true;
+                load_level = true;
+            }
 
         }
 
@@ -4469,6 +4478,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
         skip_level = (btn == 2) ? -1 : 1;
+        force_load_level = false;
     }
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
@@ -4544,7 +4554,8 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             current_level_group_index = x;
             current_level_set_index = 0;
             current_level_index = 0;
-            load_level = 1;
+            load_level = true;
+            force_load_level = false;
             auto_progress = false;
 
             auto_progress_all = (clicks > 1);
@@ -4562,7 +4573,8 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         {
             current_level_set_index = idx;
             current_level_index = 0;
-            load_level = 1;
+            load_level = true;
+            force_load_level = false;
             auto_progress =  (clicks > 1);
             auto_progress_all = false;
         }
@@ -5070,6 +5082,7 @@ bool GameState::events()
                     case SDL_SCANCODE_F3:
                     {
                         skip_level = 1;
+                        force_load_level = false;
                         break;
                     }
                     case SDL_SCANCODE_F4:
@@ -5253,7 +5266,8 @@ bool GameState::events()
                             current_level_group_index = 0;
                             current_level_set_index = 0;
                             current_level_index = 0;
-                            load_level = 1;
+                            load_level = true;
+                            force_load_level = false;
                             region_type = RegionType(RegionType::SET, 0);
                             select_region_type = RegionType(RegionType::EQUAL, 0);
                             game_mode = index;

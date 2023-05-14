@@ -186,6 +186,7 @@ public:
 
     int skip_level = 0;
     bool load_level = true;
+    bool force_load_level = false;
     bool auto_progress = false;
     bool auto_progress_all = false;
     double steps_had = 0;
