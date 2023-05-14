@@ -119,8 +119,20 @@ z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
 
 bool RegionType::apply_int_rule(unsigned in, int vars[32])
 {
-    unsigned v = vars[var - 1];
-    assert(v>=0);
+    int v = 0;
+    if (var)
+    {
+        for (unsigned i = 0; i < 5; i++)
+        {
+            if ((var >> i) & 1)
+            {
+                if (vars[(1 << i) - 1] == -1)
+                    return false;
+                v += vars[(1 << i) - 1];
+            }
+        }
+        assert(vars[var - 1]  == v);
+    }
     return apply_rule_imp<bool,unsigned>(in, v + value);
 }
 
@@ -1733,6 +1745,16 @@ bool Grid::add_region(GridRegion& reg, bool front)
             return false;
         }
     }
+
+    cnt = 0;
+    FOR_XY_SET(p, reg.elements)
+    {
+        if (vals[p].bomb)
+            cnt++;
+    }
+    assert(!reg.type.var);
+    assert((reg.type.apply_rule_imp<bool,unsigned>(cnt, reg.type.value)));
+
 
     if (front)
     {
