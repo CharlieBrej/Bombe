@@ -66,6 +66,7 @@ public:
     bool display_rules = false;
     bool display_clipboard_rules = false;
     bool display_scores = false;
+    bool display_levels = false;
     bool display_modes = false;
 
     char key_held = 0;
@@ -101,6 +102,11 @@ public:
     int display_rules_sort_col_2nd = 1;
     bool display_rules_sort_dir_2nd = true;
     bool display_rules_level = false;
+    int display_levels_sort_col = 0;
+    bool display_levels_sort_dir = true;
+    int display_levels_sort_col_2nd = 1;
+    bool display_levels_sort_dir_2nd = true;
+    bool display_levels_level = false;
 
     struct ConstructedRuleState
     {

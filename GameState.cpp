@@ -2490,6 +2490,202 @@ void GameState::render(bool saving)
         display_rules_click = false;
 
     }
+    else if (display_levels)
+    {
+        int row_count = 16;
+        int rules_list_size = panel_size.y;
+        int cell_width = rules_list_size / 7.5;
+        int cell_height = (rules_list_size - cell_width) / row_count;
+        int col_click = -1;
+        XYPos list_pos = left_panel_offset + XYPos(panel_size.x, 0);
+        {
+            SDL_Rect src_rect = {704 + 0 * 192, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 0 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Level ID");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                col_click = 0;
+        }
+        {
+            SDL_Rect src_rect = {704 + 1 * 192, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Pass Rate");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                col_click = 1;
+        }
+        {
+            SDL_Rect src_rect = {704 + 2 * 192, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 2 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Solved");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                col_click = 2;
+        }
+        {
+            SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 96};
+            SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width / 2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Close");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+            {
+                display_levels = false;
+            }
+        }
+
+        if (col_click >= 0)
+        {
+            if (display_levels_sort_col == col_click)
+                display_levels_sort_dir = !display_levels_sort_dir;
+            else
+            {
+                display_levels_sort_col_2nd = display_levels_sort_col;
+                display_levels_sort_dir_2nd = display_levels_sort_dir;
+                display_levels_sort_col = col_click;
+                display_levels_sort_dir = true;
+            }
+        }
+        {
+            SDL_Rect src_rect = {1088 + (192 * 2) + (display_levels_sort_dir_2nd ? 0 : 192), 2336, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + display_levels_sort_col_2nd * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        {
+            SDL_Rect src_rect = {1088 + (display_levels_sort_dir ? 0 : 192), 2336, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + display_levels_sort_col * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+
+        struct RuleDiplaySort
+        {
+            GameState& state;
+            int col = 0;
+            bool descend = false;
+            RuleDiplaySort(GameState& state_, int col_, bool descend_):
+                state(state_), col(col_), descend(descend_)
+            {};
+            bool operator() (unsigned a_,unsigned b_)
+            {
+                unsigned a = descend ? a_ : b_;
+                unsigned b = descend ? b_ : a_;
+                if (col == 0)
+                    return (a < b);
+                if (col == 1)
+                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_stats[a] < 
+                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_stats[b]);
+                if (col == 2)
+                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a] < 
+                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b]);
+                assert(0);
+                return false;
+            }
+        };
+
+        std::vector<unsigned> levels_list;
+
+        for (int i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
+            levels_list.push_back(i);
+
+        std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_rules_sort_col_2nd, display_rules_sort_dir_2nd));
+        std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_levels_sort_col, display_levels_sort_dir));
+
+        if (rules_list_offset + row_count > levels_list.size())
+            rules_list_offset = levels_list.size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+
+        for (int level_index = 0; level_index < row_count; level_index++)
+        {
+            if (level_index + rules_list_offset >= levels_list.size())
+                break;
+            unsigned index = levels_list[level_index + rules_list_offset];
+
+            if (index == current_level_index)
+            {
+                render_box(list_pos + XYPos(0, cell_width + level_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
+            }
+            render_number(index, list_pos + XYPos(0 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+
+            {
+                unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_stats[index];
+
+                std::string digits;
+                if (rep == 0)
+                {
+                    digits = "0%";
+                }
+                else if (rep < 100)
+                {
+                    digits = "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+                }
+                else if (rep < 1000)
+                {
+                    digits = std::to_string((rep / 100) % 10) + "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+                }
+                else 
+                {
+                    digits = std::to_string((rep / 1000) % 10) + std::to_string((rep / 100) % 10) + "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+                }
+
+                render_number_string(digits, list_pos + XYPos(1 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            }
+            {
+                bool rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
+                SDL_Rect src_rect = {1280, rep ? 2240 : 2144, 96, 96};
+                SDL_Rect dst_rect = {list_pos.x + cell_width * 2 + (cell_width - cell_height) / 2, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+
+
+        }
+
+
+
+        {
+            SDL_Rect src_rect = {1664, 1344, 64, 64};
+            SDL_Rect dst_rect = {list_pos.x + cell_width * 7, list_pos.y + cell_width * 1, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset--;
+        }
+        {
+            SDL_Rect src_rect = {1664, 1408, 64, 64};
+            SDL_Rect dst_rect = {list_pos.x + cell_width * 7, list_pos.y + cell_width * 7, cell_width/2, cell_width/2};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                rules_list_offset++;
+        }
+
+        if (rules_list_offset + row_count > levels_list.size())
+            rules_list_offset = levels_list.size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+
+        {
+            int full_size = cell_width * 5.5;
+            int all_count = levels_list.size();
+            int box_height = full_size;
+            int box_pos = 0;
+
+            if (all_count > row_count)
+            {
+                box_height = (row_count * full_size) / all_count;
+                box_height = std::max(cell_width / 4, box_height);
+                box_pos = (rules_list_offset * (full_size - box_height)) / (all_count - row_count);
+                if (display_rules_click_drag && ((display_rules_click_pos - list_pos - XYPos(cell_width * 7, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 5.5))))
+                {
+                    int p = mouse.y - list_pos.y - cell_width * 1.5 - box_height / 2;
+                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    rules_list_offset = p;
+                }
+            }
+
+            render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
+        }
+
+        if (rules_list_offset + row_count > (int)levels_list.size())
+            rules_list_offset = levels_list.size() - row_count;
+        rules_list_offset = std::max(rules_list_offset, 0);
+        display_rules_click = false;
+    }
     else if (display_rules)
     {
         int row_count = 16;
@@ -2651,11 +2847,19 @@ void GameState::render(bool saving)
                     return (a.rule->region_count < b.rule->region_count);
                 }
                 if (col == 5)
+                {
+                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        b.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return true;
                     if (cur_level)
                         return (a.rule->level_used_count < b.rule->level_used_count);
                     else
                         return (a.rule->used_count < b.rule->used_count);
+                }
                 if (col == 6)
+                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        b.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return true;
                     if (cur_level)
                         return (a.rule->level_clear_count < b.rule->level_clear_count);
                     else
@@ -2712,7 +2916,7 @@ void GameState::render(bool saving)
 
             if (!display_clipboard_rules && display_rules_click_drag && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
-                if (inspected_rule.rule != &rule)
+                if (inspected_rule.rule != &rule && (right_panel_mode == RIGHT_MENU_RULE_INSPECT))
                 {
                     if ((display_rules_sort_col != 0) || (display_rules_sort_dir != true))
                     {
@@ -3221,11 +3425,13 @@ void GameState::render(bool saving)
         add_tooltip(dst_rect, "Import Clipboard");
     }
     {
-        SDL_Rect src_rect = {1920, 384, 192, 192};
+        if (display_levels)
+            render_box(left_panel_offset + XYPos(button_size * 0, button_size * 3), XYPos(button_size * 2, button_size), button_size/4);
+        SDL_Rect src_rect = {1408, 2144, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         dst_rect.w *= 2;
-        add_tooltip(dst_rect, "Current Level", false);
+        add_tooltip(dst_rect, "Current Level");
         unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_stats[current_level_index];
 
         std::string digits;
@@ -4153,7 +4359,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
     grid_dragging = true;
     grid_dragging_last_pos = mouse;
 
-    if (display_scores || display_rules)
+    if (display_scores || display_rules || display_levels)
     {
         display_rules_click = true;
         display_rules_click_drag = true;
@@ -4283,13 +4489,31 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     {
         display_rules = !display_rules;
         display_clipboard_rules = false;
-        if (display_rules) display_scores = false;
+        if (display_rules)
+        {
+            display_levels = false;
+            display_levels = false;
+        }
+    }
+    if ((pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size * 2, button_size)))
+    {
+        display_levels = !display_levels;
+        display_clipboard_rules = false;
+        if (display_levels)
+        {
+            display_rules = false;
+            display_scores = false;
+        }
     }
     if ((pos - XYPos(button_size * 0, button_size * 4)).inside(XYPos(button_size * 2, button_size)))
     {
         display_scores = !display_scores;
-        if (display_scores) display_rules = false;
         display_clipboard_rules = false;
+        if (display_scores)
+        {
+            display_rules = false;
+            display_levels = false;
+        }
     }
 
     if ((pos - XYPos(button_size * 2, button_size * 2)).inside(XYPos(button_size, button_size)) && prog_seen[PROG_LOCK_GAME_MODE])
@@ -5074,7 +5298,7 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
-                if (display_rules || display_scores)
+                if (display_rules || display_scores || display_levels)
                 {
                     rules_list_offset -= e.wheel.y;
                     break;
