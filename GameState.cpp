@@ -847,6 +847,7 @@ void GameState::advance(int steps)
                 rule.level_used_count = 0;
                 rule.level_clear_count = 0;
             }
+            display_levels_center_current = true;
         }
         else
             auto_progress = false;
@@ -1178,7 +1179,8 @@ void GameState::reset_rule_gen_region()
     constructed_rule_undo.clear();
     constructed_rule_redo.clear();
     update_constructed_rule();
-    right_panel_mode = RIGHT_MENU_NONE;
+    if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_REGION)
+        right_panel_mode = RIGHT_MENU_NONE;
     filter_pos.clear();
 }
 
@@ -1934,13 +1936,16 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
     if (prog_seen[lock_type] >= PROG_ANIM_MAX)
         return true;
 
-    int togo = prog_stars[lock_type] - cur_stars;
-    if (togo <= 0)
+    if (prog_stars[lock_type] <= max_stars)
     {
-        star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
-        prog_seen[lock_type] += frame_step;
+        if (lock_type < PROG_ANIM_MAX)
+        {
+            star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
+            prog_seen[lock_type] += frame_step;
+        }
         return true;
     }
+    int togo = prog_stars[lock_type] - cur_stars;
     int min_siz = std::min(size.x, size.y);
     XYPos offset = XYPos((size.x - min_siz) / 2, (size.y - min_siz) / 2);
 
@@ -2589,9 +2594,17 @@ void GameState::render(bool saving)
         for (int i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
             levels_list.push_back(i);
 
-        std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_rules_sort_col_2nd, display_rules_sort_dir_2nd));
+        std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_levels_sort_col_2nd, display_levels_sort_dir_2nd));
         std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_levels_sort_col, display_levels_sort_dir));
 
+        if (display_levels_center_current)
+            for (int i = 0; i < levels_list.size(); i++)
+                if (levels_list[i] == current_level_index)
+                {
+                    rules_list_offset = i - 8;
+                    break;
+                }
+        display_levels_center_current = false;
         if (rules_list_offset + row_count > levels_list.size())
             rules_list_offset = levels_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
@@ -2641,7 +2654,7 @@ void GameState::render(bool saving)
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + level_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
                 current_level_index = index;
-                force_load_level = true;
+                force_load_level = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
                 load_level = true;
             }
 
@@ -5182,10 +5195,10 @@ bool GameState::events()
                     {
                         if (p == XYPos(1, 4))
                         {
-                            reset_levels();
-                            if (!display_reset_confirm_levels_only)
+                            if (display_reset_confirm_levels_only)
+                                reset_levels();
+                            else
                                 rules[game_mode].clear();
-
                             display_reset_confirm = false;
                         }
                         if (p == XYPos(5, 4))

@@ -67,6 +67,7 @@ public:
     bool display_clipboard_rules = false;
     bool display_scores = false;
     bool display_levels = false;
+    bool display_levels_center_current = false;
     bool display_modes = false;
 
     char key_held = 0;
