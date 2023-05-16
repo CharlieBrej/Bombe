@@ -179,6 +179,7 @@ public:
 
     GridRegionCause gen_cause;
     GridRegionCause vis_cause;
+    float priority = 0;
 
     GridRegion(RegionType type);
     bool overlaps(GridRegion& other);
@@ -202,6 +203,7 @@ public:
 class GridRule
 {
 public:
+    int8_t priority = 0;
     uint8_t region_count = 0;
     RegionType region_type[4] = {};
     RegionType square_counts[16] = {};

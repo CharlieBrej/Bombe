@@ -226,6 +226,8 @@ GridRule::GridRule(SaveObject* sobj)
         if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
     }
 
+    if (omap->has_key("priority"))
+        priority = omap->get_num("priority");
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
@@ -252,6 +254,7 @@ SaveObject* GridRule::save(bool lite)
     omap->add_num("region_count", region_count);
     omap->add_num("apply_region_type", apply_region_type.as_int());
     omap->add_num("apply_region_bitmap", apply_region_bitmap);
+    omap->add_num("priority", priority);
 
     SaveObjectList* region_type_list = new SaveObjectList;
     for (int i = 0; i < region_count; i++)
@@ -1963,6 +1966,15 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             reg.elements.set(pos);
         }
         reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+        reg.priority = rule.priority;
+        float f = 0;
+        for (int i = 0; i < rule.region_count; i++)
+            f += r[i]->priority;
+        f /= rule.region_count;
+        f /= 10;
+        f += rule.priority;
+        reg.priority = f;
+
         bool added = add_region(reg);
         if (added)
         {
@@ -2159,14 +2171,12 @@ void Grid::add_new_regions()
 
 bool Grid::add_one_new_region(GridRegion* r)
 {
+    if (regions_to_add.empty())
+        return false;
+
     std::list<GridRegion>::iterator it = regions_to_add.begin();
     while (it != regions_to_add.end())
     {
-        if (r && !(*it).has_ancestor(r))
-        {
-            it++;
-            continue;
-        }
         GridRegionCause c = (*it).gen_cause;
         if (regions_set.count(&*it) ||
             (
@@ -2179,22 +2189,35 @@ bool Grid::add_one_new_region(GridRegion* r)
             it = regions_to_add.erase(it);
         }
         else
-        {
-            if ((*it).gen_cause.rule)
-            {
-                (*it).gen_cause.rule->level_used_count++;
-            }
-
-            remove_from_regions_to_add_multiset(&(*it));
-            regions_set.insert(&(*it));
-            regions.splice(regions.end(), regions_to_add, it);
-            return true;
-        }
+            it++;
     }
-    if (r)
-        return add_one_new_region(NULL);
-    assert(regions_to_add.empty());
-    return false;
+
+    if (regions_to_add.empty())
+        return false;
+
+    it = regions_to_add.begin();
+    std::list<GridRegion>::iterator best_reg = regions_to_add.begin();
+    float best_pri = (*best_reg).priority;
+    while (it != regions_to_add.end())
+    {
+        float pri = (*it).priority;
+        if (r && !(*it).has_ancestor(r))
+            pri += 10;
+        if (pri > best_pri)
+        {
+            best_pri = pri;
+            best_reg = it;
+        }
+        it++;
+    }
+    if ((*best_reg).gen_cause.rule)
+        (*best_reg).gen_cause.rule->level_used_count++;
+
+    best_reg = regions_to_add.begin();
+    remove_from_regions_to_add_multiset(&(*best_reg));
+    regions_set.insert(&(*best_reg));
+    regions.splice(regions.end(), regions_to_add, best_reg);
+    return true;
 }
 
 void Grid::clear_regions()

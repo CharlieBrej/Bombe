@@ -720,7 +720,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
         if (constructed_rule.apply_region_bitmap && constructed_rule.apply_region_type.var)
             return false;
     }
-    if (rule.apply_region_type.type == RegionType::VISIBILITY && (mode == 2 || mode == 3))
+    if (rule.apply_region_type.type != RegionType::VISIBILITY && (mode == 2 || mode == 3))
     {
         int rule_cnt = 0;
         for (GridRule& rule : rules[game_mode])
@@ -4132,6 +4132,37 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Copy Rule to Clipboard Image");
             }
+            {
+                SDL_Rect src_rect = {2240, 1344, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Maximum Priority");
+            }
+            {
+                SDL_Rect src_rect = {2240, 1344 + 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 8, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "High Priority");
+            }
+            {
+                SDL_Rect src_rect = {2240, 1344 + 2 * 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Medium Priority");
+            }
+            {
+                SDL_Rect src_rect = {2240, 1344 + 3 * 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Low Priority");
+            }
+            {
+                SDL_Rect src_rect = {2240, 1344 + 4 * 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Minimum Priority");
+            }
+            render_box(right_panel_offset + XYPos(button_size * 0, button_size * (9 - inspected_rule.rule->priority)), XYPos(button_size, button_size), button_size/4);
         }
     }
     {
@@ -4747,6 +4778,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             send_rule_to_img_clipboard(*inspected_rule.rule);
         }
+        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
+            inspected_rule.rule->priority = 2;
+        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(button_size, button_size)))
+            inspected_rule.rule->priority = 1;
+        if ((pos - XYPos(button_size * 0, button_size * 9)).inside(XYPos(button_size, button_size)))
+            inspected_rule.rule->priority = 0;
+        if ((pos - XYPos(button_size * 0, button_size * 10)).inside(XYPos(button_size, button_size)))
+            inspected_rule.rule->priority = -1;
+        if ((pos - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size, button_size)))
+            inspected_rule.rule->priority = -2;
     }
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
