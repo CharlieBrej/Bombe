@@ -57,6 +57,7 @@ public:
 
     Grid *grid;
     std::list<GridRule> rules[GAME_MODES];
+    int rule_del_count[GAME_MODES] = {};
 
     bool display_menu = false;
     bool display_help = false;

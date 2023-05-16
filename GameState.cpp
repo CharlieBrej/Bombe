@@ -143,8 +143,14 @@ GameState::GameState(std::string& load_data, bool json)
                 server_levels_version = omap->get_num("server_levels_version");
             }
 
-            std::list<SaveObjectMap*> modes;
+            if (omap->has_key("rule_del_count"))
+            {
+                SaveObjectList* dlist = omap->get_item("rule_del_count")->get_list();
+                for (int k = 0; k < dlist->get_count() && k < GAME_MODES; k++)
+                    rule_del_count[k] = dlist->get_item(k)->get_num();
+            }
 
+            std::list<SaveObjectMap*> modes;
             if (omap->has_key("modes"))
             {
                 SaveObjectList* mode_lists = omap->get_item("modes")->get_list();
@@ -266,8 +272,8 @@ GameState::GameState(std::string& load_data, bool json)
 
     prog_stars[PROG_LOCK_HEX] = 0;
     prog_stars[PROG_LOCK_SQUARE] = 500;
-    prog_stars[PROG_LOCK_TRIANGLE] = 4001;
-    prog_stars[PROG_LOCK_GRID] = 8000;
+    prog_stars[PROG_LOCK_TRIANGLE] = 5000;
+    prog_stars[PROG_LOCK_GRID] = 10000;
     prog_stars[PROG_LOCK_SERVER] = 12000;
     prog_stars[PROG_LOCK_NUMBER_TYPES] = 100;
     prog_stars[PROG_LOCK_VISIBILITY] = 2000;
@@ -283,7 +289,7 @@ GameState::GameState(std::string& load_data, bool json)
     // prog_stars[PROG_LOCK_VARS3] = 10000;
     // prog_stars[PROG_LOCK_VARS4] = 10000;
     // prog_stars[PROG_LOCK_VARS5] = 10000;
-    prog_stars[PROG_LOCK_FILTER] = 5000;
+    prog_stars[PROG_LOCK_FILTER] = 7000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -342,6 +348,11 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("full_screen", full_screen);
     omap->add_num("max_stars", max_stars);
 
+    SaveObjectList* dc_list = new SaveObjectList;
+    for (int i = 0; i < GAME_MODES; i++)
+        dc_list->add_num(rule_del_count[i]);
+    omap->add_item("rule_del_count", dc_list);
+
     SaveObjectList* sl_list = new SaveObjectList;
     for (std::vector<std::string>& lvl_set : server_levels)
     {
@@ -395,6 +406,7 @@ GameState::~GameState()
 }
 void GameState::reset_levels()
 {
+    rule_del_count[game_mode] = 0;
     current_level_group_index = 0;
     current_level_set_index = 0;
     current_level_index = 0;
@@ -714,6 +726,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
         for (GridRule& rule : rules[game_mode])
             if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
                 rule_cnt++;
+        rule_cnt += rule_del_count[game_mode];
         if (game_mode == 2 && rule_cnt >= 100)
             return false;
         if (game_mode == 3 && rule_cnt >= 300)
@@ -1233,6 +1246,8 @@ void GameState::update_constructed_rule()
             if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
                 rule_cnt++;
         }
+        rule_cnt += rule_del_count[game_mode];
+
         if (game_mode == 2 && rule_cnt >= 100)
             constructed_rule_is_logical = GridRule::LIMIT;
         if (game_mode == 3 && rule_cnt >= 300)
@@ -3429,7 +3444,14 @@ void GameState::render(bool saving)
                     rule_count++;
             }
         }
-        render_number(rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
+
+        std::string digits = std::to_string(rule_count);
+        if ((game_mode ==  2 || game_mode == 3) && rule_del_count[game_mode])
+        {
+            digits += "+" + std::to_string(rule_del_count[game_mode]);
+        }
+
+        render_number_string(digits, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
         render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
     }
     if (render_lock(PROG_LOCK_GAME_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + 2 * button_size), XYPos(button_size, button_size)))
@@ -4690,7 +4712,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             inspected_rule.rule->deleted = true;
             right_panel_mode = RIGHT_MENU_NONE;
             if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (game_mode == 2 || game_mode == 3))
-                reset_levels();
+                rule_del_count[game_mode]++;
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
@@ -4947,7 +4969,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                             if (game_mode == 2 || game_mode == 3)
                             {
                                 if (replace_rule->apply_region_type.type != RegionType::VISIBILITY)
-                                    reset_levels();
+                                    rule_del_count[game_mode]++;
                             }
                             *replace_rule = constructed_rule;
                             inspected_rule = GridRegionCause(replace_rule, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
@@ -5198,7 +5220,11 @@ bool GameState::events()
                             if (display_reset_confirm_levels_only)
                                 reset_levels();
                             else
+                            {
                                 rules[game_mode].clear();
+                                if (game_mode == 2 || game_mode == 3)
+                                    reset_levels();
+                            }
                             display_reset_confirm = false;
                         }
                         if (p == XYPos(5, 4))
