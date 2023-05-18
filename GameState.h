@@ -260,6 +260,7 @@ public:
         PROG_LOCK_VARS5,
 
         PROG_LOCK_FILTER,
+        PROG_LOCK_PRIORITY,
 
         PROG_LOCK_TOTAL
         };

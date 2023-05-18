@@ -290,6 +290,7 @@ GameState::GameState(std::string& load_data, bool json)
     // prog_stars[PROG_LOCK_VARS4] = 10000;
     // prog_stars[PROG_LOCK_VARS5] = 10000;
     prog_stars[PROG_LOCK_FILTER] = 7000;
+    prog_stars[PROG_LOCK_PRIORITY] = 16000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -4132,37 +4133,83 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Copy Rule to Clipboard Image");
             }
+
+            if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY)
             {
-                SDL_Rect src_rect = {2240, 1344, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Maximum Priority");
+                if (render_lock(PROG_LOCK_PRIORITY, right_panel_offset + XYPos(0, 7 * button_size), XYPos(button_size, 5 * button_size)))
+                {
+                    {
+                        SDL_Rect src_rect = {2240, 1344, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7, button_size, button_size};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Maximum Priority");
+                    }
+                    {
+                        SDL_Rect src_rect = {2240, 1344 + 192, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 8, button_size, button_size};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "High Priority");
+                    }
+                    {
+                        SDL_Rect src_rect = {2240, 1344 + 2 * 192, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9, button_size, button_size};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Medium Priority");
+                    }
+                    {
+                        SDL_Rect src_rect = {2240, 1344 + 3 * 192, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10, button_size, button_size};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Low Priority");
+                    }
+                    {
+                        SDL_Rect src_rect = {2240, 1344 + 4 * 192, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        add_tooltip(dst_rect, "Minimum Priority");
+                    }
+                    int p = std::clamp((int)inspected_rule.rule->priority, -2, 2);
+                    render_box(right_panel_offset + XYPos(button_size * 0, button_size * (9 - p)), XYPos(button_size, button_size), button_size/4);
+                }
+
+                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4);
+                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 11), XYPos(3 * button_size, button_size), button_size/4);
+
+                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4);
+                render_box(right_panel_offset + XYPos(button_size * 4, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4);
+
+                {
+                    SDL_Rect src_rect = {1408, 2144, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 9, button_size, button_size};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Level", false);
+                }
+                {
+                    SDL_Rect src_rect = {1600, 2144, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 9, button_size, button_size};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Global", false);
+                }
+
+                {
+                    SDL_Rect src_rect = {704, 2336, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 10, button_size, button_size};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Times Applied", false);
+                }
+                {
+                    SDL_Rect src_rect = {512, 192, 192, 192};
+                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 11, button_size, button_size};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    add_tooltip(dst_rect, "Cells Cleared", false);
+                }
+
+
+                render_number(inspected_rule.rule->level_used_count, right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(inspected_rule.rule->used_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(inspected_rule.rule->level_clear_count, right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             }
-            {
-                SDL_Rect src_rect = {2240, 1344 + 192, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 8, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "High Priority");
-            }
-            {
-                SDL_Rect src_rect = {2240, 1344 + 2 * 192, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Medium Priority");
-            }
-            {
-                SDL_Rect src_rect = {2240, 1344 + 3 * 192, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Low Priority");
-            }
-            {
-                SDL_Rect src_rect = {2240, 1344 + 4 * 192, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Minimum Priority");
-            }
-            render_box(right_panel_offset + XYPos(button_size * 0, button_size * (9 - inspected_rule.rule->priority)), XYPos(button_size, button_size), button_size/4);
         }
     }
     {
@@ -4778,16 +4825,19 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             send_rule_to_img_clipboard(*inspected_rule.rule);
         }
-        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
-            inspected_rule.rule->priority = 2;
-        if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(button_size, button_size)))
-            inspected_rule.rule->priority = 1;
-        if ((pos - XYPos(button_size * 0, button_size * 9)).inside(XYPos(button_size, button_size)))
-            inspected_rule.rule->priority = 0;
-        if ((pos - XYPos(button_size * 0, button_size * 10)).inside(XYPos(button_size, button_size)))
-            inspected_rule.rule->priority = -1;
-        if ((pos - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size, button_size)))
-            inspected_rule.rule->priority = -2;
+        if (prog_seen[PROG_LOCK_PRIORITY])
+        {
+            if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
+                inspected_rule.rule->priority = 2;
+            if ((pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(button_size, button_size)))
+                inspected_rule.rule->priority = 1;
+            if ((pos - XYPos(button_size * 0, button_size * 9)).inside(XYPos(button_size, button_size)))
+                inspected_rule.rule->priority = 0;
+            if ((pos - XYPos(button_size * 0, button_size * 10)).inside(XYPos(button_size, button_size)))
+                inspected_rule.rule->priority = -1;
+            if ((pos - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size, button_size)))
+                inspected_rule.rule->priority = -2;
+        }
     }
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
