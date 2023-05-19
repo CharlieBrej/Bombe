@@ -99,6 +99,8 @@ public:
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
+    bool display_rules_click_line = false;
+
     int display_rules_sort_col = 0;
     bool display_rules_sort_dir = true;
     int display_rules_sort_col_2nd = 1;
