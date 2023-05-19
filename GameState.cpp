@@ -291,6 +291,7 @@ GameState::GameState(std::string& load_data, bool json)
     // prog_stars[PROG_LOCK_VARS5] = 10000;
     prog_stars[PROG_LOCK_FILTER] = 7000;
     prog_stars[PROG_LOCK_PRIORITY] = 16000;
+    prog_stars[PROG_LOCK_PRIORITY2] = 16000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -3809,7 +3810,6 @@ void GameState::render(bool saving)
             //
             RegionType r_type(RegionType::EQUAL, (uint8_t) inspected_region->elements.count());
             render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
-
         }
         {
             SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
@@ -3880,6 +3880,25 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Trash");
             }
+        }
+        if (render_lock(PROG_LOCK_PRIORITY2, right_panel_offset + XYPos(button_size * 0, button_size * 8), XYPos(button_size * 2, button_size)))
+        {
+            std::ostringstream out;
+            out << inspected_region->priority;
+            out.str();
+            std::string s = out.str();
+            render_number_string(s, right_panel_offset + XYPos(button_size * 1, button_size * 8 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            int p = std::round(inspected_region->priority);
+            if (p < -2) p = -2;
+            if (p >  2) p =  2;
+            {
+                SDL_Rect src_rect = {2432, 1344 + (2 - p) * 128, 128, 128};
+                SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 8, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = button_size * 2;
+                add_tooltip(dst_rect, "Priority", false);
+            }
+
         }
     }
 

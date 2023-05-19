@@ -1963,7 +1963,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         for (int i = 0; i < rule.region_count; i++)
             f += r[i]->priority;
         f /= rule.region_count;
-        f /= 10;
+        f /= 2;
         f += rule.priority;
         reg.priority = f;
 
