@@ -71,6 +71,9 @@ public:
     bool display_levels_center_current = false;
     bool display_modes = false;
 
+    bool low_contrast = false;
+    uint8_t contrast = 255;
+
     char key_held = 0;
 
     bool dragging_speed = false;
