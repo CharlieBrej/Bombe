@@ -42,6 +42,8 @@ public:
 
     static const int tut_texture_count = 5;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
+    SDL_Texture* overlay_texture;
+    bool overlay_texture_is_clean = true;
 
     std::string steam_session_string;
     std::set <std::string> achievements;
@@ -85,6 +87,7 @@ public:
     enum {
         MOUSE_MODE_NONE,
         MOUSE_MODE_FILTER,
+        MOUSE_MODE_PAINT,
         }
         mouse_mode = MOUSE_MODE_NONE;
     SDL_SystemCursor mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
@@ -175,6 +178,7 @@ public:
     double grid_zoom = 1;
     double target_grid_zoom = 1;
     bool grid_dragging = false;
+    int grid_dragging_btn;
     XYPos grid_dragging_last_pos;
     XYPos scaled_grid_offset;
     int scaled_grid_size = 1;
@@ -310,6 +314,7 @@ public:
     void post_to_server(SaveObject* send, bool sync);
     void fetch_from_server(SaveObject* send, ServerResp* resp);
     void fetch_scores();
+    void clear_overlay();
     SDL_Texture* loadTexture(const char* filename);
 
     bool rule_is_permitted(GridRule& rule, int mode);

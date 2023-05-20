@@ -240,7 +240,9 @@ GameState::GameState(std::string& load_data, bool json)
         SDL_SetWindowIcon(sdl_window, icon_surface);
 	    SDL_FreeSurface(icon_surface);
     }
-
+    overlay_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 2048, 2048);
+    SDL_SetTextureBlendMode(overlay_texture, SDL_BLENDMODE_BLEND);
+    clear_overlay();
 
     for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
     {
@@ -700,6 +702,23 @@ void GameState::fetch_scores()
     fetch_from_server(omap, &scores_from_server);
 }
 
+void GameState::clear_overlay()
+{
+    if (overlay_texture_is_clean)
+        return;
+    uint32_t* pixels;
+    int pitch;
+    int r = SDL_LockTexture(overlay_texture, NULL, (void**)&pixels, &pitch);
+    assert(r == 0);
+    pitch /= 4;
+    FOR_XY(p, XYPos(0, 0), XYPos(2048, 2048))
+    {
+        pixels[p.y * pitch + p.x] = 0;
+    }
+    SDL_UnlockTexture(overlay_texture);
+    overlay_texture_is_clean = true;
+}
+
 SDL_Texture* GameState::loadTexture(const char* filename)
 {
     SDL_Surface* loadedSurface = IMG_Load(filename);
@@ -734,7 +753,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
             if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
                 rule_cnt++;
         rule_cnt += rule_del_count[game_mode];
-        if (game_mode == 2 && rule_cnt >= 100)
+        if (game_mode == 2 && rule_cnt >= 60)
             return false;
         if (game_mode == 3 && rule_cnt >= 300)
             return false;
@@ -817,6 +836,7 @@ void GameState::advance(int steps)
 
     if (load_level || skip_level)
     {
+        clear_overlay();
         clue_solves.clear();
         if (force_load_level || level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
         {
@@ -1259,7 +1279,7 @@ void GameState::update_constructed_rule()
         }
         rule_cnt += rule_del_count[game_mode];
 
-        if (game_mode == 2 && rule_cnt >= 100)
+        if (game_mode == 2 && rule_cnt >= 60)
             constructed_rule_is_logical = GridRule::LIMIT;
         if (game_mode == 3 && rule_cnt >= 300)
             constructed_rule_is_logical = GridRule::LIMIT;
@@ -1590,6 +1610,7 @@ std::string GameState::translate(std::string s)
     SaveObjectMap* trans = lang->get_item("translate")->get_map();
     if (trans->has_key(s))
         return trans->get_string(s);
+    std::cout << s << std::endl;
     return s;
 }
 void GameState::render_tooltip()
@@ -2465,11 +2486,11 @@ void GameState::render(bool saving)
             render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
 
             {
-                SDL_Color color = {0xFF, 0xFF, 0xFF};
+                SDL_Color color = {contrast, contrast, contrast};
                 if (s.is_friend == 1)
-                    color = {0x80, 0xFF, 0x80};
+                    color = {uint8_t(contrast / 2), contrast, uint8_t(contrast / 2)};
                 if (s.is_friend == 2)
-                    color = {0xFF, 0x80, 0x80};
+                    color = {contrast, uint8_t(contrast / 2), uint8_t(contrast / 2)};
                 SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, s.name.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
@@ -3246,6 +3267,17 @@ void GameState::render(bool saving)
                 SDL_SetTextureAlphaMod(sdl_texture, 255);
             }
         }
+        for(WrapPos r : wraps)
+        {
+            XYPos mgpos = grid_offset + r.pos;
+            XYPos mgsize = grid->get_wrapped_size(grid_pitch);
+            {
+                SDL_Rect src_rect = {0, 0, 2048, 2048};
+                SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(mgsize.x * r.size), int(mgsize.y * r.size)};
+                SDL_RenderCopy(sdl_renderer, overlay_texture, &src_rect, &dst_rect);
+            }
+        }
+
         if (row_col_clues)
         {
             std::vector<EdgePos> edges;
@@ -3574,14 +3606,15 @@ void GameState::render(bool saving)
 
     for (int i = 0; i < 5; i++)
     {
+        const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Server"};
         if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5), XYPos(button_size, button_size)))
         {
             SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
             if (i == 4)
                 src_rect = {1664, 1536, 192, 192};
-            add_clickable_highlight(dst_rect);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, grid_names[i]);
         }
         {
             SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
@@ -4336,7 +4369,7 @@ void GameState::render(bool saving)
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
         for (int i = 0; i < GAME_MODES; i++)
         {
-            static const char* mode_names[4] = {"Regular", "Three region rules", "Max 100 rules", "No variables, max 300 rules"};
+            static const char* mode_names[4] = {"Regular", "Three region rules", "Max 60 rules", "No variables, max 300 rules"};
             std::string name = mode_names[i];
             {
                 SDL_Rect src_rect = {2240, 576 + (i * 192), 192, 192};
@@ -4534,9 +4567,6 @@ void GameState::render(bool saving)
 
 void GameState::grid_click(XYPos pos, int clicks, int btn)
 {
-    grid_dragging = true;
-    grid_dragging_last_pos = mouse;
-
     if (display_scores || display_rules || display_levels)
     {
         display_rules_click = true;
@@ -4581,6 +4611,9 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                 }
             }
         }
+        grid_dragging = true;
+        grid_dragging_btn = btn;
+        grid_dragging_last_pos = mouse;
     }
 }
 
@@ -5285,6 +5318,14 @@ bool GameState::events()
                         get_hint = false;
                         break;
                     }
+                    case SDL_SCANCODE_F5:
+                    {
+                        if (mouse_mode != MOUSE_MODE_PAINT)
+                            mouse_mode = MOUSE_MODE_PAINT;
+                        else
+                            mouse_mode = MOUSE_MODE_NONE;
+                        break;
+                    }
                     case SDL_SCANCODE_F11:
                     {
                         full_screen = !full_screen;
@@ -5315,7 +5356,41 @@ bool GameState::events()
                 mouse.y = e.motion.y;
                 if (grid_dragging)
                 {
-                    scaled_grid_offset += (mouse - grid_dragging_last_pos);
+                    if (mouse_mode == MOUSE_MODE_PAINT)
+                    {
+                        XYPos pos = mouse - grid_offset - scaled_grid_offset;
+                        XYPos siz = grid->get_wrapped_size(grid_pitch);
+                        XYPos ppos = (pos * 2048) / siz;
+                        XYPos opos = grid_dragging_last_pos - grid_offset - scaled_grid_offset;
+                        XYPos oppos = (opos * 2048) / siz;
+
+                        uint32_t* pixels;
+                        int pitch;
+                        int r = SDL_LockTexture(overlay_texture, NULL, (void**)&pixels, &pitch);
+                        assert(r == 0);
+                        pitch /= 4;
+                        int s = 10;
+                        if (grid_dragging_btn)
+                            s = 30;
+                        uint32_t nv = grid_dragging_btn ? 0 : 0xFFFFFFFF;
+                        for (int i = 0; i < 10; i++)
+                        {
+                            XYPos lp = oppos / 10 * i + ppos / 10 * (10 - i);
+                            FOR_XY(p, lp - XYPos(s, s), lp + XYPos(s, s))
+                            {
+                                if (!p.inside(XYPos(2048,2048)))
+                                    continue;
+                                pixels[p.y * pitch + p.x] = nv;
+                            }
+                        }
+                        if (grid_dragging_btn == 0)
+                            overlay_texture_is_clean = false;
+                        SDL_UnlockTexture(overlay_texture);
+                    }
+                    else
+                    {
+                        scaled_grid_offset += (mouse - grid_dragging_last_pos);
+                    }
                     grid_dragging_last_pos = mouse;
                 }
                 if (dragging_speed)
