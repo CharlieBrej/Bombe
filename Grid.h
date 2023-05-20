@@ -177,6 +177,7 @@ public:
     bool deleted = false;
     XYSet elements;
 
+    XYPos gen_cause_pos;
     GridRegionCause gen_cause;
     GridRegionCause vis_cause;
     float priority = 0;

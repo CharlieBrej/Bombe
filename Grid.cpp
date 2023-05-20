@@ -1868,6 +1868,8 @@ static void add_clear_count(GridRegion* region, int count)
 
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[32])
 {
+    if (rule.priority < -100)
+        return APPLY_RULE_RESP_NONE;
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
