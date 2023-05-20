@@ -154,6 +154,13 @@ GameState::GameState(std::string& load_data, bool json)
                     rule_del_count[k] = dlist->get_item(k)->get_num();
             }
 
+            if (omap->has_key("key_codes"))
+            {
+                SaveObjectList* dlist = omap->get_item("key_codes")->get_list();
+                for (int k = 0; k < dlist->get_count() && k < KEY_CODE_TOTAL; k++)
+                    key_codes[k] = dlist->get_item(k)->get_num();
+            }
+
             std::list<SaveObjectMap*> modes;
             if (omap->has_key("modes"))
             {
@@ -361,6 +368,11 @@ SaveObject* GameState::save(bool lite)
     for (int i = 0; i < GAME_MODES; i++)
         dc_list->add_num(rule_del_count[i]);
     omap->add_item("rule_del_count", dc_list);
+
+    dc_list = new SaveObjectList;
+    for (int i = 0; i < KEY_CODE_TOTAL; i++)
+        dc_list->add_num(key_codes[i]);
+    omap->add_item("key_codes", dc_list);
 
     SaveObjectList* sl_list = new SaveObjectList;
     for (std::vector<std::string>& lvl_set : server_levels)
@@ -4465,7 +4477,7 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 11.8 * button_size), button_size/4, 1);
         {
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -4499,6 +4511,14 @@ void GameState::render(bool saving)
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 5.2 * button_size), t);
         }
         {
+            SDL_Rect src_rect = {2432, 1152, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
+            std::string t = translate("Remap Keys");
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
+        }
+        {
             SDL_Rect src_rect = {2048, 576, 192, 576};
             SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size * 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -4511,31 +4531,31 @@ void GameState::render(bool saving)
 
         {
             SDL_Rect src_rect = {1664, 960, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 9, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Levels");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 9.2 * button_size), t);
         }
         {
             SDL_Rect src_rect = {1664, 960, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 10, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Rules");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 10.2 * button_size), t);
         }
         {
             SDL_Rect src_rect = {1280, 1728, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_clickable_highlight(dst_rect);
             std::string t = translate("Quit");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 8.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 11.2 * button_size), t);
         }
         {
             SDL_Rect src_rect = {704, 384, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 9, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "OK");
         }
@@ -4546,7 +4566,7 @@ void GameState::render(bool saving)
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
         {
-            std::string t = display_reset_confirm_levels_only ? translate("Reset Levels") : translate("Reset Game");
+            std::string t = display_reset_confirm_levels_only ? translate("Reset Levels") : translate("Reset Rules");
             render_text_box(left_panel_offset + XYPos(4 * button_size, 3 * button_size), t);
             {
                 SDL_Rect src_rect = {704, 384, 192, 192};
@@ -4559,6 +4579,96 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Cancel");
+            }
+
+        }
+    }
+
+    if (display_key_select)
+    {
+        tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10.5 * button_size), button_size/4, 1);
+        {
+            std::string t = "Remap Keys";
+            render_text_box(left_panel_offset + XYPos(1.5 * button_size, 1.5 * button_size), t);
+            {
+                SDL_Rect src_rect = {704, 960, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Help");
+            }
+            {
+                SDL_Rect src_rect = {1472, 960, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Hint");
+            }
+            {
+                SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Next Level");
+            }
+            {
+                SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Refresh Regions");
+            }
+            {
+                SDL_Rect src_rect = {1472, 1152, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Full Screen");
+            }
+            {
+                SDL_Rect src_rect = {2432, 576, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Visible");
+            }
+            {
+                SDL_Rect src_rect = {2432, 576 + 192, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Hidden");
+            }
+            {
+                SDL_Rect src_rect = {2432, 576 + 192 * 2, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Trash");
+            }
+            {
+                SDL_Rect src_rect = {1856, 768, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Undo");
+            }
+            {
+                SDL_Rect src_rect = {1856, 960, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Redo");
+            }
+
+
+
+            {
+                SDL_Rect src_rect = {704, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 9, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "OK");
+            }
+
+            for (int i = 0; i < KEY_CODE_TOTAL; i++)
+            {
+                std::string s = SDL_GetKeyName(key_codes[i]);
+                if (i == capturing_key)
+                    s = "?";
+                
+                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3 + (i % 5)) * button_size), s);
             }
 
         }
@@ -5282,72 +5392,49 @@ bool GameState::events()
                 break;
             case SDL_KEYDOWN:
             {
-                if (display_help || display_language_chooser || display_menu)
+                if (capturing_key >= 0)
                 {
-                    switch (e.key.keysym.scancode)
+                    key_codes[capturing_key] = e.key.keysym.sym;
+                    capturing_key = -1;
+                    break;
+                }
+                if (display_help || display_language_chooser || display_menu || display_key_select)
+                {
+                    if ((e.key.keysym.sym == key_codes[KEY_CODE_F1]) ||
+                        (e.key.keysym.sym == SDLK_ESCAPE))
                     {
-                        case SDL_SCANCODE_F1:
-                        case SDL_SCANCODE_ESCAPE:
-                            display_help = false;
-                            display_language_chooser = false;
-                            display_menu = false;
-                            break;
-                        case SDL_SCANCODE_F11:
-                        {
-                            full_screen = !full_screen;
-                            SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-                            SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                            SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                            SDL_SetWindowInputFocus(sdl_window);
-                            break;
-                        }
+                        display_help = false;
+                        display_language_chooser = false;
+                        display_key_select = false;
+                        display_menu = false;
+                    }
+                    if (e.key.keysym.sym == key_codes[KEY_CODE_F11])
+                    {
+                        full_screen = !full_screen;
+                        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+                        SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+                        SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+                        SDL_SetWindowInputFocus(sdl_window);
                     }
                     break;
                 }
-                switch (e.key.keysym.scancode)
+                int key = e.key.keysym.sym;
                 {
-                    case SDL_SCANCODE_Z:
+                    if (key == key_codes[KEY_CODE_Z])
                         rule_gen_undo();
-                        break;
-                    case SDL_SCANCODE_Y:
+                    else if (key == key_codes[KEY_CODE_Y])
                         rule_gen_redo();
-                        break;
-                    case SDL_SCANCODE_Q:
+                    else if (key == key_codes[KEY_CODE_Q])
                         key_held = 'Q';
-                        break;
-                    case SDL_SCANCODE_W:
+                    else if (key == key_codes[KEY_CODE_W])
                         key_held = 'W';
-                        break;
-                    case SDL_SCANCODE_E:
+                    else if (key == key_codes[KEY_CODE_E])
                         key_held = 'E';
-                        break;
-                    case SDL_SCANCODE_C:
-                    {
-                        std::string s = grid->to_string();
-                        SDL_SetClipboardText(s.c_str());
-                        break;
-                    }
-                    case SDL_SCANCODE_V:
-                    {
-                        char* s = SDL_GetClipboardText();
-                        clue_solves.clear();
-                        reset_rule_gen_region();
-                        delete grid;
-                        grid = Grid::Load(s);
-                        SDL_free(s);
-                        grid_cells_animation.clear();
-                        grid_regions_animation.clear();
-                        grid_regions_fade.clear();
-                        current_level_is_temp = true;
-                        break;
-                    }
-                    case SDL_SCANCODE_ESCAPE:
+                    else if (key == SDLK_ESCAPE)
                         display_menu = true;
-                        break;
-                    case SDL_SCANCODE_F1:
+                    else if (key == key_codes[KEY_CODE_F1])
                         display_help = true;
-                        break;
-                    case SDL_SCANCODE_F2:
+                    else if (key == key_codes[KEY_CODE_F2])
                     {
                         clue_solves.clear();
                         XYSet grid_squares = grid->get_squares();
@@ -5357,15 +5444,14 @@ bool GameState::events()
                                 clue_solves.insert(pos);
                         }
                         get_hint = true;
-                        break;
                     }
-                    case SDL_SCANCODE_F3:
+                    else if (key == key_codes[KEY_CODE_F3])
                     {
                         skip_level = 1;
                         force_load_level = false;
                         break;
                     }
-                    case SDL_SCANCODE_F4:
+                    else if (key == key_codes[KEY_CODE_F4])
                     {
                         clue_solves.clear();
                         grid_regions_animation.clear();
@@ -5375,7 +5461,7 @@ bool GameState::events()
                         get_hint = false;
                         break;
                     }
-                    case SDL_SCANCODE_F5:
+                    else if (key == SDLK_F5)
                     {
                         if (mouse_mode != MOUSE_MODE_PAINT)
                             mouse_mode = MOUSE_MODE_PAINT;
@@ -5383,7 +5469,7 @@ bool GameState::events()
                             mouse_mode = MOUSE_MODE_NONE;
                         break;
                     }
-                    case SDL_SCANCODE_F11:
+                    else if (key == key_codes[KEY_CODE_F11])
                     {
                         full_screen = !full_screen;
                         SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
@@ -5392,20 +5478,18 @@ bool GameState::events()
                         SDL_SetWindowInputFocus(sdl_window);
                         break;
                     }
-                    default:
-                        printf("Uncaught key: %d\n", e.key.keysym.scancode);
-                        break;
+                    else
+                    {
+                        printf("Uncaught key: %d\n", key);
+                    }
                 }
                 break;
             }
             case SDL_KEYUP:
-                switch (e.key.keysym.scancode)
-                {
-                    case SDL_SCANCODE_Q:
-                    case SDL_SCANCODE_W:
-                    case SDL_SCANCODE_E:
+                if (e.key.keysym.sym == key_codes[KEY_CODE_Q] || 
+                    e.key.keysym.sym == key_codes[KEY_CODE_W] |
+                    e.key.keysym.sym == key_codes[KEY_CODE_E])
                         key_held = 0;
-                }
                 break;
             case SDL_MOUSEMOTION:
             {
@@ -5496,7 +5580,25 @@ bool GameState::events()
                     }
                     break;
                 }
-                if (display_reset_confirm)
+                if (display_key_select)
+                {
+                    XYPos p = (mouse - left_panel_offset) / button_size;
+                    p -= XYPos(2,3);
+                    if (p.x >= 0 && p.y >= 0 && p.y < 5 && p.x <= 6)
+                    {
+                        int index = p.y + (p.x / 3) * 5;
+
+                        if (index < KEY_CODE_TOTAL)
+                            capturing_key = index;
+                    }
+                    if (p == XYPos(7,6))
+                    {
+                        capturing_key = -1;
+                        display_key_select = false;
+                    }
+                    break;
+                }
+               if (display_reset_confirm)
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
@@ -5541,16 +5643,18 @@ bool GameState::events()
                         if (p.y == 3)
                             low_contrast = !low_contrast;
                         if (p.y == 4)
+                            display_key_select = true;
+                        if (p.y == 7)
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = true;
                         }
-                        if (p.y == 5)
+                        if (p.y == 8)
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = false;
                         }
-                        if (p.y == 6)
+                        if (p.y == 9)
                             quit = true;
                     }
                     if (p.x == 7 && p.y >= 0 && p.y <= 3)
@@ -5560,7 +5664,7 @@ bool GameState::events()
                         volume = std::clamp(p, 0.0, 1.0);
                         Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                     }
-                    if (p == XYPos(7,7))
+                    if (p == XYPos(7,9))
                         display_menu = false;
                     break;
                 }

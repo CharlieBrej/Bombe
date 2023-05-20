@@ -66,6 +66,8 @@ public:
     bool display_language_chooser = false;
     bool display_reset_confirm = false;
     bool display_reset_confirm_levels_only = false;
+    bool display_key_select = false;
+
     bool display_rules = false;
     bool display_clipboard_rules = false;
     bool display_scores = false;
@@ -77,6 +79,23 @@ public:
     uint8_t contrast = 255;
 
     char key_held = 0;
+
+
+    enum{
+        KEY_CODE_F1,
+        KEY_CODE_F2,
+        KEY_CODE_F3,
+        KEY_CODE_F4,
+        KEY_CODE_F11,
+        KEY_CODE_Q,
+        KEY_CODE_W,
+        KEY_CODE_E,
+        KEY_CODE_Z,
+        KEY_CODE_Y,
+        KEY_CODE_TOTAL,
+        };
+    int key_codes[KEY_CODE_TOTAL] = {SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F11, SDLK_q, SDLK_w, SDLK_e, SDLK_z, SDLK_y};
+    int capturing_key = -1;
 
     bool dragging_speed = false;
     bool dragging_volume = false;
@@ -247,7 +266,7 @@ public:
     };
     std::list<AnimationStarBurst> star_burst_animations;
 
-    enum {
+    enum{
         PROG_LOCK_HEX,
         PROG_LOCK_SQUARE,
         PROG_LOCK_TRIANGLE,
