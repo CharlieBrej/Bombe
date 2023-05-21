@@ -2195,8 +2195,10 @@ bool Grid::add_one_new_region(GridRegion* r)
     while (it != regions_to_add.end())
     {
         float pri = (*it).priority;
-        if (r && !(*it).has_ancestor(r))
+        if (r && (*it).has_ancestor(r))
             pri += 10;
+        if (!(*it).gen_cause.rule)
+            pri += 20;
         if (pri > best_pri)
         {
             best_pri = pri;
@@ -2207,7 +2209,6 @@ bool Grid::add_one_new_region(GridRegion* r)
     if ((*best_reg).gen_cause.rule)
         (*best_reg).gen_cause.rule->level_used_count++;
 
-    best_reg = regions_to_add.begin();
     remove_from_regions_to_add_multiset(&(*best_reg));
     regions_set.insert(&(*best_reg));
     regions.splice(regions.end(), regions_to_add, best_reg);
