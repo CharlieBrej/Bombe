@@ -4825,6 +4825,11 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         grid_regions_fade.clear();
         grid->clear_regions();
         reset_rule_gen_region();
+        inspected_rule.regions[0] = NULL;
+        inspected_rule.regions[1] = NULL;
+        inspected_rule.regions[2] = NULL;
+        inspected_rule.regions[3] = NULL;
+
         get_hint = false;
     }
     if ((pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size * 3, button_size)))
@@ -5617,6 +5622,7 @@ bool GameState::events()
                                     reset_levels();
                             }
                             display_reset_confirm = false;
+                            right_panel_mode = RIGHT_MENU_NONE;
                         }
                         if (p == XYPos(5, 4))
                             display_reset_confirm = false;
