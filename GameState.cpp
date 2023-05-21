@@ -222,6 +222,10 @@ GameState::GameState(std::string& load_data, bool json)
         display_help = true;
         display_language_chooser = true;
     }
+    if (current_level_group_index >= GLBAL_LEVEL_SETS)
+        current_level_group_index = 0;
+    if (current_level_set_index >= global_level_sets[current_level_group_index].size())
+        current_level_set_index = 0;
 
     sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -536,9 +540,10 @@ static int level_gen_thread_func(void *ptr)
     int xy3 = req[8] - '0';
     int xyz = req[9] - '0';
     int exc = req[10] - '0';
+    int parity = req[11] - '0';
 
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10);
-    g->make_harder(pm, xy, xy3, xyz, exc);
+    g->make_harder(pm, xy, xy3, xyz, exc, parity);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
     game_state->level_gen_resp = g->to_string();
@@ -1925,18 +1930,16 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
         SDL_Rect dst_rect = {pos.x + int(siz) / 8, pos.y + int(siz) / 8,  int(siz * 6 / 8), int(siz * 6 / 8)};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
-    else if (reg.type == RegionType::XOR2 || reg.type == RegionType::XOR3)
+    else if (reg.type == RegionType::XOR1 || reg.type == RegionType::XOR2 || reg.type == RegionType::XOR3)
     {
         XYPos numsiz = XYPos(siz * 2 * 1.35 / 8, siz * 3 * 1.35 / 8);
 
         render_number_string(reg.val_as_str(0), pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
-        render_number_string(reg.val_as_str(reg.type == RegionType::XOR3 ? 3 : 2), pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
+        render_number_string(reg.val_as_str(reg.type == RegionType::XOR3 ? 3 : (reg.type == RegionType::XOR2 ? 2 : 1)), pos - numsiz + XYPos(int(siz) * 7 / 8,int(siz) * 7 / 8), numsiz);
 
         SDL_Rect src_rect = {384, 736, 128, 128};
         SDL_Rect dst_rect = {pos.x + int(siz) / 3, pos.y + int(siz) / 4,  int(siz / 3), int(siz / 2)};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-
-
     }
     else if (reg.type == RegionType::MORE || reg.type == RegionType::LESS)
     {
@@ -1968,6 +1971,12 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     {
         XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
         std::string digits = "!" + reg.val_as_str(0);
+        render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+    }
+    else if (reg.type == RegionType::PARITY)
+    {
+        XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
+        std::string digits = reg.val_as_str(0) + "+2f";
         render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
     }
     else if (reg.type == RegionType::VISIBILITY)

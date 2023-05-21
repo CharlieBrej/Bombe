@@ -101,6 +101,14 @@ RESP RegionType::apply_rule_imp(IN in, OTHER other)
     {
         return (in == other) || (in == (other + 2)) || (in == (other + 4)) || (in == (other + 6));
     }
+    if (type == PARITY)
+    {
+        return (in >= other) && (((in - other) % 2) == 0);
+    }
+    if (type == XOR1)
+    {
+        return (in == other) || (in == (other + 1));
+    }
     assert(0);
 }
 
@@ -156,6 +164,10 @@ int RegionType::max()
         return 4;
     if (type == XOR222)
         return 6;
+    if (type == PARITY)
+        return -1;
+    if (type == XOR1)
+        return 1;
     assert(0);
 }
 
@@ -1337,7 +1349,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
-void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool exc)
+void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool exc, bool parity)
 {
 
     XYSet grid_squares = get_squares();
@@ -1432,6 +1444,65 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
                     tst->get_clue(p).value += 1;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+            }
+            if (parity)
+            {
+                if (rnd % 10 < 4 && (get_clue(p).value >= 4))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PARITY;
+                    tst->get_clue(p).value -= 4;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PARITY;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (rnd % 10 < 4)
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PARITY;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+            }
+            if (parity)
+            {
+                if (rnd % 10 < 4 && (get_clue(p).value >= 1))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::XOR1;
+                    tst->get_clue(p).value -= 1;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (rnd % 10 < 4)
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::XOR1;
                     if (tst->is_solveable())
                     {
                         get_clue(p) = tst->get_clue(p);
@@ -1796,7 +1867,17 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
     {
         return false;
     }
-    assert (clue.value >= 0);
+    if (clue.value < 0 && clue.type == RegionType::PARITY)
+    {
+        clue.value &= 1;
+    }
+    if (clue.value < 0 && clue.type == RegionType::XOR1)
+    {
+        assert(clue.value == -1);
+        clue.value = 0;
+        clue.type = RegionType::EQUAL;
+    }
+assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
     return add_region(reg, true);

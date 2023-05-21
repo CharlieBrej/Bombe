@@ -133,7 +133,7 @@ public:
     //  0            1  2  3     4       5    6    7    8    9     10
     //  A            8  8  0     2       0    0    0    0    1     0
 
-static const char* server_level_types[] = {"A8802000100", "B8802000100","C8802000100",NULL};
+static const char* server_level_types[] = {"A88020001000", "B88020001000","C88020001000",NULL};
 
 class Database
 {

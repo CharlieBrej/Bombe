@@ -174,8 +174,8 @@ public:
     
     RegionType region_type = RegionType(RegionType::SET, 0);
     RegionType select_region_type = RegionType(RegionType::EQUAL, 0);
-    const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::NONE},
-                                                        {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::NONE}};
+    const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::XOR1},
+                                                        {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::PARITY}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule rule_illogical_reason;
