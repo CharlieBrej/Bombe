@@ -40,7 +40,7 @@ public:
     unsigned frame = 0;
     int frame_step = 0;
 
-    static const int tut_texture_count = 5;
+    static const int tut_texture_count = 6;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
     SDL_Texture* overlay_texture;
     bool overlay_texture_is_clean = true;

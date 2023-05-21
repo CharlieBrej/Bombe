@@ -241,6 +241,7 @@ GameState::GameState(std::string& load_data, bool json)
     tutorial_texture[2] = loadTexture("tutorial/tut2.png");
     tutorial_texture[3] = loadTexture("tutorial/tut3.png");
     tutorial_texture[4] = loadTexture("tutorial/tut4.png");
+    tutorial_texture[5] = loadTexture("tutorial/tut5.png");
 
     {
         SDL_Surface* icon_surface = IMG_Load("icon.png");
@@ -3285,16 +3286,17 @@ void GameState::render(bool saving)
                 SDL_SetTextureAlphaMod(sdl_texture, 255);
             }
         }
-        for(WrapPos r : wraps)
-        {
-            XYPos mgpos = grid_offset + r.pos;
-            XYPos mgsize = grid->get_wrapped_size(grid_pitch);
+        if (!overlay_texture_is_clean)
+            for(WrapPos r : wraps)
             {
-                SDL_Rect src_rect = {0, 0, 2048, 2048};
-                SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(mgsize.x * r.size), int(mgsize.y * r.size)};
-                SDL_RenderCopy(sdl_renderer, overlay_texture, &src_rect, &dst_rect);
+                XYPos mgpos = grid_offset + r.pos;
+                XYPos mgsize = grid->get_wrapped_size(grid_pitch);
+                {
+                    SDL_Rect src_rect = {0, 0, 2048, 2048};
+                    SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(mgsize.x * r.size), int(mgsize.y * r.size)};
+                    SDL_RenderCopy(sdl_renderer, overlay_texture, &src_rect, &dst_rect);
+                }
             }
-        }
 
         if (row_col_clues)
         {

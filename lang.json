@@ -130,6 +130,14 @@
                 {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
                 {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
                 {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -228,6 +236,14 @@
                 {"x": 1050, "y": 290,           "text": "Versteckt, aber immer noch durch Regeln genutzt" },
                 {"x": 1050, "y": 490,           "text": "Müll, von Regeln ignoriert" },
                 {"x": 1050, "y": 700,           "text": "Regeln können verwendet werden,\num die Sichtbarkeit von Regionen zu verändern"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -330,6 +346,14 @@
                 {"x":1050,  "y": 290,           "text":"Gizli, ama hala kurallar tarafından kullanılabilir"},
                 {"x":1050,  "y": 490,           "text":"Çöp, kurallar tarafından önemsenmez"},
                 {"x":1050,  "y": 700,           "text":"Bölgenin görünürlüğünü\ndeğiştirmek için kullanılabilir"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -434,6 +458,14 @@
                 {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
                 {"x":1050,  "y": 490,           "text":"無效,被規則忽略"},
                 {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -538,6 +570,14 @@
                 {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
                 {"x":1050,  "y": 490,           "text":"无效,被规则忽略"},
                 {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -640,6 +680,14 @@
                 {"x":1050,  "y": 290,           "text":"非表示ですが、まだルールで使用されています"},
                 {"x":1050,  "y": 490,           "text":"ゴミ箱、ルールで無視"},
                 {"x":1050,  "y": 700,           "text":"ルールを使用して\n領域の可視性を変更できます"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
@@ -743,6 +791,14 @@
                 {"x":1050,  "y": 290,           "text":"Ocultas, pero usadas por las reglas"},
                 {"x":1050,  "y": 490,           "text":"Eliminadas, son ignoradas por las reglas"},
                 {"x":1050,  "y": 700,           "text":"Las reglas pueden usarse para\ncambiar la visibilidad de las regiones"}
+            ],
+            [
+                {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
+                {"x": 700,  "y": 670,            "text":"Numbers show\nunsolved levels"},
+                {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
+                {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
+                {"x": 1200, "y": 970,            "text":"More complex"},
+                {"x": 1650, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     }
