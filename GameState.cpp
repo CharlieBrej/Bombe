@@ -276,14 +276,10 @@ GameState::GameState(std::string& load_data, bool json)
     sounds[5] = Mix_LoadWAV( "snd/plop5.wav" );
     sounds[6] = Mix_LoadWAV( "snd/plop6.wav" );
     sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
-    assert(sounds[0]);
-    assert(sounds[1]);
-    assert(sounds[2]);
-    assert(sounds[3]);
-    assert(sounds[4]);
-    assert(sounds[5]);
-    assert(sounds[6]);
-    assert(sounds[7]);
+    sounds[8] = Mix_LoadWAV( "snd/success1.wav" );
+    sounds[9] = Mix_LoadWAV( "snd/success2.wav" );
+    for (int i = 0; i < 10; i++)
+        assert(sounds[i]);
     Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
 
     grid = Grid::Load("ABBA!");
@@ -293,7 +289,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_TRIANGLE] = 5000;
     prog_stars[PROG_LOCK_GRID] = 10000;
     prog_stars[PROG_LOCK_SERVER] = 12000;
-    prog_stars[PROG_LOCK_NUMBER_TYPES] = 100;
+    prog_stars[PROG_LOCK_NUMBER_TYPES] = 20;
     prog_stars[PROG_LOCK_VISIBILITY] = 2000;
     prog_stars[PROG_LOCK_VISIBILITY2] = 2000;
     prog_stars[PROG_LOCK_VISIBILITY3] = 2000;
@@ -413,8 +409,9 @@ GameState::~GameState()
     fonts.clear();
     TTF_CloseFont(score_font);
 
-    for (int i = 0; i < 8; i++)
-        Mix_FreeChunk(sounds[i]);
+    for (int i = 0; i < 16; i++)
+        if (sounds[i])
+            Mix_FreeChunk(sounds[i]);
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -828,27 +825,13 @@ void GameState::advance(int steps)
     {
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
         {
-            // uint64_t prev = 0;
-            // for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
-            //     if (level_is_accessible(i))
-            //         prev |= 1 << i;
-
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
             level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             skip_level = 1;
-            // if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo == 0)
-            // {
-            //     XYPos pos = left_panel_offset + XYPos(button_size * (current_level_set_index % 5), button_size * (current_level_set_index / 5 + 6));
-            //     star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, false));
-            // }
-            // for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
-            // {
-            //     if (!((prev >> i) & 1) && level_is_accessible(i))
-            //     {
-            //         XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
-            //         star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), 0, true));
-            //     }
-            // }
+            if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
+                assert(Mix_PlayChannel(8, sounds[8], 0) != -1);
+            else
+                assert(Mix_PlayChannel(9, sounds[9], 0) != -1);
         }
     }
 
@@ -1101,7 +1084,7 @@ void GameState::advance(int steps)
             }
             if (sound_frame_index > 50)
             {
-                assert(Mix_PlayChannel(rnd % 32, sounds[rnd % 8], 0) != -1);
+                assert(Mix_PlayChannel(rnd % 8, sounds[rnd % 8], 0) != -1);
                 sound_frame_index -= 50;
             }
             continue;
@@ -1977,6 +1960,8 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     {
         XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
         std::string digits = reg.val_as_str(0) + "+2f";
+        if (!reg.var && !reg.value)
+            digits = "2f";
         render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
     }
     else if (reg.type == RegionType::VISIBILITY)
