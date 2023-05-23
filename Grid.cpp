@@ -109,6 +109,10 @@ RESP RegionType::apply_rule_imp(IN in, OTHER other)
     {
         return (in == other) || (in == (other + 1));
     }
+    if (type == XOR11)
+    {
+        return (in == other) || (in == (other + 1))  || (in == (other + 2));
+    }
     assert(0);
 }
 
@@ -168,6 +172,8 @@ int RegionType::max()
         return -1;
     if (type == XOR1)
         return 1;
+    if (type == XOR11)
+        return 2;
     assert(0);
 }
 
@@ -1488,6 +1494,41 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
             if (parity)
             {
+                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::XOR11;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (rnd % 10 < 4 && (get_clue(p).value >= 1))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::XOR11;
+                    tst->get_clue(p).value -= 1;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (rnd % 10 < 4)
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::XOR11;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+            }
+            if (parity)
+            {
                 if (rnd % 10 < 4 && (get_clue(p).value >= 1))
                 {
                     tst = *this;
@@ -1871,13 +1912,18 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
     {
         clue.value &= 1;
     }
+    if (clue.value < 0 && clue.type == RegionType::XOR11)
+    {
+        clue.value++;
+        clue.type = RegionType::XOR1;
+    }
     if (clue.value < 0 && clue.type == RegionType::XOR1)
     {
         assert(clue.value == -1);
         clue.value = 0;
         clue.type = RegionType::EQUAL;
     }
-assert (clue.value >= 0);
+    assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
     return add_region(reg, true);

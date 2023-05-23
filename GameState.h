@@ -82,19 +82,54 @@ public:
 
 
     enum{
-        KEY_CODE_F1,
-        KEY_CODE_F2,
-        KEY_CODE_F3,
-        KEY_CODE_F4,
-        KEY_CODE_F11,
-        KEY_CODE_Q,
-        KEY_CODE_W,
-        KEY_CODE_E,
-        KEY_CODE_Z,
-        KEY_CODE_Y,
+        KEY_CODE_HELP,
+        KEY_CODE_HINT,
+        KEY_CODE_SKIP,
+        KEY_CODE_REFRESH,
+        KEY_CODE_FULL_SCREEN,
+        KEY_CODE_G_VISIBLE,
+        KEY_CODE_G_HIDDEN,
+        KEY_CODE_G_TRASH,
+        KEY_CODE_UNDO,
+        KEY_CODE_REDO,
+
+        KEY_CODE_DONT_CARE,
+        KEY_CODE_CLEAR,
+        KEY_CODE_BOMB,
+        KEY_CODE_HIDE,
+        KEY_CODE_TRASH,
+        KEY_CODE_VAR1,
+        KEY_CODE_VAR2,
+        KEY_CODE_VAR3,
+        KEY_CODE_VAR4,
+        KEY_CODE_VAR5,
+        KEY_CODE_0,
+        KEY_CODE_1,
+        KEY_CODE_2,
+        KEY_CODE_3,
+        KEY_CODE_4,
+        KEY_CODE_5,
+        KEY_CODE_6,
+        KEY_CODE_7,
+        KEY_CODE_8,
+        KEY_CODE_9,
+        KEY_CODE_EQUAL,
+        KEY_CODE_NOTEQUAL,
+        KEY_CODE_PLUS,
+        KEY_CODE_MINUS,
+        KEY_CODE_XOR3,
+        KEY_CODE_XOR2,
+        KEY_CODE_XOR22,
+        KEY_CODE_PARITY,
+        KEY_CODE_XOR1,
+        KEY_CODE_XOR11,
         KEY_CODE_TOTAL,
         };
-    int key_codes[KEY_CODE_TOTAL] = {SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F11, SDLK_q, SDLK_w, SDLK_e, SDLK_z, SDLK_y};
+    int key_codes[KEY_CODE_TOTAL] = {SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F11, SDLK_q, SDLK_w, SDLK_e, SDLK_z, SDLK_y,
+                                     SDLK_QUESTION, SDLK_SPACE, SDLK_TAB, SDLK_COMMA, SDLK_PERIOD, SDLK_a, SDLK_s, SDLK_d, SDLK_f, SDLK_g,
+                                     SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7, SDLK_8, SDLK_9,
+                                     SDLK_EQUALS, SDLK_EXCLAIM, SDLK_PLUS, SDLK_MINUS, SDLK_x, SDLK_c, SDLK_v, SDLK_b, SDLK_n, SDLK_m
+                                     };
     int capturing_key = -1;
 
     bool dragging_speed = false;
@@ -120,6 +155,8 @@ public:
         right_panel_mode = RIGHT_MENU_NONE;
 
     int tutorial_index = 0;
+    int key_remap_page_index = 0;
+
     int rules_list_offset = 0;
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
@@ -175,7 +212,7 @@ public:
     RegionType region_type = RegionType(RegionType::SET, 0);
     RegionType select_region_type = RegionType(RegionType::EQUAL, 0);
     const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR2, RegionType::XOR22, RegionType::XOR1},
-                                                        {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::XOR222, RegionType::PARITY}};
+                                                        {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR3, RegionType::PARITY, RegionType::XOR11}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule rule_illogical_reason;

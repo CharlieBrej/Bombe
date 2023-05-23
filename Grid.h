@@ -86,6 +86,7 @@ public:
         NOTEQUAL,
         PARITY,
         XOR1,
+        XOR11,
         SET = 100,
         VISIBILITY = 101,
     } type = NONE;

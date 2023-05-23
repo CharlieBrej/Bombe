@@ -44,12 +44,14 @@
             "Medium Priority" :             "Medium Priority",
             "Minimum Priority" :            "Minimum Priority",
             "Next Level" :                  "Next Level",
+            "Next Page" :                   "Next Page",
             "No variables, max 300 rules" : "No variables, max 300 rules",
             "Pass Rate" :                   "Pass Rate",
             "Paused" :                      "Paused",
             "Position" :                    "Position",
             "Priority" :                    "Priority",
             "Player Name" :                 "Player Name",
+            "Previous Page" :               "Previous Page",
             "OK" :                          "OK",
             "Quit" :                        "Quit",
             "Redo" :                        "Redo",
@@ -124,8 +126,7 @@
                 {"x": 240,  "y": 430,           "text":"Any number except 4"},
                 {"x": 240,  "y": 570,           "text":"Either 4 or 6"},
                 {"x": 240,  "y": 710,           "text":"Either 3, 5 or 7"},
-                {"x": 240,  "y": 850,           "text":"Either 2, 4, 6 or 8"},
-                {"x": 240,  "y": 990,           "text":"Odd numbers"},
+                {"x": 240,  "y": 850,           "text":"Odd numbers"},
 
                 {"x":1050,  "y": 100,           "text":"Normal visible"},
                 {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
@@ -138,7 +139,7 @@
                 {"x": 1200, "y": 100, "left":1,  "text":"Grid shapes"},
                 {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
                 {"x": 1200, "y": 970,            "text":"More complex"},
-                {"x": 1650, "y": 600,            "text":"Bigger grids"},
+                {"x": 1600, "y": 600,            "text":"Bigger grids"},
             ]
         ]
     },
