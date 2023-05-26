@@ -843,7 +843,7 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
         XYPos row_type = row_types[i];
         for (int j = row_type.x; j < row_type.y; j++)
         {
-            if (rnd % 100 < row_percent)
+            if (rnd % 10 < row_percent)
             {
                 int c = 0;
                 XYSet grid_squares = get_row(i, j);
@@ -1355,7 +1355,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
-void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool exc, bool parity)
+void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11)
 {
 
     XYSet grid_squares = get_squares();
@@ -1412,7 +1412,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
             if (exc)
             {
-                if (rnd % 10 < 4)
+                if (rnd % 10 < exc)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -1423,7 +1423,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4 && (get_clue(p).value >= 3))
+                if (rnd % 10 < exc && (get_clue(p).value >= 3))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -1434,7 +1434,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
+                if (rnd % 10 < exc && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -1445,7 +1445,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4)
+                if (rnd % 10 < exc)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -1459,7 +1459,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
             if (parity)
             {
-                if (rnd % 10 < 4 && (get_clue(p).value >= 4))
+                if (rnd % 10 < parity && (get_clue(p).value >= 4))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -1470,7 +1470,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
+                if (rnd % 10 < parity && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -1481,7 +1481,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4)
+                if (rnd % 10 < parity)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -1492,9 +1492,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                     }
                 }
             }
-            if (parity)
+            if (xor11)
             {
-                if (rnd % 10 < 4 && (get_clue(p).value >= 2))
+                if (rnd % 10 < xor11 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -1505,7 +1505,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4 && (get_clue(p).value >= 1))
+                if (rnd % 10 < xor11 && (get_clue(p).value >= 1))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -1516,7 +1516,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4)
+                if (rnd % 10 < xor11)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -1527,9 +1527,9 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                     }
                 }
             }
-            if (parity)
+            if (xor1)
             {
-                if (rnd % 10 < 4 && (get_clue(p).value >= 1))
+                if (rnd % 10 < xor1 && (get_clue(p).value >= 1))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR1;
@@ -1540,7 +1540,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 4)
+                if (rnd % 10 < xor1)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR1;
@@ -1553,7 +1553,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
             if (x_y_z)
             {
-                if (rnd % 10 < 2 && (get_clue(p).value >= 2))
+                if (rnd % 10 < x_y_z && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
@@ -1564,7 +1564,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 2)
+                if (rnd % 10 < x_y_z)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
@@ -1574,54 +1574,11 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                         continue;
                     }
                 }
-                if (rnd % 10 < 2 && (get_clue(p).value >= 4))
+                if (rnd % 10 < x_y_z && (get_clue(p).value >= 4))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
                     tst->get_clue(p).value -= 4;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (rnd % 10 < 2 && (get_clue(p).value >= 2))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::XOR222;
-                    tst->get_clue(p).value -= 2;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (rnd % 10 < 2 && (get_clue(p).value >= 4))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::XOR222;
-                    tst->get_clue(p).value -= 4;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (rnd % 10 < 2)
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::XOR222;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (rnd % 10 < 2 && (get_clue(p).value >= 6))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::XOR222;
-                    tst->get_clue(p).value -= 6;
                     if (tst->is_solveable())
                     {
                         get_clue(p) = tst->get_clue(p);
@@ -1631,7 +1588,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
             if (x_y3)
             {
-                if (rnd % 10 < 2)
+                if (rnd % 10 < x_y3)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR3;
@@ -1642,7 +1599,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                     }
                 }
 
-                if ((rnd % 10 < 2) && (get_clue(p).value >= 3))
+                if ((rnd % 10 < x_y3) && (get_clue(p).value >= 3))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR3;
@@ -1657,7 +1614,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
 
             if (x_y)
             {
-                if (rnd % 10 < 2)
+                if (rnd % 10 < x_y)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR2;
@@ -1668,7 +1625,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                     }
                 }
 
-                if ((rnd % 10 < 2) && (get_clue(p).value >= 2))
+                if ((rnd % 10 < x_y) && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR2;
@@ -1683,7 +1640,7 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
 
             if (plus_minus)
             {
-                if (rnd % 10 < 5)
+                if (rnd % 10 < plus_minus)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::LESS;
@@ -1731,6 +1688,10 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
                 }
             }
         }
+    }
+    {
+        LocalGrid tst = *this;
+        assert(tst->is_solveable());
     }
 }
 

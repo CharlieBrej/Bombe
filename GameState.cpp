@@ -496,8 +496,8 @@ public:
     {}
 };
 
-    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y_z)(exc)
-    //  0            1  2  3     4       5    6    7    8      9
+    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)
+    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
 static int level_gen_thread_func(void *ptr)
 {
     GameState* game_state = (GameState*) ptr;
@@ -538,9 +538,11 @@ static int level_gen_thread_func(void *ptr)
     int xyz = req[9] - '0';
     int exc = req[10] - '0';
     int parity = req[11] - '0';
+    int xor1 = req[12] - '0';
+    int xor11 = req[13] - '0';
 
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10);
-    g->make_harder(pm, xy, xy3, xyz, exc, parity);
+    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
     game_state->level_gen_resp = g->to_string();
@@ -831,11 +833,11 @@ void GameState::advance(int steps)
             {
                 if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
                 {
-                    if (sound_frame_index > 40)
+                    if (sound_frame_index > 0)
                     {
                         sound_success_round_robin = (sound_success_round_robin + 1) % 32;
                         assert(Mix_PlayChannel(sound_success_round_robin, sounds[8], 0) != -1);
-                        sound_frame_index -= 40;
+                        sound_frame_index -= 100;
                     }
                 }
                 else
@@ -1092,11 +1094,11 @@ void GameState::advance(int steps)
                         r.stale = false;
                 }
             }
-            if (sound_frame_index > 50)
+            if (sound_frame_index > 100)
             {
                 sound_success_round_robin = (sound_success_round_robin + 1) % 32;
                 assert(Mix_PlayChannel(sound_success_round_robin, sounds[rnd % 8], 0) != -1);
-                sound_frame_index -= 50;
+                sound_frame_index -= 100;
             }
             continue;
         }
@@ -2010,11 +2012,11 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
     {
         if (prog_seen[lock_type] < PROG_ANIM_MAX)
         {
-            if (prog_seen[lock_type] == 0 && sound_frame_index > 50)
+            if (prog_seen[lock_type] == 0 && sound_frame_index > 0)
             {
                 sound_success_round_robin = (sound_success_round_robin + 1) % 32;
                 assert(Mix_PlayChannel(sound_success_round_robin, sounds[9], 0) != -1);
-                sound_frame_index -= 50;
+                sound_frame_index -= 100;
             }
             star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
             prog_seen[lock_type] += frame_step;

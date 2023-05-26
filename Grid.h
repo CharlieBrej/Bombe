@@ -328,7 +328,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
 //    bool has_solution(void);
-    void make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool exc, bool parity);
+    void make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11);
     void reveal(XYPos p);
     bool is_solved(void);
 

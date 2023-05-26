@@ -129,11 +129,10 @@ public:
 
 };
 
-    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y)(x_y_z)(not)
-    //  0            1  2  3     4       5    6    7    8    9     10
-    //  A            8  8  0     2       0    0    0    0    1     0
+    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)
+    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
 
-static const char* server_level_types[] = {"A88020001000", "B88020001000","C88020001000",NULL};
+static const char* server_level_types[] = {"A8802000100000", "B8802000100000","C8802000100000",NULL};
 
 class Database
 {
