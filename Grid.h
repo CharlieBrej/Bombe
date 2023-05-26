@@ -290,6 +290,7 @@ public:
     std::list<GridRegion> regions_to_add;
     std::multiset<GridRegion*, GridRegionCompare> regions_to_add_multiset;
     std::list<GridRegion> deleted_regions;
+    XYSet last_cleared_regions;
 
 protected:
     Grid();
@@ -338,8 +339,7 @@ public:
     enum ApplyRuleResp
     {
         APPLY_RULE_RESP_NONE,
-        APPLY_RULE_RESP_HIT,
-        APPLY_RULE_RESP_ERROR
+        APPLY_RULE_RESP_HIT
     };
 
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[32]);

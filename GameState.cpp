@@ -828,10 +828,22 @@ void GameState::advance(int steps)
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
             level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
             skip_level = 1;
-            if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
-                assert(Mix_PlayChannel(8, sounds[8], 0) != -1);
-            else
-                assert(Mix_PlayChannel(9, sounds[9], 0) != -1);
+            {
+                if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
+                {
+                    if (sound_frame_index > 40)
+                    {
+                        sound_success_round_robin = (sound_success_round_robin + 1) % 32;
+                        assert(Mix_PlayChannel(sound_success_round_robin, sounds[8], 0) != -1);
+                        sound_frame_index -= 40;
+                    }
+                }
+                else
+                {
+                    sound_success_round_robin = (sound_success_round_robin + 1) % 32;
+                    assert(Mix_PlayChannel(16, sounds[9], 0) != -1);
+                }
+            }
         }
     }
 
@@ -1038,8 +1050,6 @@ void GameState::advance(int steps)
                                 rpt = true;
                                 break;
                             }
-                            if (resp == Grid::APPLY_RULE_RESP_ERROR)
-                                assert(0);
                             if (resp == Grid::APPLY_RULE_RESP_NONE)
                             {
                                 break;
@@ -1084,7 +1094,8 @@ void GameState::advance(int steps)
             }
             if (sound_frame_index > 50)
             {
-                assert(Mix_PlayChannel(rnd % 8, sounds[rnd % 8], 0) != -1);
+                sound_success_round_robin = (sound_success_round_robin + 1) % 32;
+                assert(Mix_PlayChannel(sound_success_round_robin, sounds[rnd % 8], 0) != -1);
                 sound_frame_index -= 50;
             }
             continue;
@@ -1115,8 +1126,6 @@ void GameState::advance(int steps)
                             hit = true;
                             break;
                         }
-                        if (resp == Grid::APPLY_RULE_RESP_ERROR)
-                            assert(0);
                         if (resp == Grid::APPLY_RULE_RESP_NONE)
                         {
                             rule.stale = true;
@@ -1191,8 +1200,6 @@ void GameState::rule_gen_undo()
         constructed_rule_undo.pop_front();
     }
     update_constructed_rule();
-    if (!constructed_rule.region_count)
-        right_panel_mode = RIGHT_MENU_NONE;
 }
 
 void GameState::rule_gen_redo()
@@ -1278,6 +1285,7 @@ void GameState::update_constructed_rule()
         }
     }
     while(std::next_permutation(order.begin(),order.end()));
+
     if (constructed_rule_is_logical == GridRule::OK && constructed_rule.apply_region_type.type != RegionType::VISIBILITY)
     {
         int rule_cnt = 0;
@@ -2002,9 +2010,11 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
     {
         if (prog_seen[lock_type] < PROG_ANIM_MAX)
         {
-            if (prog_seen[lock_type] == 0)
+            if (prog_seen[lock_type] == 0 && sound_frame_index > 50)
             {
-                assert(Mix_PlayChannel(9, sounds[9], 0) != -1);
+                sound_success_round_robin = (sound_success_round_robin + 1) % 32;
+                assert(Mix_PlayChannel(sound_success_round_robin, sounds[9], 0) != -1);
+                sound_frame_index -= 50;
             }
             star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
             prog_seen[lock_type] += frame_step;
@@ -3260,6 +3270,11 @@ void GameState::render(bool saving)
                 grid_cells_animation[pos] = std::min(anim_prog + frame_step, max_anim_frame);
                 double fade = 1.0 - (double(anim_prog) / double(max_anim_frame));
                 double wob = -sin((10 / (fade + 0.3))) * (fade * fade);
+                if (grid->last_cleared_regions.get(pos))
+                {
+                    sq_pos.pos.x += cos(double(frame) / 300) * (sq_pos.size.x / 100 + 2);
+                    sq_pos.pos.y += sin(double(frame) / 473) * (sq_pos.size.x / 100 + 2);
+                }
 
                 sq_pos.pos -= XYPosFloat(sq_pos.size) * (wob / 2);
                 sq_pos.size += XYPosFloat(sq_pos.size) * (wob);
@@ -4091,8 +4106,7 @@ void GameState::render(bool saving)
 
         if (right_panel_mode == RIGHT_MENU_RULE_GEN)
         {
-            if (rule.region_count >= 1)
-            {
+              {
                 SDL_Rect src_rect = { 192*3+128, 192*3, 192, 192 };
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -4160,17 +4174,17 @@ void GameState::render(bool saving)
                     }
                 }
             }
-            if (rule.region_count >= 1 && !constructed_rule_undo.empty())
+            if (!constructed_rule_undo.empty())
             {
-                SDL_Rect src_rect = { 1856, 768, 192, 192 };
-                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_Rect src_rect = {1856, 768, 192, 192 };
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Undo");
             }
-            if (rule.region_count >= 1 && !constructed_rule_redo.empty())
+            if (!constructed_rule_redo.empty())
             {
-                SDL_Rect src_rect = { 1856, 960, 192, 192 };
-                SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_Rect src_rect = {1856, 960, 192, 192 };
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Redo");
             }

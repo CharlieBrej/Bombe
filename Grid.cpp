@@ -1732,11 +1732,11 @@ void Grid::make_harder(bool plus_minus, bool x_y, bool x_y3, bool x_y_z, bool ex
             }
         }
     }
-
 }
 
 void Grid::reveal(XYPos p)
 {
+    assert(!vals[p].revealed);
     vals[p].revealed = true;
 
     std::list<GridRegion>::iterator it = regions.begin();
@@ -2053,7 +2053,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             {
                 printf("wrong\n");
                 assert(0);
-                return APPLY_RULE_RESP_ERROR;
             }
         }
         int c = 0;
@@ -2062,6 +2061,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             reveal(pos);
             c++;
         }
+        last_cleared_regions = to_reveal;
         rule.level_used_count++;
         rule.level_clear_count += c;
         add_clear_count(r[0], c);

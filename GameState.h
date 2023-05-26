@@ -53,6 +53,7 @@ public:
     std::string language = "English";
     Mix_Chunk* sounds[16] = {};
     int sound_frame_index = 0;
+    int sound_success_round_robin = 0;
 
     static const int GAME_MODES = 4;
     int game_mode = 0;
