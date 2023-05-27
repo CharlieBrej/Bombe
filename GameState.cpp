@@ -4418,11 +4418,12 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
         for (int i = 0; i < GAME_MODES; i++)
         {
             static const char* mode_names[4] = {"Regular", "Three region rules", "Max 60 rules", "No variables, max 300 rules"};
             std::string name = mode_names[i];
+            std::string tname = translate(name);
             {
                 SDL_Rect src_rect = {2240, 576 + (i * 192), 192, 192};
                 SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i), button_size, button_size};
@@ -4433,7 +4434,7 @@ void GameState::render(bool saving)
 
             if (i == game_mode)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
-            render_text_box(left_panel_offset + XYPos(button_size * 3, button_size * (2 + i)), name);
+            render_text_box(left_panel_offset + XYPos(button_size * 3, button_size * (2 + i)), tname);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
         }
     }
@@ -4493,7 +4494,7 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 11.8 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, 11.8 * button_size), button_size/4, 1);
         {
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -4535,13 +4536,21 @@ void GameState::render(bool saving)
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
         }
         {
+            SDL_Rect src_rect = {2624, 769, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_clickable_highlight(dst_rect);
+            std::string t = translate("About");
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.2 * button_size), t);
+        }
+        {
             SDL_Rect src_rect = {2048, 576, 192, 576};
-            SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size * 3};
+            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size * 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Volume", false);
 
             src_rect = {2048, 1152, 192, 64};
-            dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 2 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
+            dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 2 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
 
@@ -4606,7 +4615,7 @@ void GameState::render(bool saving)
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10.5 * button_size), button_size/4, 1);
         {
-            std::string t = "Remap Keys";
+            std::string t = translate("Remap Keys");
             render_text_box(left_panel_offset + XYPos(1.5 * button_size, 1.5 * button_size), t);
             if (key_remap_page_index == 0)
             {
@@ -4760,6 +4769,15 @@ void GameState::render(bool saving)
 
 
         }
+    }
+
+    if (display_about)
+    {
+        tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
+        std::string s = "Game by Charlie Brej\n\nThanks to:\n chirality, romain22222, Olie...";
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
+        render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * 2), s);
     }
 
     if (display_language_chooser)
@@ -5491,7 +5509,7 @@ bool GameState::events()
                     capturing_key = -1;
                     break;
                 }
-                if (display_help || display_language_chooser || display_menu || display_key_select)
+                if (display_help || display_language_chooser || display_menu || display_key_select || display_about)
                 {
                     if ((e.key.keysym.sym == key_codes[KEY_CODE_HELP]) ||
                         (e.key.keysym.sym == SDLK_ESCAPE))
@@ -5500,6 +5518,7 @@ bool GameState::events()
                         display_language_chooser = false;
                         display_key_select = false;
                         display_menu = false;
+                        display_about = false;
                     }
                     if (e.key.keysym.sym == key_codes[KEY_CODE_FULL_SCREEN])
                     {
@@ -5847,6 +5866,11 @@ bool GameState::events()
             {
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
+                if (display_about)
+                {
+                    display_about = false;
+                    break;
+                }
                 if (display_language_chooser)
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
@@ -5937,7 +5961,9 @@ bool GameState::events()
                             low_contrast = !low_contrast;
                         if (p.y == 4)
                             display_key_select = true;
-                        if (p.y == 7)
+                        if (p.y == 5)
+                            display_about = true;
+                       if (p.y == 7)
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = true;
@@ -5950,7 +5976,7 @@ bool GameState::events()
                         if (p.y == 9)
                             quit = true;
                     }
-                    if (p.x == 7 && p.y >= 0 && p.y <= 3)
+                    if (p.x == 9 && p.y >= 0 && p.y <= 3)
                     {
                         dragging_volume = true;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);

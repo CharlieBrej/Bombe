@@ -17,7 +17,7 @@ void global_mutex_unlock();
 
 class XYSet
 {
-    static const unsigned WIDTH = 16;
+    static const unsigned WIDTH = 32;
     static const unsigned SIZE = WIDTH*WIDTH;
     std::bitset <SIZE> d;
 public:
@@ -322,7 +322,7 @@ public:
     virtual XYPos get_base_square(XYPos p) {return p;}
     virtual XYPos get_wrapped_size(XYPos grid_pitch) = 0;
 
-//    void solve_easy();
+    void solve_easy();
     bool is_solveable();
 
     bool is_determinable(XYPos q);
