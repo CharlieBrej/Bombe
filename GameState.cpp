@@ -3202,11 +3202,28 @@ void GameState::render(bool saving)
         std::list<GridRegion*> display_regions;
 
         XYPos mouse_filter_pos(-1,-1);
-        if ((mouse_mode == MOUSE_MODE_FILTER) && (mouse - grid_offset - scaled_grid_offset).inside(XYPos(grid_size,grid_size)))
+        if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
         {
-            mouse_filter_pos = grid->get_square_from_mouse_pos(mouse - grid_offset - scaled_grid_offset, grid_pitch);
-            if (mouse_filter_pos != XYPos(-1,-1))
-                mouse_filter_pos = grid->get_base_square(mouse_filter_pos);
+            XYPos mouse_square = grid->get_square_from_mouse_pos(mouse - grid_offset - scaled_grid_offset, grid_pitch);
+            if (mouse_square != XYPos(-1,-1))
+            {
+                mouse_square = grid->get_base_square(mouse_square);
+                if (mouse_mode == MOUSE_MODE_FILTER)
+                {
+                    mouse_filter_pos = mouse_square;
+                }
+                else
+                {
+                    for (GridRegion& region : grid->regions)
+                    {
+                        if (!region.gen_cause.rule && (region.gen_cause_pos == mouse_square))
+                        {
+                            mouse_hover_region = &region;
+                        }
+                    }
+
+                }
+            }
         }
         {
             bool has_hover = false;
@@ -4343,6 +4360,20 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Copy All Rules to Clipboard");
             }
         }
+        if (!constructed_rule_undo.empty())
+        {
+            SDL_Rect src_rect = {1856, 768, 192, 192 };
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Undo");
+        }
+        if (!constructed_rule_redo.empty())
+        {
+            SDL_Rect src_rect = {1856, 960, 192, 192 };
+            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Redo");
+        }
 
     }
     {
@@ -4775,8 +4806,13 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        std::string s = "Game by Charlie Brej\n\nThanks to:\n chirality, romain22222, Olie...";
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
+        std::string s = "Game by Charlie Brej\n\nThank you to\n"
+                        "All the players and testers especially: 3^3=7, AndyY, artless, Autoskip,\n"
+                        "baltazar, bearb, chirality, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
+                        "hyperphysin, Leaving Leaves, Mage6019, Nif, notgreat, npinsker, Olie,\n"
+                        "Orio Prisco, Orioo, Phos/Nyaki, piepie62, rolamni, romain22222, Sinom,\n"
+                        "Snoresville, Skyhawk, ThunderClawShocktrix, transcendental guy,\n"
+                        "Tsumiki Miniwa, vpumeyyv, yuval keshet, and many many others";
         render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * 2), s);
     }
 
@@ -5209,8 +5245,20 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
     if (right_panel_mode == RIGHT_MENU_NONE)
     {
-         if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
-            export_all_rules_to_clipboard();
+        if (display_rules && !display_clipboard_rules)
+        {
+            if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
+                export_all_rules_to_clipboard();
+        }
+
+        if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
+            rule_gen_undo();
+        }
+        if ((pos - XYPos(button_size * 4, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
+            rule_gen_redo();
+        }
     }
 
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
@@ -5456,7 +5504,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
         if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size, button_size)))
         {
-            reset_rule_gen_region();
+//            reset_rule_gen_region();
+            update_constructed_rule_pre();
+            int new_count = constructed_rule.region_count - 1;
+            for (int i = 0; i < 4; i++)
+                rule_gen_region[i] = NULL;
+            while (constructed_rule.region_count)
+                constructed_rule.remove_region(constructed_rule.region_count - 1);
+            update_constructed_rule();
+            right_panel_mode = RIGHT_MENU_NONE;
+
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
         {

@@ -133,7 +133,7 @@ public:
     //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
 
 static const char* server_level_types[] = {"A8802000100000", "B8802000100000","C8802000100000",NULL};
-
+static const int game_version = 7;
 class Database
 {
 public:
@@ -157,8 +157,8 @@ public:
         SaveObjectList* player_list = omap->get_item("players")->get_list();
 
         unsigned load_game_version = 0;
-        if (omap->has_key("version"))
-            load_game_version = omap->get_num("version");
+        if (omap->has_key("game_version"))
+            load_game_version = omap->get_num("game_version");
 
         for (unsigned i = 0; i < player_list->get_count(); i++)
         {
@@ -258,6 +258,7 @@ public:
         }
         omap->add_item("next_server_levels", sl_list);
         omap->add_num("server_levels_version", server_levels_version);
+        omap->add_num("game_version", game_version);
 
         return omap;
     }
@@ -497,6 +498,13 @@ public:
                     
                     std::string command;
                     omap->get_string("command", command);
+                    int player_version = omap->get_num("version");
+                    if (player_version != game_version)
+                    {
+                        printf("old version\n");
+                        close();
+                        break;
+                    }
                     if (command == "scores")
                     {
                         std::string steam_username;

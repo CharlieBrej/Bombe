@@ -1881,7 +1881,7 @@ bool Grid::add_region(GridRegion& reg, bool front)
     return true;
 }
 
-bool Grid::add_region(XYSet& elements, RegionType clue)
+bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
 {
     if (!elements.count())
         return false;
@@ -1931,6 +1931,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue)
     assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
+    reg.gen_cause_pos = cause;
     return add_region(reg, true);
 }
 
@@ -1955,7 +1956,7 @@ bool Grid::add_regions(int level)
                 clue.value--;
             }
         }
-        if (add_region(elements, clue))
+        if (add_region(elements, clue, XYPos(-1,-1)))
             return true;
     }
 
@@ -1979,7 +1980,7 @@ bool Grid::add_regions(int level)
                         clue.value--;
                 }
             }
-            if (add_region(elements, clue))
+            if (add_region(elements, clue, p))
                 return true;
         }
     }

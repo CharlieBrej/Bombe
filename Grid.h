@@ -333,7 +333,7 @@ public:
     bool is_solved(void);
 
     bool add_region(GridRegion& r, bool front = false);
-    bool add_region(XYSet& elements, RegionType clue);
+    bool add_region(XYSet& elements, RegionType clue, XYPos cause);
     bool add_regions(int level);
 
     enum ApplyRuleResp

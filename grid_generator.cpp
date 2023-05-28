@@ -279,7 +279,7 @@ void global_mutex_unlock()
 int main( int argc, char* argv[] )
 {
     //grid_set_rnd(1);
-    int TNUM = 4;
+    int TNUM = 4 ;
     pthread_t thread[TNUM];
     void* dummy;
 
