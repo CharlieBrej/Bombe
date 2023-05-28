@@ -133,7 +133,7 @@ public:
     //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
 
 static const char* server_level_types[] = {"A8802000100000", "B8802000100000","C8802000100000",NULL};
-static const int game_version = 7;
+static const int game_version = 8;
 class Database
 {
 public:
@@ -168,13 +168,16 @@ public:
             omap->get_string("steam_username", name);
             update_name(id, name);
         }
-        SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
-        for (int j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
+        if (load_game_version == game_version)
         {
-            SaveObjectList* score_list = score_list2->get_item(j)->get_list();
-            for (int i = 0; (i <= LEVEL_TYPES) && (i < score_list->get_count()); i++)
+            SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
+            for (int j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
             {
-                scores[j][i].load(score_list->get_item(i));
+                SaveObjectList* score_list = score_list2->get_item(j)->get_list();
+                for (int i = 0; (i <= LEVEL_TYPES) && (i < score_list->get_count()); i++)
+                {
+                    scores[j][i].load(score_list->get_item(i));
+                }
             }
         }
 

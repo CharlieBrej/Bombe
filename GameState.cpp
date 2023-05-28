@@ -181,6 +181,7 @@ GameState::GameState(std::string& load_data, bool json)
                         rules[mode].push_back(r);
                 }
 
+                if (version == game_version)
                 {
                     SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
                     for (int k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
