@@ -892,6 +892,8 @@ void GameState::advance(int steps)
             inspected_rule.regions[1] = NULL;
             inspected_rule.regions[2] = NULL;
             inspected_rule.regions[3] = NULL;
+            inspected_region = NULL;
+            mouse_hover_region = NULL;
             grid_cells_animation.clear();
             grid_regions_animation.clear();
             grid_regions_fade.clear();
@@ -4901,6 +4903,10 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                         {
                             if (rule_gen_region[i] == mouse_hover_region)
                                 found = true;
+                        }
+                        for (int i = constructed_rule.region_count; i < 4; i++)
+                        {
+                            assert(!rule_gen_region[i]);
                         }
                         if (!found)
                         {
