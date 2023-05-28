@@ -388,7 +388,7 @@ public:
     void update_constructed_rule();
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
-    void render_text_box(XYPos pos, std::string& s, bool left = false);
+    void render_text_box(XYPos pos, std::string& s, bool left = false, int force_width = -1);
     std::string translate(std::string s);
     void render_tooltip();
     void add_clickable_highlight(SDL_Rect& dst_rect);

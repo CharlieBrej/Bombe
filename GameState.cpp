@@ -1349,9 +1349,12 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             {
                 if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
                 {
-                    mouse_hover_region = &region;
-                    if (!grid_dragging)
-                        mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                    if (!display_menu)
+                    {
+                        mouse_hover_region = &region;
+                        if (!grid_dragging)
+                            mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                    }
                 }
             }
         }
@@ -1566,7 +1569,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
 
 }
 
-void GameState::render_text_box(XYPos pos, std::string& s, bool left)
+void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_width)
 {
     SDL_Color color = {contrast, contrast, contrast};
     std::vector<SDL_Surface*> text_surfaces;
@@ -1603,6 +1606,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left)
         box_pos.x -= box_size.x;
     if (box_pos.x < 0)
         box_pos.x = 0;
+    if (force_width > 0)
+        box_size.x = force_width;
 
     render_box(box_pos, box_size, button_size / 4, 1);
     XYPos txt_pos = box_pos + XYPos(border * 2, border);
@@ -3219,7 +3224,12 @@ void GameState::render(bool saving)
                     {
                         if (!region.gen_cause.rule && (region.gen_cause_pos == mouse_square))
                         {
-                            mouse_hover_region = &region;
+                            if (!display_menu)
+                            {
+                                mouse_hover_region = &region;
+                                if (!grid_dragging)
+                                    mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                            }
                         }
                     }
 
@@ -4531,49 +4541,55 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Full Screen");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 2.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 2.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {1280, 1344, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Select Language");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 3.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 3.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {1664, show_row_clues ? 576 : 768, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Show Row Clues");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {low_contrast ? 1856 : 2048, 1920, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Low Contrast");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 5.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 5.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {2432, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Remap Keys");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {2624, 769, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("About");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
@@ -4590,29 +4606,32 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 9, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Levels");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 9.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 9.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 10, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Rules");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 10.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 10.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {1280, 1728, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.7 * button_size;
             add_clickable_highlight(dst_rect);
             std::string t = translate("Quit");
-            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 11.2 * button_size), t);
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 11.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {704, 384, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "OK");
         }
@@ -4655,60 +4674,70 @@ void GameState::render(bool saving)
                     SDL_Rect src_rect = {704, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Help");
                 }
                 {
                     SDL_Rect src_rect = {1472, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Hint");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Next Level");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Refresh Regions");
                 }
                 {
                     SDL_Rect src_rect = {1472, 1152, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Full Screen");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Visible");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Hidden");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192 * 2, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Trash");
                 }
                 {
                     SDL_Rect src_rect = {1856, 768, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Undo");
                 }
                 {
                     SDL_Rect src_rect = {1856, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    dst_rect.w = 3 * button_size;
                     add_tooltip(dst_rect, "Redo");
                 }
             }
@@ -4758,6 +4787,7 @@ void GameState::render(bool saving)
                     SDL_Rect dst_rect = {left_panel_offset.x + (2 + (i / 5) * 4) * button_size, left_panel_offset.y + button_size * (3 + i % 5) , button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     render_region_type(reg, left_panel_offset + XYPos((2 + (i / 5) * 4) * button_size, button_size * (3 + i % 5)), button_size);
+                    dst_rect.w = 3 * button_size;
                     if (tip)
                         add_tooltip(dst_rect, tip);
                     else
@@ -4772,7 +4802,7 @@ void GameState::render(bool saving)
                 if (a == capturing_key)
                     s = "[?]";
                 
-                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3 + (i % 5)) * button_size), s);
+                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3.14 + (i % 5)) * button_size), s, false, button_size * 1.86);
             }
 
             {
@@ -4809,11 +4839,11 @@ void GameState::render(bool saving)
         tooltip_rect = XYRect(-1,-1,-1,-1);
         std::string s = "Game by Charlie Brej\n\nThank you to\n"
                         "All the players and testers especially: 3^3=7, AndyY, artless, Autoskip,\n"
-                        "baltazar, bearb, chirality, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
-                        "hyperphysin, Leaving Leaves, Mage6019, Nif, notgreat, npinsker, Olie,\n"
-                        "Orio Prisco, Orioo, Phos/Nyaki, piepie62, rolamni, romain22222, Sinom,\n"
-                        "Snoresville, Skyhawk, ThunderClawShocktrix, transcendental guy,\n"
-                        "Tsumiki Miniwa, vpumeyyv, yuval keshet, and many many others";
+                        "baltazar, bearb, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
+                        "hyperphysin, icely, Leaving Leaves, Mage6019, Nif, notgreat, npinsker,\n"
+                        "Nyphakosi, Olie, Orio Prisco, Orioo, Phos/Nyaki, piepie62, rolamni,\n"
+                        "romain22222, Sinom, Snoresville, Skyhawk, ThunderClawShocktrix,\n"
+                        "transcendental guy, Tsumiki Miniwa, vpumeyyv, yuval keshet\n    and many many others";
         render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * 2), s);
     }
 
@@ -6001,7 +6031,7 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x >= 0 && p.x <= 6 && p.y >= 0)
+                    if (p.x >= 0 && p.x <= 8 && p.y >= 0)
                     {
                         if (p.y == 0)
                         {
@@ -6041,7 +6071,7 @@ bool GameState::events()
                         volume = std::clamp(p, 0.0, 1.0);
                         Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                     }
-                    if (p == XYPos(7,9))
+                    if (p == XYPos(9,9))
                         display_menu = false;
                     break;
                 }
