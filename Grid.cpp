@@ -2962,6 +2962,8 @@ void TriangleGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
 
 XYPos TriangleGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
+    if (grid_pitch.x <= 0 || grid_pitch.y <= 0)
+        return XYPos(-1,-1);
     if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
         pos.x += grid_pitch.x;
     XYPos rep(pos / grid_pitch);

@@ -4478,7 +4478,7 @@ void GameState::render(bool saving)
 
             if (i == game_mode)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
-            render_text_box(left_panel_offset + XYPos(button_size * 3, button_size * (2 + i)), tname);
+            render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
         }
     }

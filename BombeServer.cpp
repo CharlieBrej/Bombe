@@ -693,11 +693,19 @@ int main(int argc, char *argv[])
     std::list<Connection> conns;
 
     time_t old_time = 0;
-
     int week = time(NULL) / 604800;
 
     while(true)
     {
+        {
+            std::ifstream loadfile("NEW_SERVER_LEVELS");
+            if (!loadfile.fail() && !loadfile.eof())
+                week = 0;
+        }
+        if (week == 0)
+        {
+            std::remove("NEW_SERVER_LEVELS");
+        }
         {
             fd_set w_fds;
             fd_set r_fds;
