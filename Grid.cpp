@@ -467,8 +467,7 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
                         else
                             var_counts[(i | j) - 1] = var_counts[i - 1] + var_counts[j - 1];
                     }
-                        
-                    if ((i & j) == i)
+                    else if ((i & j) == i)
                     {
                         if (var_counts[(j & ~i) - 1] >= 0)
                         {
@@ -487,6 +486,25 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
                                 break;
                             }
                         }
+                    }
+                    else
+                    {
+                        int x = i ^ j;
+                        if (var_counts[x - 1] >= 0)
+                        {
+                            int v = var_counts[i - 1] + var_counts[j - 1] + var_counts[x - 1];
+                            if (v % 2)
+                                return false;
+                            v /= 2;
+                            if (var_counts[(j | i) - 1] >= 0)
+                            {
+                                if (var_counts[(j | i) - 1] != v)
+                                    return false;
+                            }
+                            else
+                                var_counts[(j | i) - 1] = v;
+                        }
+
                     }
                 }
             }
