@@ -6,7 +6,7 @@
 #include "Misc.h"
 #include "LevelSet.h"
 #include "Compress.h"
-#include "clip/clip.h"
+#include "ImgClipBoard.h"
 
 #include <cassert>
 #include <SDL.h>
@@ -266,22 +266,26 @@ GameState::GameState(std::string& load_data, bool json)
     set_language(language);
     score_font = TTF_OpenFont("font-fixed.ttf", 19*4);
 
-    assert(Mix_OpenAudio(48000, MIX_DEFAULT_FORMAT, 2, 2048) == 0);
-    assert(Mix_AllocateChannels(32) == 32);
-
-    sounds[0] = Mix_LoadWAV( "snd/plop0.wav" );
-    sounds[1] = Mix_LoadWAV( "snd/plop1.wav" );
-    sounds[2] = Mix_LoadWAV( "snd/plop2.wav" );
-    sounds[3] = Mix_LoadWAV( "snd/plop3.wav" );
-    sounds[4] = Mix_LoadWAV( "snd/plop4.wav" );
-    sounds[5] = Mix_LoadWAV( "snd/plop5.wav" );
-    sounds[6] = Mix_LoadWAV( "snd/plop6.wav" );
-    sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
-    sounds[8] = Mix_LoadWAV( "snd/success1.wav" );
-    sounds[9] = Mix_LoadWAV( "snd/success2.wav" );
-    for (int i = 0; i < 10; i++)
-        assert(sounds[i]);
-    Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+    if (Mix_OpenAudio(48000, MIX_DEFAULT_FORMAT, 2, 2048) != 0)
+        has_sound = false;
+    else if (Mix_AllocateChannels(32) != 32)
+        has_sound = false;
+    if (has_sound)
+    {
+        sounds[0] = Mix_LoadWAV( "snd/plop0.wav" );
+        sounds[1] = Mix_LoadWAV( "snd/plop1.wav" );
+        sounds[2] = Mix_LoadWAV( "snd/plop2.wav" );
+        sounds[3] = Mix_LoadWAV( "snd/plop3.wav" );
+        sounds[4] = Mix_LoadWAV( "snd/plop4.wav" );
+        sounds[5] = Mix_LoadWAV( "snd/plop5.wav" );
+        sounds[6] = Mix_LoadWAV( "snd/plop6.wav" );
+        sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
+        sounds[8] = Mix_LoadWAV( "snd/success1.wav" );
+        sounds[9] = Mix_LoadWAV( "snd/success2.wav" );
+        for (int i = 0; i < 10; i++)
+            assert(sounds[i]);
+        Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+    }
 
     grid = Grid::Load("ABBA!");
 
@@ -313,7 +317,7 @@ GameState::GameState(std::string& load_data, bool json)
             prog_seen[i] = PROG_ANIM_MAX;
     if (!prog_seen[PROG_LOCK_GAME_MODE])
         game_mode = 0;
-    clip::set_error_handler(NULL);
+    ImgClipBoard::init();
 }
 
 SaveObject* GameState::save(bool lite)
@@ -409,10 +413,12 @@ GameState::~GameState()
         TTF_CloseFont(value);
     fonts.clear();
     TTF_CloseFont(score_font);
+    ImgClipBoard::init();
 
-    for (int i = 0; i < 16; i++)
-        if (sounds[i])
-            Mix_FreeChunk(sounds[i]);
+    if (has_sound)
+        for (int i = 0; i < 16; i++)
+            if (sounds[i])
+                Mix_FreeChunk(sounds[i]);
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -837,14 +843,16 @@ void GameState::advance(int steps)
                     if (sound_frame_index > 0)
                     {
                         sound_success_round_robin = (sound_success_round_robin + 1) % 32;
-                        assert(Mix_PlayChannel(sound_success_round_robin, sounds[8], 0) != -1);
+                        if (has_sound)
+                            Mix_PlayChannel(sound_success_round_robin, sounds[8], 0);
                         sound_frame_index -= 100;
                     }
                 }
                 else
                 {
                     sound_success_round_robin = (sound_success_round_robin + 1) % 32;
-                    assert(Mix_PlayChannel(16, sounds[9], 0) != -1);
+                    if (has_sound)
+                        Mix_PlayChannel(16, sounds[9], 0);
                 }
             }
         }
@@ -1100,7 +1108,8 @@ void GameState::advance(int steps)
             if (sound_frame_index > 100)
             {
                 sound_success_round_robin = (sound_success_round_robin + 1) % 32;
-                assert(Mix_PlayChannel(sound_success_round_robin, sounds[rnd % 8], 0) != -1);
+                if (has_sound)
+                    Mix_PlayChannel(sound_success_round_robin, sounds[rnd % 8], 0);
                 sound_frame_index -= 100;
             }
             continue;
@@ -1236,6 +1245,7 @@ void GameState::reset_rule_gen_region()
 //    rule_gen_region_count = 0;
 //    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
+    constructed_rule.priority = 0;
     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
     constructed_rule_undo.clear();
     constructed_rule_redo.clear();
@@ -2023,7 +2033,8 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
             if (prog_seen[lock_type] == 0 && sound_frame_index > 0)
             {
                 sound_success_round_robin = (sound_success_round_robin + 1) % 32;
-                assert(Mix_PlayChannel(sound_success_round_robin, sounds[9], 0) != -1);
+                if (has_sound)
+                    Mix_PlayChannel(sound_success_round_robin, sounds[9], 0);
                 sound_frame_index -= 100;
             }
             star_burst_animations.push_back(AnimationStarBurst(pos, size, prog_seen[lock_type], true));
@@ -5942,7 +5953,8 @@ bool GameState::events()
                 {
                     double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
                     volume = std::clamp(p, 0.0, 1.0);
-                    Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                    if (has_sound)
+                        Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                 }
                 break;
             }
@@ -6075,7 +6087,8 @@ bool GameState::events()
                         dragging_volume = true;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
                         volume = std::clamp(p, 0.0, 1.0);
-                        Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                        if (has_sound)
+                            Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                     }
                     if (p == XYPos(9,9))
                         display_menu = false;
@@ -6355,10 +6368,9 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
 
     render_rule(rule, XYPos(0, 0), 100, -1);
 
-    uint32_t pixel_data[500 * 500];
+    uint32_t* pixel_data = new uint32_t[500 * 500];
     SDL_Rect dst_rect = {0, 0, 500, 500};
     SDL_RenderReadPixels(sdl_renderer, &dst_rect, SDL_PIXELFORMAT_BGRA8888, (void*)pixel_data, 500 * 4);
-
 
     uint32_t comp_size = comp.size();
 
@@ -6384,24 +6396,11 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
         }
     }
 
-    clip::image_spec spec;
-    spec.width = 500;
-    spec.height = 500;
-    spec.bits_per_pixel = 32;
-    spec.bytes_per_row = spec.width*4;
-    spec.red_mask = 0xff00;
-    spec.green_mask = 0xff0000;
-    spec.blue_mask = 0xff000000;
-    spec.alpha_mask = 0xff;
-    spec.red_shift = 8;
-    spec.green_shift = 16;
-    spec.blue_shift = 24;
-    spec.alpha_shift = 0;
-    clip::image img(pixel_data, spec);
-    clip::set_image(img);
+    ImgClipBoard::send(pixel_data, XYPos(500, 500));
 
     SDL_DestroyTexture(my_canvas);
     SDL_SetRenderTarget(sdl_renderer, NULL);
+    delete[] pixel_data;
 }
 
 static uint32_t get_hidden_val(uint32_t** dat, unsigned roff, unsigned goff, unsigned boff)
@@ -6425,39 +6424,25 @@ void GameState::check_clipboard()
 {
     std::string comp;
     std::string new_value;
-//#ifndef TARGET_LINUX
-    bool has_image = false;
-    if (clip::has(clip::image_format()))
+    std::vector<uint32_t> pix_dat;
+    XYPos siz = ImgClipBoard::recieve(pix_dat);
+    if (siz.x > 0)
     {
-        clip::image_spec spec;
-        if (clip::get_image_spec(spec))
-        {
-            if (spec.width == 500 && spec.height == 500)
-                has_image = true;
-        }
-    }
-
-    if (has_image)
-    {
-        clip::image img;
-        if (!clip::get_image(img))
-            return;
-        clip::image_spec spec = img.spec();
-        uint32_t* dat = (uint32_t*) img.data();
+        uint32_t* dat = &pix_dat[0];
         dat += 32;
-        uint32_t comp_size = get_hidden_val(&dat, spec.red_shift, spec.green_shift, spec.blue_shift);
-        comp_size += uint32_t(get_hidden_val(&dat, spec.red_shift, spec.green_shift, spec.blue_shift)) << 8;
-        comp_size += uint32_t(get_hidden_val(&dat, spec.red_shift, spec.green_shift, spec.blue_shift)) << 16;
-        comp_size += uint32_t(get_hidden_val(&dat, spec.red_shift, spec.green_shift, spec.blue_shift)) << 24;
+        uint32_t comp_size = get_hidden_val(&dat, 8, 16, 24);
+        comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 8;
+        comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 16;
+        comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 24;
+        printf("comp_size %d\n", comp_size);
         if (comp_size > (500*500/3))
             return;
         for (int i = 0; i < comp_size; i++)
         {
-            comp += get_hidden_val(&dat, spec.red_shift, spec.green_shift, spec.blue_shift);
+            comp += get_hidden_val(&dat, 8, 16, 24);
         }
     }
     else
-//#endif
     {
         if (!SDL_HasClipboardText())
         {

@@ -51,6 +51,7 @@ public:
     uint64_t steam_id = 0;
     std::set<uint64_t> steam_friends;
     std::string language = "English";
+    bool has_sound = true;
     Mix_Chunk* sounds[16] = {};
     int sound_frame_index = 0;
     int sound_success_round_robin = 0;
