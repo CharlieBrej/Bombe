@@ -773,13 +773,13 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
     if (rule.apply_region_type.type != RegionType::VISIBILITY && (mode == 2 || mode == 3))
     {
         int rule_cnt = 0;
-        for (GridRule& rule : rules[game_mode])
+        for (GridRule& rule : rules[mode])
             if (!rule.deleted && rule.apply_region_type.type != RegionType::VISIBILITY)
                 rule_cnt++;
-        rule_cnt += rule_del_count[game_mode];
-        if (game_mode == 2 && rule_cnt >= 60)
+        rule_cnt += rule_del_count[mode];
+        if (mode == 2 && rule_cnt >= 60)
             return false;
-        if (game_mode == 3 && rule_cnt >= 300)
+        if (mode == 3 && rule_cnt >= 300)
             return false;
     }
     return true;
@@ -4853,9 +4853,9 @@ void GameState::render(bool saving)
         std::string s = "Game by Charlie Brej\n\nThank you to\n"
                         "All the players and testers especially: 3^3=7, AndyY, artless, Autoskip,\n"
                         "baltazar, bearb, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
-                        "hyperphysin, icely, Leaving Leaves, Mage6019, Nif, notgreat, npinsker,\n"
-                        "Nyphakosi, Olie, Orio Prisco, Orioo, Phos/Nyaki, piepie62, rolamni,\n"
-                        "romain22222, Sinom, Snoresville, Skyhawk, ThunderClawShocktrix,\n"
+                        "hyperphysin, icely, Leaving Leaves, Mage6019, Miri Mayhem, Nif, notgreat,\n"
+                        "npinsker, Nyphakosi, Olie, Orio Prisco, Orioo, Phos/Nyaki, piepie62,\n"
+                        "rolamni, romain22222, Sinom, Snoresville, Skyhawk, ThunderClawShocktrix,\n"
                         "transcendental guy, Tsumiki Miniwa, vpumeyyv, yuval keshet\n    and many many others";
         render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * 2), s);
     }
