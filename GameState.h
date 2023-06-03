@@ -83,6 +83,9 @@ public:
 
     char key_held = 0;
 
+    uint8_t ctrl_held = 0;
+    uint8_t shift_held = 0;
+
 
     enum{
         KEY_CODE_HELP,

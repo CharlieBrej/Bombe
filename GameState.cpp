@@ -303,8 +303,8 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_VARS1] = 6000;
     prog_stars[PROG_LOCK_VARS2] = 10000;
     prog_stars[PROG_LOCK_VARS3] = 14000;
-    prog_stars[PROG_LOCK_VARS4] = 18000;
-    prog_stars[PROG_LOCK_VARS5] = 22000;
+    prog_stars[PROG_LOCK_VARS4] = 17000;
+    prog_stars[PROG_LOCK_VARS5] = 20000;
     // prog_stars[PROG_LOCK_VARS3] = 10000;
     // prog_stars[PROG_LOCK_VARS4] = 10000;
     // prog_stars[PROG_LOCK_VARS5] = 10000;
@@ -3296,18 +3296,6 @@ void GameState::render(bool saving)
             }
         }
 
-        for (GridRegion* region : display_regions)
-        {
-            int r = grid_regions_fade[region];
-            if (!mouse_hover_region || (region == mouse_hover_region))
-                r = std::min(r + frame_step, 500);
-            else
-                r = std::max(r - frame_step, 0);
-            grid_regions_fade[region] = r;
-
-            grid_regions_animation[region] = std::min(grid_regions_animation[region] + frame_step, 500);
-        }
-
         FOR_XY_SET(pos, grid_squares)
         {
             GridPlace place = grid->get(pos);
@@ -3362,6 +3350,7 @@ void GameState::render(bool saving)
 
         if (row_col_clues)
         {
+            EdgePos* edge_hover_pos = NULL;
             std::vector<EdgePos> edges;
             grid->get_edges(edges, grid_pitch);
             {
@@ -3406,6 +3395,8 @@ void GameState::render(bool saving)
                     XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                     render_region_type(edge.type, grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
                     double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(0 + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < (arrow_size / 2.0))
+                        edge_hover_pos = &edge;
                     if (distance < best_distance)
                     {
                         best_distance = distance;
@@ -3426,6 +3417,8 @@ void GameState::render(bool saving)
                     XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                     render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin), arrow_size - bubble_margin * 2);
                     double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, 0 + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < (arrow_size / 2.0))
+                        edge_hover_pos = &edge;
                     if (distance < best_distance)
                     {
                         best_distance = distance;
@@ -3446,6 +3439,8 @@ void GameState::render(bool saving)
                     XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                     render_region_type(edge.type, grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin), arrow_size - bubble_margin * 2);
                     double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(grid_size + bubble_margin, p + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < (arrow_size / 2.0))
+                        edge_hover_pos = &edge;
                     if (distance < best_distance)
                     {
                         best_distance = distance;
@@ -3467,6 +3462,8 @@ void GameState::render(bool saving)
                     XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
                     render_region_type(edge.type, grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin), arrow_size - bubble_margin * 2);
                     double distance = XYPosFloat(mouse - (grid_offset + t + XYPos(p + bubble_margin, grid_size + bubble_margin) + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                    if (distance < (arrow_size / 2.0))
+                        edge_hover_pos = &edge;
                     if (distance < best_distance)
                     {
                         best_distance = distance;
@@ -3474,7 +3471,36 @@ void GameState::render(bool saving)
                     }
                 }
             }
+            if (edge_hover_pos)
+            {
+                XYPos p = edge_hover_pos->rule_pos;
+                p.x += 1000;
+                for (GridRegion& region : grid->regions)
+                {
+                    if (!region.gen_cause.rule && (region.gen_cause_pos == p))
+                    {
+                        if (!display_menu)
+                        {
+                            mouse_hover_region = &region;
+                            if (!grid_dragging)
+                                mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                        }
+                    }
+                }
+            }
         }
+        for (GridRegion* region : display_regions)
+        {
+            int r = grid_regions_fade[region];
+            if (!mouse_hover_region || (region == mouse_hover_region))
+                r = std::min(r + frame_step, 500);
+            else
+                r = std::max(r - frame_step, 0);
+            grid_regions_fade[region] = r;
+
+            grid_regions_animation[region] = std::min(grid_regions_animation[region] + frame_step, 500);
+        }
+
 
         {
             SDL_Rect src_rect = {448, 448, 1, 1};
@@ -5614,6 +5640,27 @@ bool GameState::events()
                 break;
             case SDL_KEYDOWN:
             {
+                int key = e.key.keysym.sym;
+                if (key == SDLK_LCTRL)
+                {
+                    ctrl_held |= 1;
+                    break;
+                }
+                if (key == SDLK_RCTRL)
+                {
+                    ctrl_held |= 2;
+                    break;
+                }
+                if (key == SDLK_LSHIFT)
+                {
+                    shift_held |= 1;
+                    break;
+                }
+                if (key == SDLK_RSHIFT)
+                {
+                    shift_held |= 2;
+                    break;
+                }
                 if (capturing_key >= 0)
                 {
                     key_codes[capturing_key] = e.key.keysym.sym;
@@ -5641,7 +5688,6 @@ bool GameState::events()
                     }
                     break;
                 }
-                int key = e.key.keysym.sym;
                 {
                     if (key == key_codes[KEY_CODE_UNDO])
                         rule_gen_undo();
@@ -5902,11 +5948,22 @@ bool GameState::events()
                 break;
             }
             case SDL_KEYUP:
-                if (e.key.keysym.sym == key_codes[KEY_CODE_G_VISIBLE] || 
-                    e.key.keysym.sym == key_codes[KEY_CODE_G_HIDDEN] |
-                    e.key.keysym.sym == key_codes[KEY_CODE_G_TRASH])
+            {
+                int key = e.key.keysym.sym;
+                if (key == SDLK_LCTRL)
+                    ctrl_held &= ~1;
+                if (key == SDLK_RCTRL)
+                    ctrl_held &= ~2;
+                if (key == SDLK_LSHIFT)
+                    shift_held &= ~1;
+                if (key == SDLK_RSHIFT)
+                    shift_held &= ~2;
+                if (key == key_codes[KEY_CODE_G_VISIBLE] || 
+                    key == key_codes[KEY_CODE_G_HIDDEN] |
+                    key == key_codes[KEY_CODE_G_TRASH])
                         key_held = 0;
                 break;
+            }
             case SDL_MOUSEMOTION:
             {
                 mouse.x = e.motion.x;

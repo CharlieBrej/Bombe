@@ -1974,7 +1974,7 @@ bool Grid::add_regions(int level)
                 clue.value--;
             }
         }
-        if (add_region(elements, clue, XYPos(-1,-1)))
+        if (add_region(elements, clue, XYPos(e_pos.x + 1000,e_pos.y)))
             return true;
     }
 
@@ -2436,9 +2436,9 @@ void SquareGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
     for (auto const& [pos, type] : edges)
     {
         if (pos.x == 0)
-            rep.push_back(EdgePos (type, XYPosFloat(1,0).angle(), (pos.y + 0.5) * grid_pitch.y));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(1,0).angle(), (pos.y + 0.5) * grid_pitch.y));
         if (pos.x == 1)
-            rep.push_back(EdgePos (type, XYPosFloat(0,1).angle(), -(pos.y + 0.5) * grid_pitch.y));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(0,1).angle(), -(pos.y + 0.5) * grid_pitch.y));
     }
 }
 
@@ -2973,14 +2973,14 @@ void TriangleGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
     for (auto const& [pos, type] : edges)
     {
         if (pos.x == 0)
-            rep.push_back(EdgePos (type, XYPosFloat(1, 0).angle(), (pos.y + 0.5) * grid_pitch.y));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(1, 0).angle(), (pos.y + 0.5) * grid_pitch.y));
         else if (pos.x == 1)
         {
-            rep.push_back(EdgePos (type, XYPosFloat(1, std::sqrt(3)).angle(), (((size.y - 1) / 2) - pos.y)  * grid_pitch.y));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(1, std::sqrt(3)).angle(), (((size.y - 1) / 2) - pos.y)  * grid_pitch.y));
         }
         else if (pos.x == 2)
         {
-            rep.push_back(EdgePos (type, XYPosFloat(-1, std::sqrt(3)).angle(), -(pos.y + 1)  * grid_pitch.y));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(-1, std::sqrt(3)).angle(), -(pos.y + 1)  * grid_pitch.y));
         }
         else
             assert(0);
@@ -3328,15 +3328,15 @@ void HexagonGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
     {
         if (pos.x == 0)
         {
-            rep.push_back(EdgePos (type, XYPosFloat(1.5, std::sqrt(3)/2).angle(), -((pos.y - size.y) * 3 - 0.5) * grid_pitch.x));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(1.5, std::sqrt(3)/2).angle(), -((pos.y - size.y) * 3 - 0.5) * grid_pitch.x));
         }
         else if (pos.x == 1)
         {
-            rep.push_back(EdgePos (type, XYPosFloat(0, 1).angle(), -(2 + pos.y * 3) * grid_pitch.x));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(0, 1).angle(), -(2 + pos.y * 3) * grid_pitch.x));
         }
         else if (pos.x == 2)
         {
-            rep.push_back(EdgePos (type, XYPosFloat(-1.5, std::sqrt(3)/2).angle(), -(std::sqrt(7) + pos.y * 3) * grid_pitch.x));
+            rep.push_back(EdgePos(pos, type, XYPosFloat(-1.5, std::sqrt(3)/2).angle(), -(std::sqrt(7) + pos.y * 3) * grid_pitch.x));
         }
         else
             assert(0);

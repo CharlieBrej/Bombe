@@ -257,10 +257,11 @@ struct RenderCmd
 
 struct EdgePos
 {
+    XYPos rule_pos;
     RegionType type;
     double angle;
     double pos;
-    EdgePos (RegionType type_, double angle_, double pos_): type(type_),angle(angle_),pos(pos_){}
+    EdgePos (XYPos _rule_pos, RegionType type_, double angle_, double pos_): rule_pos(_rule_pos),type(type_),angle(angle_),pos(pos_){}
     EdgePos (){}
     bool operator==(const EdgePos& other) const
     {
