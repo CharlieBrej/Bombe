@@ -229,6 +229,7 @@ public:
     GridRegion* mouse_hover_region = NULL;
     GridRegion *inspected_region = NULL;
     GridRegionCause inspected_rule;
+    std::set<GridRule*> selected_rules;
     bool rule_gen_target_square_count = false;
     XYSet filter_pos;
 
