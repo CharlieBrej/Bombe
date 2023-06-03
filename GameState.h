@@ -206,19 +206,21 @@ public:
     enum {
         CLIPBOARD_HAS_NONE,
         CLIPBOARD_HAS_RULE,
-        CLIPBOARD_HAS_RULE_SET
+        CLIPBOARD_HAS_RULE_SET,
+        CLIPBOARD_HAS_LEVEL
         }
         clipboard_has_item = CLIPBOARD_HAS_NONE;
 
     std::string clipboard_last;
     GridRule clipboard_rule;
     std::list<GridRule> clipboard_rule_set;
+    std::string clipboard_level;
 
     
     RegionType region_type = RegionType(RegionType::SET, 0);
     RegionType select_region_type = RegionType(RegionType::EQUAL, 0);
-    const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::MORE, RegionType::XOR1, RegionType::XOR2, RegionType::XOR3},
-                                                      {RegionType::NOTEQUAL, RegionType::LESS, RegionType::XOR11, RegionType::XOR22, RegionType::PARITY}};
+    const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::LESS, RegionType::XOR1, RegionType::XOR2, RegionType::XOR3},
+                                                      {RegionType::NOTEQUAL, RegionType::MORE, RegionType::XOR11, RegionType::XOR22, RegionType::PARITY}};
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule rule_illogical_reason;
@@ -380,6 +382,7 @@ public:
     SDL_Texture* loadTexture(const char* filename);
 
     bool rule_is_permitted(GridRule& rule, int mode);
+    void load_grid(std::string s);
     void advance(int steps);
     void audio();
     void set_language(std::string lang);
@@ -411,7 +414,7 @@ public:
     bool events();
     void deal_with_scores();
     void export_all_rules_to_clipboard();
-    void send_to_clipboard(SaveObject* obj);
+    void send_to_clipboard(std::string title, SaveObject* obj);
     void check_clipboard();
     void send_rule_to_img_clipboard(GridRule& rule);
     void import_all_rules();

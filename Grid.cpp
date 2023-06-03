@@ -2384,6 +2384,11 @@ void Grid::clear_regions()
     deleted_regions.clear();
 }
 
+std::string SquareGrid::text_desciption()
+{
+    return "Square " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));
+}
+
 std::string SquareGrid::to_string()
 {
     return "A" + Grid::to_string();
@@ -2715,6 +2720,11 @@ bool TriangleGrid::is_inside(XYPos pos)
         return true;
     }
     return pos.inside(size);
+}
+
+std::string TriangleGrid::text_desciption()
+{
+    return "Triangle " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));
 }
 
 std::string TriangleGrid::to_string()
@@ -3240,6 +3250,11 @@ XYPos TriangleGrid::get_base_square(XYPos p)
 XYPos TriangleGrid::get_wrapped_size(XYPos grid_pitch)
 {
     return size * grid_pitch;
+}
+
+std::string HexagonGrid::text_desciption()
+{
+    return "Hexagon " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));
 }
 
 std::string HexagonGrid::to_string()

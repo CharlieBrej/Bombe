@@ -310,6 +310,7 @@ public:
     GridPlace get(XYPos p);
     RegionType& get_clue(XYPos p);
 
+    virtual std::string text_desciption() = 0;
     virtual std::string to_string();
     virtual Grid* dup() = 0;
     virtual XYSet get_squares() = 0;
@@ -376,6 +377,7 @@ public:
     SquareGrid() {}
     SquareGrid(std::string s) {from_string(s);}
 
+    std::string text_desciption();
     std::string to_string();
     Grid* dup() {return new SquareGrid(*this);}
     XYSet get_squares();
@@ -404,6 +406,7 @@ public:
 
     bool is_inside(XYPos p);
 
+    std::string text_desciption();
     std::string to_string();
     Grid* dup() {return new TriangleGrid(*this);}
     XYSet get_squares();
@@ -435,6 +438,7 @@ public:
     HexagonGrid() {}
     HexagonGrid(std::string s) {from_string(s);}
 
+    std::string text_desciption();
     std::string to_string();
     Grid* dup() {return new HexagonGrid(*this);}
     XYSet get_squares();

@@ -61,6 +61,7 @@ XYPos ImgClipBoard::recieve(std::vector<uint32_t>& reply)
 #include "clip/clip.h"
 #include "clip/clip_x11_png.h"
 
+static SDL_mutex* clip_mutex;
 static SDL_Thread *sdl_clipboard_thread;
 static Atom XA_TARGETS;
 static Display* disp;
@@ -150,7 +151,7 @@ static int clipboard_thread(void *ptr)
 			}
 			else if(target == image_png_atom)
 			{
-
+				SDL_LockMutex(clip_mutex);
 				clip::image_spec spec;
 				spec.width = reply_size.x;
 				spec.height = reply_size.y;
@@ -173,6 +174,7 @@ static int clipboard_thread(void *ptr)
 						&png_data[0], png_data.size());
 				}
 				XSendEvent(disp, e.xselectionrequest.requestor, True, 0, &s);
+				SDL_UnlockMutex(clip_mutex);
 			}
 			else
 			{
@@ -189,6 +191,7 @@ static int clipboard_thread(void *ptr)
 			}
 			else
 			{
+				bool tgts = false;
 				Property prop = read_property(disp, win, sel);
 				if(target == XA_TARGETS)
 				{
@@ -199,14 +202,22 @@ static int clipboard_thread(void *ptr)
 						if (atom_list[i] == image_png_atom)
 						{
 							XConvertSelection(disp, sel, image_png_atom, sel, win, CurrentTime);
+							tgts = true;
 						}
                     }
+					if (!tgts)
+					{
+						SDL_LockMutex(clip_mutex);
+						reply_size = XYPos(0,0);
+						SDL_UnlockMutex(clip_mutex);
+					}
 				}
 				else if(target == image_png_atom)
 				{
 					clip::image img;
 					if (clip::x11::read_png(prop.data, prop.nitems * prop.format / 8, &img, NULL))
 					{
+						SDL_LockMutex(clip_mutex);
 						clip::image_spec spec = img.spec();
 						uint32_t* dat = (uint32_t*) img.data();
 						XYPos siz(spec.width, spec.height);
@@ -223,18 +234,9 @@ static int clipboard_thread(void *ptr)
 							reply_data.push_back(bgra);
 						}
 						reply_size = siz;
+						SDL_UnlockMutex(clip_mutex);
 					}
-					else
-					{
-						reply_size = XYPos(0, 0);
-					}
-					continue;
 				}
-				else
-                {
-                    continue;
-                }
-
 				XFree(prop.data);
 			}
 		}
@@ -247,14 +249,17 @@ static int clipboard_thread(void *ptr)
 
 void ImgClipBoard::init()
 {
+	clip_mutex = SDL_CreateMutex();
     sdl_clipboard_thread = SDL_CreateThread(clipboard_thread, "ClipBoardThread", (void *)NULL);
 }
 
 void ImgClipBoard::send(uint32_t* data, XYPos siz)
 {
+	SDL_LockMutex(clip_mutex);
 	reply_data.clear();
 	reply_data.insert(reply_data.begin(), data, data + (siz.x * siz.y));
 	reply_size = siz;
+	SDL_UnlockMutex(clip_mutex);
 	XSetSelectionOwner(disp, sel, win, CurrentTime);
 }
 

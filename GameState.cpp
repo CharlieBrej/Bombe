@@ -785,6 +785,35 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
     return true;
 }
 
+void GameState::load_grid(std::string s)
+{
+    delete grid;
+    grid = Grid::Load(s);
+    reset_rule_gen_region();
+    inspected_rule.regions[0] = NULL;
+    inspected_rule.regions[1] = NULL;
+    inspected_rule.regions[2] = NULL;
+    inspected_rule.regions[3] = NULL;
+    inspected_region = NULL;
+    mouse_hover_region = NULL;
+    grid_cells_animation.clear();
+    grid_regions_animation.clear();
+    grid_regions_fade.clear();
+    current_level_is_temp = false;
+    grid_zoom = 1;
+    target_grid_zoom = 1;
+    scaled_grid_offset = XYPos(0,0);
+    scaled_grid_size = grid_size;
+    for (GridRule& rule : rules[game_mode])
+    {
+        rule.used_count += rule.level_used_count;
+        rule.clear_count += rule.level_clear_count;
+        rule.level_used_count = 0;
+        rule.level_clear_count = 0;
+    }
+    display_levels_center_current = true;
+
+}
 void GameState::advance(int steps)
 {
     frame = frame + steps;
@@ -865,6 +894,7 @@ void GameState::advance(int steps)
         if (force_load_level || level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
         {
             if (!force_load_level)
+            {
                 do
                 {
                     if (load_level)
@@ -889,35 +919,12 @@ void GameState::advance(int steps)
                     }
                 }
                 while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index]);
+            }
 
             std::string& s = (current_level_group_index == GLBAL_LEVEL_SETS) ?
                         server_levels[current_level_set_index][current_level_index] :
                         global_level_sets[current_level_group_index][current_level_set_index]->levels[current_level_index];
-            delete grid;
-            grid = Grid::Load(s);
-            reset_rule_gen_region();
-            inspected_rule.regions[0] = NULL;
-            inspected_rule.regions[1] = NULL;
-            inspected_rule.regions[2] = NULL;
-            inspected_rule.regions[3] = NULL;
-            inspected_region = NULL;
-            mouse_hover_region = NULL;
-            grid_cells_animation.clear();
-            grid_regions_animation.clear();
-            grid_regions_fade.clear();
-            current_level_is_temp = false;
-            grid_zoom = 1;
-            target_grid_zoom = 1;
-            scaled_grid_offset = XYPos(0,0);
-            scaled_grid_size = grid_size;
-            for (GridRule& rule : rules[game_mode])
-            {
-                rule.used_count += rule.level_used_count;
-                rule.clear_count += rule.level_clear_count;
-                rule.level_used_count = 0;
-                rule.level_clear_count = 0;
-            }
-            display_levels_center_current = true;
+            load_grid(s);
         }
         else
             auto_progress = false;
@@ -4055,6 +4062,13 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Go to Rule Constructor");
         }
     }
+    if ((right_panel_mode == RIGHT_MENU_NONE) || (right_panel_mode == RIGHT_MENU_REGION))
+    {
+        SDL_Rect src_rect = {1856, 1536, 192, 192};
+        SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6, button_size, button_size};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        add_tooltip(dst_rect, "Copy Level to Clipboard");
+    }
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_RULE_INSPECT)
     {
@@ -5102,12 +5116,17 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
         }
-         if (clipboard_has_item == CLIPBOARD_HAS_RULE_SET)
+        if (clipboard_has_item == CLIPBOARD_HAS_RULE_SET)
         {
             display_rules = true;
             display_clipboard_rules = true;
         }
-    }
+         if (clipboard_has_item == CLIPBOARD_HAS_LEVEL)
+        {
+            load_grid(clipboard_level);
+            current_level_is_temp = true;
+        }
+   }
 
     if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * (GLBAL_LEVEL_SETS + 1), button_size)))
     {
@@ -5268,7 +5287,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             SaveObjectMap* omap = new SaveObjectMap;
             omap->add_item("rule", inspected_rule.rule->save(true));
-            send_to_clipboard(omap);
+            send_to_clipboard("Rule", omap);
             delete omap;
         }
         if ((pos - XYPos(button_size * 4, button_size * 6)).inside(XYPos(button_size, button_size)))
@@ -5350,6 +5369,18 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 right_panel_mode = RIGHT_MENU_RULE_GEN;
                 return;
             }
+        }
+    }
+    if (((right_panel_mode == RIGHT_MENU_NONE) || (right_panel_mode == RIGHT_MENU_REGION)) && !display_rules)
+    {
+        if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
+        {
+            SaveObjectMap* omap = new SaveObjectMap;
+            omap->add_string("level", grid->to_string());
+
+            std::string title = "Level (" + grid->text_desciption() + ")";
+            send_to_clipboard(title, omap);
+            delete omap;
         }
     }
 
@@ -6381,11 +6412,11 @@ void GameState::export_all_rules_to_clipboard()
             rlist->add_item(rule.save(true));
     }
     omap->add_item("rules", rlist);
-    send_to_clipboard(omap);
+    send_to_clipboard("Rules", omap);
     delete omap;
 }
 
-void GameState::send_to_clipboard(SaveObject* obj)
+void GameState::send_to_clipboard(std::string title, SaveObject* obj)
 {
     std::ostringstream stream;
     obj->save(stream);
@@ -6393,7 +6424,8 @@ void GameState::send_to_clipboard(SaveObject* obj)
 
     std::string comp = compress_string_zstd(str);
     std::u32string s32;
-    std::string reply = "";
+    std::string reply = "Bombe " + title;
+    reply += ":\n";
 
     s32 += 0x1F4A3;                 // unicode Bomb 
     unsigned spaces = 2;
@@ -6563,6 +6595,11 @@ void GameState::check_clipboard()
                     clipboard_rule_set.push_back(r);
                 }
                 clipboard_has_item = CLIPBOARD_HAS_RULE_SET;
+            }
+            if (omap->has_key("level"))
+            {
+                clipboard_level = omap->get_string("level");
+                clipboard_has_item = CLIPBOARD_HAS_LEVEL;
             }
         }
     }
