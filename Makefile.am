@@ -14,8 +14,8 @@ EXTRA_SRC =
 
 if LINUX
     EXTRA_FLAGS += -DTARGET_LINUX 
-    EXTRA_SRC += clip/clip.cpp clip/image.cpp  clip/clip_x11.cpp
-    EXTRA_LDADD += @XCB_LIBS@ -lX11
+    EXTRA_SRC += clip/image.cpp
+    EXTRA_LDADD += -lX11 -lpng
 endif
 
 if MACOS

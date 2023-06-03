@@ -97,10 +97,15 @@ public:
     RegionType() : type (NONE), value(0) {}
     RegionType(char dummy, unsigned t) : var((t >> 16) & 0xFF), type (Type((t >> 8) & 0xFF)), value(t & 255) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
+    static int type_priority(Type t)
+    {
+        static const int pri[] = {12, 0, 3, 4, 7, 8, 9, 10, 1, 11, 5, 6};
+        return (t <= XOR11) ? pri[t] : t;
+    }
 
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value) && (var == other.var); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
-    bool operator<(const RegionType& other) const { return (type < other.type) || ((type == other.type) && (value < other.value)); }
+    bool operator<(const RegionType& other) const { return (type_priority(type) < type_priority(other.type)) || ((type == other.type) && ((value < other.value) || ((value == other.value) && (var < other.var)))); }
     unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
     std::string val_as_str(int offset = 0);
 

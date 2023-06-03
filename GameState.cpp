@@ -2963,8 +2963,11 @@ void GameState::render(bool saving)
                 }
                 if (col == 5)
                 {
-                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY &&
-                        b.rule->apply_region_type.type != RegionType::VISIBILITY)
+                    if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        b_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return false;
+                    if (b_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        a_.rule->apply_region_type.type != RegionType::VISIBILITY)
                             return true;
                     if (cur_level)
                         return (a.rule->level_used_count < b.rule->level_used_count);
@@ -2972,8 +2975,11 @@ void GameState::render(bool saving)
                         return (a.rule->used_count < b.rule->used_count);
                 }
                 if (col == 6)
-                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY &&
-                        b.rule->apply_region_type.type != RegionType::VISIBILITY)
+                    if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        b_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return false;
+                    if (b_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        a_.rule->apply_region_type.type != RegionType::VISIBILITY)
                             return true;
                     if (cur_level)
                         return (a.rule->level_clear_count < b.rule->level_clear_count);
@@ -6434,7 +6440,6 @@ void GameState::check_clipboard()
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 8;
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 16;
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 24;
-        printf("comp_size %d\n", comp_size);
         if (comp_size > (500*500/3))
             return;
         for (int i = 0; i < comp_size; i++)
