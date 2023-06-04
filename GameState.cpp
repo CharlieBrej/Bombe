@@ -3271,10 +3271,10 @@ void GameState::render(bool saving)
             Colour base(contrast * 0.6,contrast * 0.6,contrast * 0.6);
             if (colors > 0)
             {
-                double p = (double)pos.y / grid->size.y * radians(360) + (double)frame / 500;
-                base.r += sin(p) * 255 * 0.4 * colors;
-                base.g += sin(p + radians(120)) * 255 * 0.4 * colors;
-                base.b += sin(p + radians(230)) * 255 * 0.4 * colors;
+                double p = (double)pos.y / grid->size.y * radians(360) + (double)frame / 2000;
+                base.r += sin(p) * contrast * 0.4 * colors;
+                base.g += sin(p + radians(120)) * contrast * 0.4 * colors;
+                base.b += sin(p + radians(230)) * contrast * 0.4 * colors;
             }
 
             Colour bg_col(0,0,0);
