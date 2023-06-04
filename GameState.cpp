@@ -5070,8 +5070,20 @@ void GameState::render(bool saving)
         set_language(orig_lang);
     }
 
-
     render_tooltip();
+    if (pirate)
+    {
+        XYPos pos = grid_offset + XYPos(grid_size / 2, grid_size / 2);
+        XYPos siz = XYPos(grid_size / 8, grid_size / 8);
+        pos -= siz / 2;
+        XYPosFloat cyc(Angle(float(frame) / 1000), grid_size / 3);
+        pos += cyc;
+        SDL_Rect src_rect = {2112, 384, 192, 192};
+        SDL_Rect dst_rect = {pos.x, pos.y, siz.x , siz.y};
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+    }
+
     SDL_RenderPresent(sdl_renderer);
 }
 
@@ -6525,6 +6537,8 @@ void GameState::deal_with_scores()
             try 
             {
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
+                if (omap->has_key("pirate"))
+                    pirate = true;
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
                 for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
                 {

@@ -442,6 +442,7 @@ public:
             }
             else if (length > 0 && inbuf.length() >= length)
             {
+                bool pirate = false;
                 try
                 {
                     std::string decomp = decompress_string(inbuf);
@@ -498,10 +499,11 @@ public:
                         if ((steam_id == 0) ||
                             (db.steam_sessions[steam_session] != steam_id))
                         {
-                            std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
-                            omap->save(std::cout);
-                            close();
-                            break;
+                            pirate = true;
+                            // std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
+                            // omap->save(std::cout);
+                            // close();
+                            // break;
                         }
                     }
                     
@@ -510,9 +512,10 @@ public:
                     int player_version = omap->get_num("version");
                     if (player_version != game_version)
                     {
-                        printf("old version\n");
-                        close();
-                        break;
+                        pirate = true;
+                        // printf("old version\n");
+                        // close();
+                        // break;
                     }
                     if (command == "scores")
                     {
@@ -592,6 +595,8 @@ public:
                                 scr->add_item("server_levels", sl_list);
                             }
                         }
+                        if (pirate)
+                            scr->add_num("pirate", 1);
 
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
