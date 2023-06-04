@@ -345,7 +345,7 @@
             "Main Menu" :                   "Hauptmenü",
             "Medium Priority" :             "Mittlere Priorität",
             "Minimum Priority" :            "Niedrigste Priorität",
-            "Music Volume" :                "Musiklautstärke",
+            "Music Volume" :                "Musik",
             "Next Level" :                  "Nächstes Level",
             "Next Page" :                   "Nächste Seite",
             "No variables, max 300 rules" : "Keine Variablen, maximal 300 Regeln",
@@ -391,7 +391,7 @@
             "Update Rule" :                 "Regel aktualisieren",
             "Visible" :                     "Sichtbar",
             "Visibility set by User" :      "Benutzerdefinierte Sichtbarkeit",
-            "Volume" :                      "Lautstärke",
+            "Volume" :                      "Soundeffekte",
             "Why Illogical" :               "Warum unlogisch"
         },
         "tutorial":
