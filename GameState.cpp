@@ -3059,35 +3059,69 @@ void GameState::render(bool saving)
 
             if (!display_clipboard_rules && display_rules_click_drag && display_rules_click_line && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
-                if (inspected_rule.rule != &rule && (right_panel_mode == RIGHT_MENU_RULE_INSPECT) && selected_rules.empty())
+                if (selected_rules.empty())
                 {
-                    if ((display_rules_sort_col != 0) || (display_rules_sort_dir != true))
+                    if (inspected_rule.rule != &rule && (right_panel_mode == RIGHT_MENU_RULE_INSPECT))
                     {
-                        display_rules_sort_col = 0;
-                        display_rules_sort_dir = true;
-                    }
-                    else
-                    {
-                        std::list<GridRule>::iterator from, to = rules[game_mode].end();
-
-                        for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
+                        if ((display_rules_sort_col != 0) || (display_rules_sort_dir != true))
                         {
-                            if (&(*it) == &rule)
-                            {
-                                to = it;
-                                to++;
-                            }
-                            if (&(*it) == inspected_rule.rule)
-                            {
-                                from = it;
-                                to--;
-                            }
+                            display_rules_sort_col = 0;
+                            display_rules_sort_dir = true;
                         }
-                        rules[game_mode].splice(to, rules[game_mode], from);
+                        else
+                        {
+                            std::list<GridRule>::iterator from, to = rules[game_mode].end();
+
+                            for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
+                            {
+                                if (&(*it) == &rule)
+                                {
+                                    to = it;
+                                    to++;
+                                }
+                                if (&(*it) == inspected_rule.rule)
+                                {
+                                    from = it;
+                                    to--;
+                                }
+                            }
+                            rules[game_mode].splice(to, rules[game_mode], from);
+                        }
                     }
                 }
-                
+                else
+                {
+                    if (!selected_rules.count(&rule) && (right_panel_mode == RIGHT_MENU_RULE_INSPECT))
+                    {
+                        if ((display_rules_sort_col != 0) || (display_rules_sort_dir != true))
+                        {
+                            display_rules_sort_col = 0;
+                            display_rules_sort_dir = true;
+                        }
+                        else
+                        {
+                            for (GridRule* s_rule : selected_rules)
+                            {
+                                std::list<GridRule>::iterator from, to = rules[game_mode].end();
 
+                                for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
+                                {
+                                    if (&(*it) == &rule)
+                                    {
+                                        to = it;
+                                        to++;
+                                    }
+                                    if (&(*it) == s_rule)
+                                    {
+                                        from = it;
+                                        to--;
+                                    }
+                                }
+                                rules[game_mode].splice(to, rules[game_mode], from);
+                            }
+                        }
+                    }
+                }
             }
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
@@ -3122,13 +3156,13 @@ void GameState::render(bool saving)
                                         inspected_rule.rule = *selected_rules.begin();
                                         selected_rules.clear();
                                     }
+                                    display_rules_click_drag = false;
                                 }
                                 else
                                 {
                                     selected_rules.insert(&rule);
                                 }
                             }
-                            display_rules_click_drag = false;
                         }
                         else
                         {
