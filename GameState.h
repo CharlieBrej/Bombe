@@ -55,6 +55,8 @@ public:
     Mix_Chunk* sounds[16] = {};
     int sound_frame_index = 0;
     int sound_success_round_robin = 0;
+    Mix_Music *music;
+
 
     static const int GAME_MODES = 4;
     int game_mode = 0;
@@ -140,8 +142,12 @@ public:
 
     bool dragging_speed = false;
     bool dragging_volume = false;
+    bool dragging_music_volume = false;
+    bool dragging_color = false;
     double speed_dial = 0.25;
     double volume = 0.50;
+    double music_volume = 0.50;
+    double colors = 0.00;
 
     XYPos mouse;
     enum {
@@ -336,6 +342,7 @@ public:
         PROG_LOCK_FILTER,
         PROG_LOCK_PRIORITY,
         PROG_LOCK_PRIORITY2,
+        PROG_LOCK_COLORS,
 
         PROG_LOCK_TOTAL
         };

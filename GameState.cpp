@@ -116,6 +116,10 @@ GameState::GameState(std::string& load_data, bool json)
                 speed_dial = double(omap->get_num("speed_dial")) / 1000;
             if (omap->has_key("volume"))
                 volume = double(omap->get_num("volume")) / 1000;
+            if (omap->has_key("music_volume"))
+                music_volume = double(omap->get_num("music_volume")) / 1000;
+            if (omap->has_key("colors"))
+                colors = double(omap->get_num("colors")) / 1000;
             if (omap->has_key("game_mode"))
                 game_mode = omap->get_num("game_mode");
             if (omap->has_key("full_screen"))
@@ -285,6 +289,10 @@ GameState::GameState(std::string& load_data, bool json)
         for (int i = 0; i < 10; i++)
             assert(sounds[i]);
         Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+        Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
+        music = Mix_LoadMUS("music.ogg");
+        assert(music);
+        assert(Mix_PlayMusic(music, -1) == 0);
     }
 
     grid = Grid::Load("ABBA!");
@@ -310,7 +318,7 @@ GameState::GameState(std::string& load_data, bool json)
     // prog_stars[PROG_LOCK_VARS5] = 10000;
     prog_stars[PROG_LOCK_FILTER] = 7000;
     prog_stars[PROG_LOCK_PRIORITY] = 16000;
-    prog_stars[PROG_LOCK_PRIORITY2] = 16000;
+    prog_stars[PROG_LOCK_COLORS] = 15000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -367,6 +375,8 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("low_contrast", low_contrast);
     omap->add_num("speed_dial", speed_dial * 1000);
     omap->add_num("volume", volume * 1000);
+    omap->add_num("music_volume", music_volume * 1000);
+    omap->add_num("colors", colors * 1000);
     omap->add_num("full_screen", full_screen);
     omap->add_num("max_stars", max_stars);
 
@@ -406,7 +416,6 @@ void GameState::save(std::ostream& outfile, bool lite)
 
 GameState::~GameState()
 {
-//    Mix_FreeMusic(music);
     delete grid;
     delete lang_data;
     for (const auto& [key, value] : fonts)
@@ -419,6 +428,7 @@ GameState::~GameState()
         for (int i = 0; i < 16; i++)
             if (sounds[i])
                 Mix_FreeChunk(sounds[i]);
+    Mix_FreeMusic(music);
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -3224,6 +3234,15 @@ void GameState::render(bool saving)
 
         FOR_XY_SET(pos, grid_squares)
         {
+            Colour base(contrast * 0.6,contrast * 0.6,contrast * 0.6);
+            if (colors > 0)
+            {
+                double p = (double)pos.y / grid->size.y * radians(360) + (double)frame / 500;
+                base.r += sin(p) * 255 * 0.4 * colors;
+                base.g += sin(p + radians(120)) * 255 * 0.4 * colors;
+                base.b += sin(p + radians(230)) * 255 * 0.4 * colors;
+            }
+
             Colour bg_col(0,0,0);
             bool hl = false;
             {
@@ -3233,7 +3252,7 @@ void GameState::render(bool saving)
                 }
                 if (filter_pos.get(pos))
                 {
-                    bg_col = Colour(contrast,0, 0);
+                    bg_col = Colour(contrast ,0, 0);
                 }
                 if (hover_rulemaker && hover_squares_highlight.get(pos))
                 {
@@ -3246,6 +3265,8 @@ void GameState::render(bool saving)
             {
                 for(WrapPos r : wraps)
                 {
+                    SDL_SetTextureColorMod(sdl_texture, base.r,  base.g, base.b);
+
                     if (cmd.bg)
                     {
                         if (bg_col == Colour(0, 0, 0))
@@ -3255,21 +3276,19 @@ void GameState::render(bool saving)
                     else if (grid->wrapped == Grid::WRAPPED_IN)
                     {
                         double d = log(grid_pitch.y * r.size / grid_size) * 1.2;
-                        uint8_t r = ((sin(d) + 1) / 2) * 100 + 155;
-                        uint8_t g = ((sin(d+2) + 1) / 2) * 100 + 155;
-                        uint8_t b = ((sin(d+4) + 1) / 2) * 100 + 155;
+                        uint8_t r = ((((sin(d) + 1) / 2) * 100 + 155) * base.r) / 255;
+                        uint8_t g = ((((sin(d+2) + 1) / 2) * 100 + 155) * base.g) / 255;
+                        uint8_t b = ((((sin(d+4) + 1) / 2) * 100 + 155) * base.b) / 255;
                         SDL_SetTextureColorMod(sdl_texture, r, g, b);
                     }
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
                     SDL_Rect dst_rect = {grid_offset.x + r.pos.x + int(cmd.dst.pos.x * r.size), grid_offset.y + r.pos.y + int(cmd.dst.pos.y * r.size), int(cmd.dst.size.x * r.size), int(ceil(cmd.dst.size.y * r.size))};
                     SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.center.y)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
-                    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
-
-
                 }
             }
         }
+        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
 
         std::map<XYPos, int> total_taken;
         std::list<GridRegion*> display_regions;
@@ -4647,7 +4666,7 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, 11.8 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(16 * button_size, 11.8 * button_size), button_size/4, 1);
         {
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -4704,13 +4723,52 @@ void GameState::render(bool saving)
         }
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
-            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size * 3};
+            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Volume", false);
 
             src_rect = {2048, 1152, 192, 64};
-            dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 2 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
+            dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 3 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        {
+            SDL_Rect src_rect = {2624, 960, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        {
+            SDL_Rect src_rect = {2048, 576, 192, 576};
+            SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Music Volume", false);
+
+            src_rect = {2048, 1152, 192, 64};
+            dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3 + int((1 - music_volume) * 2.6666 * button_size), button_size, button_size / 3};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+        {
+            SDL_Rect src_rect = {2624, 1152, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+
+        if (render_lock(PROG_LOCK_COLORS, XYPos(left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3), XYPos(button_size, button_size * 3)))
+        {
+            {
+                SDL_Rect src_rect = {2816, 576, 192, 576};
+                SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Colors", false);
+
+                src_rect = {2048, 1152, 192, 64};
+                dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3 + int((1 - colors) * 2.6666 * button_size), button_size, button_size / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                SDL_Rect src_rect = {2624, 1344, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
         }
 
         {
@@ -4742,7 +4800,7 @@ void GameState::render(bool saving)
         }
         {
             SDL_Rect src_rect = {704, 384, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 11, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "OK");
         }
@@ -4948,7 +5006,7 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        std::string s = "Game by Charlie Brej\n\nThank you to\n"
+        std::string s = "Game by Charlie Brej\n\nMusic by Amurich\n\nThank you to\n"
                         "All the players and testers especially: 3^3=7, AndyY, artless, Autoskip,\n"
                         "baltazar, bearb, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
                         "hyperphysin, icely, Leaving Leaves, Mage6019, Miri Mayhem, Nif, notgreat,\n"
@@ -6131,10 +6189,23 @@ bool GameState::events()
                 }
                 if (dragging_volume)
                 {
-                    double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
-                    volume = std::clamp(p, 0.0, 1.0);
-                    if (has_sound)
-                        Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                    double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+                    if (dragging_color)
+                    {
+                        colors = std::clamp(p, 0.0, 1.0);
+                    }
+                    else if (dragging_music_volume)
+                    {
+                        music_volume = std::clamp(p, 0.0, 1.0);
+                        if (has_sound)
+                            Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
+                    }
+                    else
+                    {
+                        volume = std::clamp(p, 0.0, 1.0);
+                        if (has_sound)
+                            Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                    }
                 }
                 break;
             }
@@ -6265,12 +6336,32 @@ bool GameState::events()
                     if (p.x == 9 && p.y >= 0 && p.y <= 3)
                     {
                         dragging_volume = true;
-                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 2) - (button_size / 6)) / (button_size * 2.6666);
+                        dragging_music_volume = false;
+                        dragging_color = false;
+                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
                         volume = std::clamp(p, 0.0, 1.0);
                         if (has_sound)
                             Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                     }
-                    if (p == XYPos(9,9))
+                    if (p.x == 11 && p.y >= 0 && p.y <= 3)
+                    {
+                        dragging_volume = true;
+                        dragging_music_volume = true;
+                        dragging_color = false;
+                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+                        music_volume = std::clamp(p, 0.0, 1.0);
+                        if (has_sound)
+                            Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
+                    }
+                    if (p.x == 13 && p.y >= 0 && p.y <= 3 && prog_seen[PROG_LOCK_COLORS])
+                    {
+                        dragging_volume = true;
+                        dragging_music_volume = false;
+                        dragging_color = true;
+                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+                        colors = std::clamp(p, 0.0, 1.0);
+                    }
+                    if (p == XYPos(13,9))
                         display_menu = false;
                     break;
                 }
