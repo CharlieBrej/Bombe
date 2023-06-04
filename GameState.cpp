@@ -6680,9 +6680,11 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
     SDL_RenderReadPixels(sdl_renderer, &dst_rect, SDL_PIXELFORMAT_BGRA8888, (void*)pixel_data, 500 * 4);
 
     uint32_t comp_size = comp.size();
+    uint32_t comp_size2 = comp_size ^ 0x55555555;
 
     std::string siz_str = std::string(1, char(comp_size)) + std::string(1, char(comp_size>>8)) + std::string(1, char(comp_size>>16)) + std::string(1, char(comp_size>>24));
-    comp = siz_str + comp;
+    std::string siz_str2 = std::string(1, char(comp_size2)) + std::string(1, char(comp_size2>>8)) + std::string(1, char(comp_size2>>16)) + std::string(1, char(comp_size2>>24));
+    comp = siz_str + siz_str2 + comp;
     int offset = 32;
     comp_size = comp.size();
     for (int i = 0; i < comp_size; i++)
@@ -6741,11 +6743,17 @@ void GameState::check_clipboard()
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 8;
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 16;
         comp_size += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 24;
-        if (comp_size > (500*500/3))
-            return;
-        for (int i = 0; i < comp_size; i++)
+
+        uint32_t comp_size2 = get_hidden_val(&dat, 8, 16, 24);
+        comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 8;
+        comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 16;
+        comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 24;
+        if ((comp_size == (comp_size2 ^ 0x55555555)) && (comp_size < (siz.x * siz.y / 3)))
         {
-            comp += get_hidden_val(&dat, 8, 16, 24);
+            for (int i = 0; i < comp_size; i++)
+            {
+                comp += get_hidden_val(&dat, 8, 16, 24);
+            }
         }
     }
     else
