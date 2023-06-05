@@ -478,6 +478,7 @@ public:
                             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data);
                             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
+                            db.steam_sessions[steam_session] = 0;
 
                             res = curl_easy_perform(curl);
                             if(res != CURLE_OK)
@@ -489,8 +490,6 @@ public:
                             curl_easy_cleanup(curl);
                             std::cout << steam_id  << " " << response << "\n";
 
-                            db.steam_sessions[steam_session] = 0;
-
                             SaveObjectMap* omap = SaveObject::load(response)->get_map()->get_item("response")->get_map()->get_item("params")->get_map();
                             uint64_t server_steam_id = std::stoull(omap->get_string("steamid"));
                             db.steam_sessions[steam_session] = server_steam_id;
@@ -499,6 +498,7 @@ public:
                         if ((steam_id == 0) ||
                             (db.steam_sessions[steam_session] != steam_id))
                         {
+                            printf("pirate check failed\n");
                             pirate = true;
                             // std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
                             // omap->save(std::cout);
@@ -517,7 +517,18 @@ public:
                         // close();
                         // break;
                     }
-                    if (command == "scores")
+                    if (pirate)
+                    {
+                        SaveObjectMap* scr = new SaveObjectMap();
+                        scr->add_num("pirate", 1);
+                        std::string s = scr->to_string();
+                        std::string comp = compress_string(s);
+                        uint32_t length = comp.length();
+                        outbuf.append((char*)&length, 4);
+                        outbuf.append(comp);
+                        delete scr;
+                    }
+                    else if (command == "scores")
                     {
                         std::string steam_username;
                         omap->get_string("steam_username", steam_username);

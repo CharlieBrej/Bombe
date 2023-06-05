@@ -5081,9 +5081,7 @@ void GameState::render(bool saving)
         SDL_Rect src_rect = {2112, 384, 192, 192};
         SDL_Rect dst_rect = {pos.x, pos.y, siz.x , siz.y};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-
     }
-
     SDL_RenderPresent(sdl_renderer);
 }
 
@@ -6538,7 +6536,10 @@ void GameState::deal_with_scores()
             {
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
                 if (omap->has_key("pirate"))
+                {
                     pirate = true;
+                    server_timeout = 1000 * 60 * 60;
+                }
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
                 for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
                 {
@@ -6682,16 +6683,26 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
     delete omap;
     std::string comp = compress_string(stream.str());
 
-    SDL_Texture* my_canvas = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 500, 500);
+    XYPos siz;
+    if (rule.region_count == 1)
+        siz = XYPos(100, 200);
+    else if (rule.region_count == 2)
+        siz = XYPos(300, 208);
+    else if (rule.region_count == 3)
+        siz = XYPos(500, 300);
+    else
+        siz = XYPos(508, 500);
+
+    SDL_Texture* my_canvas = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, siz.x, siz.y);
     SDL_SetTextureBlendMode(my_canvas, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(sdl_renderer, my_canvas);
     SDL_RenderClear(sdl_renderer);
 
     render_rule(rule, XYPos(0, 0), 100, -1);
 
-    uint32_t* pixel_data = new uint32_t[500 * 500];
-    SDL_Rect dst_rect = {0, 0, 500, 500};
-    SDL_RenderReadPixels(sdl_renderer, &dst_rect, SDL_PIXELFORMAT_BGRA8888, (void*)pixel_data, 500 * 4);
+    uint32_t* pixel_data = new uint32_t[siz.x * siz.y];
+    SDL_Rect dst_rect = {0, 0, siz.x, siz.y};
+    SDL_RenderReadPixels(sdl_renderer, &dst_rect, SDL_PIXELFORMAT_BGRA8888, (void*)pixel_data, siz.x * 4);
 
     uint32_t comp_size = comp.size();
     uint32_t comp_size2 = comp_size ^ 0x55555555;
@@ -6719,7 +6730,7 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
         }
     }
 
-    ImgClipBoard::send(pixel_data, XYPos(500, 500));
+    ImgClipBoard::send(pixel_data, XYPos(siz.x, siz.y));
 
     SDL_DestroyTexture(my_canvas);
     SDL_SetRenderTarget(sdl_renderer, NULL);
@@ -6749,7 +6760,7 @@ void GameState::check_clipboard()
     std::string new_value;
     std::vector<uint32_t> pix_dat;
     XYPos siz = ImgClipBoard::recieve(pix_dat);
-    if (siz.x > 0)
+    if (siz.x >= 100 && siz.y >= 200)
     {
         uint32_t* dat = &pix_dat[0];
         dat += 32;
