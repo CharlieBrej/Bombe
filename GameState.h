@@ -345,6 +345,8 @@ public:
         PROG_LOCK_PRIORITY2,
         PROG_LOCK_COLORS,
 
+        PROG_LOCK_REGION_HINT,
+
         PROG_LOCK_TOTAL
         };
 
@@ -414,6 +416,7 @@ public:
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
+    void render_star_burst(XYPos pos, XYPos size, int progress, bool lock);
     bool render_lock(int lock_type, XYPos pos, XYPos size);
     void render_rule(GridRule& rule, XYPos pos, int size, int hover_rulemaker_region_base_index, bool reason = false);
     void render(bool saving = false);

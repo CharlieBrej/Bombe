@@ -319,6 +319,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_FILTER] = 7000;
     prog_stars[PROG_LOCK_PRIORITY] = 16000;
     prog_stars[PROG_LOCK_COLORS] = 15000;
+    prog_stars[PROG_LOCK_REGION_HINT] = 400;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -2036,6 +2037,69 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     }
 
 
+}
+void GameState::render_star_burst(XYPos pos, XYPos size, int progress, bool lock)
+{
+    if (progress < 1000 && lock)
+    {
+        int s = size.x;
+        SDL_Rect src_rect = {1088, 192, 192, 192};
+        SDL_Rect dst_rect = {pos.x, pos.y + progress * size.x / 500, s, s};
+        SDL_Point rot_center = {s / 2, s / 2};
+        double star_angle = progress / 1000.0;
+        SDL_SetTextureAlphaMod(sdl_texture, std::min (255, 1000 - progress));
+
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+    }
+
+    if (progress < 1000)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            int s = size.x * progress / 500;
+            double angle = i;
+            XYPosFloat p (Angle (angle), s);
+            p.y += progress * progress * s / 1000000;
+            SDL_Rect src_rect = {512, 960, 192, 192};
+            SDL_Rect dst_rect = {pos.x + size.x / 2 - s / 2 + int(p.x), pos.y + size.y / 2 - s / 2 + int(p.y), s, s};
+            SDL_Point rot_center = {s / 2, s / 2};
+            double star_angle = progress / 100.0;
+            SDL_SetTextureAlphaMod(sdl_texture, 250 - progress / 4);
+
+            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+        }
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        int s = size.x / 10;
+        int p = int(i * 1000 / 4 + progress) % 1000;
+        SDL_Rect src_rect = {512, 960, 192, 192};
+        SDL_Rect dst_rect = {0, 0, s, s};
+        SDL_Point rot_center = {s / 2, s / 2};
+        double star_angle = progress / 300.0;
+        XYPos ps(pos.x - s / 2, pos.y - s / 2);
+
+        double t = (sin((i * 77) % 100 + progress / 100) + 1) / 2;
+        if (progress > 4000)
+            t *= 1.0 - (progress - 4000.0) / 1000;
+        SDL_SetTextureAlphaMod(sdl_texture, t * 255);
+
+        dst_rect.x = ps.x + (p * size.x) / 1000;
+        dst_rect.y = ps.y;
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+        dst_rect.x = ps.x + size.x;
+        dst_rect.y = ps.y + (p * size.y) / 1000;
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+        dst_rect.x = ps.x + size.x - (p * size.x) / 1000;
+        dst_rect.y = ps.y + size.y;
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+        dst_rect.x = ps.x;
+        dst_rect.y = ps.y + size.y - (p * size.y) / 1000;
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
+    }
+
+    SDL_SetTextureAlphaMod(sdl_texture, 255);
 }
 
 bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
@@ -4556,68 +4620,10 @@ void GameState::render(bool saving)
         while (it != star_burst_animations.end())
         {
             AnimationStarBurst& burst = *it;
-            if (burst.progress < 1000 && burst.lock)
-            {
-                int size = burst.size.x;
-                SDL_Rect src_rect = {1088, 192, 192, 192};
-                SDL_Rect dst_rect = {burst.pos.x, burst.pos.y + burst.progress * burst.size.x / 500, size, size};
-                SDL_Point rot_center = {size / 2, size / 2};
-                double star_angle = burst.progress / 1000.0;
-                SDL_SetTextureAlphaMod(sdl_texture, std::min (255, 1000 - burst.progress));
-
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-            }
-
-            if (burst.progress < 1000)
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    int size = burst.size.x * burst.progress / 500;
-                    double angle = i;
-                    XYPosFloat pos (Angle (angle), size);
-                    pos.y += burst.progress * burst.progress * size / 1000000;
-                    SDL_Rect src_rect = {512, 960, 192, 192};
-                    SDL_Rect dst_rect = {burst.pos.x + burst.size.x / 2 - size / 2 + int(pos.x), burst.pos.y + burst.size.y / 2 - size / 2 + int(pos.y), size, size};
-                    SDL_Point rot_center = {size / 2, size / 2};
-                    double star_angle = burst.progress / 100.0;
-                    SDL_SetTextureAlphaMod(sdl_texture, 250 - burst.progress / 4);
-
-                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-                }
-            }
-            for (int i = 0; i < 8; i++)
-            {
-                int size = burst.size.x / 10;
-                int p = int(i * 1000 / 4 + burst.progress) % 1000;
-                SDL_Rect src_rect = {512, 960, 192, 192};
-                SDL_Rect dst_rect = {0, 0, size, size};
-                SDL_Point rot_center = {size / 2, size / 2};
-                double star_angle = burst.progress / 300.0;
-                XYPos pos(burst.pos.x - size / 2, burst.pos.y - size / 2);
-
-                double t = (sin((i * 77) % 100 + burst.progress / 100) + 1) / 2;
-                if (burst.progress > 4000)
-                    t *= 1.0 - (burst.progress - 4000.0) / 1000;
-                SDL_SetTextureAlphaMod(sdl_texture, t * 255);
-
-                dst_rect.x = pos.x + (p * burst.size.x) / 1000;
-                dst_rect.y = pos.y;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-                dst_rect.x = pos.x + burst.size.x;
-                dst_rect.y = pos.y + (p * burst.size.y) / 1000;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-                dst_rect.x = pos.x + burst.size.x - (p * burst.size.x) / 1000;
-                dst_rect.y = pos.y + burst.size.y;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-                dst_rect.x = pos.x;
-                dst_rect.y = pos.y + burst.size.y - (p * burst.size.y) / 1000;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(star_angle), &rot_center, SDL_FLIP_NONE);
-            }
-
+            render_star_burst(burst.pos, burst.size, burst.progress, burst.lock);
             it++;
         }
         star_burst_animations.clear();
-        SDL_SetTextureAlphaMod(sdl_texture, 255);
     }
 
     if (display_modes)
@@ -4694,6 +4700,29 @@ void GameState::render(bool saving)
             else
                 add_tooltip(dst_rect, "Next Page");
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        }
+    }
+    if (prog_seen[PROG_LOCK_REGION_HINT] < PROG_ANIM_MAX)
+    {
+        if (prog_stars[PROG_LOCK_REGION_HINT] <= max_stars)
+        {
+            if (prog_seen[PROG_LOCK_REGION_HINT] == 0)
+            {
+                bool seen = false;
+                for (GridRule& rule : rules[game_mode])
+                {
+                    if (rule.apply_region_type.type != RegionType::SET)
+                        seen = true;
+                }
+                if (!seen)
+                {
+                    display_help = true;
+                    tutorial_index = 3;
+                }
+            }
+            if (display_help)
+                render_star_burst(right_panel_offset + XYPos(-button_size * 4.3, button_size * 1) , XYPos(button_size * 6, button_size * 8), prog_seen[PROG_LOCK_REGION_HINT], false);
+            prog_seen[PROG_LOCK_REGION_HINT] += frame_step;
         }
     }
     if (display_menu)
