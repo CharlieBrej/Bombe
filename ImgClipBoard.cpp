@@ -7,6 +7,7 @@ void ImgClipBoard::init()
 {
     clip::set_error_handler(NULL);
 }
+
 void ImgClipBoard::shutdown()
 {
 }
@@ -36,16 +37,21 @@ XYPos ImgClipBoard::recieve(std::vector<uint32_t>& reply)
     if (!clip::get_image(img))
         return XYPos(0,0);
     clip::image_spec spec = img.spec();
-    uint32_t* dat = (uint32_t*) img.data();
+
+    uint8_t* dat = (uint8_t*) img.data();
     XYPos siz(spec.width, spec.height);
+	int bytes_per_pixel = spec.bits_per_pixel / 8;
     for (int y = 0; y < siz.y; y++)
     for (int x = 0; x < siz.x; x++)
     {
+		uint32_t d = 0;
+		for (int i = 0; i < bytes_per_pixel; i++)
+			d |= uint32_t(dat[y * spec.bytes_per_row + x * bytes_per_pixel + i]) << i * 8;
         int i = y * (spec.bytes_per_row / 4) + x;
-        uint32_t r = (dat[i] & spec.red_mask) >> spec.red_shift;
-        uint32_t g = (dat[i] & spec.green_mask) >> spec.green_shift;
-        uint32_t b = (dat[i] & spec.blue_mask) >> spec.blue_shift;
-        uint32_t a = (dat[i] & spec.alpha_mask) >> spec.alpha_shift;
+        uint32_t r = (d & spec.red_mask) >> spec.red_shift;
+        uint32_t g = (d & spec.green_mask) >> spec.green_shift;
+        uint32_t b = (d & spec.blue_mask) >> spec.blue_shift;
+        uint32_t a = (d & spec.alpha_mask) >> spec.alpha_shift;
         uint32_t bgra = (b << 24) | (g << 16) | (r << 8) | a;
         reply.push_back(bgra);
     }
