@@ -435,11 +435,11 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
         {
             XYSet s = (i & 1) ? r1->elements : ~r1->elements;
             if (r2)
-                s = s & ((i & 2) ? r2->elements : ~r2->elements);
+                s &= ((i & 2) ? r2->elements : ~r2->elements);
             if (r3)
-                s = s & ((i & 4) ? r3->elements : ~r3->elements);
+                s &= ((i & 4) ? r3->elements : ~r3->elements);
             if (r4)
-                s = s & ((i & 8) ? r4->elements : ~r4->elements);
+                s &= ((i & 8) ? r4->elements : ~r4->elements);
 
             int vi = square_counts[i].var - 1;
             int v = s.count() - square_counts[i].value;
@@ -540,11 +540,11 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
             continue;
         XYSet s = (i & 1) ? r1->elements : ~r1->elements;
         if (r2)
-            s = s & ((i & 2) ? r2->elements : ~r2->elements);
+            s &= ((i & 2) ? r2->elements : ~r2->elements);
         if (r3)
-            s = s & ((i & 4) ? r3->elements : ~r3->elements);
+            s &= ((i & 4) ? r3->elements : ~r3->elements);
         if (r4)
-            s = s & ((i & 8) ? r4->elements : ~r4->elements);
+            s &= ((i & 8) ? r4->elements : ~r4->elements);
         if (!square_counts[i].apply_int_rule(s.count(), var_counts))
             return false;
     }
@@ -687,7 +687,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 for (int i = 1; i < (1 << region_count); i++)
                     why.square_counts[i] = RegionType(RegionType::NONE, 0);
 
-                why.square_counts[i] = RegionType(RegionType::SET, 0);
+                why.square_counts[i] = RegionType(RegionType::MORE, 0);
                 return ILLOGICAL;
             }
             if (square_counts[i].var)
@@ -2171,7 +2171,7 @@ static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r
     }
 }
 
-static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
+static bool are_connected_old(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
     XYSet s = r0->elements;
     unsigned int connected = 1 << 0;
@@ -2207,6 +2207,109 @@ static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRe
         return true;
     if (connected == 0xf)
         return true;
+    return false;
+}
+
+static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
+{
+    if (!r1)
+        return true;
+    if (r0->elements.overlaps(r1->elements))
+    {
+        if (!r2)
+            return true;
+        XYSet s = r0->elements | r1->elements;
+        if (s.overlaps(r2->elements))
+        {
+            s |= r2->elements;
+            if (!r3)
+                return true;
+            if (s.overlaps(r3->elements))
+                return true;
+            else
+                return false;
+        }
+        else
+        {
+            if (!r3)
+                return false;
+            if (s.overlaps(r3->elements))
+            {
+                if (r2->elements.overlaps(r3->elements))
+                    return true;
+                else
+                    return false;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        if (!r2)
+            return false;
+        if (r0->elements.overlaps(r2->elements))
+        {
+            if (r1->elements.overlaps(r2->elements))
+            {
+                if (!r3)
+                    return true;
+                XYSet s = r0->elements | r1->elements | r2->elements;
+                if (s.overlaps(r3->elements))
+                    return true;
+                else
+                    return false;
+            }
+            else            // 02 1
+            {
+                if (!r3)
+                    return false;
+                if (r1->elements.overlaps(r3->elements))
+                {
+                    XYSet s = r0->elements | r2->elements;
+                    if (s.overlaps(r3->elements))
+                        return true;
+                    else
+                        return false;
+                }
+                else
+                    return false;
+            }
+        }
+        else
+        {
+            if (!r3)
+                return false;           // 0x1  0x2
+            if (r0->elements.overlaps(r3->elements))
+            {
+                if (r1->elements.overlaps(r3->elements))
+                {
+                    if (r2->elements.overlaps(r3->elements))
+                        return true;
+                    if (r1->elements.overlaps(r2->elements))
+                        return true;
+                    return false;
+                }
+                else                    // 0x1 0x2 0-3 1x3
+                {
+                    if (r2->elements.overlaps(r3->elements))
+                    {
+                        if (r1->elements.overlaps(r2->elements) &&
+                            r2->elements.overlaps(r3->elements))
+                            return true;
+                        return false;
+                    }
+                    else
+                        return false;
+                }
+            }
+            else
+                return false;
+        }
+    }
+    assert(0);
     return false;
 }
 
@@ -2271,8 +2374,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                         for (GridRegion* r3 : set3)
                         {
                             GridRegion* regions[4] = {r0, r1, r2, r3};
-                            if (r1 && ((r0 == r1) || (r2 == r1) || (r3 == r1))) continue;
-                            if (r2 && ((r0 == r2) || (r1 == r2) || (r3 == r2))) continue;
+                            if (r0 == r1) continue;
+                            if (r2 && ((r0 == r2) || (r1 == r2))) continue;
                             if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
                             if (!are_connected(r0, r1, r2, r3)) continue;
                             int var_counts[32];

@@ -827,6 +827,8 @@ void GameState::load_grid(std::string s)
 }
 void GameState::advance(int steps)
 {
+    // if(grid->regions.size() > 300)
+    //     _exit(1);
     frame = frame + steps;
     frame_step = steps;
     sound_frame_index = std::min(sound_frame_index + steps, 500);
@@ -1063,31 +1065,24 @@ void GameState::advance(int steps)
             rpt = false;
             for (GridRegion& region : grid->regions)
             {
-                if (!region.stale && region.priority > -100)
+                if (!region.stale)
                 {
                     for (GridRule& rule : rules[game_mode])
                     {
                         if (rule.deleted)
                             continue;
+                        if (rule.priority < -100)
+                            continue;
                         if (rule.apply_region_type.type != RegionType::SET)
                             continue;
 
-                        while (true)
+                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
+                        if (resp == Grid::APPLY_RULE_RESP_HIT)
                         {
-                            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
-                            if (resp == Grid::APPLY_RULE_RESP_HIT)
-                            {
-                                hit = true;
-                                rpt = true;
-                                break;
-                            }
-                            if (resp == Grid::APPLY_RULE_RESP_NONE)
-                            {
-                                break;
-                            }
-                        }
-                        if (rpt)
+                            hit = true;
+                            rpt = true;
                             break;
+                        }
                     }
                     if (rpt)
                         break;
@@ -1142,6 +1137,8 @@ void GameState::advance(int steps)
                         continue;
                 for (GridRule& rule : rules[game_mode])
                 {
+                    if (rule.priority < -100)
+                        continue;
                     if (rule.deleted)
                         continue;
                     if (rule.apply_region_type.type == RegionType::VISIBILITY)
@@ -1181,8 +1178,6 @@ void GameState::advance(int steps)
                         for (GridRule& rule : rules[game_mode])
                         {
                             if (rule.deleted)
-                                continue;
-                            if (region.priority < -100)
                                 continue;
                             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                             {
@@ -2240,9 +2235,9 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 XYPos sp = base_pos + p * size;
                 if (r_type.value == 0)
                 {
-                    if (r_type.type == RegionType::SET)
+                    if (r_type.type == RegionType::MORE)
                     {
-                        SDL_Rect src_rect = {512, 192, 192, 192};
+                        SDL_Rect src_rect = {2304, 384, 192, 192};
                         SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + size * 1 / 8, (int)(size * 6 / 8), (int)(size * 6 / 8)};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     }

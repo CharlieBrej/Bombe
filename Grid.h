@@ -45,8 +45,8 @@ public:
     bool contains(XYPos p) {return get(p);}
     bool contains(XYSet p) {return !(p & ~*this).any();}
     bool empty() {return d.none();}
-    bool operator==(const XYSet& other) const { return (d == other.d); }
-    bool operator<(const XYSet& other) const
+    inline bool operator==(const XYSet& other) const { return (d == other.d); }
+    inline bool operator<(const XYSet& other) const
     {
         typedef std::array<uint64_t, (SIZE / 64)> AsArray;
         const AsArray a = *reinterpret_cast<const AsArray*>(this);
@@ -59,10 +59,12 @@ public:
         }
         return rep;
     }
-    XYSet operator~() const {return XYSet(~d); }
-    XYSet operator&(const XYSet other) const {return XYSet(d & other.d); }
-    XYSet operator|(const XYSet other) const {return XYSet(d | other.d); }
-    bool overlaps(const XYSet other) const {return (d & other.d).any(); }
+    inline XYSet operator~() const {return XYSet(~d); }
+    inline XYSet operator&(const XYSet other) const {return XYSet(d & other.d); }
+    inline void operator&=(const XYSet other) {d &= other.d;}
+    inline XYSet operator|(const XYSet other) const {return XYSet(d | other.d); }
+    inline void operator|=(const XYSet other) {d |= other.d;}
+    inline bool overlaps(const XYSet other) const {return (d & other.d).any(); }
 
 
 };
