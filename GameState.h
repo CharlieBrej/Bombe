@@ -142,13 +142,21 @@ public:
     int capturing_key = -1;
 
     bool dragging_speed = false;
-    bool dragging_volume = false;
-    bool dragging_music_volume = false;
-    bool dragging_color = false;
+    bool dragging_scroller = false;
+    enum {
+        DRAGGING_SCROLLER_VOLUME,
+        DRAGGING_SCROLLER_MUSIC,
+        DRAGGING_SCROLLER_COLOUR,
+        DRAGGING_SCROLLER_RULES,
+        }
+        dragging_scroller_type = DRAGGING_SCROLLER_VOLUME;
+
     double speed_dial = 0.25;
     double volume = 0.50;
     double music_volume = 0.50;
     double colors = 0.00;
+    double rule_limit_slider = 1.00;
+    int rule_limit_count = -1;
 
     XYPos mouse;
     enum {
@@ -346,6 +354,7 @@ public:
         PROG_LOCK_COLORS,
 
         PROG_LOCK_REGION_HINT,
+        PROG_LOCK_REGION_LIMIT,
 
         PROG_LOCK_TOTAL
         };

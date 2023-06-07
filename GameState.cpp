@@ -120,6 +120,8 @@ GameState::GameState(std::string& load_data, bool json)
                 music_volume = double(omap->get_num("music_volume")) / 1000;
             if (omap->has_key("colors"))
                 colors = double(omap->get_num("colors")) / 1000;
+            if (omap->has_key("rule_limit"))
+                rule_limit_slider = double(omap->get_num("rule_limit")) / 1000;
             if (omap->has_key("game_mode"))
                 game_mode = omap->get_num("game_mode");
             if (omap->has_key("full_screen"))
@@ -231,6 +233,9 @@ GameState::GameState(std::string& load_data, bool json)
         current_level_group_index = 0;
     if (current_level_set_index >= global_level_sets[current_level_group_index].size())
         current_level_set_index = 0;
+    rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
+    if (rule_limit_slider >= 1.0)
+        rule_limit_count = -1;
 
     sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -320,6 +325,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PRIORITY] = 16000;
     prog_stars[PROG_LOCK_COLORS] = 15000;
     prog_stars[PROG_LOCK_REGION_HINT] = 400;
+    prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -378,6 +384,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("volume", volume * 1000);
     omap->add_num("music_volume", music_volume * 1000);
     omap->add_num("colors", colors * 1000);
+    omap->add_num("rule_limit", rule_limit_slider * 1000);
     omap->add_num("full_screen", full_screen);
     omap->add_num("max_stars", max_stars);
 
@@ -829,6 +836,9 @@ void GameState::advance(int steps)
 {
     // if(grid->regions.size() > 300)
     //     _exit(1);
+    if (rule_limit_count >= 0)
+        if(grid->regions.size() > rule_limit_count)
+            skip_level = true;
     frame = frame + steps;
     frame_step = steps;
     sound_frame_index = std::min(sound_frame_index + steps, 500);
@@ -4585,6 +4595,10 @@ void GameState::render(bool saving)
     }
     if (right_panel_mode == RIGHT_MENU_NONE)
     {
+        {
+            std::string t = translate("Current Level");
+            render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
+        }
         if (display_rules && !display_clipboard_rules)
         {
             {
@@ -4607,6 +4621,39 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Redo");
+        }
+
+        if (render_lock(PROG_LOCK_REGION_LIMIT, XYPos(right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 2), XYPos(button_size, button_size * 4)))
+        {
+            {
+                SDL_Rect src_rect = {3008, 576, 192, 576};
+                SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Maximum Regions", false);
+
+                src_rect = {2048, 1152, 192, 64};
+                dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3 + int((1 - rule_limit_slider) * 2.6666 * button_size), button_size, button_size / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                SDL_Rect src_rect = {2624, 1536, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Maximum Regions", false);
+                SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+                if (rule_limit_count >= 0)
+                {
+                    render_number(rule_limit_count, XYPos(right_panel_offset.x + 0.1 * button_size, right_panel_offset.y + button_size * 2.25), XYPos(button_size * 0.8, button_size/2));
+                }
+                else
+                {
+                    src_rect = {2304, 384, 192, 192};
+                    dst_rect = {right_panel_offset.x + int(0.1 * button_size), right_panel_offset.y + int(button_size * 2.1), int(button_size * 0.8), int(button_size * 0.8)};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+                }
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            }
         }
 
     }
@@ -5567,6 +5614,20 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             rule_gen_redo();
         }
+
+
+        if ((pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size, button_size * 3)))
+        {
+            dragging_scroller = true;
+            dragging_scroller_type = DRAGGING_SCROLLER_RULES;
+            double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+            rule_limit_slider = std::clamp(p, 0.0, 1.0);
+            rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
+            if (rule_limit_slider >= 1.0)
+                rule_limit_count = -1;
+        }
+
+
     }
 
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
@@ -5867,7 +5928,7 @@ bool GameState::events()
                         display_rules_click_drag = false;
                         grid_dragging = false;
                         dragging_speed = false;
-                        dragging_volume = false;
+                        dragging_scroller = false;
                     }
 
                     default:
@@ -6255,24 +6316,31 @@ bool GameState::events()
                     double p = double(mouse.x - left_panel_offset.x - (button_size / 6)) / (button_size * 2.6666);
                     speed_dial = std::clamp(p, 0.0, 1.0);
                 }
-                if (dragging_volume)
+                if (dragging_scroller)
                 {
                     double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
-                    if (dragging_color)
+                    if (dragging_scroller_type == DRAGGING_SCROLLER_COLOUR)
                     {
                         colors = std::clamp(p, 0.0, 1.0);
                     }
-                    else if (dragging_music_volume)
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_MUSIC)
                     {
                         music_volume = std::clamp(p, 0.0, 1.0);
                         if (has_sound)
                             Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
                     }
-                    else
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_VOLUME)
                     {
                         volume = std::clamp(p, 0.0, 1.0);
                         if (has_sound)
                             Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
+                    }
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_RULES)
+                    {
+                        rule_limit_slider = std::clamp(p, 0.0, 1.0);
+                        rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
+                        if (rule_limit_slider >= 1.0)
+                            rule_limit_count = -1;
                     }
                 }
                 break;
@@ -6282,7 +6350,7 @@ bool GameState::events()
                 display_rules_click_drag = false;
                 grid_dragging = false;
                 dragging_speed = false;
-                dragging_volume = false;
+                dragging_scroller = false;
                 mouse.x = e.button.x;
                 mouse.y = e.button.y;
                 break;
@@ -6403,9 +6471,8 @@ bool GameState::events()
                     }
                     if (p.x == 9 && p.y >= 0 && p.y <= 3)
                     {
-                        dragging_volume = true;
-                        dragging_music_volume = false;
-                        dragging_color = false;
+                        dragging_scroller = true;
+                        dragging_scroller_type = DRAGGING_SCROLLER_VOLUME;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
                         volume = std::clamp(p, 0.0, 1.0);
                         if (has_sound)
@@ -6413,9 +6480,8 @@ bool GameState::events()
                     }
                     if (p.x == 11 && p.y >= 0 && p.y <= 3)
                     {
-                        dragging_volume = true;
-                        dragging_music_volume = true;
-                        dragging_color = false;
+                        dragging_scroller = true;
+                        dragging_scroller_type = DRAGGING_SCROLLER_MUSIC;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
                         music_volume = std::clamp(p, 0.0, 1.0);
                         if (has_sound)
@@ -6423,9 +6489,8 @@ bool GameState::events()
                     }
                     if (p.x == 13 && p.y >= 0 && p.y <= 3 && prog_seen[PROG_LOCK_COLORS])
                     {
-                        dragging_volume = true;
-                        dragging_music_volume = false;
-                        dragging_color = true;
+                        dragging_scroller = true;
+                        dragging_scroller_type = DRAGGING_SCROLLER_COLOUR;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
                         colors = std::clamp(p, 0.0, 1.0);
                     }
