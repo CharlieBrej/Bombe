@@ -323,6 +323,9 @@ GameState::GameState(std::string& load_data, bool json)
     // prog_stars[PROG_LOCK_VARS5] = 10000;
     prog_stars[PROG_LOCK_FILTER] = 7000;
     prog_stars[PROG_LOCK_PRIORITY] = 16000;
+    prog_stars[PROG_LOCK_PRIORITY2] = 16000;
+    prog_stars[PROG_LOCK_PAUSE] = 9000;
+
     prog_stars[PROG_LOCK_COLORS] = 15000;
     prog_stars[PROG_LOCK_REGION_HINT] = 400;
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
@@ -838,7 +841,8 @@ void GameState::advance(int steps)
     //     _exit(1);
     if (rule_limit_count >= 0)
         if(grid->regions.size() > rule_limit_count)
-            skip_level = true;
+            if (auto_progress && !grid->is_solved())
+                skip_level = true;
     frame = frame + steps;
     frame_step = steps;
     sound_frame_index = std::min(sound_frame_index + steps, 500);
@@ -4497,48 +4501,62 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Copy Rule to Clipboard Image");
             }
 
-            if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY)
+            if (inspected_rule.rule->apply_region_type.type < RegionType::SET)
             {
                 if (render_lock(PROG_LOCK_PRIORITY, right_panel_offset + XYPos(0, 7 * button_size), XYPos(button_size, 5 * button_size)))
                 {
+                    int p = std::clamp((int)inspected_rule.rule->priority, -3, 2);
                     {
                         SDL_Rect src_rect = {2240, 1344, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 6, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Maximum Priority");
+                        if (inspected_rule.rule->priority == 2)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 6), XYPos(button_size, button_size), button_size/4);
                     }
                     {
                         SDL_Rect src_rect = {2240, 1344 + 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "High Priority");
+                        if (inspected_rule.rule->priority == 1)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 7), XYPos(button_size, button_size), button_size/4);
                     }
                     {
                         SDL_Rect src_rect = {2240, 1344 + 2 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 8, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Medium Priority");
+                        if (inspected_rule.rule->priority == 0)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 8), XYPos(button_size, button_size), button_size/4);
                     }
                     {
                         SDL_Rect src_rect = {2240, 1344 + 3 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Low Priority");
+                        if (inspected_rule.rule->priority == -1)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 9), XYPos(button_size, button_size), button_size/4);
                     }
                     {
                         SDL_Rect src_rect = {2240, 1344 + 4 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Minimum Priority");
+                        if (inspected_rule.rule->priority == -2)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 10), XYPos(button_size, button_size), button_size/4);
                     }
+                }
+                if (render_lock(PROG_LOCK_PAUSE, right_panel_offset + XYPos(0, 11 * button_size), XYPos(button_size, button_size)))
+                {
                     {
                         SDL_Rect src_rect = {896, 960, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Paused");
+                        if (inspected_rule.rule->priority < -2)
+                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 11), XYPos(button_size, button_size), button_size/4);
                     }
-                    int p = std::clamp((int)inspected_rule.rule->priority, -3, 2);
-                    render_box(right_panel_offset + XYPos(button_size * 0, button_size * (8 - p)), XYPos(button_size, button_size), button_size/4);
                 }
 
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4);
@@ -4825,6 +4843,15 @@ void GameState::render(bool saving)
             add_clickable_highlight(dst_rect);
             std::string t = translate("About");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 7.14 * button_size), t, false, 7.5 * button_size);
+        }
+        {
+            SDL_Rect src_rect = {2624, 1728, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            dst_rect.w = 8.84 * button_size;
+            add_clickable_highlight(dst_rect);
+            std::string t = translate("Join Discord");
+            render_text_box(left_panel_offset + XYPos(3.2 * button_size, 8.14 * button_size), t, false, 7.5 * button_size);
         }
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
@@ -5550,7 +5577,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             send_rule_to_img_clipboard(*inspected_rule.rule);
         }
-        if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && selected_rules.empty())
+        if (inspected_rule.rule->apply_region_type.type < RegionType::SET && selected_rules.empty())
         {
             if (prog_seen[PROG_LOCK_PRIORITY])
             {
@@ -5580,7 +5607,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         else
         {
-            if (prog_seen[PROG_LOCK_PRIORITY])
+            if (prog_seen[PROG_LOCK_PAUSE])
             {
                 if ((pos - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size, button_size)))
                 {
@@ -6456,7 +6483,9 @@ bool GameState::events()
                             display_key_select = true;
                         if (p.y == 5)
                             display_about = true;
-                       if (p.y == 7)
+                        if (p.y == 6)
+                            DisplayWebsite("https://discord.gg/MXHyWsRkeu");
+                        if (p.y == 7)
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = true;

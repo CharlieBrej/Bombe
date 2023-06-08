@@ -775,6 +775,12 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                                     break;
                                 }
                             }
+                            else
+                            {
+                                int x = i ^ j;
+                                if ((seen >> x) & 1)
+                                    seen |= 1 << (j | i);
+                            }
                         }
                     }
 

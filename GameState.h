@@ -351,6 +351,7 @@ public:
         PROG_LOCK_FILTER,
         PROG_LOCK_PRIORITY,
         PROG_LOCK_PRIORITY2,
+        PROG_LOCK_PAUSE,
         PROG_LOCK_COLORS,
 
         PROG_LOCK_REGION_HINT,
