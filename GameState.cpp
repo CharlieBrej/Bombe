@@ -4554,17 +4554,6 @@ void GameState::render(bool saving)
                             render_box(right_panel_offset + XYPos(button_size * 0, button_size * 10), XYPos(button_size, button_size), button_size/4);
                     }
                 }
-                if (render_lock(PROG_LOCK_PAUSE, right_panel_offset + XYPos(0, 11 * button_size), XYPos(button_size, button_size)))
-                {
-                    {
-                        SDL_Rect src_rect = {896, 960, 192, 192};
-                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                        add_tooltip(dst_rect, "Paused");
-                        if (inspected_rule.rule->priority < -2)
-                            render_box(right_panel_offset + XYPos(button_size * 0, button_size * 11), XYPos(button_size, button_size), button_size/4);
-                    }
-                }
 
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4);
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 11), XYPos(3 * button_size, button_size), button_size/4);
@@ -4604,17 +4593,14 @@ void GameState::render(bool saving)
                 render_number(inspected_rule.rule->level_clear_count, right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
                 render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             }
-            else
+            if (render_lock(PROG_LOCK_PAUSE, right_panel_offset + XYPos(0, 11 * button_size), XYPos(button_size, button_size)))
             {
-                if (render_lock(PROG_LOCK_PRIORITY, right_panel_offset + XYPos(0, 11 * button_size), XYPos(button_size, button_size)))
-                {
-                    SDL_Rect src_rect = {896, 960, 192, 192};
-                    SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
-                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    add_tooltip(dst_rect, "Paused");
-                    if (inspected_rule.rule->priority < -100)
-                        render_box(right_panel_offset + XYPos(button_size * 0, button_size * 11), XYPos(button_size, button_size), button_size/4);
-                }
+                SDL_Rect src_rect = {896, 960, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Paused");
+                if (inspected_rule.rule->priority < -100)
+                    render_box(right_panel_offset + XYPos(button_size * 0, button_size * 11), XYPos(button_size, button_size), button_size/4);
             }
         }
     }
@@ -5953,6 +5939,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 constructed_rule.remove_region(constructed_rule.region_count - 1);
             update_constructed_rule();
             right_panel_mode = RIGHT_MENU_NONE;
+            replace_rule = NULL;
 
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
