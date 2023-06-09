@@ -355,6 +355,7 @@ public:
         PROG_LOCK_COLORS,
 
         PROG_LOCK_REGION_HINT,
+        PROG_LOCK_DOUBLE_CLICK_HINT,
         PROG_LOCK_REGION_LIMIT,
 
         PROG_LOCK_TOTAL
@@ -363,6 +364,8 @@ public:
     static const int PROG_ANIM_MAX = 5000;
     int prog_stars[PROG_LOCK_TOTAL]= {};
     int prog_seen[PROG_LOCK_TOTAL]= {};
+    int server_level_anim = PROG_ANIM_MAX;
+    bool seen_ff = false;
 
     class PlayerScore
     {

@@ -121,7 +121,7 @@ GameState::GameState(std::string& load_data, bool json)
             if (omap->has_key("colors"))
                 colors = double(omap->get_num("colors")) / 1000;
             if (omap->has_key("rule_limit"))
-                rule_limit_slider = double(omap->get_num("rule_limit")) / 1000;
+                rule_limit_slider = double(omap->get_num("rule_limit")) / 1000000000;
             if (omap->has_key("game_mode"))
                 game_mode = omap->get_num("game_mode");
             if (omap->has_key("full_screen"))
@@ -328,6 +328,7 @@ GameState::GameState(std::string& load_data, bool json)
 
     prog_stars[PROG_LOCK_COLORS] = 15000;
     prog_stars[PROG_LOCK_REGION_HINT] = 400;
+    prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] = 1000;
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
@@ -387,7 +388,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("volume", volume * 1000);
     omap->add_num("music_volume", music_volume * 1000);
     omap->add_num("colors", colors * 1000);
-    omap->add_num("rule_limit", rule_limit_slider * 1000);
+    omap->add_num("rule_limit", rule_limit_slider * 1000000000);
     omap->add_num("full_screen", full_screen);
     omap->add_num("max_stars", max_stars);
 
@@ -2396,6 +2397,8 @@ void GameState::render(bool saving)
         contrast--;
     if(!low_contrast && contrast < 255)
         contrast++;
+    if (prog_stars[PROG_LOCK_REGION_LIMIT] > max_stars)
+        rule_limit_slider = 1.00;
 
     mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
     if (grid_dragging)
@@ -3903,7 +3906,11 @@ void GameState::render(bool saving)
             SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-        
+    }
+    if (server_level_anim < PROG_ANIM_MAX)
+    {
+        star_burst_animations.push_back(AnimationStarBurst(XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 5), XYPos(button_size,button_size), server_level_anim, false));
+        server_level_anim += frame_step;
     }
 
 
@@ -4785,6 +4792,23 @@ void GameState::render(bool saving)
             prog_seen[PROG_LOCK_REGION_HINT] += frame_step;
         }
     }
+    if (prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] < PROG_ANIM_MAX)
+    {
+        if (prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] <= max_stars)
+        {
+            if (prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] == 0)
+            {
+                if (!seen_ff)
+                {
+                    display_help = true;
+                    tutorial_index = 5;
+                }
+            }
+            if (display_help)
+                render_star_burst(right_panel_offset + XYPos(button_size * 0, button_size * 1) , XYPos(button_size * 5, button_size * 4), prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT], false);
+            prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] += frame_step;
+        }
+    }
     if (display_menu)
     {
         tooltip_string = "";
@@ -5394,6 +5418,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 
             auto_progress_all = (clicks > 1);
             auto_progress = (clicks > 1);
+            if (auto_progress)
+                seen_ff = true;
+            
         }
     }
 
@@ -5411,6 +5438,8 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             force_load_level = false;
             auto_progress =  (clicks > 1);
             auto_progress_all = false;
+            if (auto_progress)
+                seen_ff = true;
         }
     }
 }
@@ -6704,6 +6733,7 @@ void GameState::deal_with_scores()
                 }
                 if (omap->has_key("server_levels"))
                 {
+                    server_level_anim = 0;
                     server_levels_version = omap->get_num("server_levels_version");
                     SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
                     server_levels.clear();
