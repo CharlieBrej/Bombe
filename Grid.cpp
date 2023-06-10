@@ -1966,7 +1966,12 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
     assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
-    reg.gen_cause_pos = cause;
+    if (cell_causes.count(cause))
+    {
+        reg.gen_cause= cell_causes[cause];
+    }
+    else
+        reg.gen_cause_pos = cause;
     return add_region(reg, true);
 }
 
@@ -2106,6 +2111,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         FOR_XY_SET(pos, to_reveal)
         {
             reveal(pos);
+            cell_causes[pos] = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
             c++;
         }
         last_cleared_regions = to_reveal;

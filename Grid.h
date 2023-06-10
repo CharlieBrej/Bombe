@@ -293,6 +293,7 @@ public:
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
+    std::map<XYPos, GridRegionCause> cell_causes;
     XYPos innie_pos = XYPos(1,1);
     std::list<GridRegion> regions;
     std::set<GridRegion*, GridRegionCompare> regions_set;

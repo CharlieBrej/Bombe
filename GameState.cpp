@@ -3416,6 +3416,11 @@ void GameState::render(bool saving)
                 }
                 else
                 {
+                    if (grid->cell_causes.count(mouse_square))
+                    {
+                        mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                    }
+
                     for (GridRegion& region : grid->regions)
                     {
                         if (!region.gen_cause.rule && (region.gen_cause_pos == mouse_square))
@@ -3428,7 +3433,6 @@ void GameState::render(bool saving)
                             }
                         }
                     }
-
                 }
             }
         }
@@ -5251,6 +5255,19 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                 {
                     right_panel_mode = RIGHT_MENU_REGION;
                     inspected_region = mouse_hover_region;
+                }
+            }
+        }
+        else
+        {
+            XYPos gpos = grid->get_square_from_mouse_pos(pos - grid_offset - scaled_grid_offset, grid_pitch);
+            if (gpos.x >= 0)
+            {
+                gpos = grid->get_base_square(gpos);
+                if (grid->cell_causes.count(gpos))
+                {
+                    right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                    inspected_rule = grid->cell_causes[gpos];
                 }
             }
         }
