@@ -3894,6 +3894,14 @@ void GameState::render(bool saving)
         const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Server"};
         if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5), XYPos(button_size, button_size)))
         {
+            if (auto_progress_all && (current_level_group_index == i))
+            {
+                SDL_Rect src_rect = {1344, 1920, 128, 128};
+                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                SDL_Point rot_center = {button_size / 2, button_size / 2};
+                double angle = frame * 0.05;
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+            }
             SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
             if (i == 4)
@@ -4228,11 +4236,14 @@ void GameState::render(bool saving)
 
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
-        if (constructed_rule.region_count)
         {
-            SDL_Rect src_rect = { 704 + (constructed_rule.region_count - 1) * 192, 1152, 192, 192 };
+            SDL_Rect src_rect = { 704, 1152, 192, 192 };
             SDL_Rect dst_rect = { right_panel_offset.x + button_size * 1, right_panel_offset.y + 6 * button_size, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (constructed_rule.region_count)
+            {
+                render_number(constructed_rule.region_count, XYPos(right_panel_offset.x + button_size * 1.6, right_panel_offset.y + 6.2 * button_size), XYPos(button_size * 0.3, button_size * 0.3));
+            }
             add_tooltip(dst_rect, "Go to Rule Constructor");
         }
     }
@@ -5676,11 +5687,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
     {
         if ((pos - XYPos(button_size * 1, button_size * 6)).inside(XYPos(button_size, button_size)))
         {
-            if(constructed_rule.region_count)
-            {
-                right_panel_mode = RIGHT_MENU_RULE_GEN;
-                return;
-            }
+            right_panel_mode = RIGHT_MENU_RULE_GEN;
+            return;
         }
     }
     if (((right_panel_mode == RIGHT_MENU_NONE) || (right_panel_mode == RIGHT_MENU_REGION)) && !display_rules)
@@ -5786,6 +5794,13 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     select_region_type.type = t;
                     region_type = select_region_type;
+                    if (clicks == 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+                    {
+                        update_constructed_rule_pre();
+                        rule_gen_region[constructed_rule.region_count] = NULL;
+                        constructed_rule.add_region(region_type);
+                        update_constructed_rule();
+                    }
                 }
             }
 
@@ -5794,6 +5809,13 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 XYPos region_item_selected = (pos - XYPos(0, button_size * 9.6)) / button_size;
                 select_region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
                 region_type = select_region_type;
+                if (clicks == 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+                {
+                    update_constructed_rule_pre();
+                    rule_gen_region[constructed_rule.region_count] = NULL;
+                    constructed_rule.add_region(region_type);
+                    update_constructed_rule();
+                }
             }
             if ((pos - XYPos(button_size * 0, button_size * 11.8)).inside(XYPos(5 * button_size, 1 * button_size)))
             {
@@ -5939,7 +5961,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 constructed_rule.remove_region(constructed_rule.region_count - 1);
             update_constructed_rule();
             right_panel_mode = RIGHT_MENU_NONE;
-            replace_rule = NULL;
+            replace_rule  = NULL;
 
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))

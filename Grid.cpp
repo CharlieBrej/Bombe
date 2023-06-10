@@ -783,7 +783,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                             }
                         }
                     }
-
                 }
             }
         }
@@ -813,6 +812,18 @@ void GridRule::remove_region(int index)
     }
     apply_region_bitmap = new_apply_region_bitmap;
 }
+
+void GridRule::add_region(RegionType type)
+{
+    if (region_count >= 4)
+        return;
+    region_type[region_count] = type;
+
+    for (int i = 1 << region_count; i < (1 << (region_count + 1)); i++)
+        square_counts[i] = RegionType(RegionType::EQUAL, 0);
+    region_count++;
+}
+
 void GridRule::resort_region()
 {
     struct Sorter {

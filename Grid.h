@@ -241,6 +241,7 @@ public:
     typedef enum {OK, ILLOGICAL, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;
     IsLogicalRep is_legal(GridRule& why);
     void remove_region(int index);
+    void add_region(RegionType type);
     void resort_region();
     RegionType get_region_sorted(int index);
 
