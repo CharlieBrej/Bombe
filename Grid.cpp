@@ -205,6 +205,8 @@ void GridRegion::next_colour()
 
 bool GridRegion::has_ancestor(GridRegion* other)
 {
+    if (gen_cause.rule && gen_cause.rule->apply_region_type.type == RegionType::SET)
+        return false;
     for (int i = 0; i < 4; i++)
     {
         if (gen_cause.regions[i])
@@ -1968,10 +1970,9 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
     reg.elements = elements;
     if (cell_causes.count(cause))
     {
-        reg.gen_cause= cell_causes[cause];
+        reg.gen_cause = cell_causes[cause];
     }
-    else
-        reg.gen_cause_pos = cause;
+    reg.gen_cause_pos = cause;
     return add_region(reg, true);
 }
 
@@ -2031,7 +2032,7 @@ static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_cr
 {
     if (!region)
         return;
-    if (region->gen_cause.rule)
+    if (region->gen_cause.rule && region->gen_cause.rule->apply_region_type.type != RegionType::SET)
     {
         rules_to_credit.insert(region->gen_cause.rule);
         for (int i = 0; i < 4; i++)
@@ -2439,7 +2440,7 @@ void Grid::add_new_regions()
 {
     for (GridRegion& r :regions_to_add)
     {
-        if (r.gen_cause.rule)
+        if (r.gen_cause.rule && r.gen_cause.rule->apply_region_type.type != RegionType::SET)
         {
             r.gen_cause.rule->level_used_count++;
         }
@@ -2459,11 +2460,11 @@ bool Grid::add_one_new_region(GridRegion* r)
     {
         GridRegionCause c = (*it).gen_cause;
         if (regions_set.count(&*it) ||
-            (
-            (c.regions[0] && c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN) ||
-            (c.regions[1] && c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN) ||
-            (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
-            (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN)))
+            ((c.rule && c.rule->apply_region_type.type != RegionType::SET) &&
+            ((c.regions[0] && c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN) ||
+             (c.regions[1] && c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN) ||
+             (c.regions[2] && c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN) ||
+             (c.regions[3] && c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN))))
         {
             remove_from_regions_to_add_multiset(&(*it));
             it = regions_to_add.erase(it);
@@ -2483,7 +2484,7 @@ bool Grid::add_one_new_region(GridRegion* r)
         float pri = (*it).priority;
         if (r && (*it).has_ancestor(r))
             pri += 10;
-        if (!(*it).gen_cause.rule)
+        if (!(*it).gen_cause.rule || (*it).gen_cause.rule->apply_region_type.type != RegionType::SET)
             pri += 20;
         if (pri > best_pri)
         {
@@ -2508,6 +2509,7 @@ void Grid::clear_regions()
     regions_to_add.clear();
     regions_to_add_multiset.clear();
     deleted_regions.clear();
+    cell_causes.clear();
 }
 
 std::string SquareGrid::text_desciption()
