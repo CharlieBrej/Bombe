@@ -964,15 +964,19 @@ void GameState::advance(int steps)
     {
         while (true)
         {
-            current_level_set_index++;
+            current_level_set_index += 5;
             if (level_progress[game_mode][current_level_group_index].size() <= current_level_set_index)
             {
-                current_level_set_index = 0;
-                current_level_index = 0;
-                auto_progress_all = false;
-                auto_progress = false;
-                load_level = true;
-                break;
+                current_level_set_index = current_level_set_index % 5 + 1;
+                if (current_level_set_index == 5)
+                {
+                    current_level_set_index = 0;
+                    current_level_index = 0;
+                    auto_progress_all = false;
+                    auto_progress = false;
+                    load_level = true;
+                    break;
+                }
             }
             if (level_is_accessible(game_mode, current_level_group_index, current_level_set_index))
             {
