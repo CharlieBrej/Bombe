@@ -866,9 +866,17 @@ void GameState::advance(int steps)
         for (int i = 0; i < level_progress[0][s].size(); i++)
         {
             LevelProgress& prog = level_progress[0][s][i];
-            for (bool b : prog.level_status)
-                if (b)
-                    count++;
+            for (int j = 0; j < level_progress[0][s][i].level_status.size(); j++)
+            {
+                for (int m = 0; m < GAME_MODES; m++)
+                {
+                    if (level_progress[m][s][i].level_status[j])
+                    {
+                        count++;
+                        break;
+                    }
+                }
+            }
         }
         int ach_sizes[] = {2000, 3000, 4000, 5000, 5500};
         int ach_cnt = *(&ach_sizes + 1) - ach_sizes;
