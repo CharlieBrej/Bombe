@@ -2484,7 +2484,7 @@ bool Grid::add_one_new_region(GridRegion* r)
         float pri = (*it).priority;
         if (r && (*it).has_ancestor(r))
             pri += 10;
-        if (!(*it).gen_cause.rule || (*it).gen_cause.rule->apply_region_type.type != RegionType::SET)
+        if (!(*it).gen_cause.rule || (*it).gen_cause.rule->apply_region_type.type == RegionType::SET)
             pri += 20;
         if (pri > best_pri)
         {
