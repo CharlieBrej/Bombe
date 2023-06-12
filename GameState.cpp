@@ -5636,7 +5636,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             if (prog_seen[PROG_LOCK_PRIORITY])
             {
-                if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size, button_size * 6)))
+                if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size, button_size * 5)))
                 {
                     int y = ((pos - XYPos(button_size * 0, button_size * 6)) / button_size).y;
                     int np = 2 - y;
@@ -5644,23 +5644,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     if (inspected_rule.rule->priority < -100)
                     {
                         inspected_rule.rule->stale = false;
-                        if (np == -3)
-                            inspected_rule.rule->priority = 0;
-                        else
-                            inspected_rule.rule->priority = np;
+                        inspected_rule.rule->priority = np;
                     }
                     else
                     {
-                        if (np == -3)
-                            inspected_rule.rule->priority = -128;
-                        else
-                            inspected_rule.rule->priority = np;
+                        inspected_rule.rule->priority = np;
                     }
                     
                 }
             }
         }
-        else
         {
             if (prog_seen[PROG_LOCK_PAUSE])
             {
