@@ -1023,6 +1023,7 @@ void GameState::advance(int steps)
             {
                 get_hint = true;
                 r.visibility_force = GridRegion::VIS_FORCE_HINT;
+                r.vis_cause.rule = NULL;
                 r.vis_level = GRID_VIS_LEVEL_HIDE;
 
                 std::set<XYPos> new_clue_solves;
@@ -4186,6 +4187,13 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Visibility set by User");
         }
+        if (inspected_region->visibility_force == GridRegion::VIS_FORCE_HINT)
+        {
+            SDL_Rect src_rect = { 1280, 1152, 192, 192};
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size, button_size, button_size };
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Hint");
+        }
         else if (inspected_region->vis_cause.rule)
         {
             SDL_Rect src_rect = { 896, 768, 192, 192 };
@@ -5513,9 +5521,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         if ((pos - XYPos(button_size * 1, button_size * 4)).inside(XYPos(button_size, button_size)))
         {
-            if(inspected_region->visibility_force == GridRegion::VIS_FORCE_USER)
+            if(inspected_region->visibility_force == GridRegion::VIS_FORCE_USER || inspected_region->visibility_force == GridRegion::VIS_FORCE_HINT)
             {
                 inspected_region->visibility_force = GridRegion::VIS_FORCE_NONE;
+                inspected_region->vis_cause.rule = NULL;
             }
             else if(inspected_region->vis_cause.rule)
             {

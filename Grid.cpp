@@ -3154,7 +3154,7 @@ XYPos TriangleGrid::get_grid_pitch(XYPos grid_size)
 {
     XYPosFloat gsize((size.x + ((wrapped == WRAPPED_IN) ? 0.0 : 1.0)) / 2, size.y * std::sqrt(3) / 2);
     double s = std::min(grid_size.x / gsize.x, grid_size.y / gsize.y);
-    return XYPos(ceil(s / 2.0), ceil(std::sqrt(3) * s / 2.0));
+    return XYPos(floor(s / 2.0), floor(std::sqrt(3) * s / 2.0));
 }
 
 XYRect TriangleGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
