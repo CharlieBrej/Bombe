@@ -3999,7 +3999,7 @@ void GameState::render(bool saving)
         int c = level_progress[game_mode][current_level_group_index][i].count_todo;
         if (c)
         {
-            render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 8, button_size / 8), XYPos(button_size * 3 / 4 , button_size * 3 / 4));
+            render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 32, button_size / 4), XYPos(button_size * 15 / 16 , button_size / 2));
             SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
             add_clickable_highlight(dst_rect);
         }
