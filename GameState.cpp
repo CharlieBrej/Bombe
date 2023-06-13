@@ -4336,9 +4336,9 @@ void GameState::render(bool saving)
                     if (region_type.type >= 50)
                     {
                         new_region_type = RegionType(RegionType::NONE, 0);
-                        if ((rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
-                            (rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
-                            new_region_type = RegionType(RegionType::EQUAL, 0);
+                        // if ((rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
+                        //     (rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
+                        //     new_region_type = RegionType(RegionType::EQUAL, 0);
                     }
                     if (new_region_type == rule.square_counts[hover_rulemaker_bits])
                     {
@@ -5911,9 +5911,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     if (region_type.type >= 50)
                     {
                         new_region_type = RegionType(RegionType::NONE, 0);
-                        if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
-                            (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
-                            new_region_type = RegionType(RegionType::EQUAL, 0);
+                        // if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
+                        //     (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
+                        //     new_region_type = RegionType(RegionType::EQUAL, 0);
                     }
                     if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
                     {
