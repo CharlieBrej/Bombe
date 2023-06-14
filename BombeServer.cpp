@@ -500,7 +500,7 @@ public:
                         {
                             printf("pirate check failed\n");
                             pirate = true;
-                            // std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
+                            std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
                             // omap->save(std::cout);
                             // close();
                             // break;

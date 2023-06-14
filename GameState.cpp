@@ -3836,7 +3836,7 @@ void GameState::render(bool saving)
         }
         else if (rep < 100)
         {
-            digits = "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
+            digits = "0." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
         }
         else if (rep < 1000)
         {
@@ -5020,70 +5020,70 @@ void GameState::render(bool saving)
                     SDL_Rect src_rect = {704, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Help");
                 }
                 {
                     SDL_Rect src_rect = {1472, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Hint");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Next Level");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Refresh Regions");
                 }
                 {
                     SDL_Rect src_rect = {1472, 1152, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Full Screen");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Visible");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Hidden");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192 * 2, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Trash");
                 }
                 {
                     SDL_Rect src_rect = {1856, 768, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Undo");
                 }
                 {
                     SDL_Rect src_rect = {1856, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     add_tooltip(dst_rect, "Redo");
                 }
             }
@@ -5133,7 +5133,7 @@ void GameState::render(bool saving)
                     SDL_Rect dst_rect = {left_panel_offset.x + (2 + (i / 5) * 4) * button_size, left_panel_offset.y + button_size * (3 + i % 5) , button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     render_region_type(reg, left_panel_offset + XYPos((2 + (i / 5) * 4) * button_size, button_size * (3 + i % 5)), button_size);
-                    dst_rect.w = 3.2 * button_size;
+                    dst_rect.w = 3.9 * button_size;
                     if (tip)
                         add_tooltip(dst_rect, tip);
                     else
@@ -5148,7 +5148,7 @@ void GameState::render(bool saving)
                 if (a == capturing_key)
                     s = "[?]";
                 
-                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3.14 + (i % 5)) * button_size), s, false, button_size * 1.86);
+                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3.14 + (i % 5)) * button_size), s, false, button_size * 2.5);
             }
 
             {
@@ -6485,7 +6485,7 @@ bool GameState::events()
                     p -= XYPos(2,3);
                     if (p.x >= 0 && p.y >= 0 && p.y < 5 && p.x <= 6)
                     {
-                        int index = p.y + (p.x / 3) * 5 + key_remap_page_index * 10;
+                        int index = p.y + (p.x / 4) * 5 + key_remap_page_index * 10;
 
                         if (index < KEY_CODE_TOTAL)
                             capturing_key = index;
@@ -6837,27 +6837,33 @@ void GameState::send_to_clipboard(std::string title, SaveObject* obj)
     obj->save(stream);
     std::string str = stream.str();
 
-    std::string comp = compress_string_zstd(str);
-    std::u32string s32;
     std::string reply = "Bombe " + title;
     reply += ":\n";
-
-    s32 += 0x1F4A3;                 // unicode Bomb 
-    unsigned spaces = 2;
-    for(char& c : comp)
+    if (ctrl_held)
     {
-        if (spaces >= 80)
+        reply += str;
+    }
+    else
+    {
+        std::string comp = compress_string_zstd(str);
+        std::u32string s32;
+        s32 += 0x1F4A3;                 // unicode Bomb 
+        unsigned spaces = 2;
+        for(char& c : comp)
         {
-            s32 += '\n';
-            spaces = 0;
-        }
-        spaces++;
-        s32 += uint32_t(0x2800 + (unsigned char)(c));
+            if (spaces >= 80)
+            {
+                s32 += '\n';
+                spaces = 0;
+            }
+            spaces++;
+            s32 += uint32_t(0x2800 + (unsigned char)(c));
 
-    } 
-    s32 += 0x1F6D1;                 // stop sign
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-    reply += conv.to_bytes(s32);
+        } 
+        s32 += 0x1F6D1;                 // stop sign
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+        reply += conv.to_bytes(s32);
+    }
     reply += "\n";
     SDL_SetClipboardText(reply.c_str());
 }
