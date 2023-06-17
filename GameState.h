@@ -248,6 +248,7 @@ public:
     bool rule_gen_target_square_count = false;
     XYSet filter_pos;
 
+    XYPos window_size;
     int grid_size;
     XYPos panel_size;
     XYPos grid_pitch;

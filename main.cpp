@@ -93,7 +93,6 @@ void SteamGameManager::update_achievements(GameState* game_state)
 
     if (needs_send)
     {
-        std::cout << "sdfgsdfg" << std::endl;
         m_pSteamUserStats->StoreStats();
         needs_send = false;
     }

@@ -88,7 +88,7 @@ GameState::GameState(std::string& load_data, bool json)
         std::ifstream loadfile("lang.json");
         lang_data = SaveObject::load(loadfile)->get_map();
     }
-
+    window_size = XYPos(1920/2, 1080/2);
     try
     {
         if (!load_data.empty())
@@ -126,6 +126,11 @@ GameState::GameState(std::string& load_data, bool json)
                 game_mode = omap->get_num("game_mode");
             if (omap->has_key("full_screen"))
                 full_screen = omap->get_num("full_screen");
+            if (omap->has_key("window_size"))
+            {
+                window_size.y = omap->get_num("window_size");
+                window_size.x = std::ceil(double(window_size.y) * 16 / 9);
+            }
             if (omap->has_key("max_stars"))
                 max_stars = omap->get_num("max_stars");
             if (omap->has_key("server_levels"))
@@ -237,11 +242,11 @@ GameState::GameState(std::string& load_data, bool json)
     if (rule_limit_slider >= 1.0)
         rule_limit_count = -1;
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920/2, 1080/2, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, window_size.x, window_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (full_screen)
     {
-        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+        SDL_SetWindowFullscreen(sdl_window, full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
         SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
         SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
         SDL_SetWindowInputFocus(sdl_window);
@@ -389,6 +394,12 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("music_volume", music_volume * 1000);
     omap->add_num("colors", colors * 1000);
     omap->add_num("rule_limit", rule_limit_slider * 1000000000);
+    {
+        if (window_size.x * 9 > window_size.y * 16)
+            omap->add_num("window_size", window_size.y);
+        else
+            omap->add_num("window_size", std::ceil(double(window_size.x) * 9) / 16);
+    }
     omap->add_num("full_screen", full_screen);
     omap->add_num("max_stars", max_stars);
 
@@ -838,7 +849,7 @@ void GameState::load_grid(std::string s)
 }
 void GameState::advance(int steps)
 {
-    // if(grid->regions.size() > 300)
+    // if(grid->regions.size() > 500)
     //     _exit(1);
     if (rule_limit_count >= 0)
         if(grid->regions.size() > rule_limit_count)
@@ -2417,7 +2428,6 @@ void GameState::render(bool saving)
     if (grid_dragging)
         mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
 
-    XYPos window_size;
     bool row_col_clues = !grid->edges.empty() && show_row_clues;
     SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
     SDL_RenderClear(sdl_renderer);
@@ -6598,9 +6608,6 @@ bool GameState::events()
                 }
                 if (display_help)
                 {
-                    XYPos window_size;
-                    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
-
                     int sq_size = std::min(window_size.y / 9, window_size.x / 16);
                     XYPos help_image_size = XYPos(16 * sq_size, 9 * sq_size);
                     XYPos help_image_offset = (window_size - help_image_size) / 2;
@@ -6705,6 +6712,8 @@ bool GameState::events()
         else if (key_held == 'E')
             inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
         inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+        inspected_region->stale = false;
+        inspected_region->vis_cause.rule = NULL;
         inspected_region->stale = false;
     }
 

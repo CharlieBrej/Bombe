@@ -119,6 +119,7 @@ public:
     bool apply_int_rule(unsigned in, int vars[32]);
 
     int max();
+    int min();
 };
 
 class GridPlace
@@ -234,8 +235,41 @@ public:
     SaveObject* save(bool lite = false);
     static void get_square_counts(uint8_t square_counts[16], GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
 
+    class FastOp
+    {
+    public:
+        enum OpType
+        {
+            REG_TYPE,
+            CELL_COUNT,
+            VAR_ADD,
+            VAR_SUB,
+            VAR_TRIPLE,
+
+        };
+        OpType op;
+        bool set = true;
+        uint8_t vi;
+        uint8_t p1;
+        uint8_t p2;
+        uint8_t p3;
+        FastOp(OpType op_, bool set_, uint8_t vi_, uint8_t p1_, uint8_t p2_ = 0, uint8_t p3_ = 0):
+            op(op_), set(set_), vi(vi_), p1(p1_), p2(p2_), p3(p3_)
+        {}
+        FastOp() {}
+    };
+
+    class FastOpGroup
+    {
+    public:
+        std::vector<GridRule::FastOp> ops[4];
+    };
+
     GridRule permute(std::vector<int>& p);
     bool covers(GridRule& other);
+    void jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool have[32]);
+    void jit_preprocess(FastOpGroup& fast_ops);
+    bool jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     typedef enum {OK, ILLOGICAL, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;

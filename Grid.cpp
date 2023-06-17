@@ -153,27 +153,56 @@ int RegionType::max()
     if (type == NONE)
         return -1;
     if (type == EQUAL)
-        return 0;
+        return value;
     if (type == NOTEQUAL)
         return -1;
     if (type == LESS)
-        return 0;
+        return value;
     if (type == MORE)
         return -1;
     if (type == XOR2)
-        return 2;
+        return value + 2;
     if (type == XOR3)
-        return 3;
+        return value + 3;
     if (type == XOR22)
-        return 4;
+        return value + 4;
     if (type == XOR222)
-        return 6;
+        return value + 6;
     if (type == PARITY)
         return -1;
     if (type == XOR1)
-        return 1;
+        return value + 1;
     if (type == XOR11)
         return 2;
+    assert(0);
+}
+
+int RegionType::min()
+{
+    if (type == NONE)
+        return 0;
+    if (type == EQUAL)
+        return value;
+    if (type == NOTEQUAL)
+        return 0;
+    if (type == LESS)
+        return 0;
+    if (type == MORE)
+        return value;
+    if (type == XOR2)
+        return value;
+    if (type == XOR3)
+        return value;
+    if (type == XOR22)
+        return value;
+    if (type == XOR222)
+        return value;
+    if (type == PARITY)
+        return value;
+    if (type == XOR1)
+        return value;
+    if (type == XOR11)
+        return value;
     assert(0);
 }
 
@@ -405,6 +434,363 @@ bool GridRule::covers(GridRule& other)
     return true;
 }
 
+static void add_to_fast_ops(std::vector<GridRule::FastOp>& fast_ops, GridRule::FastOp new_op)
+{
+    for (GridRule::FastOp& op : fast_ops)
+    {
+        if (op.op != new_op.op)
+            continue;
+        if (op.vi != new_op.vi)
+            continue;
+        if (op.p1 != new_op.p1)
+            continue;
+        if (op.p2 != new_op.p2)
+            continue;
+        return;
+    }
+    fast_ops.push_back(new_op);
+}
+
+void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool have[32])
+{
+    for (int i = 1; i < 32; i++)
+    {
+        if (have[i-1])
+        {
+            for (int j = 1; j < 32; j++)
+            {
+                if ((have[j-1]) && (i != j))
+                {
+                    if ((i & j) == 0)
+                    {
+                        int vi = (i | j) - 1;
+                        if (!have[vi])
+                        {
+                            have[vi] = true;
+                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_ADD, true, vi, i, j));
+                            if (i > vi)
+                            {
+                                i = vi;
+                                break;
+                            }
+                        }
+                    }
+                    else if ((i & j) == i)
+                    {
+                        int vi = (j & ~i) - 1;
+                        if (!have[vi])
+                        {
+                            have[vi] = true;
+                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_SUB, true, vi, i, j));
+                            if (i > vi)
+                            {
+                                i = vi;
+                                break;
+                            }
+                        }
+                    }
+                    else if (have[(i ^ j) - 1])
+                    {
+                        int vi = (i | j) - 1;
+                        if (!have[vi])
+                        {
+                            have[vi] = true;
+                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_TRIPLE, true, vi, i, j, i ^ j));
+                            if (i > vi)
+                            {
+                                i = vi;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+void GridRule::jit_preprocess(FastOpGroup& fast_ops)
+{
+    bool have[32] = {};
+
+    for (int r = 0; r < region_count; r++)
+    {
+        {
+            if (region_type[r].var)
+            {
+                int vi = region_type[r].var - 1;
+                bool set = !have[vi];
+                have[vi] = true;
+                add_to_fast_ops(fast_ops.ops[r], FastOp(FastOp::OpType::REG_TYPE, set, vi, r));
+                jit_preprocess_calc(fast_ops.ops[r], have);
+            }
+        }
+    }
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+        if (square_counts[i].var)
+        {
+            if ((square_counts[i].type == RegionType::EQUAL))
+            {
+                int vi = square_counts[i].var - 1;
+                bool set = !have[vi];
+                have[vi] = true;
+                add_to_fast_ops(fast_ops.ops[region_count - 1], FastOp(FastOp::OpType::CELL_COUNT, set, vi, i));
+                jit_preprocess_calc(fast_ops.ops[region_count - 1], have);
+            }
+        }
+    }
+
+    for (int i = 1; i < (1 << region_count); i++)
+    {
+        if (square_counts[i].var)
+        {
+            if ((square_counts[i].type != RegionType::EQUAL))
+            {
+                int vi = square_counts[i].var - 1;
+                assert(have[vi]);
+            }
+        }
+    }
+
+    // bool atoms[32] = {};
+    // for (int i = 1; i < 32; i++)
+    //     if (distance[i - 1])
+    //         atoms[i - 1] = true;
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     for (int j = 1; j < 32; j++)
+    //     {
+    //         if (((i & j) == 0) && atoms[i - 1] && atoms[j - 1])
+    //         {
+    //             atoms[(i | j) - 1] = false;
+    //         }
+    //     }
+    // }
+    // int c = 0;
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     if (atoms[i - 1])
+    //     {
+    //         while (!have[i - 1]);
+    //         {
+    //             int at = i - 1;
+    //             while(true)
+    //             {
+    //                 if (fops[at].p1 && !have[fops[at].p1 - 1])
+    //                 {
+    //                     at = fops[at].p1;
+    //                     continue;
+    //                 }
+    //                 if (fops[at].p2 && !have[fops[at].p2 - 1])
+    //                 {
+    //                     at = fops[at].p2;
+    //                     continue;
+    //                 }
+    //                 if (fops[at].p3 && !have[fops[at].p3 - 1])
+    //                 {
+    //                     at = fops[at].p3;
+    //                     continue;
+    //                 }
+    //                 break;
+    //             }
+    //             have[at] = true;
+    //             fops[at].set = true;
+    //             add_to_fast_ops(fast_ops, fops[at]);
+    //         }
+    //     }
+    // }
+
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     distance[i - 1] = 0;
+    //     if (atoms[i - 1])
+    //         distance[i - 1] = 1;
+    // }
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     if (distance[i-1])
+    //     {
+    //         for (int j = 1; j < 32; j++)
+    //         {
+    //             if ((distance[j-1]) && (i != j))
+    //             {
+    //                 if ((i & j) == 0)
+    //                 {
+    //                     int vi = (i | j) - 1;
+    //                     int d = std::max(distance[i - 1], distance[j - 1]) + 1;
+    //                     if (d >= distance[vi])
+    //                         continue;
+    //                     distance[vi] = d;
+    //                     fops[vi] = FastOp(FastOp::OpType::VAR_ADD, false, vi, i, j);
+    //                 }
+    //                 else if ((i & j) == i)
+    //                 {
+    //                     int vi = (j & ~i) - 1;
+    //                     int d = std::max(distance[i - 1], distance[j - 1]) + 1;
+    //                     if (d >= distance[vi])
+    //                         continue;
+    //                     distance[vi] = d;
+    //                     fops[vi] = FastOp(FastOp::OpType::VAR_SUB, false, vi, i, j);
+    //                     if (i > vi)
+    //                     {
+    //                         i = vi;
+    //                         break;
+    //                     }
+    //                 }
+    //                 else if (distance[(i ^ j) - 1])
+    //                 {
+    //                     int k = i ^ j;
+    //                     int vi = (i | j) - 1;
+    //                     int d = std::max(distance[i - 1], distance[j - 1]) + 1;
+    //                     if (d >= distance[vi])
+    //                         continue;
+    //                     distance[vi] = d;
+    //                     fops[vi] = FastOp(FastOp::OpType::VAR_TRIPLE, false, vi, i, j, k);
+    //                     if (i > vi)
+    //                     {
+    //                         i = vi;
+    //                         break;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // for (int i = 1; i < 32; i++)
+    //     have[i - 1] = atoms[i - 1];
+
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     if (want[i - 1])
+    //     {
+    //         while (!have[i - 1]);
+    //         {
+    //             int at = i - 1;
+    //             while(true)
+    //             {
+    //                 if (fops[at].p1 && !have[fops[at].p1 - 1])
+    //                 {
+    //                     at = fops[at].p1;
+    //                     continue;
+    //                 }
+    //                 if (fops[at].p2 && !have[fops[at].p2 - 1])
+    //                 {
+    //                     at = fops[at].p2;
+    //                     continue;
+    //                 }
+    //                 if (fops[at].p3 && !have[fops[at].p3 - 1])
+    //                 {
+    //                     at = fops[at].p3;
+    //                     continue;
+    //                 }
+    //                 break;
+    //             }
+    //             fops[at].set = want[at];
+    //             add_to_fast_ops(fast_ops, fops[at]);
+    //             have[at] = true;
+    //         }
+    //     }
+    // }
+
+
+
+
+
+
+    // printf("%d\n", fast_ops.size());
+    // for (int i = 1; i < 32; i++)
+    // {
+    //     if (want[i])
+    //         assert(have[i]);
+    // }
+
+}
+
+bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
+{
+    GridRegion* grid_regions[4] = {r1, r2, r3, r4};
+
+    for (FastOp& op : fast_ops)
+    {
+        int v = -1;
+        switch (op.op)
+        {
+            case FastOp::REG_TYPE:
+            {
+                v = grid_regions[op.p1]->type.value - region_type[op.p1].value;
+                break;
+            }
+            case FastOp::CELL_COUNT:
+            {
+                int i = op.p1;
+                XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+                if (r2)
+                    s &= ((i & 2) ? r2->elements : ~r2->elements);
+                if (r3)
+                    s &= ((i & 4) ? r3->elements : ~r3->elements);
+                if (r4)
+                    s &= ((i & 8) ? r4->elements : ~r4->elements);
+                v = s.count() - square_counts[i].value;
+                break;
+            }
+            case FastOp::VAR_ADD:
+            {
+                v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1];
+                break;
+            }
+            case FastOp::VAR_SUB:
+            {
+                v = var_counts[op.p2 - 1] - var_counts[op.p1 - 1];
+                break;
+            }
+            case FastOp::VAR_TRIPLE:
+            {
+                int x = op.p1 ^ op.p2;
+                v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] + var_counts[x - 1];
+                if (v % 2)
+                    return false;
+                v /= 2;
+                break;
+            }
+            default:
+                assert(0);
+        }
+        if (v < 0)
+            return false;
+        if (op.set)
+        {
+//            assert (var_counts[op.vi] == v);
+            var_counts[op.vi] = v;
+        }
+        else
+        {
+            if (var_counts[op.vi] != v)
+                return false;
+        }
+    }
+    if (final)
+    {
+        for (int i = 1; i < (1 << region_count); i++)
+        {
+            if (square_counts[i].type == RegionType::NONE)
+                continue;
+            XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+            if (r2)
+                s &= ((i & 2) ? r2->elements : ~r2->elements);
+            if (r3)
+                s &= ((i & 4) ? r3->elements : ~r3->elements);
+            if (r4)
+                s &= ((i & 8) ? r4->elements : ~r4->elements);
+            if (!square_counts[i].apply_int_rule(s.count(), var_counts))
+                return false;
+        }
+    }
+    return true;
+}
+
+
 bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
 {
     GridRegion* grid_regions[4] = {r1, r2, r3, r4};
@@ -635,9 +1021,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
         if (m >= 0)
         {
             if (square_counts[i].var)
-                s.add(vec[i] <= var_vec[square_counts[i].var - 1] + square_counts[i].value + m);
+                s.add(vec[i] <= var_vec[square_counts[i].var - 1] + m);
             else
-                s.add(vec[i] <= int(square_counts[i].value + m));
+                s.add(vec[i] <= m);
 
         }
     }
@@ -693,9 +1079,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 return ILLOGICAL;
             }
             if (square_counts[i].var)
-                tot = tot + var_vec[square_counts[i].var-1] + square_counts[i].value + m;
+                tot = tot + var_vec[square_counts[i].var-1] + m;
             else
-                tot = tot + int(square_counts[i].value + m);
+                tot = tot + m;
         }
     }
 
@@ -2381,6 +2767,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
     unstale_regions.push_back(unstale_region);
     ApplyRuleResp rep = APPLY_RULE_RESP_NONE;
 
+    GridRule::FastOpGroup fast_ops;
+
+    rule.jit_preprocess(fast_ops);
+    int var_counts[32];
+
     for (int nonstale_rep_index = 0; nonstale_rep_index < rule.region_count; nonstale_rep_index++)
     {
         if ((places_for_reg >> nonstale_rep_index) & 1)
@@ -2388,25 +2779,38 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
             std::vector<GridRegion*>& set0 = (unstale_region && (nonstale_rep_index == 0)) ? unstale_regions : pos_regions[0];
             for (GridRegion* r0 : set0)
             {
+                if (!rule.jit_matches(fast_ops.ops[0], (rule.region_count == 1), r0, NULL, NULL, NULL, var_counts))
+                    continue;
                 std::vector<GridRegion*>& set1 = (nonstale_rep_index == 1) ? unstale_regions : pos_regions[1];
                 for (GridRegion* r1 : set1)
                 {
+                    if (r0 == r1) continue;
+                    if (!rule.jit_matches(fast_ops.ops[1], (rule.region_count == 2), r0, r1, NULL, NULL, var_counts))
+                        continue;
                     std::vector<GridRegion*>& set2 = (nonstale_rep_index == 2) ? unstale_regions : pos_regions[2];
                     for (GridRegion* r2 : set2)
                     {
+                        if (r2 && ((r0 == r2) || (r1 == r2))) continue;
+                        if (!rule.jit_matches(fast_ops.ops[2], (rule.region_count == 3), r0, r1, r2, NULL, var_counts))
+                            continue;
                         std::vector<GridRegion*>& set3 = (nonstale_rep_index == 3) ? unstale_regions : pos_regions[3];
                         for (GridRegion* r3 : set3)
                         {
-                            GridRegion* regions[4] = {r0, r1, r2, r3};
-                            if (r0 == r1) continue;
-                            if (r2 && ((r0 == r2) || (r1 == r2))) continue;
                             if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
-                            if (!are_connected(r0, r1, r2, r3)) continue;
-                            int var_counts[32];
-                            for (int i = 0; i < 32; i++)
-                                var_counts[i] = -1;
-                            if (rule.matches(r0, r1, r2, r3, var_counts))
+//                            bool m2 = rule.matches(r0, r1, r2, r3, var_counts);
+                            if (!rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts))
+                                continue;
+                            // if (m != m2)
+                            // {
+                            //     m = rule.matches(r0, r1, r2, r3, var_counts);
+                            //     m2 = rule.jit_matches(fast_ops, r0, r1, r2, r3, var_counts);
+                            // }
                             {
+                                for (int i = 0; i < 32; i++)
+                                    var_counts[i] = -1;
+                                assert(rule.matches(r0, r1, r2, r3, var_counts));
+                                if (!are_connected(r0, r1, r2, r3)) continue;
+                                GridRegion* regions[4] = {r0, r1, r2, r3};
                                 ApplyRuleResp resp = apply_rule(rule, regions, var_counts);
                                 if ((resp != APPLY_RULE_RESP_NONE) && (rule.apply_region_type.type == RegionType::SET))
                                     return resp;
