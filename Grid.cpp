@@ -132,19 +132,21 @@ z3::expr RegionType::apply_z3_rule(z3::expr in, z3::expr_vector& var_vect)
 bool RegionType::apply_int_rule(unsigned in, int vars[32])
 {
     int v = 0;
+    // if (var)
+    // {
+    //     for (unsigned i = 0; i < 5; i++)
+    //     {
+    //         if ((var >> i) & 1)
+    //         {
+    //             if (vars[(1 << i) - 1] == -1)
+    //                 return false;
+    //             v += vars[(1 << i) - 1];
+    //         }
+    //     }
+    //     assert(vars[var - 1]  == v);
+    // }
     if (var)
-    {
-        for (unsigned i = 0; i < 5; i++)
-        {
-            if ((var >> i) & 1)
-            {
-                if (vars[(1 << i) - 1] == -1)
-                    return false;
-                v += vars[(1 << i) - 1];
-            }
-        }
-        assert(vars[var - 1]  == v);
-    }
+        v += vars[var - 1];
     return apply_rule_imp<bool,unsigned>(in, v + value);
 }
 
@@ -531,7 +533,7 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
     {
         if (square_counts[i].var)
         {
-            if ((square_counts[i].type == RegionType::EQUAL))
+            if (square_counts[i].type == RegionType::EQUAL)
             {
                 int vi = square_counts[i].var - 1;
                 bool set = !have[vi];
