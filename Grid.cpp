@@ -735,6 +735,25 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
                 v = s.count() - square_counts[i].value;
                 break;
             }
+            case FastOp::MIN_CELL_COUNT:
+            {
+                int i = op.vi;
+                XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+                if (r2)
+                    s &= ((i & 2) ? r2->elements : ~r2->elements);
+                if (r3)
+                    s &= ((i & 4) ? r3->elements : ~r3->elements);
+                if (r4)
+                    s &= ((i & 8) ? r4->elements : ~r4->elements);
+                int c = op.p1;
+                if (op.p2)
+                    c += var_counts[op.p2 - 1];
+                if (s.count() < c)
+                {
+                    return false;
+                }
+                continue;
+            }
             case FastOp::VAR_ADD:
             {
                 v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1];

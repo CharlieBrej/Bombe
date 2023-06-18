@@ -245,7 +245,7 @@ public:
             VAR_ADD,
             VAR_SUB,
             VAR_TRIPLE,
-
+            MIN_CELL_COUNT,
         };
         OpType op;
         bool set = true;

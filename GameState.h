@@ -73,6 +73,7 @@ public:
     bool display_reset_confirm_levels_only = false;
     bool display_key_select = false;
     bool display_about = false;
+    bool display_debug = false;
 
     bool display_rules = false;
     bool display_clipboard_rules = false;
