@@ -1076,77 +1076,77 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
         return IMPOSSIBLE;
     }
     
-    if (apply_region_type.type == RegionType::VISIBILITY)
-        return OK;
-
-    z3::expr e = c.int_val(0);
-    z3::expr tot = c.int_val(0);
-
-    if (!apply_region_bitmap)
-        return OK;
-
-    for (int i = 1; i < (1 << region_count); i++)
+    if (apply_region_type.type != RegionType::VISIBILITY)
     {
-        if ((apply_region_bitmap >> i) & 1)
-        {
-            e = e + vec[i];
-            int m = square_counts[i].max();
-            if ((m < 0) && (apply_region_type == RegionType(RegionType::SET, 1)))
-            {
-                for (int i = 1; i < (1 << region_count); i++)
-                    why.square_counts[i] = RegionType(RegionType::NONE, 0);
+        z3::expr e = c.int_val(0);
+        z3::expr tot = c.int_val(0);
 
-                why.square_counts[i] = RegionType(RegionType::MORE, 0);
-                return ILLOGICAL;
-            }
-            if (square_counts[i].var)
-                tot = tot + var_vec[square_counts[i].var-1] + m;
-            else
-                tot = tot + m;
-        }
-    }
+        if (!apply_region_bitmap)
+            return OK;
 
-    if (apply_region_type.type == RegionType::SET)
-    {
-        if (apply_region_type.value)
-            s.add(e != tot);
-        else
-            s.add(e != 0);
-    }
-    else
-    {
-        s.add(!apply_region_type.apply_z3_rule(e, var_vec));
-    }
-
-    if (s.check() == z3::sat)
-    {
-        z3::model m = s.get_model();
         for (int i = 1; i < (1 << region_count); i++)
         {
-            int v = m.eval(vec[i]).get_numeral_int();
-            why.square_counts[i] = RegionType(RegionType::EQUAL ,v);
-        }
-        int vals[32];
-        for (int i = 0; i < 31; i++)
-        {
-            vals[i] = m.eval(var_vec[i]).get_numeral_int();
-        }
-        for (int i = 0; i < region_count; i++)
-        {
-            if (why.region_type[i].var)
+            if ((apply_region_bitmap >> i) & 1)
             {
-                why.region_type[i].value += vals[why.region_type[i].var - 1];
-                why.region_type[i].var = 0;
+                e = e + vec[i];
+                int m = square_counts[i].max();
+                if ((m < 0) && (apply_region_type == RegionType(RegionType::SET, 1)))
+                {
+                    for (int i = 1; i < (1 << region_count); i++)
+                        why.square_counts[i] = RegionType(RegionType::NONE, 0);
+
+                    why.square_counts[i] = RegionType(RegionType::MORE, 0);
+                    return ILLOGICAL;
+                }
+                if (square_counts[i].var)
+                    tot = tot + var_vec[square_counts[i].var - 1] + m;
+                else
+                    tot = tot + m;
             }
         }
-        if (why.apply_region_type.var)
+
+        if (apply_region_type.type == RegionType::SET)
         {
-            why.apply_region_type.value += vals[why.apply_region_type.var - 1];
-            why.apply_region_type.var = 0;
+            if (apply_region_type.value)
+                s.add(e != tot);
+            else
+                s.add(e != 0);
         }
-        return ILLOGICAL;
+        else
+        {
+            s.add(!apply_region_type.apply_z3_rule(e, var_vec));
+        }
+
+        if (s.check() == z3::sat)
+        {
+            z3::model m = s.get_model();
+            for (int i = 1; i < (1 << region_count); i++)
+            {
+                int v = m.eval(vec[i]).get_numeral_int();
+                why.square_counts[i] = RegionType(RegionType::EQUAL, v);
+            }
+            int vals[32];
+            for (int i = 0; i < 31; i++)
+            {
+                vals[i] = m.eval(var_vec[i]).get_numeral_int();
+            }
+            for (int i = 0; i < region_count; i++)
+            {
+                if (why.region_type[i].var)
+                {
+                    why.region_type[i].value += vals[why.region_type[i].var - 1];
+                    why.region_type[i].var = 0;
+                }
+            }
+            if (why.apply_region_type.var)
+            {
+                why.apply_region_type.value += vals[why.apply_region_type.var - 1];
+                why.apply_region_type.var = 0;
+            }
+            return ILLOGICAL;
+        }
     }
-    else
+
     {
         // if (!apply_region_type.var)
         //     return OK;

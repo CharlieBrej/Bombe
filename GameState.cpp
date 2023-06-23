@@ -789,6 +789,8 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
 {   
     GridRule why;
+//    if (rule.is_legal(why) != GridRule::OK)
+//            return false;
 //    assert(rule.is_legal(why) == GridRule::OK);
     if (mode == 1 && rule.region_count == 4)
         return false;
@@ -5265,7 +5267,7 @@ void GameState::render(bool saving)
         debug_text += "regions_to_add size: " + std::to_string(grid->regions_to_add.size()) + "\n";
         debug_text += "deleted_regions size: " + std::to_string(grid->deleted_regions.size()) + "\n";
         debug_text += "Regions per sec: " + std::to_string(rate * 1000) + "\n";
-        render_text_box(XYPos(), debug_text);
+        render_text_box(XYPos(0, grid_size/2), debug_text);
     }
 
     SDL_RenderPresent(sdl_renderer);
@@ -6566,6 +6568,8 @@ bool GameState::events()
                                 rules[game_mode].clear();
                                 if (game_mode == 2 || game_mode == 3)
                                     reset_levels();
+                                force_load_level = true;
+                                load_level = true;
                             }
                             display_reset_confirm = false;
                             right_panel_mode = RIGHT_MENU_NONE;
