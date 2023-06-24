@@ -332,8 +332,9 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PAUSE] = 9000;
 
     prog_stars[PROG_LOCK_COLORS] = 15000;
+    prog_stars[PROG_LOCK_USE_DONT_CARE] = 1;
     prog_stars[PROG_LOCK_REGION_HINT] = 400;
-    prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] = 1000;
+    prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] = 600;
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
@@ -4831,6 +4832,29 @@ void GameState::render(bool saving)
             if (display_help)
                 render_star_burst(right_panel_offset + XYPos(-button_size * 4.3, button_size * 1) , XYPos(button_size * 6, button_size * 8), prog_seen[PROG_LOCK_REGION_HINT], false);
             prog_seen[PROG_LOCK_REGION_HINT] += frame_step;
+        }
+    }
+    if (prog_seen[PROG_LOCK_USE_DONT_CARE] < PROG_ANIM_MAX)
+    {
+        if (prog_stars[PROG_LOCK_USE_DONT_CARE] <= max_stars)
+        {
+            if (prog_seen[PROG_LOCK_USE_DONT_CARE] == 0)
+            {
+                bool seen = false;
+                for (GridRule& rule : rules[game_mode])
+                {
+                    if (rule.square_counts[1].type == RegionType::NONE)
+                        seen = true;
+                }
+                if (!seen)
+                {
+                    display_help = true;
+                    tutorial_index = 3;
+                }
+            }
+            if (display_help)
+                render_star_burst(left_panel_offset + XYPos(button_size * 1, button_size * 1) , XYPos(button_size * 5, button_size * 8), prog_seen[PROG_LOCK_USE_DONT_CARE], false);
+            prog_seen[PROG_LOCK_USE_DONT_CARE] += frame_step;
         }
     }
     if (prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] < PROG_ANIM_MAX)
