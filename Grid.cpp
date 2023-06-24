@@ -2442,7 +2442,7 @@ static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_cr
     if (region->gen_cause.rule && region->gen_cause.rule->apply_region_type.type != RegionType::SET)
     {
         rules_to_credit.insert(region->gen_cause.rule);
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < region->gen_cause.rule->region_count; i++)
         {
             if (region->gen_cause.regions[i])
             {
@@ -2522,14 +2522,13 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             cell_causes[pos] = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
             c++;
         }
+        assert(c);
         last_cleared_regions = to_reveal;
         rule.level_used_count++;
-        rule.level_clear_count += c;
         std::set<GridRule*> rules_to_credit;
-        add_clear_count(r[0], rules_to_credit);
-        add_clear_count(r[1], rules_to_credit);
-        add_clear_count(r[2], rules_to_credit);
-        add_clear_count(r[3], rules_to_credit);
+        rules_to_credit.insert(&rule);
+        for (int i = 0; i < rule.region_count; i++)
+            add_clear_count(r[i], rules_to_credit);
         for (GridRule* rule : rules_to_credit)
             rule->level_clear_count += c;
         return APPLY_RULE_RESP_HIT;
@@ -2865,10 +2864,6 @@ void Grid::add_new_regions()
 {
     for (GridRegion& r :regions_to_add)
     {
-        if (r.gen_cause.rule && r.gen_cause.rule->apply_region_type.type != RegionType::SET)
-        {
-            r.gen_cause.rule->level_used_count++;
-        }
         regions_set.insert(&r);
     }
     regions.splice(regions.end(), regions_to_add);
@@ -2918,7 +2913,7 @@ bool Grid::add_one_new_region(GridRegion* r)
         }
         it++;
     }
-    if ((*best_reg).gen_cause.rule)
+    if ((*best_reg).gen_cause.rule && (*best_reg).gen_cause.rule->apply_region_type.type != RegionType::SET)
         (*best_reg).gen_cause.rule->level_used_count++;
 
     remove_from_regions_to_add_multiset(&(*best_reg));
