@@ -233,6 +233,7 @@ GameState::GameState(std::string& load_data, bool json)
     {
         display_help = true;
         display_language_chooser = true;
+        walkthrough = true;
     }
     if (current_level_group_index >= GLBAL_LEVEL_SETS)
         current_level_group_index = 0;
@@ -332,7 +333,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PAUSE] = 9000;
 
     prog_stars[PROG_LOCK_COLORS] = 15000;
-    prog_stars[PROG_LOCK_USE_DONT_CARE] = 1;
+    prog_stars[PROG_LOCK_USE_DONT_CARE] = 19;
     prog_stars[PROG_LOCK_REGION_HINT] = 400;
     prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] = 600;
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
@@ -5270,6 +5271,44 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
 
+    if (walkthrough && !display_help)
+    {
+        walkthrough_double_click = false;
+        if (walkthrough_step == 0)
+        {
+            walkthrough_region = XYRect(grid_offset + XYPos(button_size * 0.93, button_size * 3.65), XYPos(button_size * 1, button_size  * 1));
+            walkthrough_double_click = true;
+            region_type = RegionType(RegionType::NONE, 0);
+        }
+        else if (walkthrough_step == 1)
+        {
+            walkthrough_region = XYRect(right_panel_offset + XYPos(button_size * 1, button_size * 6), XYPos(button_size * 1, button_size  * 1));
+        }
+        else if (walkthrough_step == 2)
+        {
+            walkthrough_region = XYRect(right_panel_offset + XYPos(button_size * 0.5, button_size * 2.5), XYPos(button_size / 2, button_size  / 2));
+        }
+        else if (walkthrough_step == 3)
+        {
+            walkthrough_region = XYRect(right_panel_offset + XYPos(button_size * 4, button_size * 1), XYPos(button_size, button_size));
+        }
+        {
+            SDL_Rect src_rect = {2624, 1920, 192, 192};
+            SDL_Rect dst_rect = {walkthrough_region.pos.x - walkthrough_region.size.x * 3, walkthrough_region.pos.y - walkthrough_region.size.y * 3, walkthrough_region.size.x * 7, walkthrough_region.size.y * 7};
+            SDL_Point rot_center = {dst_rect.w / 2, dst_rect.h / 2};
+            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, double(frame) / 10, &rot_center, SDL_FLIP_NONE);
+
+            XYPos p = mouse - walkthrough_region.pos - walkthrough_region.size / 2;
+            if (XYPosFloat(p).distance()  < XYPosFloat(walkthrough_region.size).distance() / 2)
+            {
+                src_rect = {2624, walkthrough_double_click ? 2112 + 192 : 2112, 192, 192};
+                dst_rect = {walkthrough_region.pos.x, walkthrough_region.pos.y + walkthrough_region.size.y, walkthrough_region.size.x, walkthrough_region.size.y};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+
+    }
+
     if (display_debug)
     {
         static int debug_region_index = 0;
@@ -6725,6 +6764,18 @@ bool GameState::events()
                 if(e.button.button == SDL_BUTTON_RIGHT)
                 {
                     btn = 2;
+                }
+                if (walkthrough && !display_help)
+                {
+                    XYPos p = mouse - walkthrough_region.pos - walkthrough_region.size / 2;
+                    if ((XYPosFloat(p).distance()  < XYPosFloat(walkthrough_region.size).distance() / 2) && ((e.button.clicks > 1) || !walkthrough_double_click))
+                    {
+                        walkthrough_step++;
+                        if (walkthrough_step >= 4)
+                            walkthrough = false;
+                    }
+                    else
+                        break;
                 }
 
 

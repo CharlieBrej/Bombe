@@ -369,6 +369,10 @@ public:
     int prog_seen[PROG_LOCK_TOTAL]= {};
     int server_level_anim = PROG_ANIM_MAX;
     bool seen_ff = false;
+    bool walkthrough = false;
+    int walkthrough_step = 0;
+    XYRect walkthrough_region;
+    bool walkthrough_double_click = false;
 
     class PlayerScore
     {
