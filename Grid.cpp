@@ -175,7 +175,7 @@ int RegionType::max()
     if (type == XOR1)
         return value + 1;
     if (type == XOR11)
-        return 2;
+        return value + 2;
     assert(0);
 }
 
