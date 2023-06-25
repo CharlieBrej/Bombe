@@ -463,7 +463,7 @@ public:
                             if (!curl)
                             {
                                 close();
-                                break;
+                                throw(std::runtime_error("curl_easy_init() failed"));
                             }
 
                             std::string url = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?key=44D5549D3DC57BCF2492489740F0354A&appid=" + std::string(omap->get_num("demo") ? "2263470" : omap->get_num("playtest") ? "2263480" : "2262930") + "&ticket=" + steam_session;
@@ -471,36 +471,34 @@ public:
                             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     //                        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     //                        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-                            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
+                            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
 
                             std::string response;
 
                             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data);
                             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
-                            db.steam_sessions[steam_session] = 0;
-
                             res = curl_easy_perform(curl);
+                            curl_easy_cleanup(curl);
                             if(res != CURLE_OK)
                             {
                                 printf("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-                                close();
-                                break;
+                                throw(std::runtime_error("curl_easy_perform() failed"));
                             }
-                            curl_easy_cleanup(curl);
                             std::cout << steam_id  << " " << response << "\n";
 
-                            SaveObjectMap* omap = SaveObject::load(response)->get_map()->get_item("response")->get_map()->get_item("params")->get_map();
-                            uint64_t server_steam_id = std::stoull(omap->get_string("steamid"));
+                            SaveObjectMap* omap = SaveObject::load(response)->get_map()->get_item("response")->get_map();
+                            db.steam_sessions[steam_session] = 0;
+                            uint64_t server_steam_id = std::stoull(omap->get_item("params")->get_map()->get_string("steamid"));
                             db.steam_sessions[steam_session] = server_steam_id;
                         }
                         
-                        if ((steam_id == 0) ||
+                        if (db.steam_sessions.count(steam_session) &&
                             (db.steam_sessions[steam_session] != steam_id))
                         {
                             printf("pirate check failed\n");
                             pirate = true;
-                            std::cout << "\nfailed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
+                            std::cout << "failed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
                             // omap->save(std::cout);
                             // close();
                             // break;
@@ -512,7 +510,8 @@ public:
                     int player_version = omap->get_num("version");
                     if (player_version != game_version)
                     {
-                        pirate = true;
+                        throw(std::runtime_error("player_version != game_version"));
+                        // pirate = true;
                         // printf("old version\n");
                         // close();
                         // break;
@@ -606,8 +605,6 @@ public:
                                 scr->add_item("server_levels", sl_list);
                             }
                         }
-                        if (pirate)
-                            scr->add_num("pirate", 1);
 
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
@@ -626,7 +623,7 @@ public:
                 }
                 catch (const std::runtime_error& error)
                 {
-                    std::cout << error.what() << "\n";
+                    std::cout << "Exception " << error.what() << "\n";
                     close();
                     break;
                 }
