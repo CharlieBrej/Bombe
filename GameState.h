@@ -43,6 +43,7 @@ public:
 
     static const int tut_texture_count = 6;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
+    int tut_page_count = 3;
     SDL_Texture* overlay_texture;
     bool overlay_texture_is_clean = true;
 

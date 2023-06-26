@@ -2438,6 +2438,7 @@ void GameState::render(bool saving)
     if (prog_stars[PROG_LOCK_REGION_LIMIT] > max_stars)
         rule_limit_slider = 1.00;
 
+
     mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
     if (grid_dragging)
         mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
@@ -2545,6 +2546,7 @@ void GameState::render(bool saving)
         }
 
     }
+    render_box(grid_offset, XYPos(grid_size, grid_size), button_size/4, 7);
 
     tooltip_string = "";
     tooltip_rect = XYRect(-1,-1,-1,-1);
@@ -3739,14 +3741,8 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         {
-            SDL_Rect src_rect = {3, 422, 1, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x, left_panel_offset.y, panel_size.x, panel_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {25, 422, 1, 1};
-            SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y, panel_size.x, panel_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_box(left_panel_offset, panel_size, button_size/4, 5);
+            render_box(right_panel_offset, panel_size, button_size/4, 6);
         }
     }
 
