@@ -355,6 +355,8 @@ public:
         PROG_LOCK_PRIORITY2,
         PROG_LOCK_PAUSE,
         PROG_LOCK_COLORS,
+        PROG_LOCK_TABLES,
+        PROG_LOCK_SPEED,
 
         PROG_LOCK_USE_DONT_CARE,
         PROG_LOCK_REGION_HINT,

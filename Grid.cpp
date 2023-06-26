@@ -1367,14 +1367,28 @@ void Grid::from_string(std::string s)
             c = s[i++];
         }
 
-        if (c != '!')
+        if (c == '!')
+        {
+            vals[p].bomb = true;
+        }
+        else if (c == '?')
+        {
+            vals[p].bomb = false;
+            vals[p].clue = RegionType(RegionType::NONE, 1);
+        }
+        else
         {
             vals[p].bomb = false;
             vals[p].clue.type = RegionType::Type(c - 'A');
             if (i >= s.length()) return;
             c = s[i++];
-            vals[p].clue.value = c - '0';
+            if (vals[p].clue.type == RegionType::Type(RegionType::NONE))
+                vals[p].clue.value = 0;
+            else
+                vals[p].clue.value = c - '0';
+
         }
+
     }
 
     // for (int x = 0; x < size.y; x++)
@@ -1578,6 +1592,12 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     {
         if (value == si)
         {
+            if (get(key).clue == RegionType(RegionType::NONE, 1))
+            {
+                bom_count++;
+                clr_count++;
+                break;
+            }
             if (get(key).bomb)
                 bom_count++;
             else
@@ -2262,6 +2282,10 @@ std::string Grid::to_string()
         {
             s += '!';
         }
+        else if (g.clue == RegionType(RegionType::NONE, 1))
+        {
+            s += '?';
+        }
         else
         {
             char c = 'A' + (char)(g.clue.type);
@@ -2305,11 +2329,17 @@ bool Grid::add_region(GridRegion& reg, bool front)
     cnt = 0;
     FOR_XY_SET(p, reg.elements)
     {
+        if (vals[p].clue == RegionType(RegionType::NONE, 1))
+        {
+            cnt = -1;
+            break;
+        }
         if (vals[p].bomb)
             cnt++;
     }
     assert(!reg.type.var);
-    assert((reg.type.apply_rule_imp<bool,unsigned>(cnt, reg.type.value)));
+    if (cnt >= 0)
+        assert((reg.type.apply_rule_imp<bool,unsigned>(cnt, reg.type.value)));
 
 
     if (front)
@@ -2509,6 +2539,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
     {
         FOR_XY_SET(pos, to_reveal)
         {
+            if (vals[pos].clue == RegionType(RegionType::NONE, 1))
+                continue;
             if (vals[pos].bomb != bool(rule.apply_region_type.value))
             {
                 printf("wrong\n");
@@ -2519,6 +2551,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         FOR_XY_SET(pos, to_reveal)
         {
             reveal(pos);
+            if (vals[pos].clue == RegionType(RegionType::NONE, 1))
+                vals[pos].bomb = bool(rule.apply_region_type.value);
             cell_causes[pos] = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
             c++;
         }
