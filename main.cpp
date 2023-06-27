@@ -216,8 +216,14 @@ void mainloop()
 
         unsigned newtime = SDL_GetTicks();
         unsigned diff = newtime - oldtime;
-        if (diff > 100)
-            diff = 100;
+        if (diff > 1000)
+            diff = 1000;
+        if (diff < 10)
+        {
+            SDL_Delay(10 - diff);;
+            newtime = SDL_GetTicks();
+            diff = newtime - oldtime;
+        }
         save_time -= diff;
         game_state->advance(diff);
         oldtime = newtime;

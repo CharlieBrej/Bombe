@@ -126,7 +126,7 @@ GameState::GameState(std::string& load_data, bool json)
                 game_mode = omap->get_num("game_mode");
             if (omap->has_key("full_screen"))
                 full_screen = omap->get_num("full_screen");
-            if (omap->has_key("window_size"))
+            if (!full_screen && omap->has_key("window_size"))
             {
                 window_size.y = omap->get_num("window_size");
                 window_size.x = std::ceil(double(window_size.y) * 16 / 9);
@@ -243,7 +243,7 @@ GameState::GameState(std::string& load_data, bool json)
     if (rule_limit_slider >= 1.0)
         rule_limit_count = -1;
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, window_size.x, window_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
     if (full_screen)
     {
@@ -2035,8 +2035,8 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     else if (reg.type == RegionType::NONE)
     {
         int border = siz / 8;
-        SDL_Rect src_rect = {928, 192, 128, 192};
-        SDL_Rect dst_rect = {pos.x + border * 2, pos.y + border, (int)(siz - border * 2) * 3 / 4, (int)siz - border * 2};
+        SDL_Rect src_rect = {896, 192, 192, 192};
+        SDL_Rect dst_rect = {pos.x + border / 2, pos.y + border / 2, (int)(siz - border), (int)(siz - border)};
 
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
@@ -2072,7 +2072,7 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
     {
         SDL_Rect src_rect = {(reg.value == 1) ? 320 : 512, 192, 192, 192};
         int border = siz / 8;
-        SDL_Rect dst_rect = {pos.x + border, pos.y + border, (int)(siz - border * 2), (int)(siz - border * 2)};
+        SDL_Rect dst_rect = {pos.x + border / 2, pos.y + border / 2, (int)(siz - border), (int)(siz - border)};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
     }
     else
@@ -2196,7 +2196,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
 
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[0]) ? rule_gen_region[0]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[0].value, colour, contrast);
-            render_box(base_pos + XYPos(0 * size, 0 * size), XYPos(siz.x * size, siz.y * size), size / 2);
+            render_box(base_pos + XYPos(0 * size, 0 * size), XYPos(siz.x * size, siz.y * size), size / 2, 8);
             render_region_bubble(rule.region_type[0], colour, base_pos + XYPos(0 * size, 0 * size), size * 2 / 3, hover_rulemaker_region_base_index == 0);
 
         }
@@ -2208,7 +2208,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
 
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[1]) ? rule_gen_region[1]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[1].value, colour, contrast);
-            render_box(base_pos + XYPos(1 * size, 0 * size + size / 12), XYPos(siz.x * size, siz.y * size), size / 2);
+            render_box(base_pos + XYPos(1 * size, 0 * size + size / 12), XYPos(siz.x * size, siz.y * size), size / 2, 8);
             render_region_bubble(rule.region_type[1], colour, base_pos + XYPos(2 * size + size / 3, 0 * size +size / 12), size * 2 / 3, hover_rulemaker_region_base_index == 1);
 
         }
@@ -2219,7 +2219,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             if (rule.region_count >= 4) siz.y = 2;
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[2]) ? rule_gen_region[2]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[2].value, colour, contrast);
-            render_box(base_pos + XYPos(0 * size, 2 * size), XYPos(siz.x * size, siz.y * size), size / 2);
+            render_box(base_pos + XYPos(0 * size, 2 * size), XYPos(siz.x * size, siz.y * size), size / 2, 8);
             render_region_bubble(rule.region_type[2], colour, base_pos + XYPos(4 * size + size / 3, 2 * size), size * 2 / 3, hover_rulemaker_region_base_index == 2);
         }
 
@@ -2227,7 +2227,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
         {
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[3]) ? rule_gen_region[3]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[3].value, colour, contrast);
-            render_box(base_pos + XYPos(size / 12, 3 * size), XYPos(5 * size, 2 * size), size / 2);
+            render_box(base_pos + XYPos(size / 12, 3 * size), XYPos(5 * size - size / 12, 2 * size), size / 2, 8);
             render_region_bubble(rule.region_type[3], colour, base_pos + XYPos(size / 12 + 4 * size + size / 3, 4 * size + size / 3), size * 2 / 3, hover_rulemaker_region_base_index == 3);
         }
 
@@ -2546,7 +2546,6 @@ void GameState::render(bool saving)
         }
 
     }
-    render_box(grid_offset, XYPos(grid_size, grid_size), button_size/4, 7);
 
     tooltip_string = "";
     tooltip_rect = XYRect(-1,-1,-1,-1);
@@ -3360,6 +3359,7 @@ void GameState::render(bool saving)
         XYSet grid_squares = grid->get_squares();
 
         std::vector<WrapPos> wraps;
+        render_box(grid_offset, XYPos(grid_size, grid_size), button_size/4, 7);
 
         wraps.push_back(WrapPos{scaled_grid_offset, 1.0});
         if (grid->wrapped == Grid::WRAPPED_IN)
@@ -3740,11 +3740,12 @@ void GameState::render(bool saving)
             dst_rect = {left_panel_offset.x + panel_size.x, right_panel_offset.y + panel_size.y, right_panel_offset.x - (left_panel_offset.x + panel_size.x), window_size.y - (right_panel_offset.y + panel_size.y)};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
-        {
-            render_box(left_panel_offset, panel_size, button_size/4, 5);
-            render_box(right_panel_offset, panel_size, button_size/4, 6);
-        }
     }
+    {
+        render_box(XYPos(0,0), XYPos(left_panel_offset.x + panel_size.x, window_size.y), button_size/4, 5);
+        render_box(XYPos(right_panel_offset.x,0), XYPos(window_size.x - right_panel_offset.x, window_size.y), button_size/4, 6);
+    }
+    
 
 
     {
@@ -3791,6 +3792,7 @@ void GameState::render(bool saving)
 
     if (render_lock(PROG_LOCK_FILTER, XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + 1 * button_size), XYPos(button_size, button_size)))
     {
+        render_box(left_panel_offset + XYPos(button_size * 3, button_size * 1), XYPos(button_size * 2, button_size), button_size/4, 4);
         if (!filter_pos.empty())
         {
             SDL_Rect src_rect = {1472, 192, 192, 192};
@@ -3958,18 +3960,18 @@ void GameState::render(bool saving)
     for (int i = 0; i < 5; i++)
     {
         const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Server"};
-        if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5), XYPos(button_size, button_size)))
+        if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5)), XYPos(button_size, button_size)))
         {
             if (auto_progress_all && (current_level_group_index == i))
             {
                 SDL_Rect src_rect = {1344, 1920, 128, 128};
-                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
                 SDL_Point rot_center = {button_size / 2, button_size / 2};
                 double angle = frame * 0.05;
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
             }
             SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
             if (i == 4)
                 src_rect = {1664, 1536, 192, 192};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -3979,7 +3981,7 @@ void GameState::render(bool saving)
             SDL_SetTextureAlphaMod(sdl_texture, 10 * std::max(max_stars - 10, 0));
         {
             SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + button_size * 5, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
     }
@@ -3996,10 +3998,10 @@ void GameState::render(bool saving)
         p.x = i % 5;
         p.y = i / 5;
 
-        XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6));
+        XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6.5));
         if (i == current_level_set_index)
         {
-            render_box(pos, XYPos(button_size, button_size), button_size/4);
+            render_box(pos, XYPos(button_size, button_size), button_size/4, 9);
             if (auto_progress)
             {
                 SDL_Rect src_rect = {1344, 1920, 128, 128};
@@ -4069,17 +4071,17 @@ void GameState::render(bool saving)
     {
         {
             SDL_Rect src_rect = {512, 1183, 96, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + button_size * 6, button_size / 2, button_size * 6};
+            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         {
             SDL_Rect src_rect = {512 + 96, 1183, 96, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x + button_size * 5 - button_size / 2, right_panel_offset.y + button_size * 6, button_size / 2, button_size * 6};
+            SDL_Rect dst_rect = {left_panel_offset.x + button_size * 5 - button_size / 2, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         {
             SDL_Rect src_rect = {520, 1504, 1, 32};
-            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + button_size * 12 - button_size / 6, button_size * 5, button_size / 6};
+            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 12.5) - button_size / 6, button_size * 5, button_size / 6};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
     }
@@ -4283,6 +4285,7 @@ void GameState::render(bool saving)
 
         if (render_lock(PROG_LOCK_VISIBILITY4, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 3 * button_size), XYPos(button_size, button_size * 3)))
         {
+            render_box(right_panel_offset + XYPos(button_size * 3, button_size * 3), XYPos(button_size, button_size * 3), button_size/4, 4);
             {
                 if (inspected_region->vis_level == GRID_VIS_LEVEL_SHOW)
                 render_box(right_panel_offset+ XYPos(button_size * 3, button_size * 3), XYPos(button_size, button_size), button_size/4);
@@ -4616,6 +4619,7 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Copy Rule to Clipboard Image");
             }
 
+            
             if (inspected_rule.rule->apply_region_type.type < RegionType::SET)
             {
                 if (render_lock(PROG_LOCK_PRIORITY, right_panel_offset + XYPos(0, 7 * button_size), XYPos(button_size, 5 * button_size)))
@@ -4674,11 +4678,11 @@ void GameState::render(bool saving)
             }
             if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (max_stars > prog_stars[PROG_LOCK_TABLES]))
             {
-                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4);
-                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 11), XYPos(3 * button_size, button_size), button_size/4);
+                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4, 4);
+                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 11), XYPos(3 * button_size, button_size), button_size/4, 4);
 
-                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4);
-                render_box(right_panel_offset + XYPos(button_size * 4, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4);
+                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4, 0);
+                render_box(right_panel_offset + XYPos(button_size * 4, button_size * 9), XYPos(button_size, 3 * button_size), button_size/4, 0);
 
                 {
                     SDL_Rect src_rect = {1408, 2144, 192, 192};
@@ -5397,8 +5401,9 @@ void GameState::render(bool saving)
         static unsigned regions[10] = {};
 
         unsigned regs = grid->regions.size();
+        int old_time = times[debug_region_index];
 
-        double rate = double(regs - regions[debug_region_index]) / double(frame - times[debug_region_index]);
+        double rate = double(regs - regions[debug_region_index]) / double(frame - old_time);
         times[debug_region_index] = frame;
         regions[debug_region_index] = regs;
         debug_region_index = (debug_region_index + 1) % 10;
@@ -5411,6 +5416,7 @@ void GameState::render(bool saving)
         debug_text += "regions_to_add size: " + std::to_string(grid->regions_to_add.size()) + "\n";
         debug_text += "deleted_regions size: " + std::to_string(grid->deleted_regions.size()) + "\n";
         debug_text += "Regions per sec: " + std::to_string(rate * 1000) + "\n";
+        debug_text += "FPS: " + std::to_string(10000.0 / (frame - old_time)) + "\n";
         render_text_box(XYPos(0, grid_size/2), debug_text);
     }
 
@@ -5632,9 +5638,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         }
    }
 
-    if ((pos - XYPos(button_size * 0, button_size * 5)).inside(XYPos(button_size * (GLBAL_LEVEL_SETS + 1), button_size)))
+    if ((pos - XYPos(button_size * 0, button_size * 5.5)).inside(XYPos(button_size * (GLBAL_LEVEL_SETS + 1), button_size)))
     {
-        int x = ((pos - XYPos(button_size * 0, button_size * 5)) / button_size).x;
+        int x = ((pos - XYPos(button_size * 0, button_size * 5.5)) / button_size).x;
         if (x >= 0 && x <= GLBAL_LEVEL_SETS && prog_seen[PROG_LOCK_HEX + x])
         {
             current_level_group_index = x;
@@ -5652,8 +5658,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         }
     }
 
-    XYPos gpos = pos / button_size;
-    gpos.y -= 6;
+    XYPos gpos = (pos - XYPos(0, int(button_size * 6.5)))/ button_size;
     int idx = gpos.x + gpos.y * 5;
 
     if ((idx >= 0) && (idx < level_progress[game_mode][current_level_group_index].size()))
