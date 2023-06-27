@@ -5656,6 +5656,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
                 seen_ff = true;
             
         }
+        return;
     }
 
     XYPos gpos = (pos - XYPos(0, int(button_size * 6.5)))/ button_size;
