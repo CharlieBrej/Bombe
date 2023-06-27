@@ -4219,7 +4219,7 @@ void GameState::render(bool saving)
 
         {
             set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, contrast);
-            render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(1 * button_size, 2 * button_size), button_size / 2);
+            render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(1 * button_size, 2 * button_size), button_size / 2, 8);
             render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0);
         }
         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
