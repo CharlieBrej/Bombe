@@ -2465,10 +2465,13 @@ bool Grid::add_regions(int level)
     return false;
 }
 
-static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_credit)
+static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_credit, std::set<GridRegion*>& regions_to_credit)
 {
     if (!region)
         return;
+    if (regions_to_credit.count(region))
+        return;
+    regions_to_credit.insert(region);
     if (region->gen_cause.rule && region->gen_cause.rule->apply_region_type.type != RegionType::SET)
     {
         rules_to_credit.insert(region->gen_cause.rule);
@@ -2476,8 +2479,7 @@ static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_cr
         {
             if (region->gen_cause.regions[i])
             {
-                assert(i < region->gen_cause.rule->region_count);
-                add_clear_count(region->gen_cause.regions[i], rules_to_credit);
+                add_clear_count(region->gen_cause.regions[i], rules_to_credit, regions_to_credit);
             }
         }
     }
@@ -2560,9 +2562,10 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         last_cleared_regions = to_reveal;
         rule.level_used_count++;
         std::set<GridRule*> rules_to_credit;
-        rules_to_credit.insert(&rule);
+        std::set<GridRegion*> regions_to_credit;
+       rules_to_credit.insert(&rule);
         for (int i = 0; i < rule.region_count; i++)
-            add_clear_count(r[i], rules_to_credit);
+            add_clear_count(r[i], rules_to_credit, regions_to_credit);
         for (GridRule* rule : rules_to_credit)
             rule->level_clear_count += c;
         return APPLY_RULE_RESP_HIT;
