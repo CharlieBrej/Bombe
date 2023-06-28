@@ -144,9 +144,9 @@
                 {"x": 1600, "y": 600,            "text":"Bigger grids"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"Normal visible"},
-                {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
-                {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
+                {"x":400,  "y": 100,           "text":"Normal visible"},
+                {"x":400,  "y": 290,           "text":"Hidden, but still used by rules"},
+                {"x":400,  "y": 490,           "text":"Trash, ignored by rules"},
                 {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
             ]
         ]
@@ -274,8 +274,8 @@
                 {"x":1300,  "y": 800,           "text":"Appuyez sur OK"}
             ],
             [
-                {"x": 150,  "y": 500,           "text":"Un nombre de cases\npeut être marqué\ncomme \"Peu Importe\""},
-                {"x": 640,  "y": 500,           "text":"Jusqu\'à 4 régions peuvent\nêtre ajoutées en\nmême temps au Créateur\nde Règles."},
+                {"x": 50,  "y": 500,           "text":"Un nombre de cases\npeut être marqué\ncomme \"Peu Importe\""},
+                {"x": 540,  "y": 500,           "text":"Jusqu\'à 4 régions peuvent\nêtre ajoutées en\nmême temps au Créateur\nde Règles."},
             ],
             [
                 {"x": 240,  "y": 20,            "text":"6 exactement"},
@@ -296,9 +296,9 @@
                 {"x": 1600, "y": 600,            "text":"De plus\ngrandes grilles"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"Visibilité normale"},
-                {"x":1050,  "y": 290,           "text":"Caché mais encore utilisable par les règles"},
-                {"x":1050,  "y": 490,           "text":"Jeté, ignoré par les règles"},
+                {"x":400,  "y": 100,            "text":"Visibilité normale"},
+                {"x":400,  "y": 290,            "text":"Caché mais encore\nutilisable par les règles"},
+                {"x":400,  "y": 490,            "text":"Jeté, ignoré par les règles"},
                 {"x":1050,  "y": 700,           "text":"Les règles peuvent être utilisées\npour changer la visibilité des régions."}
             ]
         ]
@@ -426,8 +426,8 @@
                 {"x":1300,  "y": 800,           "text":"OK klicken"},
             ],
             [
-                {"x": 150,  "y": 500,           "text":"Anzahl der Zellen\nkann auf \"Egal\"\neingestellt werden"},
-                {"x": 550,  "y": 500,           "text":"Im Regelkonstruktor können\nbis zu 4 Regionen\nhinzugefügt werden"},
+                {"x": 100,  "y": 500,           "text":"Anzahl der Zellen\nkann auf \"Egal\"\neingestellt werden"},
+                {"x": 500,  "y": 500,           "text":"Im Regelkonstruktor können\nbis zu 4 Regionen\nhinzugefügt werden"},
             ],
             [
                 {"x": 240,  "y": 27,            "text":"Genau 6"},
@@ -448,9 +448,9 @@
                 {"x": 1600, "y": 600,            "text":"Größere Gitter"}
             ],
             [
-                {"x":1050,  "y": 95,           "text":"Normal sichtbar"},
-                {"x":1050,  "y": 275,           "text":"Versteckt, aber von Regeln genutzt"},
-                {"x":1050,  "y": 475,           "text":"Müll, von Regeln ignoriert"},
+                {"x":400,  "y": 95,             "text":"Normal sichtbar"},
+                {"x":400,  "y": 275,            "text":"Versteckt, aber\nvon Regeln genutzt"},
+                {"x":400,  "y": 475,            "text":"Müll, von Regeln ignoriert"},
                 {"x":1050,  "y": 700,           "text":"Regeln können verwendet werden, um\ndie Sichtbarkeit von Regionen zu ändern"},
             ]
         ]
@@ -578,8 +578,8 @@
                 {"x":1300,  "y": 800,           "text":"Klinknij OK"}
             ],
             [
-                {"x": 100,  "y": 500,           "text":"Można ustawić,\nże zasada nie\nbędzie sprawdzać,\nile ma być komórek"},
-                {"x": 540,  "y": 500,           "text":"Kilka (maks 4)\nRegionów może\nbyć dodana do kreatora zasad"},
+                {"x": 50,  "y": 500,           "text":"Można ustawić,\nże zasada nie\nbędzie sprawdzać,\nile ma być komórek"},
+                {"x": 500,  "y": 500,           "text":"Kilka (maks 4)\nRegionów może\nbyć dodana do kreatora zasad"},
             ],
             [
                 {"x": 240,  "y": 20,            "text":"Równo 6"},
@@ -600,9 +600,9 @@
                 {"x": 1600, "y": 600,            "text":"Większe\nplansze"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"Normalne, widzialne"},
-                {"x":1050,  "y": 290,           "text":"Ukryte, ale dalej używane przez zasady"},
-                {"x":1050,  "y": 490,           "text":"Usunięte, nie używane przez zasady"},
+                {"x":400,  "y": 100,            "text":"Normalne, widzialne"},
+                {"x":400,  "y": 290,            "text":"Ukryte, ale dalej\nużywane przez zasady"},
+                {"x":400,  "y": 490,            "text":"Usunięte, nie używane\nprzez zasady"},
                 {"x":1050,  "y": 700,           "text":"Zasady mogą zmieniać widzialność zasad"}
             ]
         ]
@@ -752,9 +752,9 @@
                 {"x": 1600, "y": 600,            "text":"更大範圍"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"正常可見"},
-                {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
-                {"x":1050,  "y": 490,           "text":"無效,被規則忽略"},
+                {"x":400,  "y": 100,            "text":"正常可見"},
+                {"x":400,  "y": 290,            "text":"隱藏,但仍被規則使用"},
+                {"x":400,  "y": 490,            "text":"無效,被規則忽略"},
                 {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
             ]
         ]
@@ -904,9 +904,9 @@
                 {"x": 1600, "y": 600,            "text":"更大范围"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"正常可见"},
-                {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
-                {"x":1050,  "y": 490,           "text":"无效,被规则忽略"},
+                {"x":400,  "y": 100,            "text":"正常可见"},
+                {"x":400,  "y": 290,            "text":"隐藏,但仍被规则使用"},
+                {"x":400,  "y": 490,            "text":"无效,被规则忽略"},
                 {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
             ]
         ]
@@ -1013,7 +1013,7 @@
         "tutorial":
         [
             [
-                {"x": 50,   "y": 600,           "text":"セルの数字は\n隣接するセルに\n存在する爆弾の数を示す"},
+                {"x": 10,   "y": 600,           "text":"セルの数字は\n隣接するセルに\n存在する爆弾の数を示す"},
                 {"x": 1100, "y": 750,           "text":"線で示される領域には\n何個爆弾が残っているかを示す"}
             ],
             [
@@ -1024,7 +1024,7 @@
                 {"x":800,   "y": 630,           "text":"ルール:\n爆弾が 3 つとセルが 3 つある領域は\n全て爆弾としてマークする"},
 
                 {"x":370,   "y": 950,           "text":"セルを全て爆弾としてマーク"},
-                {"x":1200,  "y": 950,           "text":"セルを全て\nクリアとしてマーク"},
+                {"x":1150,  "y": 920,           "text":"セルを全て\nクリアとしてマーク"},
                 {"x":1300,  "y": 250,           "text":"「OK」をクリックすると、\nルールは自動的に適用されます"}
             ],
             [
@@ -1034,7 +1034,7 @@
                 {"x":1300,  "y": 800,           "text":"「OK」をクリック"}
             ],
             [
-                {"x": 50,  "y": 500,           "text":"セル数を\n「任意の数」\nに設定可能"},
+                {"x": 150,  "y": 500,           "text":"セル数を\n「任意の数」\nに設定可能"},
                 {"x": 600,  "y": 500,           "text":"複数 (最大 4 つ) の領域を\nルールコンストラクター\nに追加可能"},
             ],
             [
@@ -1056,9 +1056,9 @@
                 {"x": 1600, "y": 600,           "text":"より大きな盤面"},
             ],
             [
-                {"x":1050,  "y": 100,           "text":"通常の可視化ルール"},
-                {"x":1050,  "y": 290,           "text":"非表示のルール、通常通り適用される"},
-                {"x":1050,  "y": 490,           "text":"適用されないルール"},
+                {"x":400,  "y": 100,            "text":"通常の可視化ルール"},
+                {"x":400,  "y": 290,            "text":"非表示のルール、\n通常通り適用される"},
+                {"x":400,  "y": 490,            "text":"適用されないルール"},
                 {"x":1050,  "y": 700,           "text":"ルールを設定して\n領域の可視性を変更できます"}
             ]
         ]
