@@ -831,7 +831,18 @@ void GameState::load_grid(std::string s)
 {
     delete grid;
     grid = Grid::Load(s);
-    reset_rule_gen_region();
+    rule_gen_region[0] = NULL;
+    rule_gen_region[1] = NULL;
+    rule_gen_region[2] = NULL;
+    rule_gen_region[3] = NULL;
+
+    for (ConstructedRuleState& s : constructed_rule_undo)
+        for (int i; i < 4; i++)
+            s.regions[i] = NULL;
+    for (ConstructedRuleState& s : constructed_rule_redo)
+        for (int i; i < 4; i++)
+            s.regions[i] = NULL;
+
     inspected_rule.regions[0] = NULL;
     inspected_rule.regions[1] = NULL;
     inspected_rule.regions[2] = NULL;
@@ -3359,7 +3370,6 @@ void GameState::render(bool saving)
                             selected_rules.clear();
                         }
                     }
-                        
                 }
                 else
                 {
