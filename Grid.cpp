@@ -2967,6 +2967,7 @@ void Grid::clear_regions()
     regions_to_add_multiset.clear();
     deleted_regions.clear();
     cell_causes.clear();
+    last_cleared_regions.clear();
 }
 
 std::string SquareGrid::text_desciption()
