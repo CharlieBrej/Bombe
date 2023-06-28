@@ -1809,15 +1809,24 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
 }
 
 
-static void get_char_texture(char c, int& pos, int &width)
+static void get_char_texture(char c, char pc, int& pos, int &width, int &cwidth)
 {
+    cwidth = -1;
     if (c == '0')
     {
         pos = 0; width = 2;
     }
     else if (c == '1')
     {
-        pos = 2; width = 1;
+        pos = 2;
+        if (pc >= '0' && pc <= '9')
+        {
+            width = 2; cwidth = 1;
+        }
+        else
+        {
+            width = 1; cwidth = 1;
+        }
     }
     else if (c >= '2' && c <= '9')
     {
@@ -1849,12 +1858,14 @@ static void get_char_texture(char c, int& pos, int &width)
     }
     else
         assert(0);
+    if (cwidth < 0)
+        cwidth = width;
 }
 
 void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, XYPos style)
 {
     int width = 0;
-
+    char pc = 0;
     for (int i = 0; i < digits.size(); i++)
     {
         if (digits[i] == '^')
@@ -1866,8 +1877,10 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         char c = digits[i];
         int p;
         int w;
-        get_char_texture(c, p, w);
+        int cw;
+        get_char_texture(c, pc, p, w, cw);
         width += w;
+        pc = c;
     }
 
     double s = std::min(double(siz.x) / width, siz.y / 3.0);
@@ -1921,16 +1934,18 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         texture_char_pos = 2752;
     }
 
-
+    pc = 0;
     for (int i = 0; i < digits.size(); i++)
     {
         char c = digits[i];
         int p;
         int w;
-        get_char_texture(c, p, w);
+        int cw;
+        get_char_texture(c, pc, p, w, cw);
+        pc = c;
         
-        SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, w * texture_char_width, 3 * texture_char_width};
-        SDL_Rect dst_rect = {pos.x, pos.y, int(w * cs), int(3 * cs)};
+        SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, cw * texture_char_width, 3 * texture_char_width};
+        SDL_Rect dst_rect = {pos.x + int((w - cw) * s / 2), pos.y, int(cw * cs), int(3 * cs)};
 
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
