@@ -865,6 +865,8 @@ void GameState::load_grid(std::string s)
         rule.level_clear_count = 0;
     }
     display_levels_center_current = true;
+    if (right_panel_mode == RIGHT_MENU_REGION)
+        right_panel_mode = RIGHT_MENU_NONE;
 
 }
 void GameState::advance(int steps)
