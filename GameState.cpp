@@ -925,6 +925,10 @@ void GameState::advance(int steps)
         }
         totcount += count;
     }
+    if(max_stars >= prog_stars[PROG_LOCK_VARS5])
+        achievements.insert("ALPHABET");
+    if(grid->regions.size() > 1000)
+        achievements.insert("EXPLOSION");
 
     cur_stars = totcount;
     if (max_stars < totcount)
@@ -2458,6 +2462,9 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 else if (rule.apply_region_type.type == RegionType::SET)
                 {
                     render_region_type(rule.apply_region_type, base_pos + XYPos(size / 2, size / 2) + p * size, size / 2);
+                    if (reason)
+                        render_box(base_pos + XYPos(size / 2, size / 2) + p * size, XYPos(size / 2, size / 2), size / 4, 9);
+
                 }
             }
         }
