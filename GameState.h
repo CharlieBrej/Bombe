@@ -41,7 +41,7 @@ public:
     int frame_step = 0;
     bool pirate = false;
 
-    static const int tut_texture_count = 6;
+    static const int tut_texture_count = 7;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
     int tut_page_count = 3;
     SDL_Texture* overlay_texture;

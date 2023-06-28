@@ -262,6 +262,7 @@ GameState::GameState(std::string& load_data, bool json)
     tutorial_texture[3] = loadTexture("tutorial/tut3.png");
     tutorial_texture[4] = loadTexture("tutorial/tut4.png");
     tutorial_texture[5] = loadTexture("tutorial/tut5.png");
+    tutorial_texture[6] = loadTexture("tutorial/tut6.png");
 
     {
         SDL_Surface* icon_surface = IMG_Load("icon.png");
@@ -3908,7 +3909,7 @@ void GameState::render(bool saving)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         add_tooltip(dst_rect, "Game Mode");
     }
-    if (clipboard_has_item != CLIPBOARD_HAS_NONE)
+    if (clipboard_has_item != CLIPBOARD_HAS_NONE && max_stars > 30)
     {
         SDL_Rect src_rect = {2048, 1536, 192, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
@@ -3954,139 +3955,142 @@ void GameState::render(bool saving)
         }
     }
 
-    if (max_stars < 36)
-        SDL_SetTextureAlphaMod(sdl_texture, 10 * std::max(max_stars - 10, 0));
-
-    for (int i = 0; i < 5; i++)
+    if (max_stars > 10)
     {
-        const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Server"};
-        if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5)), XYPos(button_size, button_size)))
-        {
-            if (auto_progress_all && (current_level_group_index == i))
-            {
-                SDL_Rect src_rect = {1344, 1920, 128, 128};
-                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
-                SDL_Point rot_center = {button_size / 2, button_size / 2};
-                double angle = frame * 0.05;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
-            }
-            SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
-            if (i == 4)
-                src_rect = {1664, 1536, 192, 192};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, grid_names[i]);
-        }
         if (max_stars < 36)
             SDL_SetTextureAlphaMod(sdl_texture, 10 * std::max(max_stars - 10, 0));
+        for (int i = 0; i < 5; i++)
         {
-            SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-    }
-    if (server_level_anim < PROG_ANIM_MAX)
-    {
-        star_burst_animations.push_back(AnimationStarBurst(XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 5), XYPos(button_size,button_size), server_level_anim, false));
-        server_level_anim += frame_step;
-    }
-
-
-    XYPos p = XYPos(0,0);
-    for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
-    {
-        p.x = i % 5;
-        p.y = i / 5;
-
-        XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6.5));
-        if (i == current_level_set_index)
-        {
-            render_box(pos, XYPos(button_size, button_size), button_size/4, 9);
-            if (auto_progress)
+            const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Weekly Levels"};
+            if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5)), XYPos(button_size, button_size)))
             {
-                SDL_Rect src_rect = {1344, 1920, 128, 128};
+                if (auto_progress_all && (current_level_group_index == i))
+                {
+                    SDL_Rect src_rect = {1344, 1920, 128, 128};
+                    SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                    SDL_Point rot_center = {button_size / 2, button_size / 2};
+                    double angle = frame * 0.05;
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+                }
+                SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                if (i == 4)
+                    src_rect = {1664, 1536, 192, 192};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                if (max_stars > 26)
+                    add_tooltip(dst_rect, grid_names[i]);
+            }
+            if (max_stars < 36)
+                SDL_SetTextureAlphaMod(sdl_texture, 10 * std::max(max_stars - 10, 0));
+            {
+                SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (server_level_anim < PROG_ANIM_MAX)
+        {
+            star_burst_animations.push_back(AnimationStarBurst(XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + int(button_size * 5.5)), XYPos(button_size,button_size), server_level_anim, false));
+            server_level_anim += frame_step;
+        }
+
+
+        XYPos p = XYPos(0,0);
+        for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+        {
+            p.x = i % 5;
+            p.y = i / 5;
+
+            XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6.5));
+            if (i == current_level_set_index)
+            {
+                render_box(pos, XYPos(button_size, button_size), button_size/4, 9);
+                if (auto_progress)
+                {
+                    SDL_Rect src_rect = {1344, 1920, 128, 128};
+                    SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+                    SDL_Point rot_center = {button_size / 2, button_size / 2};
+                    double angle = frame * 0.05;
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+                }
+            }
+            int cnt = (current_level_group_index == GLBAL_LEVEL_SETS) ?
+                            server_levels[i].size() :
+                            global_level_sets[current_level_group_index][i]->levels.size();
+
+            if (!cnt || (IS_DEMO && (i % 5 + i / 5) > 3))
+            {
+                SDL_Rect src_rect = {1088, 192, 192, 192};
                 SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
-                SDL_Point rot_center = {button_size / 2, button_size / 2};
-                double angle = frame * 0.05;
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                continue;
             }
-        }
-        int cnt = (current_level_group_index == GLBAL_LEVEL_SETS) ?
-                        server_levels[i].size() :
-                        global_level_sets[current_level_group_index][i]->levels.size();
 
-        if (!cnt || (IS_DEMO && (i % 5 + i / 5) > 3))
-        {
-            SDL_Rect src_rect = {1088, 192, 192, 192};
-            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            continue;
-        }
-
-        int need = 100;
-        if (i >= 5)
-            need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 5].count_todo) - 100);
-        if (i % 5 >= 1)
-            need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 1].count_todo) - 100);
-        if (i && need > 0)
-        {
-            SDL_Rect src_rect = {1088, 192, 192, 192};
-            SDL_Rect dst_rect = {pos.x , pos.y, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-
-            SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-            render_number(need, pos + XYPos(button_size * 45 / 192 , button_size * 77 / 192), XYPos(button_size * 102 / 192, button_size * 98 / 192));
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
-            continue;
-        }
-        else
-        {
-            if (level_progress[game_mode][current_level_group_index][i].unlock_anim_prog < PROG_ANIM_MAX)
+            int need = 100;
+            if (i >= 5)
+                need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 5].count_todo) - 100);
+            if (i % 5 >= 1)
+                need = std::min(need, int(level_progress[game_mode][current_level_group_index][i - 1].count_todo) - 100);
+            if (i && need > 0)
             {
-                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].unlock_anim_prog, true));
-                level_progress[game_mode][current_level_group_index][i].unlock_anim_prog += frame_step;
-            }
-            
-        }
+                SDL_Rect src_rect = {1088, 192, 192, 192};
+                SDL_Rect dst_rect = {pos.x , pos.y, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
-        int c = level_progress[game_mode][current_level_group_index][i].count_todo;
-        if (c)
-        {
-            render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 32, button_size / 4), XYPos(button_size * 15 / 16 , button_size / 2));
-            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
-            add_clickable_highlight(dst_rect);
-        }
-        else
-        {
-            if (level_progress[game_mode][current_level_group_index][i].star_anim_prog < PROG_ANIM_MAX)
-            {
-                star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].star_anim_prog, false));
-                level_progress[game_mode][current_level_group_index][i].star_anim_prog += frame_step;
+                SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+                render_number(need, pos + XYPos(button_size * 45 / 192 , button_size * 77 / 192), XYPos(button_size * 102 / 192, button_size * 98 / 192));
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                continue;
             }
-            SDL_Rect src_rect = {512, 960, 192, 192};
-            SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            else
+            {
+                if (level_progress[game_mode][current_level_group_index][i].unlock_anim_prog < PROG_ANIM_MAX)
+                {
+                    star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].unlock_anim_prog, true));
+                    level_progress[game_mode][current_level_group_index][i].unlock_anim_prog += frame_step;
+                }
+                
+            }
+
+            int c = level_progress[game_mode][current_level_group_index][i].count_todo;
+            if (c)
+            {
+                render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 32, button_size / 4), XYPos(button_size * 15 / 16 , button_size / 2));
+                SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+                add_clickable_highlight(dst_rect);
+            }
+            else
+            {
+                if (level_progress[game_mode][current_level_group_index][i].star_anim_prog < PROG_ANIM_MAX)
+                {
+                    star_burst_animations.push_back(AnimationStarBurst(pos, XYPos(button_size,button_size), level_progress[game_mode][current_level_group_index][i].star_anim_prog, false));
+                    level_progress[game_mode][current_level_group_index][i].star_anim_prog += frame_step;
+                }
+                SDL_Rect src_rect = {512, 960, 192, 192};
+                SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
         }
+        {
+            {
+                SDL_Rect src_rect = {512, 1183, 96, 1};
+                SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                SDL_Rect src_rect = {512 + 96, 1183, 96, 1};
+                SDL_Rect dst_rect = {left_panel_offset.x + button_size * 5 - button_size / 2, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                SDL_Rect src_rect = {520, 1504, 1, 32};
+                SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 12.5) - button_size / 6, button_size * 5, button_size / 6};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+        }
+        if (max_stars < 36)
+            SDL_SetTextureAlphaMod(sdl_texture, 255);
     }
-    {
-        {
-            SDL_Rect src_rect = {512, 1183, 96, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {512 + 96, 1183, 96, 1};
-            SDL_Rect dst_rect = {left_panel_offset.x + button_size * 5 - button_size / 2, right_panel_offset.y + int(button_size * 6.5), button_size / 2, button_size * 6};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-        {
-            SDL_Rect src_rect = {520, 1504, 1, 32};
-            SDL_Rect dst_rect = {left_panel_offset.x, right_panel_offset.y + int(button_size * 12.5) - button_size / 6, button_size * 5, button_size / 6};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-        }
-    }
-    if (max_stars < 36)
-        SDL_SetTextureAlphaMod(sdl_texture, 255);
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
     {
@@ -4347,7 +4351,7 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Go to Rule Constructor");
         }
     }
-    if ((right_panel_mode == RIGHT_MENU_NONE) || (right_panel_mode == RIGHT_MENU_REGION))
+    if (((right_panel_mode == RIGHT_MENU_NONE) || (right_panel_mode == RIGHT_MENU_REGION)) &&  max_stars > 30)
     {
         SDL_Rect src_rect = {1856, 1536, 192, 192};
         SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6, button_size, button_size};
@@ -4389,13 +4393,13 @@ void GameState::render(bool saving)
                 {
                     if (hover_rulemaker_lower_right && right_panel_mode == RIGHT_MENU_RULE_GEN)
                         SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
-                    render_box(right_panel_offset + p * button_size, XYPos(button_size, button_size), button_size / 4);
+                    render_box(right_panel_offset + p * button_size, XYPos(button_size, button_size), button_size / 4, 9);
                     SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
                     {
                         if (!hover_rulemaker_lower_right)
                             SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
-                        render_box(right_panel_offset + p * button_size + XYPos(button_size / 2, button_size / 2), XYPos(button_size / 2, button_size / 2), button_size / 4);
+                        render_box(right_panel_offset + p * button_size + XYPos(button_size / 2, button_size / 2), XYPos(button_size / 2, button_size / 2), button_size / 4, 9);
                         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     }
                 }
@@ -4605,13 +4609,14 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Duplicate Rule");
             }
+            if (max_stars > 30)
             {
                 SDL_Rect src_rect = {1856, 1536, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Copy Rule to Clipboard");
             }
-            if(selected_rules.empty())
+            if (max_stars > 30 && selected_rules.empty())
             {
                 SDL_Rect src_rect = {2048, 1728, 192, 192};
                 SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 6, button_size, button_size};

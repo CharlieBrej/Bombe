@@ -124,7 +124,6 @@
             [
                 {"x": 150,  "y": 500,           "text":"Number of cells\ncan be set to\n\"Don't Care\""},
                 {"x": 540,  "y": 500,           "text":"Multiple (up to 4) regions\ncan be added to the\nRule Constructor"},
-                {"x": 1200, "y": 500,           "text":"Rules can be used\nto create new regions"}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"Exactly 6"},
@@ -134,11 +133,7 @@
                 {"x": 240,  "y": 570,           "text":"Either 4 or 6"},
                 {"x": 240,  "y": 710,           "text":"Either 3, 5 or 7"},
                 {"x": 240,  "y": 850,           "text":"Odd numbers"},
-
-                {"x":1050,  "y": 100,           "text":"Normal visible"},
-                {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
-                {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
-                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
+                {"x": 1000, "y": 500,           "text":"Rules can be used\nto create new regions"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
@@ -147,6 +142,12 @@
                 {"x": 1500, "y": 100,            "text":"Double click to\ntest all levels"},
                 {"x": 1200, "y": 970,            "text":"More complex"},
                 {"x": 1600, "y": 600,            "text":"Bigger grids"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"Normal visible"},
+                {"x":1050,  "y": 290,           "text":"Hidden, but still used by rules"},
+                {"x":1050,  "y": 490,           "text":"Trash, ignored by rules"},
+                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
             ]
         ]
     },
@@ -275,7 +276,6 @@
             [
                 {"x": 150,  "y": 500,           "text":"Un nombre de cases\npeut être marqué\ncomme \"Peu Importe\""},
                 {"x": 640,  "y": 500,           "text":"Jusqu\'à 4 régions peuvent\nêtre ajoutées en\nmême temps au Créateur\nde Règles."},
-                {"x": 1200, "y": 500,           "text":"Les règles peuvent être\nutilisées pour créer\nde nouvelles Régions."}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"6 exactement"},
@@ -285,11 +285,7 @@
                 {"x": 240,  "y": 570,           "text":"Au choix : 4 ou 6"},
                 {"x": 240,  "y": 710,           "text":"Au choix : 3, 5 ou 7"},
                 {"x": 240,  "y": 850,           "text":"Nombres Impairs"},
-
-                {"x":1050,  "y": 100,           "text":"Visibilité normale"},
-                {"x":1050,  "y": 290,           "text":"Caché mais encore utilisable par les règles"},
-                {"x":1050,  "y": 490,           "text":"Jeté, ignoré par les règles"},
-                {"x":1050,  "y": 700,           "text":"Les règles peuvent être utilisées\npour changer la visibilité des régions."}
+                {"x": 1000, "y": 500,           "text":"Les règles peuvent être\nutilisées pour créer\nde nouvelles Régions."}
             ],
             [
                 {"x": 160,  "y": 520,            "text":"Résolvez des niveaux pour\ndébloquer des nouveaux\nniveaux et fonctionnalités"},
@@ -298,6 +294,12 @@
                 {"x": 1500, "y":  60,            "text":"Cliquez deux fois\npour tester tous\nles niveaux"},
                 {"x": 1200, "y": 970,            "text":"Plus complexe"},
                 {"x": 1600, "y": 600,            "text":"De plus\ngrandes grilles"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"Visibilité normale"},
+                {"x":1050,  "y": 290,           "text":"Caché mais encore utilisable par les règles"},
+                {"x":1050,  "y": 490,           "text":"Jeté, ignoré par les règles"},
+                {"x":1050,  "y": 700,           "text":"Les règles peuvent être utilisées\npour changer la visibilité des régions."}
             ]
         ]
     },
@@ -426,7 +428,6 @@
             [
                 {"x": 150,  "y": 500,           "text":"Anzahl der Zellen\nkann auf \"Egal\"\neingestellt werden"},
                 {"x": 550,  "y": 500,           "text":"Im Regelkonstruktor können\nbis zu 4 Regionen\nhinzugefügt werden"},
-                {"x": 1150, "y": 500,           "text":"Regeln können verwendet werden,\num neue Regionen zu erstellen"},
             ],
             [
                 {"x": 240,  "y": 27,            "text":"Genau 6"},
@@ -436,11 +437,7 @@
                 {"x": 240,  "y": 567,           "text":"Entweder 4 oder 6"},
                 {"x": 240,  "y": 707,           "text":"Entweder 3, 5 oder 7"},
                 {"x": 240,  "y": 845,           "text":"Ungerade Zahlen"},
-
-                {"x":1050,  "y": 95,           "text":"Normal sichtbar"},
-                {"x":1050,  "y": 275,           "text":"Versteckt, aber von Regeln genutzt"},
-                {"x":1050,  "y": 475,           "text":"Müll, von Regeln ignoriert"},
-                {"x":1050,  "y": 700,           "text":"Regeln können verwendet werden, um\ndie Sichtbarkeit von Regionen zu ändern"},
+                {"x": 1000, "y": 500,           "text":"Regeln können verwendet werden,\num neue Regionen zu erstellen"},
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Löse Level, um\nLevel-Sets und\nFeatures freizuschalten"},
@@ -449,6 +446,12 @@
                 {"x": 1500, "y": 100,            "text":"Doppelklick, um\nalle Level zu testen"},
                 {"x": 1200, "y": 970,            "text":"Komplexer"},
                 {"x": 1600, "y": 600,            "text":"Größere Gitter"}
+            ],
+            [
+                {"x":1050,  "y": 95,           "text":"Normal sichtbar"},
+                {"x":1050,  "y": 275,           "text":"Versteckt, aber von Regeln genutzt"},
+                {"x":1050,  "y": 475,           "text":"Müll, von Regeln ignoriert"},
+                {"x":1050,  "y": 700,           "text":"Regeln können verwendet werden, um\ndie Sichtbarkeit von Regionen zu ändern"},
             ]
         ]
     },
@@ -577,7 +580,6 @@
             [
                 {"x": 100,  "y": 500,           "text":"Można ustawić,\nże zasada nie\nbędzie sprawdzać,\nile ma być komórek"},
                 {"x": 540,  "y": 500,           "text":"Kilka (maks 4)\nRegionów może\nbyć dodana do kreatora zasad"},
-                {"x": 1300, "y": 500,           "text":"Zasadami można tworzyć\nnowe regiony"}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"Równo 6"},
@@ -587,11 +589,7 @@
                 {"x": 240,  "y": 570,           "text":"Albo 4 albo 6"},
                 {"x": 240,  "y": 710,           "text":"3, 5 lub 7"},
                 {"x": 240,  "y": 850,           "text":"Liczby nieparzyste"},
-
-                {"x":1050,  "y": 100,           "text":"Normalne, widzialne"},
-                {"x":1050,  "y": 290,           "text":"Ukryte, ale dalej używane przez zasady"},
-                {"x":1050,  "y": 490,           "text":"Usunięte, nie używane przez zasady"},
-                {"x":1050,  "y": 700,           "text":"Zasady mogą zmieniać widzialność zasad"}
+                {"x": 1000, "y": 500,           "text":"Zasadami można tworzyć\nnowe regiony"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Rozwiązuj poziomy,\naby odblokować więcej funkcji"},
@@ -600,6 +598,12 @@
                 {"x": 1500, "y": 70,             "text":"Kliknij dwa razy,\naby przetestować\nwszystkie poziomy"},
                 {"x": 1200, "y": 970,            "text":"Bardziej\nzłożone"},
                 {"x": 1600, "y": 600,            "text":"Większe\nplansze"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"Normalne, widzialne"},
+                {"x":1050,  "y": 290,           "text":"Ukryte, ale dalej używane przez zasady"},
+                {"x":1050,  "y": 490,           "text":"Usunięte, nie używane przez zasady"},
+                {"x":1050,  "y": 700,           "text":"Zasady mogą zmieniać widzialność zasad"}
             ]
         ]
     },
@@ -728,7 +732,6 @@
             [
                 {"x": 150,  "y": 500,           "text":"格子數\n可以設置為\n任意數值\"?\""},
                 {"x": 540,  "y": 500,           "text":"最多可把 4 個區域\n添加到規則生成器"},
-                {"x": 1200, "y": 500,           "text":"規則可用於\n生成新的區域"}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"恰好 6"},
@@ -738,11 +741,7 @@
                 {"x": 240,  "y": 570,           "text":"4 或 6"},
                 {"x": 240,  "y": 710,           "text":"3、5 或 7"},
                 {"x": 240,  "y": 850,           "text":"奇數"},
-
-                {"x":1050,  "y": 100,           "text":"正常可見"},
-                {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
-                {"x":1050,  "y": 490,           "text":"無效,被規則忽略"},
-                {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
+                {"x": 1000, "y": 500,           "text":"規則可用於\n生成新的區域"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"解決關卡就能解鎖\n新的題組與功能"},
@@ -751,6 +750,12 @@
                 {"x": 1500, "y": 100,            "text":"雙擊\n測試所有關卡"},
                 {"x": 1200, "y": 970,            "text":"更複雜"},
                 {"x": 1600, "y": 600,            "text":"更大範圍"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"正常可見"},
+                {"x":1050,  "y": 290,           "text":"隱藏,但仍被規則使用"},
+                {"x":1050,  "y": 490,           "text":"無效,被規則忽略"},
+                {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
             ]
         ]
     },
@@ -879,7 +884,6 @@
             [
                 {"x": 150,  "y": 500,           "text":"格子数\n可以设置为\n任意数值\"?\""},
                 {"x": 540,  "y": 500,           "text":"最多可把 4 个区域\n添加到规则生成器"},
-                {"x": 1200, "y": 500,           "text":"规则可用于\n生成新的区域"}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"恰好 6"},
@@ -889,11 +893,7 @@
                 {"x": 240,  "y": 570,           "text":"4 或 6"},
                 {"x": 240,  "y": 710,           "text":"3、5 或 7"},
                 {"x": 240,  "y": 850,           "text":"奇数"},
-
-                {"x":1050,  "y": 100,           "text":"正常可见"},
-                {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
-                {"x":1050,  "y": 490,           "text":"无效,被规则忽略"},
-                {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
+                {"x": 1000, "y": 500,           "text":"规则可用于\n生成新的区域"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"解决关卡就能解锁\n新的题组与功能"},
@@ -902,6 +902,12 @@
                 {"x": 1500, "y": 100,            "text":"双击\n测试所有关卡"},
                 {"x": 1200, "y": 970,            "text":"更複杂"},
                 {"x": 1600, "y": 600,            "text":"更大范围"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"正常可见"},
+                {"x":1050,  "y": 290,           "text":"隐藏,但仍被规则使用"},
+                {"x":1050,  "y": 490,           "text":"无效,被规则忽略"},
+                {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
             ]
         ]
     },
@@ -1030,7 +1036,6 @@
             [
                 {"x": 50,  "y": 500,           "text":"セル数を\n「任意の数」\nに設定可能"},
                 {"x": 600,  "y": 500,           "text":"複数 (最大 4 つ) の領域を\nルールコンストラクター\nに追加可能"},
-                {"x": 1200, "y": 500,           "text":"ルールを設定することで\n新しい領域の作成が可能"}
             ],
             [
                 {"x": 240,  "y": 20,            "text":"ちょうど6"},
@@ -1040,11 +1045,7 @@
                 {"x": 240,  "y": 570,           "text":"4か6のどちらか"},
                 {"x": 240,  "y": 710,           "text":"3、5、7のいずれか"},
                 {"x": 240,  "y": 850,           "text":"奇数"},
-
-                {"x":1050,  "y": 100,           "text":"通常の可視化ルール"},
-                {"x":1050,  "y": 290,           "text":"非表示のルール、通常通り適用される"},
-                {"x":1050,  "y": 490,           "text":"適用されないルール"},
-                {"x":1050,  "y": 700,           "text":"ルールを設定して\n領域の可視性を変更できます"}
+                {"x": 1000, "y": 500,           "text":"ルールを設定することで\n新しい領域の作成が可能"}
             ],
             [
                 {"x": 170,  "y": 520,           "text":"レベルをクリアして\nレベルセットと機能をアンロック"},
@@ -1053,6 +1054,12 @@
                 {"x": 1400, "y": 100,           "text":"ダブルクリック\n全レベルをテストする"},
                 {"x": 1200, "y": 970,           "text":"より複雑な盤面"},
                 {"x": 1600, "y": 600,           "text":"より大きな盤面"},
+            ],
+            [
+                {"x":1050,  "y": 100,           "text":"通常の可視化ルール"},
+                {"x":1050,  "y": 290,           "text":"非表示のルール、通常通り適用される"},
+                {"x":1050,  "y": 490,           "text":"適用されないルール"},
+                {"x":1050,  "y": 700,           "text":"ルールを設定して\n領域の可視性を変更できます"}
             ]
         ]
     }
