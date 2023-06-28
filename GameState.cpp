@@ -1832,7 +1832,7 @@ static void get_char_texture(char c, char pc, int& pos, int &width, int &cwidth)
     else if (c == '1')
     {
         pos = 2;
-        if (pc >= '0' && pc <= '9')
+        if (pc == '+')
         {
             width = 2; cwidth = 1;
         }
