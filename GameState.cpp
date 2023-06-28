@@ -3252,7 +3252,8 @@ void GameState::render(bool saving)
             {
                 int priority = std::clamp(int(rule.priority), -3, 2);
                 if (rule.apply_region_type.type == RegionType::VISIBILITY || rule.apply_region_type.type == RegionType::SET)
-                    priority = -4;
+                    if (rule.priority > -100)
+                        priority = -4;
                 SDL_Rect src_rect = {2432, 1344 + (2 - priority) * 128, 128, 128};
                 SDL_Rect dst_rect = {list_pos.x + cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + rule_index * cell_height, cell_height, cell_height};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
