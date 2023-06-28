@@ -837,10 +837,10 @@ void GameState::load_grid(std::string s)
     rule_gen_region[3] = NULL;
 
     for (ConstructedRuleState& s : constructed_rule_undo)
-        for (int i; i < 4; i++)
+        for (int i = 0; i < 4; i++)
             s.regions[i] = NULL;
     for (ConstructedRuleState& s : constructed_rule_redo)
-        for (int i; i < 4; i++)
+        for (int i = 0; i < 4; i++)
             s.regions[i] = NULL;
 
     inspected_rule.regions[0] = NULL;
@@ -1911,8 +1911,15 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
     int texture_char_pos = 2560;
 
     double cs = s;
-    if (s < 1)
+    if (s < 0.5)
         return;
+    else if (s <= 1)
+    {
+        cs = 1;
+        s = 1;
+        texture_char_width = 1;
+        texture_char_pos = 2880;
+    }
     else if (s <= 2)
     {
         cs = 2;
