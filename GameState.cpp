@@ -3160,7 +3160,15 @@ void GameState::render(bool saving)
                 if (col == 0)
                     return (a.index < b.index);
                 if (col == 1)
-                    return a.rule->priority < b.rule->priority;
+                {
+                    int pa = a.rule->priority;
+                    int pb = b.rule->priority;
+                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET)
+                        pa = 3;
+                    if (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET)
+                        pb = 3;
+                    return pa < pb;
+                }
                 if (col == 2)
                     return (a.rule->apply_region_type < b.rule->apply_region_type);
                 if (col == 3)
@@ -3228,12 +3236,14 @@ void GameState::render(bool saving)
             if (((right_panel_mode == RIGHT_MENU_RULE_INSPECT) && ((selected_rules.empty() && &rule == inspected_rule.rule) || selected_rules.count(&rule))) ||
                 ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (&rule == replace_rule)))
             {
-                render_box(list_pos + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
+                render_box(list_pos + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4, 9);
             }
 
             render_number(rd.index, list_pos + XYPos(0 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
             {
                 int priority = std::clamp(int(rule.priority), -3, 2);
+                if (rule.apply_region_type.type == RegionType::VISIBILITY || rule.apply_region_type.type == RegionType::SET)
+                    priority = -4;
                 SDL_Rect src_rect = {2432, 1344 + (2 - priority) * 128, 128, 128};
                 SDL_Rect dst_rect = {list_pos.x + cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + rule_index * cell_height, cell_height, cell_height};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
