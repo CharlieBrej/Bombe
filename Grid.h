@@ -208,7 +208,7 @@ public:
         return false;
     }
     void next_colour();
-    bool has_ancestor(GridRegion* other);
+    bool has_ancestor(GridRegion* other, std::set<GridRegion*>& has, std::set<GridRegion*>& hasnt);
 
 };
 

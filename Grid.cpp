@@ -234,20 +234,30 @@ void GridRegion::next_colour()
     colour = colours_used[type.value]++;
 }
 
-bool GridRegion::has_ancestor(GridRegion* other)
+bool GridRegion::has_ancestor(GridRegion* other, std::set<GridRegion*>& has, std::set<GridRegion*>& hasnt)
 {
+    if (this == other)
+        return true;
     if (gen_cause.rule && gen_cause.rule->apply_region_type.type == RegionType::SET)
         return false;
+
+    if (has.count(this))
+        return true;
+    if (hasnt.count(this))
+        return false;
+
     for (int i = 0; i < 4; i++)
     {
         if (gen_cause.regions[i])
         {
-            if (gen_cause.regions[i] == other)
+            if (gen_cause.regions[i]->has_ancestor(other, has, hasnt))
+            {
+                has.insert(this);
                 return true;
-            if (gen_cause.regions[i]->has_ancestor(other))
-                return true;
+            }
         }
     }
+    hasnt.insert(this);
     return false;
 }
 
@@ -2936,10 +2946,12 @@ bool Grid::add_one_new_region(GridRegion* r)
     it = regions_to_add.begin();
     std::list<GridRegion>::iterator best_reg = regions_to_add.begin();
     float best_pri = (*best_reg).priority;
+    std::set<GridRegion*> has, hasnt;
+
     while (it != regions_to_add.end())
     {
         float pri = (*it).priority;
-        if (r && (*it).has_ancestor(r))
+        if (r && (*it).has_ancestor(r, has, hasnt))
             pri += 10;
         if (!(*it).gen_cause.rule || (*it).gen_cause.rule->apply_region_type.type == RegionType::SET)
             pri += 20;
