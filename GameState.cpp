@@ -930,6 +930,14 @@ void GameState::advance(int steps)
         achievements.insert("ALPHABET");
     if(grid->regions.size() > 1000)
         achievements.insert("EXPLOSION");
+    for (GridRegion& r : grid->regions)
+    {
+        if (r.type == RegionType(RegionType::EQUAL, 20))
+        {
+            achievements.insert("ONE_SCORE");
+            break;
+        }
+    }
 
     cur_stars = totcount;
     if (max_stars < totcount)
