@@ -2870,6 +2870,24 @@ void GameState::render(bool saving)
                 col_click = 2;
         }
         {
+            SDL_Rect src_rect = {512, 192, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Clear");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+            {
+                current_level_index = 0;
+                load_level = true;
+                force_load_level = false;
+                level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.clear();
+                level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(global_level_sets[current_level_group_index][current_level_set_index]->levels.size());
+                level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = global_level_sets[current_level_group_index][current_level_set_index]->levels.size();
+                level_progress[game_mode][current_level_group_index][current_level_set_index].star_anim_prog = 0;
+                level_progress[game_mode][current_level_group_index][current_level_set_index].unlock_anim_prog = 0;
+            }
+        }
+
+        {
             SDL_Rect src_rect = {704 + 3 * 192, 2144, 96, 96};
             SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width / 2, cell_width / 2};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -3187,9 +3205,9 @@ void GameState::render(bool saving)
                 {
                     int pa = a.rule->priority;
                     int pb = b.rule->priority;
-                    if (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET)
+                    if (pb > -100 && (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET))
                         pa = 3;
-                    if (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET)
+                    if (pb > -100 && (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET))
                         pb = 3;
                     return pa < pb;
                 }
