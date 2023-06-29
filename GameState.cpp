@@ -829,6 +829,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
 
 void GameState::load_grid(std::string s)
 {
+    filter_pos.clear();
     delete grid;
     grid = Grid::Load(s);
     rule_gen_region[0] = NULL;
@@ -1336,7 +1337,6 @@ void GameState::reset_rule_gen_region()
     update_constructed_rule();
     if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_REGION)
         right_panel_mode = RIGHT_MENU_NONE;
-    filter_pos.clear();
 }
 
 void GameState::update_constructed_rule_pre()
@@ -6944,7 +6944,7 @@ bool GameState::events()
                             current_level_set_index = 0;
                             current_level_index = 0;
                             load_level = true;
-                            force_load_level = false;
+                            force_load_level = true;
                             region_type = RegionType(RegionType::SET, 0);
                             select_region_type = RegionType(RegionType::EQUAL, 0);
                             game_mode = index;

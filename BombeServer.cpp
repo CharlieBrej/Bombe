@@ -378,6 +378,7 @@ static size_t curl_write_data(void *ptr, size_t size, size_t nmemb, void *usr)
 class Connection
 {
 public:
+    struct sockaddr_in clientaddr;
     int conn_fd;
     int length;
     std::string inbuf;
@@ -496,7 +497,9 @@ public:
                         if (db.steam_sessions.count(steam_session) &&
                             (db.steam_sessions[steam_session] != steam_id))
                         {
-                            printf("pirate check failed\n");
+                            char ip4[INET_ADDRSTRLEN];
+                            inet_ntop(AF_INET, &(clientaddr.sin_addr), ip4, INET_ADDRSTRLEN);
+                            printf("pirate check failed %s\n", ip4);
                             pirate = true;
                             std::cout << "failed:" << steam_id << " - " << db.steam_sessions[steam_session] << "\n";
                             // omap->save(std::cout);
@@ -762,6 +765,7 @@ int main(int argc, char *argv[])
             if (conn_fd >= 1024)
                 ::close(conn_fd);
             conns.push_back(conn_fd);
+            conns.back().clientaddr = clientaddr;
         }
 
         for (std::list<Connection>::iterator it = conns.begin(); it != conns.end();)
@@ -769,9 +773,7 @@ int main(int argc, char *argv[])
             Connection& conn = (*it);
             conn.recieve(db);
             if (conn.conn_fd < 0)
-            {
                 it = conns.erase(it);
-            }
             else
                 it++;
         }
