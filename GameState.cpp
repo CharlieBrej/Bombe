@@ -898,12 +898,15 @@ void GameState::advance(int steps)
     int totcount = 0;
     for (int s = 0; s < GLBAL_LEVEL_SETS; s++)
     {
+        int ccount = 0;
         int count = 0;
         for (int i = 0; i < level_progress[0][s].size(); i++)
         {
             LevelProgress& prog = level_progress[0][s][i];
             for (int j = 0; j < level_progress[0][s][i].level_status.size(); j++)
             {
+                if (level_progress[game_mode][s][i].level_status[j])
+                    ccount++;
                 for (int m = 0; m < GAME_MODES; m++)
                 {
                     if (level_progress[m][s][i].level_status[j])
@@ -925,6 +928,11 @@ void GameState::advance(int steps)
             }
         }
         totcount += count;
+        if (ccount >= 5500 && game_mode)
+        {
+            const std::string gm_ach_set_names[] = {"THREE", "SIXTY", "NOVAR"};
+            achievements.insert(gm_ach_set_names[game_mode - 1]);
+        }
     }
     if(max_stars >= prog_stars[PROG_LOCK_VARS5])
         achievements.insert("ALPHABET");
