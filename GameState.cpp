@@ -1343,6 +1343,8 @@ void GameState::reset_rule_gen_region()
     rule_gen_region[2] = NULL;
     rule_gen_region[3] = NULL;
     replace_rule = NULL;
+    duplicate_rule = false;
+
 //    rule_gen_region_count = 0;
 //    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
@@ -4676,7 +4678,7 @@ void GameState::render(bool saving)
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Rule Already Present");
                     }
-                    else if (replace_rule)
+                    else if (replace_rule && !duplicate_rule)
                     {
                         SDL_Rect src_rect = {1088, 960, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
@@ -5951,9 +5953,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             constructed_rule.deleted = false;
             constructed_rule.stale = false;
             if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
-            {
-                replace_rule = inspected_rule.rule;
-            }
+                duplicate_rule = false;
+            else
+                duplicate_rule = true;
+            replace_rule = inspected_rule.rule;
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
         }
@@ -6302,23 +6305,29 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     }
                     else
                     {
-                        if (replace_rule)
+                        if (rule_is_permitted(constructed_rule, game_mode))
                         {
-                            if (game_mode == 2 || game_mode == 3)
+                            std::list<GridRule>::iterator it;
+                            for (it = rules[game_mode].begin(); it != rules[game_mode].end(); it++)
                             {
-                                if (replace_rule->apply_region_type.type != RegionType::VISIBILITY)
-                                    rule_del_count[game_mode]++;
+                                if (&*it == replace_rule)
+                                {
+                                    it++;
+                                    break;
+                                }
                             }
-                            *replace_rule = constructed_rule;
-                            inspected_rule = GridRegionCause(replace_rule, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                            selected_rules.clear();
-                            reset_rule_gen_region();
-                            right_panel_mode = RIGHT_MENU_RULE_INSPECT;
-                        }
-                        else if (rule_is_permitted(constructed_rule, game_mode))
-                        {
-                            rules[game_mode].push_back(constructed_rule);
-                            inspected_rule = GridRegionCause(&rules[game_mode].back(), rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+
+                            if (replace_rule && duplicate_rule == false)
+                            {
+                                if (game_mode == 2 || game_mode == 3)
+                                {
+                                    if (replace_rule->apply_region_type.type != RegionType::VISIBILITY)
+                                        rule_del_count[game_mode]++;
+                                }
+                                replace_rule->deleted = true;
+                            }
+                            it = rules[game_mode].insert(it, constructed_rule);
+                            inspected_rule = GridRegionCause(&*it, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                             selected_rules.clear();
                             reset_rule_gen_region();
                             right_panel_mode = RIGHT_MENU_RULE_INSPECT;

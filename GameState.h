@@ -211,6 +211,7 @@ public:
     GridRegion *rule_gen_region[4] = {};
     GridRule constructed_rule;
     GridRule* replace_rule = NULL;
+    bool duplicate_rule = false;
 
     std::map<XYPos, int> grid_cells_animation;
     std::map<GridRegion*, int> grid_regions_animation;
