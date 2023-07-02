@@ -6149,7 +6149,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if (prog_seen[PROG_LOCK_DONT_CARE])
         {
             if ((pos - XYPos(button_size * 0, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+            {
                 region_type = RegionType(RegionType::NONE, 0);
+                if (clicks >= 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+                {
+                    update_constructed_rule_pre();
+                    rule_gen_region[constructed_rule.region_count] = NULL;
+                    constructed_rule.add_region(region_type);
+                    update_constructed_rule();
+                }
+            }
         }
         if ((pos - XYPos(button_size * 1, button_size * 6.2)).inside(XYPos(button_size,button_size)))
             region_type = RegionType(RegionType::SET, 0);
@@ -6175,7 +6184,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     select_region_type.type = t;
                     region_type = select_region_type;
-                    if (clicks == 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+                    if (clicks >= 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
                     {
                         update_constructed_rule_pre();
                         rule_gen_region[constructed_rule.region_count] = NULL;
@@ -6190,7 +6199,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 XYPos region_item_selected = (pos - XYPos(0, button_size * 9.6)) / button_size;
                 select_region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
                 region_type = select_region_type;
-                if (clicks == 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+                if (clicks >= 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
                 {
                     update_constructed_rule_pre();
                     rule_gen_region[constructed_rule.region_count] = NULL;
