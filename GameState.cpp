@@ -5448,7 +5448,8 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        std::string s = "Game by Charlie Brej\n\nMusic by Amurich\n\nThank you to\n"
+        std::string s = "Bombe version:" + version_text;
+        s +=            "\nGame by Charlie Brej\n\nMusic by Amurich\n\nThank you to\n"
                         "All the players and testers especially: 3^3=7, AndyY, artless, Autoskip,\n"
                         "baltazar, bearb, Detros, Elgel, Fadaja, GuiltyBystander, Host,\n"
                         "hyperphysin, icely, Leaving Leaves, Mage6019, Miri Mayhem, Nif, notgreat,\n"

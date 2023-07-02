@@ -174,6 +174,11 @@ void mainloop()
     game_state->steam_session_string = "dummy";
     game_state->steam_id = SECRET_ID;
 #endif
+    {
+        std::ifstream ifs("version");
+        game_state->version_text = std::string((std::istreambuf_iterator<char>(ifs)),
+                                               (std::istreambuf_iterator<char>()));
+    }
 
     int save_time = 0;
     SDL_Thread *save_thread = NULL;

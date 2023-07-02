@@ -308,15 +308,15 @@ public:
                     continue;
                 if (scores[mode][i].user_score[rit->second] == 0 && fr == 0)
                     continue;
-                if ((prevpos + 1) < pos)
-                {
-                    SaveObjectMap* score_map = new SaveObjectMap();
-                    score_map->add_num("pos", 0);
-                    score_map->add_string("name", "");
-                    score_map->add_num("score", 0);
-                    score_map->add_num("hidden", 1);
-                    score_list->add_item(score_map);
-                }
+                // if ((prevpos + 1) < pos)
+                // {
+                //     SaveObjectMap* score_map = new SaveObjectMap();
+                //     score_map->add_num("pos", 0);
+                //     score_map->add_string("name", "");
+                //     score_map->add_num("score", 0);
+                //     score_map->add_num("hidden", 1);
+                //     score_list->add_item(score_map);
+                // }
                 SaveObjectMap* score_map = new SaveObjectMap();
                 score_map->add_num("pos", pos);
                 score_map->add_string("name", players[rit->second]);
