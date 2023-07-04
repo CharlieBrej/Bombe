@@ -480,11 +480,8 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                         {
                             have[vi] = true;
                             add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_ADD, true, vi, i, j));
-                            if (i > vi)
-                            {
-                                i = vi;
-                                break;
-                            }
+                            i = 0;
+                            break;
                         }
                     }
                     else if ((i & j) == i)
@@ -494,11 +491,8 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                         {
                             have[vi] = true;
                             add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_SUB, true, vi, i, j));
-                            if (i > vi)
-                            {
-                                i = vi;
-                                break;
-                            }
+                            i = 0;
+                            break;
                         }
                     }
                     else if (have[(i ^ j) - 1])
@@ -508,11 +502,8 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                         {
                             have[vi] = true;
                             add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_TRIPLE, true, vi, i, j, i ^ j));
-                            if (i > vi)
-                            {
-                                i = vi;
-                                break;
-                            }
+                            i = 0;
+                            break;
                         }
                     }
                 }
@@ -2838,6 +2829,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
 
     rule.jit_preprocess(fast_ops);
     int var_counts[32];
+    for (int i = 0; i < 32; i++)
+        var_counts[i] = -1;
 
     for (int nonstale_rep_index = 0; nonstale_rep_index < rule.region_count; nonstale_rep_index++)
     {
@@ -2864,14 +2857,19 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
                         for (GridRegion* r3 : set3)
                         {
                             if (r3 && ((r0 == r3) || (r1 == r3) || (r2 == r3))) continue;
-//                            bool m2 = rule.matches(r0, r1, r2, r3, var_counts);
-                            if (!rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts))
+                            bool m = rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts);
+                            if (!m)
                                 continue;
-                            // if (m != m2)
-                            // {
-                            //     m = rule.matches(r0, r1, r2, r3, var_counts);
-                            //     m2 = rule.jit_matches(fast_ops, r0, r1, r2, r3, var_counts);
-                            // }
+                            int var_counts2[32];
+                            for (int i = 0; i < 32; i++)
+                                var_counts2[i] = -1;
+                            bool m2 = rule.matches(r0, r1, r2, r3, var_counts2);
+                            if (m != m2)
+                            {
+                                m = rule.matches(r0, r1, r2, r3, var_counts);
+                                m2 = rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts);
+                                assert(0);
+                            }
                             {
                                 for (int i = 0; i < 32; i++)
                                     var_counts[i] = -1;
