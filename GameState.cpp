@@ -1195,7 +1195,7 @@ void GameState::advance(int steps)
                             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                             {
                                 rule.priority = 0;
-                                grid->apply_rule(rule, &r);
+                                grid->apply_rule(rule, &r, debug_bits[0]);
                             }
                         }
                     }
@@ -1269,7 +1269,7 @@ void GameState::advance(int steps)
                             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                             {
                                 rule.priority = 0;
-                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
+                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region, debug_bits[0]);
                                 if (resp == Grid::APPLY_RULE_RESP_NONE)
                                     rule.stale = true;
                             }
@@ -5560,6 +5560,10 @@ void GameState::render(bool saving)
         debug_text += "deleted_regions size: " + std::to_string(grid->deleted_regions.size()) + "\n";
         debug_text += "Regions per sec: " + std::to_string(rate * 1000) + "\n";
         debug_text += "FPS: " + std::to_string(10000.0 / (frame - old_time)) + "\n";
+        debug_text += "DEBUG_BITS: ";
+        for (int i = 0; i < 10; i++)
+            debug_text += debug_bits[i] ? '1' : '0';
+        debug_text += "\n";
         render_text_box(XYPos(0, grid_size/2), debug_text);
     }
 
@@ -6507,6 +6511,11 @@ bool GameState::events()
                             mouse_mode = MOUSE_MODE_PAINT;
                         else
                             mouse_mode = MOUSE_MODE_NONE;
+                        break;
+                    }
+                    else if (key == SDLK_F6)
+                    {
+                        debug_bits[0] = !debug_bits[0];
                         break;
                     }
                     else if (key == key_codes[KEY_CODE_FULL_SCREEN])

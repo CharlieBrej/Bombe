@@ -2781,11 +2781,10 @@ static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRe
     return false;
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region, bool always_ignore_bin)
 {
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
-    bool ignore_bin = (rule.apply_region_type.type == RegionType::VISIBILITY);
 
     assert(rule.region_count);
     unsigned places_for_reg = 0;
@@ -2813,7 +2812,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region)
             {
                 if (r.type != rule.region_type[i] && rule.region_type[i].type != RegionType::NONE && !(rule.region_type[i].var && (r.type.type == rule.region_type[i].type)))
                     continue;
-                if (r.vis_level == GRID_VIS_LEVEL_BIN && !ignore_bin)
+                if ((r.vis_level == GRID_VIS_LEVEL_BIN) && (rule.apply_region_type.type != RegionType::VISIBILITY))
+                    continue;
+                if ((r.vis_level == GRID_VIS_LEVEL_BIN) && (r.visibility_force == GridRegion::VIS_FORCE_USER))
+                    continue;
+                if ((r.vis_level == GRID_VIS_LEVEL_BIN) && always_ignore_bin)
                     continue;
 
                 pos_regions[i].push_back(&r);

@@ -84,6 +84,8 @@ public:
     bool display_levels_center_current = false;
     bool display_modes = false;
 
+    bool debug_bits[10] = {};
+
     bool low_contrast = false;
     uint8_t contrast = 255;
 
