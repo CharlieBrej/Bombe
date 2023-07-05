@@ -278,6 +278,7 @@ int main( int argc, char* argv[] )
 
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     SDL_SetHint("SDL_MOUSE_AUTO_CAPTURE", "0");
 
     mainloop();

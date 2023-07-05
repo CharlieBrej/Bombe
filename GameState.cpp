@@ -243,7 +243,7 @@ GameState::GameState(std::string& load_data, bool json)
     if (rule_limit_slider >= 1.0)
         rule_limit_count = -1;
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
     if (full_screen)
     {
@@ -2553,7 +2553,8 @@ void GameState::render(bool saving)
         mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
 
     bool row_col_clues = !grid->edges.empty() && show_row_clues;
-    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+//    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+    SDL_GetRendererOutputSize(sdl_renderer, &window_size.x, &window_size.y);
     SDL_RenderClear(sdl_renderer);
 
     {
