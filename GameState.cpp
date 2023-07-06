@@ -6443,6 +6443,22 @@ bool GameState::events()
                     capturing_key = -1;
                     break;
                 }
+                if (key == SDLK_PAGEUP)
+                {
+                    if (display_rules || display_scores || display_levels)
+                    {
+                        rules_list_offset -= 16;
+                        break;
+                    }
+                }
+                if (key == SDLK_PAGEDOWN)
+                {
+                    if (display_rules || display_scores || display_levels)
+                    {
+                        rules_list_offset += 16;
+                        break;
+                    }
+                }
                 if (display_help || display_language_chooser || display_menu || display_key_select || display_about)
                 {
                     if ((e.key.keysym.sym == key_codes[KEY_CODE_HELP]) ||
