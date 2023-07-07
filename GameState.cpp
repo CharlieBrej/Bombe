@@ -243,7 +243,7 @@ GameState::GameState(std::string& load_data, bool json)
     if (rule_limit_slider >= 1.0)
         rule_limit_count = -1;
 
-    sdl_window = SDL_CreateWindow( "Bombe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
+    sdl_window = SDL_CreateWindow( "Bombe", 0, 32, window_size.x, window_size.y, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | (full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP  | SDL_WINDOW_BORDERLESS : 0));
     sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
     if (full_screen)
     {
@@ -5896,21 +5896,24 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if ((pos - XYPos(button_size * 3, button_size * 3)).inside(XYPos(button_size, button_size)))
             {
                 inspected_region->vis_level = GRID_VIS_LEVEL_SHOW;
-                inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                if (!ctrl_held)
+                    inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
                 inspected_region->vis_cause.rule = NULL;
                 inspected_region->stale = false;
             }
             if ((pos - XYPos(button_size * 3, button_size * 4)).inside(XYPos(button_size, button_size)))
             {
                 inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
-                inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                if (!ctrl_held)
+                    inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
                 inspected_region->vis_cause.rule = NULL;
                 inspected_region->stale = false;
             }
             if ((pos - XYPos(button_size * 3, button_size * 5)).inside(XYPos(button_size, button_size)))
             {
                 inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
-                inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+                if (!ctrl_held)
+                    inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
                 inspected_region->vis_cause.rule = NULL;
                 inspected_region->stale = false;
             }
@@ -6464,7 +6467,7 @@ bool GameState::events()
                     if ((e.key.keysym.sym == key_codes[KEY_CODE_HELP]) ||
                         (e.key.keysym.sym == SDLK_ESCAPE))
                     {
-                        display_help = false;
+                        display_help = false;    
                         display_language_chooser = false;
                         display_key_select = false;
                         display_menu = false;
@@ -7112,7 +7115,8 @@ bool GameState::events()
             inspected_region->vis_level = GRID_VIS_LEVEL_HIDE;
         else if (key_held == 'E')
             inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
-        inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
+        if (!ctrl_held)
+            inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
         inspected_region->stale = false;
         inspected_region->vis_cause.rule = NULL;
         inspected_region->stale = false;
