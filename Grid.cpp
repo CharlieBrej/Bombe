@@ -2511,32 +2511,24 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         return APPLY_RULE_RESP_NONE;
     }
 
-    XYSet itter_elements;
-    GridRegion* itter = NULL;
-    for (int i = 0; i < 4; i++)
-    {
-        if (r[i])
-            itter_elements = itter_elements | r[i]->elements;
-    }
-
     XYSet to_reveal;
-
-    FOR_XY_SET(pos, itter_elements)
+    for (int i = 0; i < 16; i++)
     {
-        unsigned m = 0;
-        if (r[0]->elements.get(pos))
-            m |= 1;
-        if (r[1] && (r[1]->elements.get(pos)))
-            m |= 2;
-        if (r[2] && (r[2]->elements.get(pos)))
-            m |= 4;
-        if (r[3] && (r[3]->elements.get(pos)))
-            m |= 8;
-        if ((rule.apply_region_bitmap >> m) & 1)
-            to_reveal.set(pos);
+        if ((rule.apply_region_bitmap >> i) & 1)
+        {
+            XYSet s = (i & 1) ? r[0]->elements : ~r[0]->elements;
+            if (r[1])
+                s &= ((i & 2) ? r[1]->elements : ~r[1]->elements);
+            if (r[2])
+                s &= ((i & 4) ? r[2]->elements : ~r[2]->elements);
+            if (r[3])
+                s &= ((i & 8) ? r[3]->elements : ~r[3]->elements);
+            to_reveal |= s;
+        }
     }
     if (to_reveal.empty())
         return APPLY_RULE_RESP_NONE;
+
 
     if (rule.apply_region_type.type == RegionType::SET)
     {
@@ -2583,10 +2575,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
                 return APPLY_RULE_RESP_NONE;
         }
         GridRegion reg(typ);
-        FOR_XY_SET(pos, to_reveal)
-        {
-            reg.elements.set(pos);
-        }
+        reg.elements = to_reveal;
         reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
         reg.priority = rule.priority;
         float f = 0;
