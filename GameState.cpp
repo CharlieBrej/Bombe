@@ -263,6 +263,7 @@ GameState::GameState(std::string& load_data, bool json)
     tutorial_texture[4] = loadTexture("tutorial/tut4.png");
     tutorial_texture[5] = loadTexture("tutorial/tut5.png");
     tutorial_texture[6] = loadTexture("tutorial/tut6.png");
+    tutorial_texture[7] = loadTexture("tutorial/tut7.png");
 
     {
         SDL_Surface* icon_surface = IMG_Load("icon.png");
@@ -317,6 +318,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_DONT_CARE] = 19;
     prog_stars[PROG_LOCK_NUMBER_TYPES] = 30;
     prog_stars[PROG_LOCK_LEVELS_AND_LOCKS] = 40;
+    prog_stars[PROG_LOCK_GEN_REGIONS] = 395;
     prog_stars[PROG_LOCK_VISIBILITY] = 2000;
     prog_stars[PROG_LOCK_VISIBILITY2] = 2000;
     prog_stars[PROG_LOCK_VISIBILITY3] = 2000;
@@ -2507,8 +2509,10 @@ void GameState::render(bool saving)
         tut_page_count = 5;
     if (prog_stars[PROG_LOCK_LEVELS_AND_LOCKS] <= max_stars)
         tut_page_count = 6;
-    if (prog_stars[PROG_LOCK_VISIBILITY] <= max_stars)
+    if (prog_stars[PROG_LOCK_GEN_REGIONS] <= max_stars)
         tut_page_count = 7;
+    if (prog_stars[PROG_LOCK_VISIBILITY] <= max_stars)
+        tut_page_count = 8;
 
     if (prog_seen[PROG_LOCK_DONT_CARE] == 0)
     {
@@ -2538,12 +2542,22 @@ void GameState::render(bool saving)
         }
     }
 
+    if (prog_seen[PROG_LOCK_GEN_REGIONS] == 0)
+    {
+        if (prog_stars[PROG_LOCK_GEN_REGIONS] <= max_stars)
+        {
+            display_help = true;
+            tutorial_index = 6;
+            prog_seen[PROG_LOCK_GEN_REGIONS]++;
+        }
+    }
+
     if (prog_seen[PROG_LOCK_VISIBILITY] == 0)
     {
         if (prog_stars[PROG_LOCK_VISIBILITY] <= max_stars)
         {
             display_help = true;
-            tutorial_index = 6;
+            tutorial_index = 7;
             prog_seen[PROG_LOCK_VISIBILITY]++;
         }
     }
@@ -5031,6 +5045,10 @@ void GameState::render(bool saving)
                     display_help = true;
                     tutorial_index = 4;
                 }
+                else
+                {
+                    prog_seen[PROG_LOCK_REGION_HINT] = PROG_ANIM_MAX;
+                }
             }
             if (display_help)
                 render_star_burst(right_panel_offset + XYPos(-button_size * 7.6, button_size * 1) , XYPos(button_size * 7, button_size * 11.5), prog_seen[PROG_LOCK_REGION_HINT], false);
@@ -5054,6 +5072,11 @@ void GameState::render(bool saving)
                     display_help = true;
                     tutorial_index = 3;
                 }
+                else
+                {
+                    prog_seen[PROG_LOCK_USE_DONT_CARE] = PROG_ANIM_MAX;
+                }
+
             }
             if (display_help)
                 render_star_burst(left_panel_offset + XYPos(button_size * 1, button_size * 1) , XYPos(button_size * 5, button_size * 8), prog_seen[PROG_LOCK_USE_DONT_CARE], false);
@@ -5070,6 +5093,10 @@ void GameState::render(bool saving)
                 {
                     display_help = true;
                     tutorial_index = 5;
+                }
+                else
+                {
+                    prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] = PROG_ANIM_MAX;
                 }
             }
             if (display_help)

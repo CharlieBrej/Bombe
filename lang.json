@@ -143,6 +143,7 @@
                 {"x": 1200, "y": 970,            "text":"More complex"},
                 {"x": 1600, "y": 600,            "text":"Bigger grids"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,           "text":"Normal visible"},
                 {"x":400,  "y": 290,           "text":"Hidden, but still used by rules"},
@@ -295,6 +296,7 @@
                 {"x": 1200, "y": 970,            "text":"Plus complexe"},
                 {"x": 1600, "y": 600,            "text":"De plus\ngrandes grilles"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,            "text":"Visibilité normale"},
                 {"x":400,  "y": 290,            "text":"Caché mais encore\nutilisable par les règles"},
@@ -447,6 +449,7 @@
                 {"x": 1200, "y": 970,            "text":"Komplexer"},
                 {"x": 1600, "y": 600,            "text":"Größere Gitter"}
             ],
+            [],
             [
                 {"x":400,  "y": 95,             "text":"Normal sichtbar"},
                 {"x":400,  "y": 275,            "text":"Versteckt, aber\nvon Regeln genutzt"},
@@ -599,6 +602,7 @@
                 {"x": 1200, "y": 970,            "text":"Bardziej\nzłożone"},
                 {"x": 1600, "y": 600,            "text":"Większe\nplansze"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,            "text":"Normalne, widzialne"},
                 {"x":400,  "y": 290,            "text":"Ukryte, ale dalej\nużywane przez zasady"},
@@ -751,6 +755,7 @@
                 {"x": 1200, "y": 970,            "text":"更複雜"},
                 {"x": 1600, "y": 600,            "text":"更大範圍"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,            "text":"正常可見"},
                 {"x":400,  "y": 290,            "text":"隱藏,但仍被規則使用"},
@@ -903,6 +908,7 @@
                 {"x": 1200, "y": 970,            "text":"更複杂"},
                 {"x": 1600, "y": 600,            "text":"更大范围"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,            "text":"正常可见"},
                 {"x":400,  "y": 290,            "text":"隐藏,但仍被规则使用"},
@@ -1055,6 +1061,7 @@
                 {"x": 1200, "y": 970,           "text":"より複雑な盤面"},
                 {"x": 1600, "y": 600,           "text":"より大きな盤面"},
             ],
+            [],
             [
                 {"x":400,  "y": 100,            "text":"通常の可視化ルール"},
                 {"x":400,  "y": 290,            "text":"非表示のルール、\n通常通り適用される"},

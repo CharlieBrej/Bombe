@@ -41,7 +41,7 @@ public:
     int frame_step = 0;
     bool pirate = false;
 
-    static const int tut_texture_count = 7;
+    static const int tut_texture_count = 8;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
     int tut_page_count = 3;
     SDL_Texture* overlay_texture;
@@ -345,6 +345,7 @@ public:
         PROG_LOCK_DONT_CARE,
         PROG_LOCK_NUMBER_TYPES,
         PROG_LOCK_LEVELS_AND_LOCKS,
+        PROG_LOCK_GEN_REGIONS,
         PROG_LOCK_VISIBILITY,
         PROG_LOCK_VISIBILITY2,
         PROG_LOCK_VISIBILITY3,
