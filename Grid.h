@@ -388,7 +388,7 @@ public:
     };
 
     ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[32]);
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region, bool always_respect_bin = false);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region, bool always_ignore_bin = false);
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();

@@ -164,6 +164,7 @@ public:
     int rule_limit_count = -1;
 
     XYPos mouse;
+    XYPosFloat mouse_scale = XYPosFloat(1,1);
     enum {
         MOUSE_MODE_NONE,
         MOUSE_MODE_FILTER,

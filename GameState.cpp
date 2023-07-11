@@ -2553,8 +2553,10 @@ void GameState::render(bool saving)
         mouse_cursor = SDL_SYSTEM_CURSOR_SIZEALL;
 
     bool row_col_clues = !grid->edges.empty() && show_row_clues;
-//    SDL_GetWindowSize(sdl_window, &window_size.x, &window_size.y);
+    XYPos wsize;
+    SDL_GetWindowSize(sdl_window, &wsize.x, &wsize.y);
     SDL_GetRendererOutputSize(sdl_renderer, &window_size.x, &window_size.y);
+    mouse_scale = XYPosFloat(double(window_size.x) / double(wsize.x), double(window_size.y) / double(wsize.y));
     SDL_RenderClear(sdl_renderer);
 
     {
@@ -6766,8 +6768,8 @@ bool GameState::events()
             }
             case SDL_MOUSEMOTION:
             {
-                mouse.x = e.motion.x;
-                mouse.y = e.motion.y;
+                mouse.x = e.motion.x * mouse_scale.x;
+                mouse.y = e.motion.y * mouse_scale.y;
                 if (grid_dragging)
                 {
                     if (mouse_mode == MOUSE_MODE_PAINT)
@@ -6847,14 +6849,14 @@ bool GameState::events()
                 grid_dragging = false;
                 dragging_speed = false;
                 dragging_scroller = false;
-                mouse.x = e.button.x;
-                mouse.y = e.button.y;
+                mouse.x = e.button.x * mouse_scale.x;
+                mouse.y = e.button.y * mouse_scale.y;
                 break;
             }
             case SDL_MOUSEBUTTONDOWN:
             {
-                mouse.x = e.button.x;
-                mouse.y = e.button.y;
+                mouse.x = e.button.x * mouse_scale.x;
+                mouse.y = e.button.y * mouse_scale.y;
                 if (display_about)
                 {
                     display_about = false;
