@@ -1917,9 +1917,11 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             {
                 tst = *this;
                 tst->get_clue(p).type = RegionType::NONE;
+                tst->get_clue(p).value = 0;
                 if (tst->is_solveable())
                 {
                     get_clue(p).type = RegionType::NONE;
+                    get_clue(p).value = 0;
                     continue;
                 }
             }
