@@ -483,7 +483,7 @@ void GameState::reset_levels()
     current_level_set_index = 0;
     current_level_index = 0;
     load_level = true;
-    force_load_level = false;
+    force_load_level = true;
 
     for (GridRule& rule : rules[game_mode])
     {
@@ -1024,6 +1024,7 @@ void GameState::advance(int steps)
             auto_progress = false;
         skip_level = 0;
         load_level = false;
+        force_load_level = false;
     }
 
     if (auto_progress_all && !auto_progress)
