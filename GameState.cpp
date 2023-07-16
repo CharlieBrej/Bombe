@@ -5785,6 +5785,11 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             get_hint = false;
             return;
         }
+        if (get_hint)
+        {
+            get_hint = false;
+            return;
+        }
         for (GridRegion& r : grid->regions)
             if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
                 r.visibility_force = GridRegion::VIS_FORCE_NONE;
@@ -6618,7 +6623,7 @@ bool GameState::events()
                             if (grid->is_determinable_using_regions(pos, true))
                                 clue_solves.insert(pos);
                         }
-                        get_hint = true;
+                        get_hint = !get_hint;
                     }
                     else if (key == key_codes[KEY_CODE_SKIP])
                     {
