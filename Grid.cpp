@@ -2558,7 +2558,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         rule.level_used_count++;
         std::set<GridRule*> rules_to_credit;
         std::set<GridRegion*> regions_to_credit;
-       rules_to_credit.insert(&rule);
+        rules_to_credit.insert(&rule);
         for (int i = 0; i < rule.region_count; i++)
             add_clear_count(r[i], rules_to_credit, regions_to_credit);
         for (GridRule* rule : rules_to_credit)

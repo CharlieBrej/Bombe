@@ -1122,7 +1122,11 @@ void GameState::advance(int steps)
             continue;
         if (rule.priority < -100)
             continue;
+        unsigned oldtime = SDL_GetTicks();
         Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
+        unsigned newtime = SDL_GetTicks();
+        if (newtime - oldtime)
+            rule_times[game_mode][&rule] += newtime - oldtime;
         if (resp == Grid::APPLY_RULE_RESP_HIT)
             return;
         if (resp == Grid::APPLY_RULE_RESP_NONE)
@@ -1161,7 +1165,13 @@ void GameState::advance(int steps)
                         if (rule.apply_region_type.type != RegionType::SET)
                             continue;
                         rule.priority = 0;
+                        unsigned oldtime = SDL_GetTicks();
                         Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
+                        unsigned newtime = SDL_GetTicks();
+                        if (newtime - oldtime)
+                            rule_times[game_mode][&rule] += newtime - oldtime;
+
+
                         if (resp == Grid::APPLY_RULE_RESP_HIT)
                         {
                             hit = true;
@@ -1198,7 +1208,11 @@ void GameState::advance(int steps)
                             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                             {
                                 rule.priority = 0;
-                                grid->apply_rule(rule, &r, debug_bits[0]);
+                                unsigned oldtime = SDL_GetTicks();
+                                grid->apply_rule(rule, &r, false);
+                                unsigned newtime = SDL_GetTicks();
+                                if (newtime - oldtime)
+                                    rule_times[game_mode][&rule] += newtime - oldtime;
                             }
                         }
                     }
@@ -1236,7 +1250,11 @@ void GameState::advance(int steps)
 
                     while (true)
                     {
+                        unsigned oldtime = SDL_GetTicks();
                         Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
+                        unsigned newtime = SDL_GetTicks();
+                        if (newtime - oldtime)
+                            rule_times[game_mode][&rule] += newtime - oldtime;
                         if (resp == Grid::APPLY_RULE_RESP_HIT)
                         {
                             //grid->apply_rule(rule, region);
@@ -1272,7 +1290,11 @@ void GameState::advance(int steps)
                             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                             {
                                 rule.priority = 0;
-                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region, debug_bits[0]);
+                                unsigned oldtime = SDL_GetTicks();
+                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region, false);
+                                unsigned newtime = SDL_GetTicks();
+                                if (newtime - oldtime)
+                                    rule_times[game_mode][&rule] += newtime - oldtime;
                                 if (resp == Grid::APPLY_RULE_RESP_NONE)
                                     rule.stale = true;
                             }
@@ -3214,14 +3236,16 @@ void GameState::render(bool saving)
         {
             unsigned index;
             GridRule* rule;
+            int cpu_time;
         };
         struct RuleDiplaySort
         {
             int col = 0;
             bool descend = false;
             bool cur_level = false;
-            RuleDiplaySort(int col_, bool descend_, bool cur_level_):
-                col(col_), descend(descend_), cur_level(cur_level_)
+            bool cpu_debug = false;
+            RuleDiplaySort(int col_, bool descend_, bool cur_level_, bool cpu_debug_):
+                col(col_), descend(descend_), cur_level(cur_level_), cpu_debug(cpu_debug_)
             {};
             bool operator() (RuleDiplay a_,RuleDiplay b_)
             {
@@ -3251,6 +3275,13 @@ void GameState::render(bool saving)
                             return false;
                     }
                     return (a.rule->region_count < b.rule->region_count);
+                }
+                if (cpu_debug && (col == 5))
+                {
+                    if (a.cpu_time < b.cpu_time)
+                        return true;
+                    if (b.cpu_time < a.cpu_time)
+                        return false;
                 }
                 if (col == 5)
                 {
@@ -3286,12 +3317,12 @@ void GameState::render(bool saving)
             if (r.deleted)
                 continue;
             r.resort_region();
-            rules_list.push_back(RuleDiplay{i, &r});
+            rules_list.push_back(RuleDiplay{i, &r, rule_times[game_mode][&r]});
             i++;
         }
 
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level));
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, debug_bits[0]));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, debug_bits[0]));
 
         if (rules_list_offset + row_count > rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
@@ -3328,10 +3359,17 @@ void GameState::render(bool saving)
             {
                 render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(3 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
-            if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
+            if(debug_bits[0])
             {
-                render_number(display_rules_level ? rule.level_used_count : rule.used_count, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
-                render_number(display_rules_level ? rule.level_clear_count : rule.clear_count, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                int num_used = rule_times[game_mode][&rule];
+                render_number(num_used, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+            }
+            else if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
+            {
+                int num_used = display_rules_level ? rule.level_used_count : rule.used_count;
+                int num_clear = display_rules_level ? rule.level_used_count : rule.used_count;
+                render_number(num_used, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                render_number(num_clear, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
             }
 
             if (!display_clipboard_rules && display_rules_click_drag && display_rules_click_line && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
@@ -6986,6 +7024,7 @@ bool GameState::events()
                             else
                             {
                                 rules[game_mode].clear();
+                                rule_times[game_mode].clear();
                                 if (game_mode == 2 || game_mode == 3)
                                     reset_levels();
                                 force_load_level = true;
