@@ -5729,6 +5729,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                 {
                     right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                     inspected_rule = grid->cell_causes[gpos];
+                    selected_rules.insert(inspected_rule.rule);
                 }
             }
         }
@@ -6426,6 +6427,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     {
                         inspected_rule = GridRegionCause(constructed_rule_is_already_present, NULL, NULL, NULL, NULL);
                         selected_rules.clear();
+                        selected_rules.insert(inspected_rule.rule);
                         reset_rule_gen_region();
                         right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                     }
@@ -6455,6 +6457,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                             it = rules[game_mode].insert(it, constructed_rule);
                             inspected_rule = GridRegionCause(&*it, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                             selected_rules.clear();
+                            selected_rules.insert(inspected_rule.rule);
                             reset_rule_gen_region();
                             right_panel_mode = RIGHT_MENU_RULE_INSPECT;
                         }
