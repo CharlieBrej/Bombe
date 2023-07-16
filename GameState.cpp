@@ -3367,7 +3367,7 @@ void GameState::render(bool saving)
             else if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
             {
                 int num_used = display_rules_level ? rule.level_used_count : rule.used_count;
-                int num_clear = display_rules_level ? rule.level_used_count : rule.used_count;
+                int num_clear = display_rules_level ? rule.level_clear_count : rule.clear_count;
                 render_number(num_used, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
                 render_number(num_clear, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
             }
@@ -6616,6 +6616,11 @@ bool GameState::events()
                         display_help = true;
                     else if (key == key_codes[KEY_CODE_HINT])
                     {
+                        if (get_hint)
+                        {
+                            get_hint = false;
+                            break;
+                        }
                         clue_solves.clear();
                         XYSet grid_squares = grid->get_squares();
                         FOR_XY_SET(pos, grid_squares)
@@ -6623,7 +6628,7 @@ bool GameState::events()
                             if (grid->is_determinable_using_regions(pos, true))
                                 clue_solves.insert(pos);
                         }
-                        get_hint = !get_hint;
+                        get_hint = true;
                     }
                     else if (key == key_codes[KEY_CODE_SKIP])
                     {
