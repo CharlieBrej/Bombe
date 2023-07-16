@@ -504,7 +504,7 @@
             "Low Priority" :                "Lage Prioriteit",
             "Max 60 rules":                 "Max 60 regels",
             "Maximum Priority" :            "Maximum Prioriteit",
-            "Maximum Regions" :             "Max Gebieden",
+            "Maximum Regions" :             "Max Regio's",
             "Main Menu" :                   "Hoofdmenu",
             "Medium Priority" :             "Medium Prioriteit",
             "Minimum Priority" :            "Minimum Prioriteit",
@@ -521,9 +521,9 @@
             "OK" :                          "OK",
             "Quit" :                        "Stop",
             "Redo" :                        "Herhaal",
-            "Refresh Regions" :             "Ververs Gebieden",
-            "Region Inspector" :            "Gebied Inspecteur",
-            "Regions" :                     "Gebieden",
+            "Refresh Regions" :             "Ververs Regio's",
+            "Region Inspector" :            "Regio Inspecteur",
+            "Regions" :                     "Regio's",
             "Regular" :                     "Normaal",
             "Remap Keys" :                  "Herbind Toetsen",
             "Remove Rule" :                 "Verwijder Regel",
@@ -546,7 +546,7 @@
             "Speed" :                       "Snelheid",
             "Square" :                      "Vierkant",
             "Triangle" :                    "Driehoek",
-            "Three region rules" :          "Drie gebieden regels",
+            "Three region rules" :          "Drie Regio regels",
             "Times Applied" :               "Keren Toegepast",
             "Trash" :                       "Verwijderd",
             "Unbounded" :                   "Ongelimiteerd",
@@ -561,28 +561,28 @@
         [
             [
                 {"x": 50,   "y": 600,           "text":"Nummers tonen\nhoeveel bommen in\naangrenzende\ncellen zitten"},
-                {"x": 1100, "y": 750,           "text":"Gebieden tonen hoeveel\nonontdekte bommen aanwezig zijn."}
+                {"x": 1100, "y": 750,           "text":"Regio's tonen hoeveel\nonontdekte bommen aanwezig zijn."}
             ],
             [
-                {"x": 100,  "y": 650,           "text":"Gebieden worden gebruikt\ndoor regels."},
-                {"x":1050,  "y": 100, "left":1, "text":"Type Gebied"},
+                {"x": 100,  "y": 650,           "text":"Regio's worden gebruikt\ndoor regels."},
+                {"x":1050,  "y": 100, "left":1, "text":"Type Regio"},
                 {"x":1050,  "y": 530, "left":1, "text":"Aantal cellen"},
                 {"x":1240,  "y": 560,           "text":"Actie om uit te voeren"},
-                {"x":800,   "y": 630,           "text":"Deze regel zegt:\nEen gebied met 3 bommen en\n3 cellen kan alleen bommen bevatten."},
+                {"x":800,   "y": 630,           "text":"Deze regel zegt:\nEen regio met 3 bommen en\n3 cellen kan alleen bommen bevatten."},
 
                 {"x":370,   "y": 950,           "text":"Markeer alles als Bom"},
                 {"x":1200,  "y": 925,           "text":"Markeer alles\nals Leeg"},
                 {"x":1400,  "y": 250,           "text":"Wanneer je op Ok drukt,\nwordt de regel\nautomatisch toegepast."}
             ],
             [
-                {"x": 200,  "y": 800,           "text":"Dubbelklik op een gebied"},
+                {"x": 200,  "y": 800,           "text":"Dubbelklik op een regio"},
                 {"x":1200,  "y": 200,           "text":"Voer aantal cellen in"},
                 {"x":1200,  "y": 500,           "text":"Voer actie om uit te voeren in"},
                 {"x":1300,  "y": 800,           "text":"Klik op OK"}
             ],
             [
                 {"x": 150,  "y": 500,           "text":"Aantal cellen\nkan ingesteld\nworden op\n\"Onbelangrijk\""},
-                {"x": 540,  "y": 500,           "text":"Meerdere (maximaal 4)\ngebieden kunnen \nworden toegvoegd aan\nde Regel Bouwer"},
+                {"x": 540,  "y": 500,           "text":"Meerdere (maximaal 4)\nregio's kunnen \nworden toegvoegd aan\nde Regel Bouwer"},
             ],
             [
                 {"x": 240,  "y": 20,            "text":"Exact 6"},
@@ -592,7 +592,7 @@
                 {"x": 240,  "y": 570,           "text":"4 of 6"},
                 {"x": 240,  "y": 710,           "text":"3, 5 of 7"},
                 {"x": 240,  "y": 850,           "text":"Oneven nummers"},
-                {"x": 925, "y": 500,           "text":"Met regels kan je\nnieuwe gebieden maken."}
+                {"x": 925, "y": 500,           "text":"Met regels kan je\nnieuwe regio's maken."}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Los levels op om\nlevel sets en functies\nte ontgrendelen."},
@@ -607,7 +607,7 @@
                 {"x":400,  "y": 100,           "text":"Normaal, zichtbaar"},
                 {"x":400,  "y": 250,           "text":"Verborgen, maar nogsteeds\ngebruikt door regels"},
                 {"x":400,  "y": 450,           "text":"Verwijderd, genegeerd\ndoor de regels"},
-                {"x":1050,  "y": 700,           "text":"Met regels kan je\nde zichtbaarheid van\ngebieden veranderen."}
+                {"x":1050,  "y": 700,           "text":"Met regels kan je\nde zichtbaarheid van\nregio's veranderen."}
             ]
         ]
     },
