@@ -272,7 +272,7 @@ public:
     bool jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
-    typedef enum {OK, ILLOGICAL, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;
+    typedef enum {OK, ILLOGICAL, LOSES_DATA, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;
     IsLogicalRep is_legal(GridRule& why);
     void remove_region(int index);
     void add_region(RegionType type);

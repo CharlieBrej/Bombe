@@ -798,9 +798,9 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
 {   
     GridRule why;
-//    if (rule.is_legal(why) != GridRule::OK)
-//            return false;
-//    assert(rule.is_legal(why) == GridRule::OK);
+    // if (rule.is_legal(why) != GridRule::OK)
+    //     return false;
+    // assert(rule.is_legal(why) == GridRule::OK);
     if (mode == 1 && rule.region_count == 4)
         return false;
     if (mode == 3)
@@ -1404,8 +1404,10 @@ void GameState::update_constructed_rule()
         if (constructed_rule.apply_region_bitmap && constructed_rule.apply_region_type.var)
             reset_rule_gen_region();
     } 
-
-    constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason);
+    if (!constructed_rule.apply_region_bitmap)
+        constructed_rule_is_logical == GridRule::OK;
+    else
+        constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason);
     constructed_rule_is_already_present = NULL;
 
     std::vector<int> order;
@@ -4724,6 +4726,19 @@ void GameState::render(bool saving)
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
                     }
+                    else if (constructed_rule_is_logical == GridRule::LOSES_DATA)
+                    {
+                        SDL_Rect src_rect = {896, 1152, 192, 192};
+                        SDL_Rect dst_rect = {right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size };
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        if (add_tooltip(dst_rect, "Loses Information"))
+                        {
+                            render_box(right_panel_offset + XYPos(-6 * button_size, 0), XYPos(6 * button_size, 6.5 * button_size), button_size/2, 1);
+                            std::string t = translate("Why Loses Information");
+                            render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
+                            render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
+                        }
+                    }
                     else if (constructed_rule_is_logical == GridRule::UNBOUNDED)
                     {
                         SDL_Rect src_rect = {2048, 1344, 192, 192};
@@ -6426,7 +6441,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             if (constructed_rule.region_count && constructed_rule.apply_region_bitmap)
             {
-                if (constructed_rule_is_logical == GridRule::OK)
+                if ((constructed_rule_is_logical == GridRule::OK) || (constructed_rule_is_logical == GridRule::LOSES_DATA))
                 {
                     if (constructed_rule_is_already_present)
                     {

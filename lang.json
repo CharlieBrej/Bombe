@@ -41,6 +41,7 @@
             "Join Discord" :                "Join Discord",
             "Level" :                       "Level",
             "Level ID" :                    "Level ID",
+            "Loses Information" :           "Loses Information",
             "Low Contrast" :                "Low Contrast",
             "Low Priority" :                "Low Priority",
             "Max 60 rules":                 "Max 60 rules",
@@ -96,7 +97,8 @@
             "Visible" :                     "Visible",
             "Visibility set by User" :      "Visibility set by User",
             "Volume" :                      "Volume",
-            "Why Illogical" :               "Why Illogical"
+            "Why Illogical" :               "Why Illogical",
+            "Why Loses Information" :       "Why Loses Information"
         },
         "tutorial":
         [

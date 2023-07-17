@@ -1072,18 +1072,154 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
         s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
         s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
     }
+
     if (s.check() != z3::sat)
     {
         return IMPOSSIBLE;
     }
-    
-    if (apply_region_type.type != RegionType::VISIBILITY)
+
+    if (apply_region_type.type == RegionType::VISIBILITY)
+    {
+
+        z3::context c;
+        z3::solver s2(c);
+
+        z3::expr_vector vec(c);
+        z3::expr_vector var_vec(c);
+        why = *this;
+
+        for (int v = 1; v < 32; v++)
+        {
+            std::stringstream x_name;
+            x_name << "V" << v;
+            var_vec.push_back(c.int_const(x_name.str().c_str()));
+            if ((v & (v - 1)) == 0)
+            {
+                s2.add(var_vec[v - 1] >= 0);
+            }
+            else
+            {
+                z3::expr e = c.int_val(0);
+                for (int i = 0; i < 5; i++)
+                {
+                    if ((v >> i) & 1)
+                        e = e + var_vec[(1 << i) - 1];
+                }
+                s2.add(var_vec[v - 1] == e);
+            }
+        }
+
+        vec.push_back(c.bool_const("DUMMY"));
+        if (region_count == 0)
+            return IMPOSSIBLE;
+
+        for (int i = 1; i < (1 << region_count); i++)
+        {
+            std::stringstream x_name;
+            x_name << "A" << i;
+            vec.push_back(c.int_const(x_name.str().c_str()));
+            s2.add(vec[i] >= 0);
+            int m = square_counts[i].max();
+            if (m >= 0)
+            {
+                if (square_counts[i].var)
+                    s2.add(vec[i] <= var_vec[square_counts[i].var - 1] + m);
+                else
+                    s2.add(vec[i] <= m);
+
+            }
+        }
+
+        unsigned vis_apply_inv = apply_region_bitmap;
+        if (region_count == 1)
+        {
+            if (vis_apply_inv & 1)
+                s2.add(!region_type[0].apply_z3_rule(vec[1], var_vec));
+            else
+                s2.add(region_type[0].apply_z3_rule(vec[1], var_vec));
+        }
+        if (region_count == 2)
+        {
+            if (vis_apply_inv & 1)
+                s2.add(!region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec));
+            else
+                s2.add(region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec));
+            if (vis_apply_inv & 2)
+                s2.add(!region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec));
+            else
+                s2.add(region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec));
+        }
+        if (region_count == 3)
+        {
+            if (vis_apply_inv & 1)
+                s2.add(!region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec));
+            else
+                s2.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec));
+            if (vis_apply_inv & 2)
+                s2.add(!region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec));
+            else
+                s2.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec));
+            
+            if (vis_apply_inv & 4)
+                s2.add(!region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7], var_vec));
+            else
+                s2.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7], var_vec));
+        }
+        if (region_count == 4)
+        {
+            if (vis_apply_inv & 1)
+                s2.add(!region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec));
+            else
+                s2.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec));
+            if (vis_apply_inv & 2)
+                s2.add(!region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec));
+            else
+                s2.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec));
+            if (vis_apply_inv & 4)
+                s2.add(!region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+            else
+                s2.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+            if (vis_apply_inv & 4)
+                s2.add(!region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+            else
+                s2.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+        }
+        if (s2.check() == z3::sat)
+        {
+            z3::model m = s2.get_model();
+            for (int i = 1; i < (1 << region_count); i++)
+            {
+                int v = m.eval(vec[i]).get_numeral_int();
+                why.square_counts[i] = RegionType(RegionType::EQUAL, v);
+            }
+            int vals[32];
+            for (int i = 0; i < 31; i++)
+            {
+                vals[i] = m.eval(var_vec[i]).get_numeral_int();
+            }
+            for (int i = 0; i < region_count; i++)
+            {
+                if (why.region_type[i].var)
+                {
+                    why.region_type[i].value += vals[why.region_type[i].var - 1];
+                    why.region_type[i].var = 0;
+                }
+            }
+            if (why.apply_region_type.var)
+            {
+                why.apply_region_type.value += vals[why.apply_region_type.var - 1];
+                why.apply_region_type.var = 0;
+            }
+            return LOSES_DATA;
+        }
+        return OK;
+    }
+    else
     {
         z3::expr e = c.int_val(0);
         z3::expr tot = c.int_val(0);
 
-        if (!apply_region_bitmap)
-            return OK;
+        assert (apply_region_bitmap);
 
         for (int i = 1; i < (1 << region_count); i++)
         {
