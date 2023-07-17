@@ -4973,6 +4973,13 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Copy All Rules to Clipboard");
             }
         }
+        if (!last_deleted_rules[game_mode].empty())
+        {
+            SDL_Rect src_rect = {1088, 1152, 192, 192};
+            SDL_Rect dst_rect = { right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Undelete Rules");
+        }
         if (!constructed_rule_undo.empty())
         {
             SDL_Rect src_rect = {1856, 768, 192, 192 };
@@ -6047,6 +6054,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size, button_size)))
         {
             right_panel_mode = RIGHT_MENU_NONE;
+            return;
         }
         if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)) && !inspected_rule.rule->deleted)
         {
@@ -6058,14 +6066,18 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             // }
             // else
             {
+                last_deleted_rules[game_mode].clear();
+
                 for (GridRule* rule : selected_rules)
                 {
                     rule->deleted = true;
                     if (rule->apply_region_type.type != RegionType::VISIBILITY && (game_mode == 2 || game_mode == 3))
                         rule_del_count[game_mode]++;
+                    last_deleted_rules[game_mode].insert(rule);
                 }
             }
-                right_panel_mode = RIGHT_MENU_NONE;
+            right_panel_mode = RIGHT_MENU_NONE;
+            return;
         }
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
@@ -6089,6 +6101,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             replace_rule = inspected_rule.rule;
             right_panel_mode = RIGHT_MENU_RULE_GEN;
             update_constructed_rule();
+            return;
         }
         if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
         {
@@ -6113,17 +6126,23 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 send_to_clipboard(title, omap);
                 delete omap;
             }
+            return;
         }
         if ((pos - XYPos(button_size * 4, button_size * 6)).inside(XYPos(button_size, button_size)) && selected_rules.size() == 1)
         {
             send_rule_to_img_clipboard(*inspected_rule.rule);
+            return;
         }
 
         // if (inspected_rule.rule->apply_region_type.type < RegionType::SET)
         {
             if (prog_seen[PROG_LOCK_PRIORITY])
             {
-                if ((pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size, button_size * 5)))
+                bool has_reg = false;
+                for (GridRule* rule : selected_rules)
+                    if (rule->apply_region_type.type < RegionType::SET)
+                        has_reg = true;
+                if (has_reg && (pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size, button_size * 5)))
                 {
                     int y = ((pos - XYPos(button_size * 0, button_size * 6)) / button_size).y;
                     int np = 2 - y;
@@ -6172,16 +6191,33 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if (display_rules && !display_clipboard_rules)
         {
             if ((pos - XYPos(button_size * 3, button_size * 6)).inside(XYPos(button_size, button_size)))
+            {
                 export_all_rules_to_clipboard();
+                return;
+            }
+        }
+
+        if ((pos - XYPos(button_size * 4, button_size * 1)).inside(XYPos(button_size, button_size)) && !last_deleted_rules[game_mode].empty())
+        {
+            selected_rules.clear();
+            for (GridRule* rule : last_deleted_rules[game_mode])
+                rule->deleted = false;
+            selected_rules = last_deleted_rules[game_mode];
+            last_deleted_rules[game_mode].clear();
+            right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+            inspected_rule = GridRegionCause(*selected_rules.begin(), NULL, NULL, NULL, NULL);
+            return;
         }
 
         if ((pos - XYPos(button_size * 3, button_size * 2)).inside(XYPos(button_size, button_size)))
         {
             rule_gen_undo();
+            return;
         }
         if ((pos - XYPos(button_size * 4, button_size * 2)).inside(XYPos(button_size, button_size)))
         {
             rule_gen_redo();
+            return;
         }
 
 
@@ -6194,6 +6230,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
             if (rule_limit_slider >= 1.0)
                 rule_limit_count = -1;
+            return;
         }
 
 
@@ -6217,6 +6254,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             std::string title = "Level (" + grid->text_desciption() + ")";
             send_to_clipboard(title, omap);
             delete omap;
+            return;
         }
     }
 
@@ -6277,6 +6315,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 right_panel_mode = RIGHT_MENU_REGION;
                 inspected_region = rule_cause.regions[region_index];
             }
+            return;
         }
     }
     if (btn)
