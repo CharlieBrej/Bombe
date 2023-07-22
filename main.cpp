@@ -60,6 +60,7 @@ public:
         needs_send = true;
     }
     void update_achievements(GameState* game_state);
+    void get_new_ticket();
 };
 
 void SteamGameManager::OnUserStatsReceived( UserStatsReceived_t *pCallback )
@@ -108,6 +109,15 @@ void SteamGameManager::update_achievements(GameState* game_state)
         }
         game_state->steam_session_string = str;
         game_state->fetch_scores();
+    }
+}
+
+void SteamGameManager::get_new_ticket()
+{
+    if (auth_buffer_ready)
+    {
+        auth_buffer_ready = false;
+        HAuthTicket handle = SteamUser()->GetAuthSessionTicket(auth_buffer, 1024, &auth_buffer_size);
     }
 }
 
@@ -171,7 +181,7 @@ void mainloop()
         game_state->steam_friends.insert(friend_id.ConvertToUint64());
     }
 #else
-    game_state->steam_session_string = "dummy";
+    game_state->steam_session_string = "";
     game_state->steam_id = SECRET_ID;
 #endif
     {
@@ -186,6 +196,11 @@ void mainloop()
     unsigned oldtime = SDL_GetTicks();
 	while(true)
 	{
+#ifdef STEAM
+        if (game_state->pirate)
+            steam_manager->get_new_ticket()
+#endif
+
 		if (game_state->events())
             break;
         game_state->audio();

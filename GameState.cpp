@@ -5611,7 +5611,7 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 10 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 11 * button_size), button_size/4, 1);
         int index = 0;
         std::string orig_lang = language;
         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
@@ -7344,8 +7344,10 @@ void GameState::deal_with_scores()
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
                 if (omap->has_key("pirate"))
                 {
+                    if (pirate)
+                        server_timeout = 1000 * 60 * 60;
                     pirate = true;
-                    server_timeout = 1000 * 60 * 60;
+                    steam_session_string = "";
                 }
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
                 for (int i = 0; i < GLBAL_LEVEL_SETS + 2; i++)
