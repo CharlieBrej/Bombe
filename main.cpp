@@ -198,7 +198,7 @@ void mainloop()
 	{
 #ifdef STEAM
         if (game_state->pirate)
-            steam_manager->get_new_ticket()
+            steam_manager.get_new_ticket();
 #endif
 
 		if (game_state->events())
