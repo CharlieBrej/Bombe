@@ -147,7 +147,7 @@ bool RegionType::apply_int_rule(unsigned in, int vars[32])
     // }
     if (var)
         v += vars[var - 1];
-    return apply_rule_imp<bool,unsigned>(in, v + value);
+    return apply_rule_imp<bool,int>(in, v + value);
 }
 
 int RegionType::max()
@@ -293,11 +293,11 @@ GridRule::GridRule(SaveObject* sobj)
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
-    for (int i = 0; i < rlist->get_count(); i++)
+    for (unsigned i = 0; i < rlist->get_count(); i++)
         region_type[i] = RegionType('a',rlist->get_num(i));
 
     rlist = omap->get_item("square_counts")->get_list();
-    for (int i = 0; i < rlist->get_count(); i++)
+    for (unsigned i = 0; i < rlist->get_count(); i++)
     {
         int v = rlist->get_num(i);
         square_counts[i] = RegionType('a',v);
@@ -751,7 +751,7 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
                 int c = op.p1;
                 if (op.p2)
                     c += var_counts[op.p2 - 1];
-                if (s.count() < c)
+                if (int(s.count()) < c)
                 {
                     return false;
                 }
@@ -1389,12 +1389,12 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
     }
     std::vector<XYPos> row_types;
     get_row_types(row_types);
-    for (int i = 0; i < row_types.size(); i++)
+    for (unsigned i = 0; i < row_types.size(); i++)
     {
         XYPos row_type = row_types[i];
         for (int j = row_type.x; j < row_type.y; j++)
         {
-            if (rnd % 10 < row_percent)
+            if (int(rnd % 10) < row_percent)
             {
                 int c = 0;
                 XYSet grid_squares = get_row(i, j);
@@ -1424,7 +1424,7 @@ void Grid::from_string(std::string s)
 
     a = s[2] - 'A';
     wrapped = WrapType(a);
-    int i = 3;
+    unsigned i = 3;
     if (wrapped == WRAPPED_IN)
     {
         innie_pos.x = s[i++] - '0';
@@ -1565,7 +1565,7 @@ void Grid::solve_easy()
         std::string sin = "[{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":492,\"priority\":0,\"region_count\":1,\"region_type\":[65792],\"square_counts\":[0,0],\"used_count\":1089},{\"apply_region_bitmap\":2,\"apply_region_type\":66048,\"clear_count\":1156,\"priority\":0,\"region_count\":1,\"region_type\":[65792],\"square_counts\":[0,0],\"used_count\":961},{\"apply_region_bitmap\":2,\"apply_region_type\":25857,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66304],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25857,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66048],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25601,\"clear_count\":902,\"priority\":0,\"region_count\":1,\"region_type\":[66304],\"square_counts\":[0,65792],\"used_count\":483},{\"apply_region_bitmap\":2,\"apply_region_type\":25600,\"clear_count\":1602,\"priority\":0,\"region_count\":1,\"region_type\":[512],\"square_counts\":[0,0],\"used_count\":842},{\"apply_region_bitmap\":4,\"apply_region_type\":131841,\"clear_count\":39,\"priority\":0,\"region_count\":2,\"region_type\":[66048,197377],\"square_counts\":[0,0,0,66305],\"used_count\":49},{\"apply_region_bitmap\":4,\"apply_region_type\":262656,\"clear_count\":33,\"priority\":0,\"region_count\":2,\"region_type\":[197376,328192],\"square_counts\":[0,131328,0,0],\"used_count\":359},{\"apply_region_bitmap\":1,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66048,66048],\"square_counts\":[0,256,0,0],\"used_count\":0},{\"apply_region_bitmap\":8,\"apply_region_type\":25600,\"clear_count\":5,\"priority\":0,\"region_count\":3,\"region_type\":[66049,131584,459520],\"square_counts\":[0,0,0,0,262656,0,0,0],\"used_count\":3},{\"apply_region_bitmap\":2,\"apply_region_type\":65792,\"clear_count\":200,\"priority\":0,\"region_count\":1,\"region_type\":[66816],\"square_counts\":[0,66050],\"used_count\":167},{\"apply_region_bitmap\":2,\"apply_region_type\":65792,\"clear_count\":241,\"priority\":0,\"region_count\":1,\"region_type\":[66560],\"square_counts\":[0,66049],\"used_count\":305},{\"apply_region_bitmap\":4,\"apply_region_type\":132096,\"clear_count\":1,\"priority\":0,\"region_count\":2,\"region_type\":[65792,197632],\"square_counts\":[0,256,0,0],\"used_count\":6},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66560],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66816],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,68096],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,68352],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":12,\"apply_region_type\":65794,\"clear_count\":2,\"priority\":0,\"region_count\":2,\"region_type\":[197377,66560],\"square_counts\":[0,131328,0,0],\"used_count\":1},{\"apply_region_bitmap\":2,\"apply_region_type\":66048,\"clear_count\":54,\"priority\":0,\"region_count\":1,\"region_type\":[67585],\"square_counts\":[0,65793],\"used_count\":78},{\"apply_region_bitmap\":2,\"apply_region_type\":66560,\"clear_count\":205,\"priority\":0,\"region_count\":1,\"region_type\":[67072],\"square_counts\":[0,66051],\"used_count\":425},{\"apply_region_bitmap\":12,\"apply_region_type\":65795,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[197377,66816],\"square_counts\":[0,131584,0,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25601,\"clear_count\":177,\"priority\":0,\"region_count\":1,\"region_type\":[68096],\"square_counts\":[0,65792],\"used_count\":80},{\"apply_region_bitmap\":2,\"apply_region_type\":67072,\"clear_count\":305,\"priority\":0,\"region_count\":1,\"region_type\":[67840],\"square_counts\":[0,66053],\"used_count\":432},{\"apply_region_bitmap\":2,\"apply_region_type\":769,\"clear_count\":44,\"priority\":0,\"region_count\":1,\"region_type\":[2048],\"square_counts\":[0,0],\"used_count\":55},{\"apply_region_bitmap\":4,\"apply_region_type\":132608,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66560,197634],\"square_counts\":[0,256,0,0],\"used_count\":0},{\"apply_region_bitmap\":4,\"apply_region_type\":1025,\"clear_count\":1,\"priority\":0,\"region_count\":2,\"region_type\":[66560,66561],\"square_counts\":[0,256,0,0],\"used_count\":1},{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":173,\"priority\":0,\"region_count\":1,\"region_type\":[67072],\"square_counts\":[0,0],\"used_count\":270},{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":50,\"priority\":0,\"region_count\":1,\"region_type\":[68352],\"square_counts\":[0,0],\"used_count\":62},{\"apply_region_bitmap\":2,\"apply_region_type\":66049,\"clear_count\":18,\"priority\":0,\"region_count\":1,\"region_type\":[68096],\"square_counts\":[0,0],\"used_count\":202},{\"apply_region_bitmap\":4,\"apply_region_type\":68096,\"clear_count\":3,\"priority\":0,\"region_count\":2,\"region_type\":[131328,199168],\"square_counts\":[0,256,0,0],\"used_count\":2},{\"apply_region_bitmap\":12,\"apply_region_type\":196864,\"clear_count\":10,\"priority\":0,\"region_count\":2,\"region_type\":[66048,199168],\"square_counts\":[0,0,131584,0],\"used_count\":7},{\"apply_region_bitmap\":4,\"apply_region_type\":132352,\"clear_count\":4,\"priority\":0,\"region_count\":2,\"region_type\":[65792,197888],\"square_counts\":[0,256,0,0],\"used_count\":2},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"clear_count\":2,\"priority\":0,\"region_count\":1,\"region_type\":[2049],\"square_counts\":[0,258],\"used_count\":14},{\"apply_region_bitmap\":1,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[67072,66560],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66560,67840],\"square_counts\":[0,256,256,0],\"used_count\":0}]";
         SaveObject* sobj = SaveObject::load(sin);
         SaveObjectList* rlist = sobj->get_list();
-        for (int i = 0; i < rlist->get_count(); i++)
+        for (unsigned i = 0; i < rlist->get_count(); i++)
         {
             global_rules.push_back(GridRule(rlist->get_item(i)));
         }
@@ -1732,7 +1732,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     z3::expr_vector vec(c);
     vec.push_back(c.bool_const("DUMMY"));
 
-    for (int i = 1; i < set_index; i++)
+    for (unsigned i = 1; i < set_index; i++)
     {
         std::stringstream x_name;
         x_name << "S" << i;
@@ -2033,7 +2033,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (exc)
             {
-                if (rnd % 10 < exc)
+                if (int(rnd % 10) < exc)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -2044,7 +2044,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < exc && (get_clue(p).value >= 3))
+                if (int(rnd % 10) < exc && (get_clue(p).value >= 3))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -2055,7 +2055,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < exc && (get_clue(p).value >= 2))
+                if (int(rnd % 10) < exc && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -2066,7 +2066,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < exc)
+                if (int(rnd % 10) < exc)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::NOTEQUAL;
@@ -2080,7 +2080,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (parity)
             {
-                if (rnd % 10 < parity && (get_clue(p).value >= 4))
+                if (int(rnd % 10) < parity && (get_clue(p).value >= 4))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -2091,7 +2091,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < parity && (get_clue(p).value >= 2))
+                if (int(rnd % 10) < parity && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -2102,7 +2102,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < parity)
+                if (int(rnd % 10) < parity)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
@@ -2115,7 +2115,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (xor11)
             {
-                if (rnd % 10 < xor11 && (get_clue(p).value >= 2))
+                if (int(rnd % 10) < xor11 && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -2126,7 +2126,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < xor11 && (get_clue(p).value >= 1))
+                if (int(rnd % 10) < xor11 && (get_clue(p).value >= 1))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -2137,7 +2137,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < xor11)
+                if (int(rnd % 10) < xor11)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR11;
@@ -2150,7 +2150,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (xor1)
             {
-                if (rnd % 10 < xor1 && (get_clue(p).value >= 1))
+                if (int(rnd % 10) < xor1 && (get_clue(p).value >= 1))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR1;
@@ -2161,7 +2161,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < xor1)
+                if (int(rnd % 10) < xor1)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR1;
@@ -2174,7 +2174,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (x_y_z)
             {
-                if (rnd % 10 < x_y_z && (get_clue(p).value >= 2))
+                if (int(rnd % 10) < x_y_z && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
@@ -2185,7 +2185,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < x_y_z)
+                if (int(rnd % 10) < x_y_z)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
@@ -2195,7 +2195,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         continue;
                     }
                 }
-                if (rnd % 10 < x_y_z && (get_clue(p).value >= 4))
+                if (int(rnd % 10) < x_y_z && (get_clue(p).value >= 4))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR22;
@@ -2209,7 +2209,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (x_y3)
             {
-                if (rnd % 10 < x_y3)
+                if (int(rnd % 10) < x_y3)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR3;
@@ -2220,7 +2220,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                     }
                 }
 
-                if ((rnd % 10 < x_y3) && (get_clue(p).value >= 3))
+                if ((int(rnd % 10) < x_y3) && (get_clue(p).value >= 3))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR3;
@@ -2235,7 +2235,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
 
             if (x_y)
             {
-                if (rnd % 10 < x_y)
+                if (int(rnd % 10) < x_y)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR2;
@@ -2246,7 +2246,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                     }
                 }
 
-                if ((rnd % 10 < x_y) && (get_clue(p).value >= 2))
+                if ((int(rnd % 10) < x_y) && (get_clue(p).value >= 2))
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::XOR2;
@@ -2261,7 +2261,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
 
             if (plus_minus)
             {
-                if (rnd % 10 < plus_minus)
+                if (int(rnd % 10) < plus_minus)
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::LESS;
@@ -2448,7 +2448,7 @@ bool Grid::add_region(GridRegion& reg, bool front)
     }
     assert(!reg.type.var);
     if (cnt >= 0)
-        assert((reg.type.apply_rule_imp<bool,unsigned>(cnt, reg.type.value)));
+        assert((reg.type.apply_rule_imp<bool,int>(cnt, reg.type.value)));
 
 
     if (front)
@@ -2557,7 +2557,6 @@ bool Grid::add_regions(int level)
             RegionType clue = g.clue;
             if (!vals[p].bomb)
             {
-                int cnt = 0;
                 XYSet neigh = get_neighbors(p);
                 FOR_XY_SET(n, neigh)
                 {
@@ -2736,44 +2735,44 @@ static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r
     }
 }
 
-static bool are_connected_old(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
-{
-    XYSet s = r0->elements;
-    unsigned int connected = 1 << 0;
-    bool hit;
-    do
-    {
-        hit = false;
-        if (r1 && !(connected & (1 << 1)) && s.overlaps(r1->elements))
-        {
-            connected |= (1 << 1);
-            s = s | r1->elements;
-            hit = true;
-        }
-        if (r2 && !(connected & (1 << 2)) && s.overlaps(r2->elements))
-        {
-            connected |= (1 << 2);
-            s = s | r2->elements;
-            hit = true;
-        }
-        if (r3 && !(connected & (1 << 3)) && s.overlaps(r3->elements))
-        {
-            connected |= (1 << 3);
-            s = s | r3->elements;
-            hit = true;
-        }
-    }
-    while (hit);
-    if (!r1)
-        return true;
-    if (!r2 && connected == 3)
-        return true;
-    if (!r3 && connected == 7)
-        return true;
-    if (connected == 0xf)
-        return true;
-    return false;
-}
+// static bool are_connected_old(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
+// {
+//     XYSet s = r0->elements;
+//     unsigned int connected = 1 << 0;
+//     bool hit;
+//     do
+//     {
+//         hit = false;
+//         if (r1 && !(connected & (1 << 1)) && s.overlaps(r1->elements))
+//         {
+//             connected |= (1 << 1);
+//             s = s | r1->elements;
+//             hit = true;
+//         }
+//         if (r2 && !(connected & (1 << 2)) && s.overlaps(r2->elements))
+//         {
+//             connected |= (1 << 2);
+//             s = s | r2->elements;
+//             hit = true;
+//         }
+//         if (r3 && !(connected & (1 << 3)) && s.overlaps(r3->elements))
+//         {
+//             connected |= (1 << 3);
+//             s = s | r3->elements;
+//             hit = true;
+//         }
+//     }
+//     while (hit);
+//     if (!r1)
+//         return true;
+//     if (!r2 && connected == 3)
+//         return true;
+//     if (!r3 && connected == 7)
+//         return true;
+//     if (connected == 0xf)
+//         return true;
+//     return false;
+// }
 
 static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
@@ -3769,10 +3768,10 @@ XYRect TriangleGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index,
         {
             int w = s + gpos.y;
             int ofst = 0;
-            if (gpos.y >= s)
+            if (gpos.y >= (int)s)
                 ofst = (gpos.y - s + 1);
 
-            if (index < (w - ofst * 2))
+            if ((int)index < (w - ofst * 2))
             {
                 gpos.x = index + ofst;
                 break;
@@ -4120,10 +4119,10 @@ XYRect HexagonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, 
     {
         int w = s + gpos.y;
         int ofst = 0;
-        if (gpos.y >= s)
+        if (gpos.y >= (int)s)
             ofst = (gpos.y - s + 1);
 
-        if (index < (w - ofst * 2))
+        if ((int)index < (w - ofst * 2))
         {
             gpos.x = index + ofst;
             break;

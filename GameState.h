@@ -405,7 +405,7 @@ public:
 
     unsigned current_level_group_index = 0;
     unsigned current_level_set_index = 0;
-    int current_level_index = 0;
+    unsigned current_level_index = 0;
     bool current_level_is_temp = true;
 
     SDL_mutex* level_gen_mutex;

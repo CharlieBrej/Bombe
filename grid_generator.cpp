@@ -189,11 +189,11 @@ void* exec(void* dummy)
         {
             if (params[i].group != j)
                 continue;
-            if (global_level_sets[j].size() <= cnt)
+            if ((int)global_level_sets[j].size() <= cnt)
                 global_level_sets[j].push_back(new LevelSet());
-            while (global_level_sets[j][cnt]->levels.size() < params[i].cnt)
+            while ((int)global_level_sets[j][cnt]->levels.size() < params[i].cnt)
             {
-                printf("%d of %d\n", global_level_sets[j][cnt]->levels.size(), params[i].cnt);
+                printf("%lu of %d\n", global_level_sets[j][cnt]->levels.size(), params[i].cnt);
                 pthread_mutex_unlock(&glob_mutex);
                 const char* req = params[i].pars;
                 Grid* g;
@@ -217,7 +217,6 @@ void* exec(void* dummy)
                 else
                     siz.x = c - '0';
                 c = req[2];
-                int y;
                 if (c >= 'A' && c <= 'Z')
                     siz.y = (c - 'A') + 10;
                 else
@@ -279,7 +278,7 @@ void global_mutex_unlock()
 int main( int argc, char* argv[] )
 {
     //grid_set_rnd(1);
-    int TNUM = 16 ;
+    const int TNUM = 16 ;
     pthread_t thread[TNUM];
     void* dummy;
 

@@ -82,6 +82,7 @@ public:
     void add_num(std::string key, int64_t value);
     void add_string(std::string key, std::string value);
     void get_string(std::string key, std::string& value);
+    using SaveObject::get_string;
     std::string get_string(std::string key);
     bool has_key(std::string key);
     SaveObject* dup();
@@ -109,6 +110,7 @@ public:
     void add_num(int64_t value);
     int64_t get_num(int index);
     void add_string(std::string value);
+    using SaveObject::get_string;
     std::string get_string(int index);
     SaveObject* dup();
     virtual bool is_list(){return true;};

@@ -37,7 +37,7 @@ struct LevelStats
 class ScoreTable
 {
 public:
-    std::multimap<Score, int64_t> sorted_scores;
+    std::multimap<Score, uint64_t> sorted_scores;
     std::map<uint64_t, Score> user_score;
     LevelStats stats[30][200];
     
@@ -114,9 +114,11 @@ public:
                ++it;
         }
         user_score.erase(steam_id);
+        if (!score)
+            return;
         sorted_scores.insert({-score, steam_id});
         user_score[steam_id] = score;
-    }
+    } 
     void reset()
     {
         sorted_scores.clear();
@@ -177,10 +179,10 @@ public:
         if (load_game_version == game_version)
         {
             SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
-            for (int j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
+            for (unsigned j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
             {
                 SaveObjectList* score_list = score_list2->get_item(j)->get_list();
-                for (int i = 0; (i < LEVEL_TYPES) && (i < score_list->get_count()); i++)
+                for (unsigned i = 0; (i < LEVEL_TYPES) && (i < score_list->get_count()); i++)
                 {
                     scores[j][i].load(score_list->get_item(i));
                 }
@@ -189,11 +191,11 @@ public:
 
         SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
         server_levels.resize(lvl_sets->get_count());
-        for (int k = 0; k < lvl_sets->get_count(); k++)
+        for (unsigned k = 0; k < lvl_sets->get_count(); k++)
         {
             SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
             server_levels[k].clear();
-            for (int i = 0; i < plist->get_count(); i++)
+            for (unsigned i = 0; i < plist->get_count(); i++)
             {
                 std::string s = plist->get_string(i);
                 server_levels[k].push_back(s);
@@ -201,11 +203,11 @@ public:
         }
         lvl_sets = omap->get_item("next_server_levels")->get_list();
         next_server_levels.resize(lvl_sets->get_count());
-        for (int k = 0; k < lvl_sets->get_count(); k++)
+        for (unsigned k = 0; k < lvl_sets->get_count(); k++)
         {
             SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
             next_server_levels[k].clear();
-            for (int i = 0; i < plist->get_count(); i++)
+            for (unsigned i = 0; i < plist->get_count(); i++)
             {
                 std::string s = plist->get_string(i);
                 next_server_levels[k].push_back(s);
@@ -297,8 +299,7 @@ public:
         {
             SaveObjectList* score_list = new SaveObjectList();
             int pos = 0;
-            int prevpos = 0;
-            for (std::multimap<Score, int64_t>::iterator rit = scores[mode][i].sorted_scores.begin(); rit != scores[mode][i].sorted_scores.end(); rit++)
+            for (std::multimap<Score, uint64_t>::iterator rit = scores[mode][i].sorted_scores.begin(); rit != scores[mode][i].sorted_scores.end(); rit++)
             {
                 pos++;
                 int fr = friends.count(rit->second);
@@ -324,7 +325,6 @@ public:
                 if (fr)
                     score_map->add_num("friend", fr);
                 score_list->add_item(score_map);
-                prevpos = pos;
             }
             top_list->add_item(score_list);
         }
@@ -351,7 +351,7 @@ public:
         }
         resp->add_item("stats", top_slist);
         
-        for (int i = 0;  server_level_types[i]; i++)
+        for (unsigned i = 0;  server_level_types[i]; i++)
         {
             if (i >= next_server_levels.size())
                 next_server_levels.resize(i + 1);
@@ -441,7 +441,7 @@ public:
                     break;
                 }
             }
-            else if (length > 0 && inbuf.length() >= length)
+            else if (length > 0 && (int)inbuf.length() >= length)
             {
                 bool pirate = false;
                 try
@@ -538,10 +538,10 @@ public:
                         int mode = 0;
                         if (omap->has_key("game_mode"))
                             mode = omap->get_num("game_mode");
-                        printf("scores: %s %lld (%d)", steam_username.c_str(), steam_id, mode);
+                        printf("scores: %s %lu (%d)", steam_username.c_str(), steam_id, mode);
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
-                        for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES - 1; lset++)
+                        for (unsigned lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES - 1; lset++)
                         {
                             if (steam_id == 76561198083927051ull)
                                 continue;
@@ -553,10 +553,10 @@ public:
 
                             unsigned score = 0;
                             SaveObjectList* l = progress_list->get_item(lset)->get_list();
-                            for (int lgrp = 0; lgrp < l->get_count() && lgrp < 30; lgrp++)
+                            for (unsigned lgrp = 0; lgrp < l->get_count() && lgrp < 30; lgrp++)
                             {
                                 std::string s = l->get_item(lgrp)->get_string();
-                                for (int i = 0; i < s.length() && i < 200; i++)
+                                for (unsigned i = 0; i < s.length() && i < 200; i++)
                                 {
                                     bool c = (s[i] == '1');
                                     db.scores[mode][lset].stats[lgrp][i].total++;
@@ -568,7 +568,7 @@ public:
                                 }
                             }
                             db.scores[mode][lset].add_score(steam_id, score);
-                            printf("%lld ", score);
+                            printf("%u ", score);
                         }
                         printf("\n");
                         std::set<uint64_t> friends;

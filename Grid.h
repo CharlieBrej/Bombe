@@ -97,7 +97,7 @@ public:
 
 
     RegionType() : type (NONE), value(0) {}
-    RegionType(char dummy, unsigned t) : var((t >> 16) & 0xFF), type (Type((t >> 8) & 0xFF)), value(t & 255) {}
+    RegionType(char dummy, unsigned t) : type (Type((t >> 8) & 0xFF)), value(t & 255), var((t >> 16) & 0xFF) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
     static int type_priority(Type t)
     {

@@ -15,7 +15,7 @@ LevelSet::LevelSet(SaveObjectMap* omap)
 {
     SaveObjectList* rlist = omap->get_item("levels")->get_list();
 
-    for (int i = 0; i < rlist->get_count(); i++)
+    for (unsigned i = 0; i < rlist->get_count(); i++)
     {
         levels.push_back(rlist->get_string(i));
         // std::string s = rlist->get_string(i);
@@ -58,10 +58,10 @@ void LevelSet::init_global()
     SaveObjectList* llist = omap->get_item("level_sets")->get_list();
     delete_global();
 
-    for (int j = 0; (j < llist->get_count()) && (j < GLBAL_LEVEL_SETS); j++)
+    for (unsigned j = 0; (j < llist->get_count()) && (j < GLBAL_LEVEL_SETS); j++)
     {
         SaveObjectList* rlist = llist->get_item(j)->get_list();
-        for (int i = 0; i < rlist->get_count(); i++)
+        for (unsigned i = 0; i < rlist->get_count(); i++)
         {
             LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
             global_level_sets[j].push_back(lset);

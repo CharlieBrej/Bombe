@@ -115,7 +115,6 @@ void SaveObjectString::save(std::ostream& f)
 SaveObjectMap::SaveObjectMap(std::istream& f)
 {
     assert_exp('{');
-    char c;
     while (true)
     {
         skip_whitespace(f);
@@ -252,7 +251,6 @@ SaveObject* SaveObjectMap::dup()
 SaveObjectList::SaveObjectList(std::istream& f)
 {
     assert_exp('[');
-    char c;
     while (true)
     {
         skip_whitespace(f);
@@ -336,7 +334,7 @@ void SaveObjectList::add_string(std::string value)
 
 std::string SaveObjectList::get_string(int index)
 {
-    if (index >= olist.size())
+    if (index >= (int)olist.size())
         return "";
     return get_item(index)->get_string();
 }

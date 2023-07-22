@@ -181,7 +181,7 @@ void mainloop()
         game_state->steam_friends.insert(friend_id.ConvertToUint64());
     }
 #else
-    game_state->steam_session_string = "";
+    game_state->steam_session_string = "dummy";
     game_state->steam_id = SECRET_ID;
 #endif
     {
@@ -191,8 +191,6 @@ void mainloop()
     }
 
     int save_time = 0;
-    SDL_Thread *save_thread = NULL;
-
     unsigned oldtime = SDL_GetTicks();
 	while(true)
 	{
@@ -277,8 +275,8 @@ int main( int argc, char* argv[] )
        IS_PLAYTEST = bool(ifile);
     }
 
-    int game_id = IS_DEMO ? 2263470 : IS_PLAYTEST ? 2263480 : 2262930;
 #ifdef STEAM
+    int game_id = IS_DEMO ? 2263470 : IS_PLAYTEST ? 2263480 : 2262930;
 	if (SteamAPI_RestartAppIfNecessary(game_id))
 		return 1;
 	if (!SteamAPI_Init())

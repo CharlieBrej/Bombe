@@ -64,13 +64,12 @@ GameState::GameState(std::string& load_data, bool json)
     global_mutex = SDL_CreateMutex();
     level_gen_mutex = SDL_CreateMutex();
     LevelSet::init_global();
-    bool load_was_good = false;
 
     for (int k = 0; k < GAME_MODES; k++)
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
         level_progress[k][j].resize(global_level_sets[j].size());
-        for (int i = 0; i < global_level_sets[j].size(); i++)
+        for (unsigned i = 0; i < global_level_sets[j].size(); i++)
         {
             level_progress[k][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
             level_progress[k][j][i].count_todo = global_level_sets[j][i]->levels.size();
@@ -139,7 +138,7 @@ GameState::GameState(std::string& load_data, bool json)
                 server_levels.resize(lvl_sets->get_count());
                 for (int m = 0; m < GAME_MODES; m++)
                     level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
-                for (int k = 0; k < lvl_sets->get_count(); k++)
+                for (unsigned k = 0; k < lvl_sets->get_count(); k++)
                 {
                     SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
                     server_levels[k].clear();
@@ -149,7 +148,7 @@ GameState::GameState(std::string& load_data, bool json)
                         level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
                         level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
                     }
-                    for (int i = 0; i < plist->get_count(); i++)
+                    for (unsigned i = 0; i < plist->get_count(); i++)
                     {
                         std::string s = plist->get_string(i);
                         server_levels[k].push_back(s);
@@ -161,14 +160,14 @@ GameState::GameState(std::string& load_data, bool json)
             if (omap->has_key("rule_del_count"))
             {
                 SaveObjectList* dlist = omap->get_item("rule_del_count")->get_list();
-                for (int k = 0; k < dlist->get_count() && k < GAME_MODES; k++)
+                for (unsigned k = 0; k < dlist->get_count() && k < GAME_MODES; k++)
                     rule_del_count[k] = dlist->get_item(k)->get_num();
             }
 
             if (omap->has_key("key_codes"))
             {
                 SaveObjectList* dlist = omap->get_item("key_codes")->get_list();
-                for (int k = 0; k < dlist->get_count() && k < KEY_CODE_TOTAL; k++)
+                for (unsigned k = 0; k < dlist->get_count() && k < KEY_CODE_TOTAL; k++)
                     key_codes[k] = dlist->get_item(k)->get_num();
             }
 
@@ -176,7 +175,7 @@ GameState::GameState(std::string& load_data, bool json)
             if (omap->has_key("modes"))
             {
                 SaveObjectList* mode_lists = omap->get_item("modes")->get_list();
-                for (int k = 0; k < mode_lists->get_count(); k++)
+                for (unsigned k = 0; k < mode_lists->get_count(); k++)
                     modes.push_back(mode_lists->get_item(k)->get_map());
             }
             else
@@ -185,7 +184,7 @@ GameState::GameState(std::string& load_data, bool json)
             for (SaveObjectMap* omap : modes)
             {
                 SaveObjectList* rlist = omap->get_item("rules")->get_list();
-                for (int i = 0; i < rlist->get_count(); i++)
+                for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
                     if (rule_is_permitted(r, mode))
@@ -195,10 +194,10 @@ GameState::GameState(std::string& load_data, bool json)
                 if (version == game_version)
                 {
                     SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
-                    for (int k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
+                    for (unsigned k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
                     {
                         SaveObjectList* plist = pplist->get_item(k)->get_list();
-                        for (int i = 0; i < plist->get_count() && i < level_progress[mode][k].size(); i++)
+                        for (unsigned i = 0; i < plist->get_count() && i < level_progress[mode][k].size(); i++)
                         {
                             std::string s = plist->get_string(i);
                             int lim = std::min(s.size(), level_progress[mode][k][i].level_status.size());
@@ -219,9 +218,7 @@ GameState::GameState(std::string& load_data, bool json)
                 }
                 mode++;
             }
-
             delete omap;
-            load_was_good = true;
         }
     }
     catch (const std::runtime_error& error)
@@ -495,7 +492,7 @@ void GameState::reset_levels()
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
         level_progress[game_mode][j].resize(global_level_sets[j].size());
-        for (int i = 0; i < global_level_sets[j].size(); i++)
+        for (unsigned i = 0; i < global_level_sets[j].size(); i++)
         {
             level_progress[game_mode][j][i].level_status.clear();
             level_progress[game_mode][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
@@ -504,7 +501,7 @@ void GameState::reset_levels()
             level_progress[game_mode][j][i].unlock_anim_prog = 0;
         }
     }
-    for (int i = 0; i < server_levels.size(); i++)
+    for (unsigned i = 0; i < server_levels.size(); i++)
     {
         level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
         level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(server_levels[i].size());
@@ -573,7 +570,6 @@ static int level_gen_thread_func(void *ptr)
     else
         siz.x = c - '0';
     c = req[2];
-    int y;
     if (c >= 'A' && c <= 'Z')
         siz.y = (c - 'A') + 10;
     else
@@ -646,7 +642,7 @@ static int fetch_from_server_thread(void *ptr)
 
         if (comms->resp)
         {
-            int got = SDLNet_TCP_Recv(tcpsock, (char*)&length, 4);
+            unsigned got = SDLNet_TCP_Recv(tcpsock, (char*)&length, 4);
             if (got != 4)
                 throw(std::runtime_error("Connection closed early"));
             char* data = (char*)malloc(length);
@@ -728,8 +724,6 @@ void GameState::fetch_scores()
     omap->add_num("playtest", IS_PLAYTEST);
     omap->add_num("version", game_version);
     omap->add_num("game_mode", game_mode);
-    SaveObjectList* plist = new SaveObjectList;
-
     SaveObjectList* pplist = new SaveObjectList;
     for (int j = 0; j <= GLBAL_LEVEL_SETS; j++)
     {
@@ -879,7 +873,7 @@ void GameState::advance(int steps)
     // if(grid->regions.size() > 700)
     //     _exit(1);
     if (rule_limit_count >= 0)
-        if(grid->regions.size() > rule_limit_count)
+        if(int(grid->regions.size()) > rule_limit_count)
             if (auto_progress && !grid->is_solved())
                 skip_level = true;
     frame = frame + steps;
@@ -902,14 +896,13 @@ void GameState::advance(int steps)
     {
         int ccount = 0;
         int count = 0;
-        for (int i = 0; i < level_progress[0][s].size(); i++)
+        for (unsigned i = 0; i < level_progress[0][s].size(); i++)
         {
-            LevelProgress& prog = level_progress[0][s][i];
-            for (int j = 0; j < level_progress[0][s][i].level_status.size(); j++)
+            for (unsigned j = 0; j < level_progress[0][s][i].level_status.size(); j++)
             {
                 if (level_progress[game_mode][s][i].level_status[j])
                     ccount++;
-                for (int m = 0; m < GAME_MODES; m++)
+                for (unsigned m = 0; m < GAME_MODES; m++)
                 {
                     if (level_progress[m][s][i].level_status[j])
                     {
@@ -1112,8 +1105,6 @@ void GameState::advance(int steps)
     }
 
     unsigned oldtime = SDL_GetTicks();
-    bool cleared_cell = false;
-
     for (GridRule& rule : rules[game_mode])
     {
         if (rule.deleted)
@@ -1405,7 +1396,7 @@ void GameState::update_constructed_rule()
             reset_rule_gen_region();
     } 
     if (!constructed_rule.apply_region_bitmap)
-        constructed_rule_is_logical == GridRule::OK;
+        constructed_rule_is_logical = GridRule::OK;
     else
         constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason);
     constructed_rule_is_already_present = NULL;
@@ -1753,7 +1744,7 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_
     render_box(box_pos, box_size, button_size / 4, 1);
     XYPos txt_pos = box_pos + XYPos(border * 2, border);
 
-    for (int i = 0; i < textures.size(); i++)
+    for (unsigned i = 0; i < textures.size(); i++)
     {
         SDL_Rect txt_rect;
         SDL_GetClipRect(text_surfaces[i], &txt_rect);
@@ -1928,7 +1919,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
 {
     int width = 0;
     char pc = 0;
-    for (int i = 0; i < digits.size(); i++)
+    for (unsigned i = 0; i < digits.size(); i++)
     {
         if (digits[i] == '^')
         {
@@ -2004,7 +1995,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
     }
 
     pc = 0;
-    for (int i = 0; i < digits.size(); i++)
+    for (unsigned i = 0; i < digits.size(); i++)
     {
         char c = digits[i];
         int p;
@@ -2426,9 +2417,9 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
         {
             double best_dist = INFINITY;
             int best_i, best_j;
-            for (int i = 0; i < reg_pos.size(); i++)
+            for (unsigned i = 0; i < reg_pos.size(); i++)
             {
-                for (int j = 0; j < reg_pos.size(); j++)
+                for (unsigned j = 0; j < reg_pos.size(); j++)
                 {
                     if (i == j)
                         continue;
@@ -2447,7 +2438,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 break;
             int o = reg_grp[best_i];
             int n = reg_grp[best_j];
-            for (int i = 0; i < reg_pos.size(); i++)
+            for (unsigned i = 0; i < reg_pos.size(); i++)
             {
                 if (reg_grp[i] == o)
                     reg_grp[i] = n;
@@ -2778,7 +2769,7 @@ void GameState::render(bool saving)
 
     if (display_scores)
     {
-        int row_count = 16;
+        unsigned row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 7.5;
         int cell_height = (rules_list_size - cell_width) / row_count;
@@ -2823,11 +2814,11 @@ void GameState::render(bool saving)
         if (current_level_group_index == GLBAL_LEVEL_SETS && display_scores_global)
                 grp_index = current_level_group_index + 1;
 
-        if (rules_list_offset + row_count > (int)score_tables[game_mode][grp_index].size())
+        if (rules_list_offset + row_count > score_tables[game_mode][grp_index].size())
             rules_list_offset = score_tables[game_mode][grp_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
-        for (int score_index = 0; score_index < row_count; score_index++)
+        for (unsigned score_index = 0; score_index < row_count; score_index++)
         {
 
             if (score_index + rules_list_offset >= score_tables[game_mode][grp_index].size())
@@ -2855,7 +2846,7 @@ void GameState::render(bool saving)
                     height = (height * cell_width * 5) / width;
                     width = cell_width * 5;
                 }
-                SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y + cell_width + score_index * cell_height + (cell_height - height) / 2, width, height};
+                SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, int(list_pos.y + cell_width + score_index * cell_height + (cell_height - height) / 2), width, height};
                 SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
                 SDL_DestroyTexture(new_texture);
                 SDL_FreeSurface(text_surface);
@@ -2884,7 +2875,7 @@ void GameState::render(bool saving)
 
         {
             int full_size = cell_width * 5.5;
-            int all_count = score_tables[game_mode][grp_index].size();
+            unsigned all_count = score_tables[game_mode][grp_index].size();
             int box_height = full_size;
             int box_pos = 0;
 
@@ -2903,7 +2894,7 @@ void GameState::render(bool saving)
 
             render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-        if (rules_list_offset + row_count > (int)score_tables[game_mode][grp_index].size())
+        if (rules_list_offset + row_count > score_tables[game_mode][grp_index].size())
             rules_list_offset = score_tables[game_mode][grp_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
         display_rules_click = false;
@@ -3020,27 +3011,27 @@ void GameState::render(bool saving)
 
         std::vector<unsigned> levels_list;
 
-        for (int i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
+        for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
             levels_list.push_back(i);
 
         std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_levels_sort_col_2nd, display_levels_sort_dir_2nd));
         std::stable_sort (levels_list.begin(), levels_list.end(), RuleDiplaySort(*this, display_levels_sort_col, display_levels_sort_dir));
 
         if (display_levels_center_current)
-            for (int i = 0; i < levels_list.size(); i++)
+            for (unsigned i = 0; i < levels_list.size(); i++)
                 if (levels_list[i] == current_level_index)
                 {
                     rules_list_offset = i - 8;
                     break;
                 }
         display_levels_center_current = false;
-        if (rules_list_offset + row_count > levels_list.size())
+        if (rules_list_offset + row_count > (int)levels_list.size())
             rules_list_offset = levels_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         for (int level_index = 0; level_index < row_count; level_index++)
         {
-            if (level_index + rules_list_offset >= levels_list.size())
+            if (level_index + rules_list_offset >= (int)levels_list.size())
                 break;
             unsigned index = levels_list[level_index + rules_list_offset];
 
@@ -3106,7 +3097,7 @@ void GameState::render(bool saving)
                 rules_list_offset++;
         }
 
-        if (rules_list_offset + row_count > levels_list.size())
+        if (rules_list_offset + row_count > (int)levels_list.size())
             rules_list_offset = levels_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
@@ -3319,6 +3310,7 @@ void GameState::render(bool saving)
                         return (a.rule->used_count < b.rule->used_count);
                 }
                 if (col == 6)
+                {
                     if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
                         b_.rule->apply_region_type.type != RegionType::VISIBILITY)
                             return false;
@@ -3329,6 +3321,8 @@ void GameState::render(bool saving)
                         return (a.rule->level_clear_count < b.rule->level_clear_count);
                     else
                         return (a.rule->clear_count < b.rule->clear_count);
+                }
+                assert(0);
                 return (a.index < b.index);
             }
         };
@@ -3346,13 +3340,13 @@ void GameState::render(bool saving)
         std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, debug_bits[0]));
         std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, debug_bits[0]));
 
-        if (rules_list_offset + row_count > rules_list.size())
+        if (rules_list_offset + row_count > (int)rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         for (int rule_index = 0; rule_index < row_count; rule_index++)
         {
-            if (rule_index + rules_list_offset >= rules_list.size())
+            if (rule_index + rules_list_offset >= (int)rules_list.size())
                 break;
             RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
             GridRule& rule = *rd.rule;
@@ -3551,7 +3545,7 @@ void GameState::render(bool saving)
                 rules_list_offset++;
         }
 
-        if (rules_list_offset + row_count > rules_list.size())
+        if (rules_list_offset + row_count > (int)rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
@@ -3630,7 +3624,6 @@ void GameState::render(bool saving)
             }
 
             Colour bg_col(0,0,0);
-            bool hl = false;
             {
                 if (clue_solves.count(pos))
                 {
@@ -4119,7 +4112,7 @@ void GameState::render(bool saving)
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Scores");
             int count = 0;
-            for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+            for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
             {
                 LevelProgress& prog = level_progress[game_mode][current_level_group_index][i];
                 for (bool b : prog.level_status)
@@ -4186,7 +4179,7 @@ void GameState::render(bool saving)
 
     if (max_stars >= prog_stars[PROG_LOCK_LEVELS_AND_LOCKS])
     {
-        for (int i = 0; i < 5; i++)
+        for (unsigned i = 0; i < 5; i++)
         {
             const static char* grid_names[] = {"Hexagon", "Square", "Triangle", "Infinite", "Weekly Levels"};
             if (render_lock(PROG_LOCK_HEX + i, XYPos(left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5)), XYPos(button_size, button_size)))
@@ -4194,13 +4187,13 @@ void GameState::render(bool saving)
                 if (auto_progress_all && (current_level_group_index == i))
                 {
                     SDL_Rect src_rect = {1344, 1920, 128, 128};
-                    SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + (int)i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
                     SDL_Point rot_center = {button_size / 2, button_size / 2};
                     double angle = frame * 0.05;
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
                 }
-                SDL_Rect src_rect = {1472, 1344 + i * 192, 192, 192};
-                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                SDL_Rect src_rect = {1472, 1344 + (int)i * 192, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + (int)i * button_size, left_panel_offset.y + int(button_size * 5.5), button_size, button_size};
                 if (i == 4)
                     src_rect = {1664, 1536, 192, 192};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -4208,7 +4201,7 @@ void GameState::render(bool saving)
             }
             {
                 SDL_Rect src_rect = {512, (current_level_group_index == i) ? 1152 : 1344, 192, 192};
-                SDL_Rect dst_rect = {left_panel_offset.x + i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
+                SDL_Rect dst_rect = {left_panel_offset.x + (int)i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
         }
@@ -4218,13 +4211,8 @@ void GameState::render(bool saving)
             server_level_anim += frame_step;
         }
 
-
-        XYPos p = XYPos(0,0);
-        for (int i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
+        for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
         {
-            p.x = i % 5;
-            p.y = i / 5;
-
             XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6.5));
             if (i == current_level_set_index)
             {
@@ -4884,7 +4872,6 @@ void GameState::render(bool saving)
             {
                 if (render_lock(PROG_LOCK_PRIORITY, right_panel_offset + XYPos(0, 7 * button_size), XYPos(button_size, 5 * button_size)))
                 {
-                    int p = std::clamp((int)inspected_rule.rule->priority, -3, 2);
                     {
                         SDL_Rect src_rect = {2240, 1344, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 6, button_size, button_size};
@@ -5100,7 +5087,7 @@ void GameState::render(bool saving)
             SaveObjectMap* lang = lang_data->get_item(language)->get_map();
             SaveObjectList* tutorial = lang->get_item("tutorial")->get_list();
             SaveObjectList* tutorial_page = tutorial->get_item(tutorial_index)->get_list();
-            for (int i = 0; i < tutorial_page->get_count(); i++)
+            for (int i = 0; i < (int)tutorial_page->get_count(); i++)
             {
                 SaveObjectMap* text_box = tutorial_page->get_item(i)->get_map();
                 XYPos p;
@@ -5783,10 +5770,6 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
 
 void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 {
-    const int trim = 27;
-    int digit_height = button_size * 0.75;
-    int digit_width = (digit_height * (192 - trim * 2)) / 192;
-
     if (prog_seen[PROG_LOCK_FILTER])
     {
         if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size,button_size)))
@@ -5957,7 +5940,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     }
 
     XYPos gpos = (pos - XYPos(0, int(button_size * 6.5)))/ button_size;
-    int idx = gpos.x + gpos.y * 5;
+    unsigned idx = gpos.x + gpos.y * 5;
 
     if ((idx >= 0) && (idx < level_progress[game_mode][current_level_group_index].size()))
     {
@@ -5977,8 +5960,6 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
 
 void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 {
-    XYPos bpos = pos / button_size;
-
     if (right_panel_mode == RIGHT_MENU_REGION)
     {
         if ((pos - XYPos(button_size * 3, button_size)).inside(XYPos(button_size * 2, button_size)))
@@ -6450,7 +6431,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             y ^= y >> 1;
 
             unsigned hover_rulemaker_bits = x + y * 4;
-            if (hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1 << constructed_rule.region_count))
+            if (hover_rulemaker_bits >= 1 && hover_rulemaker_bits < (1u << constructed_rule.region_count))
             {
                 hover_rulemaker = true;
             }
@@ -6548,7 +6529,6 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
 //            reset_rule_gen_region();
             update_constructed_rule_pre();
-            int new_count = constructed_rule.region_count - 1;
             for (int i = 0; i < 4; i++)
                 rule_gen_region[i] = NULL;
             while (constructed_rule.region_count)
@@ -6964,7 +6944,7 @@ bool GameState::events()
                 if (key == SDLK_RSHIFT)
                     shift_held &= ~2;
                 if (key == key_codes[KEY_CODE_G_VISIBLE] || 
-                    key == key_codes[KEY_CODE_G_HIDDEN] |
+                    key == key_codes[KEY_CODE_G_HIDDEN] ||
                     key == key_codes[KEY_CODE_G_TRASH])
                         key_held = 0;
                 break;
@@ -7355,7 +7335,7 @@ void GameState::deal_with_scores()
                     SaveObjectList* scores = lvls->get_item(i)->get_list();
                     int mode = omap->get_num("game_mode");
                     score_tables[mode][i].clear();
-                    for (int j = 0; j < scores->get_count(); j++)
+                    for (unsigned j = 0; j < scores->get_count(); j++)
                     {
                         SaveObjectMap* score = scores->get_item(j)->get_map();
                         unsigned is_friend = 0;
@@ -7368,13 +7348,13 @@ void GameState::deal_with_scores()
                     }
                 }
                 lvls = omap->get_item("stats")->get_list();
-                for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
+                for (unsigned i = 0; i <= GLBAL_LEVEL_SETS; i++)
                 {
                     SaveObjectList* stats1 = lvls->get_item(i)->get_list();
-                    for (int j = 0; j < stats1->get_count() && j < level_progress[game_mode][i].size(); j++)
+                    for (unsigned j = 0; j < stats1->get_count() && j < level_progress[game_mode][i].size(); j++)
                     {
                         SaveObjectList* stats2 = stats1->get_item(j)->get_list();
-                        for (int k = 0; k < stats2->get_count() && k < level_progress[game_mode][i][j].level_stats.size(); k++)
+                        for (unsigned k = 0; k < stats2->get_count() && k < level_progress[game_mode][i][j].level_stats.size(); k++)
                         {
                             int64_t s = stats2->get_item(k)->get_num();
                             level_progress[game_mode][i][j].level_stats[k] = s;
@@ -7400,12 +7380,12 @@ void GameState::deal_with_scores()
                     SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
                     server_levels.clear();
                     server_levels.resize(lvl_sets->get_count());
-                    for (int m = 0; m < GAME_MODES; m++)
+                    for (unsigned m = 0; m < GAME_MODES; m++)
                     {
                         level_progress[m][GLBAL_LEVEL_SETS].clear();
                         level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
                     }
-                    for (int k = 0; k < lvl_sets->get_count(); k++)
+                    for (unsigned k = 0; k < lvl_sets->get_count(); k++)
                     {
                         SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
                         for (int m = 0; m < GAME_MODES; m++)
@@ -7415,7 +7395,7 @@ void GameState::deal_with_scores()
                             level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
                         }
 
-                        for (int i = 0; i < plist->get_count(); i++)
+                        for (unsigned i = 0; i < plist->get_count(); i++)
                         {
                             std::string s = plist->get_string(i);
                             server_levels[k].push_back(s);
@@ -7528,7 +7508,7 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
     comp = siz_str + siz_str2 + comp;
     int offset = 32;
     comp_size = comp.size();
-    for (int i = 0; i < comp_size; i++)
+    for (unsigned i = 0; i < comp_size; i++)
     {
         uint8_t c = comp[i];
         for (int j = 0; j < 3; j++)
@@ -7589,9 +7569,9 @@ void GameState::check_clipboard()
         comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 8;
         comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 16;
         comp_size2 += uint32_t(get_hidden_val(&dat, 8, 16, 24)) << 24;
-        if ((comp_size == (comp_size2 ^ 0x55555555)) && (comp_size < (siz.x * siz.y / 3)))
+        if ((comp_size == (comp_size2 ^ 0x55555555)) && ((int)comp_size < (siz.x * siz.y / 3)))
         {
-            for (int i = 0; i < comp_size; i++)
+            for (unsigned i = 0; i < comp_size; i++)
             {
                 comp += get_hidden_val(&dat, 8, 16, 24);
             }
@@ -7650,7 +7630,7 @@ void GameState::check_clipboard()
             {
                 clipboard_rule_set.clear();
                 SaveObjectList* rlist = omap->get_item("rules")->get_list();
-                for (int i = 0; i < rlist->get_count(); i++)
+                for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
                     clipboard_rule_set.push_back(r);
