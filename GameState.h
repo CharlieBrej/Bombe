@@ -202,6 +202,7 @@ public:
     int display_levels_sort_col_2nd = 1;
     bool display_levels_sort_dir_2nd = true;
     bool display_levels_level = false;
+    bool display_scores_global = false;
 
     struct ConstructedRuleState
     {
@@ -400,7 +401,7 @@ public:
         {}
     };
 
-    std::vector<PlayerScore> score_tables[GAME_MODES][GLBAL_LEVEL_SETS + 1];
+    std::vector<PlayerScore> score_tables[GAME_MODES][GLBAL_LEVEL_SETS + 2];
 
     unsigned current_level_group_index = 0;
     unsigned current_level_set_index = 0;

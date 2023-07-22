@@ -23,7 +23,7 @@
 #include "SaveState.h"
 
 bool power_down = false;
-const int LEVEL_TYPES = 4;
+const int LEVEL_TYPES = 6;
 const int GAME_MODE_TYPES = 4;
 
 typedef int64_t Score;
@@ -101,9 +101,9 @@ public:
         }
     }
 
-    void add_score(uint64_t steam_id, Score score)
+    void add_score(uint64_t steam_id, Score score, bool force = false)
     {
-        if ((user_score.count(steam_id)) && (score <= user_score[steam_id]))
+        if (!force && (user_score.count(steam_id)) && (score <= user_score[steam_id]))
             return;
         
         for (auto it = sorted_scores.begin(); it != sorted_scores.end(); )
@@ -144,7 +144,7 @@ class Database
 {
 public:
     std::map<uint64_t, std::string> players;
-    ScoreTable scores[GAME_MODE_TYPES][LEVEL_TYPES + 1];
+    ScoreTable scores[GAME_MODE_TYPES][LEVEL_TYPES];
     std::map<std::string, uint64_t> steam_sessions;
     std::vector<std::vector<std::string>> server_levels;
     std::vector<std::vector<std::string>> next_server_levels;
@@ -180,7 +180,7 @@ public:
             for (int j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
             {
                 SaveObjectList* score_list = score_list2->get_item(j)->get_list();
-                for (int i = 0; (i <= LEVEL_TYPES) && (i < score_list->get_count()); i++)
+                for (int i = 0; (i < LEVEL_TYPES) && (i < score_list->get_count()); i++)
                 {
                     scores[j][i].load(score_list->get_item(i));
                 }
@@ -235,7 +235,7 @@ public:
         for (int j = 0; j < GAME_MODE_TYPES; j++)
         {
             SaveObjectList* score_list = new SaveObjectList;
-            for (int i = 0; i <= LEVEL_TYPES; i++)
+            for (int i = 0; i < LEVEL_TYPES; i++)
             {
                 score_list->add_item(scores[j][i].save());
             }
@@ -293,7 +293,7 @@ public:
     {
         SaveObjectMap* resp = new SaveObjectMap();
         SaveObjectList* top_list = new SaveObjectList();
-        for (int i = 0; i <= LEVEL_TYPES; i++)
+        for (int i = 0; i < LEVEL_TYPES; i++)
         {
             SaveObjectList* score_list = new SaveObjectList();
             int pos = 0;
@@ -331,7 +331,7 @@ public:
         resp->add_item("scores", top_list);
 
         SaveObjectList* top_slist = new SaveObjectList;
-        for (int l = 0; l <= LEVEL_TYPES; l++)
+        for (int l = 0; l < LEVEL_TYPES - 1; l++)
         {
             SaveObjectList* stats_list = new SaveObjectList;
             for (int i = 0; i < 30; i++)
@@ -541,7 +541,7 @@ public:
                         printf("scores: %s %lld (%d)", steam_username.c_str(), steam_id, mode);
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
-                        for (int lset = 0; lset < progress_list->get_count() && lset <= LEVEL_TYPES; lset++)
+                        for (int lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES - 1; lset++)
                         {
                             if (steam_id == 76561198083927051ull)
                                 continue;
@@ -716,11 +716,10 @@ int main(int argc, char *argv[])
         {
             std::ifstream loadfile("NEW_SERVER_LEVELS");
             if (!loadfile.fail() && !loadfile.eof())
+            {
                 week = 0;
-        }
-        if (week == 0)
-        {
-            std::remove("NEW_SERVER_LEVELS");
+                std::remove("NEW_SERVER_LEVELS");
+            }
         }
         {
             fd_set w_fds;
@@ -752,7 +751,17 @@ int main(int argc, char *argv[])
                 week = new_week;
                 for (int i = 0; i < GAME_MODE_TYPES; i++)
                 {
-                    db.scores[i][LEVEL_TYPES].reset();
+                    for (auto& [key, val] : db.scores[i][LEVEL_TYPES - 1].user_score)
+                        val = val * 0.9;
+                    for (auto& [key, val] : db.scores[i][LEVEL_TYPES - 2].user_score)
+                    {
+                        int score = val;
+                        if (db.scores[i][LEVEL_TYPES - 1].user_score.count(key) > 0)
+                            score += db.scores[i][LEVEL_TYPES - 1].user_score[key];
+                        db.scores[i][LEVEL_TYPES - 1].add_score(key, score, true);
+                    }
+
+                    db.scores[i][LEVEL_TYPES - 2].reset();
                 }
             }
         }

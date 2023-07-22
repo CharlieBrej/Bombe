@@ -229,7 +229,7 @@ GameState::GameState(std::string& load_data, bool json)
         std::cerr << error.what() << "\n";
     }
 
-    if (!load_was_good)
+    if (!max_stars)
     {
         display_help = true;
         display_language_chooser = true;
@@ -2795,6 +2795,15 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Player Name");
         }
+        if (current_level_group_index == GLBAL_LEVEL_SETS)
+        {
+            SDL_Rect src_rect = {!display_scores_global ? 1408 : 1600, 2144, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, !display_scores_global ? "Level" : "Global");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                display_scores_global = !display_scores_global;
+        }
         {
             SDL_Rect src_rect = {512, 960, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
@@ -2810,15 +2819,20 @@ void GameState::render(bool saving)
                 display_scores = false;
         }
 
-        if (rules_list_offset + row_count > (int)score_tables[game_mode][current_level_group_index].size())
-            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
+        int grp_index = current_level_group_index;
+        if (current_level_group_index == GLBAL_LEVEL_SETS && display_scores_global)
+                grp_index = current_level_group_index + 1;
+
+        if (rules_list_offset + row_count > (int)score_tables[game_mode][grp_index].size())
+            rules_list_offset = score_tables[game_mode][grp_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         for (int score_index = 0; score_index < row_count; score_index++)
         {
-            if (score_index + rules_list_offset >= score_tables[game_mode][current_level_group_index].size())
+
+            if (score_index + rules_list_offset >= score_tables[game_mode][grp_index].size())
                 break;
-            PlayerScore& s = score_tables[game_mode][current_level_group_index][score_index + rules_list_offset];
+            PlayerScore& s = score_tables[game_mode][grp_index][score_index + rules_list_offset];
             if (s.hidden)
                 continue;
 
@@ -2835,7 +2849,13 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect;
                 SDL_GetClipRect(text_surface, &src_rect);
                 int width = (src_rect.w * cell_height) / src_rect.h;
-                SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y + cell_width + score_index * cell_height, width, cell_height};
+                int height = cell_height;
+                if (width > cell_width * 5)
+                {
+                    height = (height * cell_width * 5) / width;
+                    width = cell_width * 5;
+                }
+                SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y + cell_width + score_index * cell_height + (cell_height - height) / 2, width, height};
                 SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
                 SDL_DestroyTexture(new_texture);
                 SDL_FreeSurface(text_surface);
@@ -2858,13 +2878,13 @@ void GameState::render(bool saving)
                 rules_list_offset++;
         }
 
-        if (rules_list_offset + row_count > score_tables[game_mode][current_level_group_index].size())
-            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
+        if (rules_list_offset + row_count > score_tables[game_mode][grp_index].size())
+            rules_list_offset = score_tables[game_mode][grp_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         {
             int full_size = cell_width * 5.5;
-            int all_count = score_tables[game_mode][current_level_group_index].size();
+            int all_count = score_tables[game_mode][grp_index].size();
             int box_height = full_size;
             int box_pos = 0;
 
@@ -2883,8 +2903,8 @@ void GameState::render(bool saving)
 
             render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-        if (rules_list_offset + row_count > (int)score_tables[game_mode][current_level_group_index].size())
-            rules_list_offset = score_tables[game_mode][current_level_group_index].size() - row_count;
+        if (rules_list_offset + row_count > (int)score_tables[game_mode][grp_index].size())
+            rules_list_offset = score_tables[game_mode][grp_index].size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
         display_rules_click = false;
 
@@ -5789,7 +5809,6 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             vis_level = GRID_VIS_LEVEL_BIN;
     }
 
-
     if ((pos - XYPos(button_size * 0, button_size * 0)).inside(XYPos(button_size,button_size)))
         display_menu = true;
     if ((pos - XYPos(button_size * 1, button_size * 0)).inside(XYPos(button_size,button_size)))
@@ -6670,6 +6689,17 @@ bool GameState::events()
                         display_help = true;
                     else if (key == key_codes[KEY_CODE_HINT])
                     {
+                        if (shift_held)
+                        {
+                            for (GridRegion& r : grid->regions)
+                                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+                                {
+                                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
+                                    r.vis_level = GRID_VIS_LEVEL_SHOW;
+                                }
+                            get_hint = false;
+                            break;
+                        }
                         if (get_hint)
                         {
                             get_hint = false;
@@ -6686,7 +6716,7 @@ bool GameState::events()
                     }
                     else if (key == key_codes[KEY_CODE_SKIP])
                     {
-                        skip_level = 1;
+                        skip_level = (shift_held) ? -1 : 1;
                         force_load_level = false;
                         break;
                     }
@@ -7318,7 +7348,7 @@ void GameState::deal_with_scores()
                     server_timeout = 1000 * 60 * 60;
                 }
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
-                for (int i = 0; i <= GLBAL_LEVEL_SETS; i++)
+                for (int i = 0; i < GLBAL_LEVEL_SETS + 2; i++)
                 {
                     SaveObjectList* scores = lvls->get_item(i)->get_list();
                     int mode = omap->get_num("game_mode");
