@@ -3250,7 +3250,7 @@ void GameState::render(bool saving)
                 {
                     int pa = a.rule->priority;
                     int pb = b.rule->priority;
-                    if (pb > -100 && (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET))
+                    if (pa > -100 && (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET))
                         pa = 3;
                     if (pb > -100 && (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET))
                         pb = 3;
