@@ -486,8 +486,6 @@ void GameState::reset_levels()
     {
         rule.used_count = 0;
         rule.clear_count = 0;
-        rule.level_used_count = 0;
-        rule.level_clear_count = 0;
     }
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
@@ -826,6 +824,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
 void GameState::load_grid(std::string s)
 {
     filter_pos.clear();
+    grid->commit_level_counts();
     delete grid;
     grid = Grid::Load(s);
     rule_gen_region[0] = NULL;
@@ -854,13 +853,6 @@ void GameState::load_grid(std::string s)
     target_grid_zoom = 1;
     scaled_grid_offset = XYPos(0,0);
     scaled_grid_size = grid_size;
-    for (GridRule& rule : rules[game_mode])
-    {
-        rule.used_count += rule.level_used_count;
-        rule.clear_count += rule.level_clear_count;
-        rule.level_used_count = 0;
-        rule.level_clear_count = 0;
-    }
     display_levels_center_current = true;
     if (right_panel_mode == RIGHT_MENU_REGION)
         right_panel_mode = RIGHT_MENU_NONE;
@@ -3256,9 +3248,10 @@ void GameState::render(bool saving)
             int col = 0;
             bool descend = false;
             bool cur_level = false;
+            Grid* grid;
             bool cpu_debug = false;
-            RuleDiplaySort(int col_, bool descend_, bool cur_level_, bool cpu_debug_):
-                col(col_), descend(descend_), cur_level(cur_level_), cpu_debug(cpu_debug_)
+            RuleDiplaySort(int col_, bool descend_, bool cur_level_, Grid* grid_, bool cpu_debug_):
+                col(col_), descend(descend_), cur_level(cur_level_), grid(grid_), cpu_debug(cpu_debug_)
             {};
             bool operator() (RuleDiplay a_,RuleDiplay b_)
             {
@@ -3305,7 +3298,7 @@ void GameState::render(bool saving)
                         a_.rule->apply_region_type.type != RegionType::VISIBILITY)
                             return true;
                     if (cur_level)
-                        return (a.rule->level_used_count < b.rule->level_used_count);
+                        return (grid->level_used_count[a.rule] < grid->level_used_count[b.rule]);
                     else
                         return (a.rule->used_count < b.rule->used_count);
                 }
@@ -3318,7 +3311,7 @@ void GameState::render(bool saving)
                         a_.rule->apply_region_type.type != RegionType::VISIBILITY)
                             return true;
                     if (cur_level)
-                        return (a.rule->level_clear_count < b.rule->level_clear_count);
+                        return (grid->level_clear_count[a.rule] < grid->level_clear_count[b.rule]);
                     else
                         return (a.rule->clear_count < b.rule->clear_count);
                 }
@@ -3337,8 +3330,8 @@ void GameState::render(bool saving)
             i++;
         }
 
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, debug_bits[0]));
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, debug_bits[0]));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, grid, debug_bits[0]));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, grid, debug_bits[0]));
 
         if (rules_list_offset + row_count > (int)rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
@@ -3382,8 +3375,8 @@ void GameState::render(bool saving)
             }
             else if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
             {
-                int num_used = display_rules_level ? rule.level_used_count : rule.used_count;
-                int num_clear = display_rules_level ? rule.level_clear_count : rule.clear_count;
+                int num_used = display_rules_level ? grid->level_used_count[&rule] : rule.used_count;
+                int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
                 render_number(num_used, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
                 render_number(num_clear, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
             }
@@ -4957,10 +4950,9 @@ void GameState::render(bool saving)
                     add_tooltip(dst_rect, "Cells Cleared", false);
                 }
 
-
-                render_number(inspected_rule.rule->level_used_count, right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(grid->level_used_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
                 render_number(inspected_rule.rule->used_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-                render_number(inspected_rule.rule->level_clear_count, right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(grid->level_clear_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
                 render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             }
         }
@@ -6085,8 +6077,6 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             constructed_rule = *inspected_rule.rule;
             constructed_rule.used_count = 0;
             constructed_rule.clear_count = 0;
-            constructed_rule.level_used_count = 0;
-            constructed_rule.level_clear_count = 0;
 
             rule_gen_region[0] = inspected_rule.regions[0];
             rule_gen_region[1] = inspected_rule.regions[1];

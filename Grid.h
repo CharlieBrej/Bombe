@@ -225,8 +225,6 @@ public:
     bool deleted = false;
     unsigned used_count = 0;
     unsigned clear_count = 0;
-    unsigned level_used_count = 0;
-    unsigned level_clear_count = 0;
     uint8_t sort_perm = 0;
 
 
@@ -335,6 +333,8 @@ public:
     std::multiset<GridRegion*, GridRegionCompare> regions_to_add_multiset;
     std::list<GridRegion> deleted_regions;
     XYSet last_cleared_regions;
+    std::map<GridRule*, int> level_used_count;
+    std::map<GridRule*, int> level_clear_count;
 
 protected:
     Grid();
@@ -394,6 +394,7 @@ public:
     void add_new_regions();
     bool add_one_new_region(GridRegion* r);
     void clear_regions();
+    void commit_level_counts();
 };
 
 class LocalGrid

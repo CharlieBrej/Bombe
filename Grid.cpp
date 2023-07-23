@@ -2660,14 +2660,14 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         }
         assert(c);
         last_cleared_regions = to_reveal;
-        rule.level_used_count++;
+        level_used_count[&rule]++;
         std::set<GridRule*> rules_to_credit;
         std::set<GridRegion*> regions_to_credit;
         rules_to_credit.insert(&rule);
         for (int i = 0; i < rule.region_count; i++)
             add_clear_count(r[i], rules_to_credit, regions_to_credit);
         for (GridRule* rule : rules_to_credit)
-            rule->level_clear_count += c;
+            level_clear_count[rule] += c;
         return APPLY_RULE_RESP_HIT;
     }
     else
@@ -3060,7 +3060,7 @@ bool Grid::add_one_new_region(GridRegion* r)
         it++;
     }
     if ((*best_reg).gen_cause.rule && (*best_reg).gen_cause.rule->apply_region_type.type != RegionType::SET)
-        (*best_reg).gen_cause.rule->level_used_count++;
+        level_used_count[(*best_reg).gen_cause.rule]++;
 
     remove_from_regions_to_add_multiset(&(*best_reg));
     regions_set.insert(&(*best_reg));
@@ -3077,6 +3077,14 @@ void Grid::clear_regions()
     deleted_regions.clear();
     cell_causes.clear();
     last_cleared_regions.clear();
+}
+
+void Grid::commit_level_counts()
+{
+    for (auto [rule, count] : level_used_count)
+        rule->used_count += count;
+    for (auto [rule, count] : level_clear_count)
+        rule->clear_count += count;
 }
 
 std::string SquareGrid::text_desciption()
