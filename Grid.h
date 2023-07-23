@@ -226,6 +226,7 @@ public:
     unsigned used_count = 0;
     unsigned clear_count = 0;
     uint8_t sort_perm = 0;
+    unsigned cpu_time = 0;
 
 
     GridRule(){};

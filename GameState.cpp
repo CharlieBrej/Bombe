@@ -858,7 +858,7 @@ void GameState::load_grid(std::string s)
         right_panel_mode = RIGHT_MENU_NONE;
 
 }
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRule*, int> &rule_times, GridRegion *inspected_region);
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region);
 
 void GameState::advance(int steps)
 {
@@ -1111,7 +1111,7 @@ void GameState::advance(int steps)
         Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
         unsigned newtime = SDL_GetTicks();
         if (newtime - oldtime)
-            rule_times[game_mode][&rule] += newtime - oldtime;
+            rule.cpu_time += newtime - oldtime;
         if (resp == Grid::APPLY_RULE_RESP_HIT)
             return;
         rule.stale = true;
@@ -1131,7 +1131,7 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
-        int rep = advance_grid(grid, rules[game_mode], rule_times[game_mode], inspected_region);
+        int rep = advance_grid(grid, rules[game_mode], inspected_region);
 
         if (rep == 0)
         {
@@ -1157,7 +1157,7 @@ void GameState::advance(int steps)
     }
 }
 
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRule*, int> &rule_times, GridRegion *inspected_region)
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region)
 {
     grid->add_base_regions();
     // for (GridRegion& r : grid->regions)
@@ -1185,7 +1185,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRul
                 grid->apply_rule(rule, new_region);
                 unsigned newtime = SDL_GetTicks();
                 if (newtime - oldtime)
-                    rule_times[&rule] += newtime - oldtime;
+                    rule.cpu_time += newtime - oldtime;
             }
         }
     }
@@ -1205,7 +1205,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRul
                 grid->apply_rule(rule, new_region, false);
                 unsigned newtime = SDL_GetTicks();
                 if (newtime - oldtime)
-                    rule_times[&rule] += newtime - oldtime;
+                    rule.cpu_time += newtime - oldtime;
             }
         }
     }
@@ -1230,7 +1230,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRul
                 Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
                 unsigned newtime = SDL_GetTicks();
                 if (newtime - oldtime)
-                    rule_times[&rule] += newtime - oldtime;
+                    rule.cpu_time += newtime - oldtime;
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
                 {
                     rpt = true;
@@ -1267,7 +1267,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRul
                             grid->apply_rule(rule, &r, false);
                             unsigned newtime = SDL_GetTicks();
                             if (newtime - oldtime)
-                                rule_times[&rule] += newtime - oldtime;
+                                rule.cpu_time += newtime - oldtime;
                         }
                     }
                 }
@@ -3229,7 +3229,6 @@ void GameState::render(bool saving)
         {
             unsigned index;
             GridRule* rule;
-            int cpu_time;
         };
         struct RuleDiplaySort
         {
@@ -3272,9 +3271,9 @@ void GameState::render(bool saving)
                 }
                 if (cpu_debug && (col == 5))
                 {
-                    if (a.cpu_time < b.cpu_time)
+                    if (a.rule->cpu_time < b.rule->cpu_time)
                         return true;
-                    if (b.cpu_time < a.cpu_time)
+                    if (b.rule->cpu_time < a.rule->cpu_time)
                         return false;
                 }
                 if (col == 5)
@@ -3314,7 +3313,7 @@ void GameState::render(bool saving)
             if (r.deleted)
                 continue;
             r.resort_region();
-            rules_list.push_back(RuleDiplay{i, &r, rule_times[game_mode][&r]});
+            rules_list.push_back(RuleDiplay{i, &r});
             i++;
         }
 
@@ -3358,8 +3357,7 @@ void GameState::render(bool saving)
             }
             if(debug_bits[0])
             {
-                int num_used = rule_times[game_mode][&rule];
-                render_number(num_used, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                render_number(rule.cpu_time, list_pos + XYPos(5 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
             }
             else if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
             {
@@ -7079,7 +7077,6 @@ bool GameState::events()
                             else
                             {
                                 rules[game_mode].clear();
-                                rule_times[game_mode].clear();
                                 if (game_mode == 2 || game_mode == 3)
                                     reset_levels();
                                 force_load_level = true;
