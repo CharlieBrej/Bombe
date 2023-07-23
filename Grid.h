@@ -379,7 +379,7 @@ public:
 
     bool add_region(GridRegion& r, bool front = false);
     bool add_region(XYSet& elements, RegionType clue, XYPos cause);
-    bool add_regions(int level);
+    void add_base_regions(void);
 
     enum ApplyRuleResp
     {
@@ -392,7 +392,7 @@ public:
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
-    bool add_one_new_region(GridRegion* r);
+    GridRegion* add_one_new_region(GridRegion* r);
     void clear_regions();
     void commit_level_counts();
 };

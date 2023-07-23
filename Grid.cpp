@@ -1580,7 +1580,7 @@ void Grid::solve_easy()
     while (rep)
     {
         rep = false;
-        while (add_regions(-1)) {}
+        add_base_regions();
         add_new_regions();
         if (regions.size() > 1000)
             return;
@@ -1598,10 +1598,10 @@ void Grid::solve_easy()
             while (apply_rule(rule, NULL) != APPLY_RULE_RESP_NONE)
                 rep = true;
         }
-        for (GridRegion& r : regions)
-        {
-            r.stale = true;
-        }
+        // for (GridRegion& r : regions)
+        // {
+        //     r.stale = true;
+        // }
     }
 }
 
@@ -1645,7 +1645,7 @@ bool Grid::is_determinable(XYPos q)
     tst->regions.clear();
     tst->regions_set.clear();
 
-    while (tst->add_regions(-1)) {}
+    tst->add_base_regions();
     tst->add_new_regions();
 
     return tst->is_determinable_using_regions(q);
@@ -2522,7 +2522,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
     return add_region(reg, true);
 }
 
-bool Grid::add_regions(int level)
+void Grid::add_base_regions(void)
 {
     for (const auto &edg : edges)
     {
@@ -2543,8 +2543,7 @@ bool Grid::add_regions(int level)
                 clue.value--;
             }
         }
-        if (add_region(elements, clue, XYPos(e_pos.x + 1000,e_pos.y)))
-            return true;
+        add_region(elements, clue, XYPos(e_pos.x + 1000,e_pos.y));
     }
 
     XYSet grid_squares = get_squares();
@@ -2566,11 +2565,10 @@ bool Grid::add_regions(int level)
                         clue.value--;
                 }
             }
-            if (add_region(elements, clue, p))
-                return true;
+            add_region(elements, clue, p);
         }
     }
-    return false;
+    return;
 }
 
 static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_credit, std::set<GridRegion*>& regions_to_credit)
@@ -3014,10 +3012,18 @@ void Grid::add_new_regions()
     regions_to_add_multiset.clear();
 }
 
-bool Grid::add_one_new_region(GridRegion* r)
+GridRegion* Grid::add_one_new_region(GridRegion* r)
 {
+    for (GridRegion& r : regions)
+    {
+        if (!r.stale)
+        {
+            r.stale = true;
+            return &r;
+        }
+    }
     if (regions_to_add.empty())
-        return false;
+        return NULL;
 
     std::list<GridRegion>::iterator it = regions_to_add.begin();
     while (it != regions_to_add.end())
@@ -3038,7 +3044,7 @@ bool Grid::add_one_new_region(GridRegion* r)
     }
 
     if (regions_to_add.empty())
-        return false;
+        return NULL;
 
     it = regions_to_add.begin();
     std::list<GridRegion>::iterator best_reg = regions_to_add.begin();
@@ -3065,7 +3071,7 @@ bool Grid::add_one_new_region(GridRegion* r)
     remove_from_regions_to_add_multiset(&(*best_reg));
     regions_set.insert(&(*best_reg));
     regions.splice(regions.end(), regions_to_add, best_reg);
-    return true;
+    return &*best_reg;
 }
 
 void Grid::clear_regions()

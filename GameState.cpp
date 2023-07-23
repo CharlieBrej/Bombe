@@ -858,6 +858,8 @@ void GameState::load_grid(std::string s)
         right_panel_mode = RIGHT_MENU_NONE;
 
 }
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRule*, int> &rule_times, GridRegion *inspected_region);
+
 void GameState::advance(int steps)
 {
     if (display_help || display_menu)
@@ -1112,8 +1114,8 @@ void GameState::advance(int steps)
             rule_times[game_mode][&rule] += newtime - oldtime;
         if (resp == Grid::APPLY_RULE_RESP_HIT)
             return;
-        if (resp == Grid::APPLY_RULE_RESP_NONE)
-            rule.stale = true;
+        rule.stale = true;
+        
     }
 
     while (true)
@@ -1129,80 +1131,16 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
+        int rep = advance_grid(grid, rules[game_mode], rule_times[game_mode], inspected_region);
 
-        bool hit = false;
-        bool rpt = true;
-        while (rpt)
+        if (rep == 0)
         {
-            rpt = false;
-            for (GridRegion& region : grid->regions)
-            {
-                if (!region.stale)
-                {
-                    for (GridRule& rule : rules[game_mode])
-                    {
-                        if (rule.deleted)
-                            continue;
-                        if (rule.priority < -100)
-                            continue;
-                        if (rule.apply_region_type.type != RegionType::SET)
-                            continue;
-                        rule.priority = 0;
-                        unsigned oldtime = SDL_GetTicks();
-                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
-                        unsigned newtime = SDL_GetTicks();
-                        if (newtime - oldtime)
-                            rule_times[game_mode][&rule] += newtime - oldtime;
-
-
-                        if (resp == Grid::APPLY_RULE_RESP_HIT)
-                        {
-                            hit = true;
-                            rpt = true;
-                            break;
-                        }
-                    }
-                    if (rpt)
-                        break;
-                }
-            }
+            if (auto_progress && !grid->is_solved())
+                skip_level = 1;
         }
-        if (hit)
+
+        if (rep == 1)
         {
-            for (GridRegion& r : grid->regions)
-            {
-                if (r.vis_cause.rule && (
-                    (r.vis_cause.regions[0] && r.vis_cause.regions[0]->deleted) ||
-                    (r.vis_cause.regions[1] && r.vis_cause.regions[1]->deleted) ||
-                    (r.vis_cause.regions[2] && r.vis_cause.regions[2]->deleted) ||
-                    (r.vis_cause.regions[3] && r.vis_cause.regions[3]->deleted) ))
-                {
-                    r.vis_cause = GridRegionCause();
-                    GridVisLevel prev = r.vis_level;
-                    r.vis_level = GRID_VIS_LEVEL_SHOW;
-                    for (int i = 1; i < 3; i++)
-                    {
-                        for (GridRule& rule : rules[game_mode])
-                        {
-                            if (rule.deleted)
-                                continue;
-                            if (rule.priority < -100)
-                                continue;
-                            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
-                            {
-                                rule.priority = 0;
-                                unsigned oldtime = SDL_GetTicks();
-                                grid->apply_rule(rule, &r, false);
-                                unsigned newtime = SDL_GetTicks();
-                                if (newtime - oldtime)
-                                    rule_times[game_mode][&rule] += newtime - oldtime;
-                            }
-                        }
-                    }
-                    if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
-                        r.stale = false;
-                }
-            }
             if (sound_frame_index > 100)
             {
                 sound_success_round_robin = (sound_success_round_robin + 1) % 32;
@@ -1210,89 +1148,139 @@ void GameState::advance(int steps)
                     Mix_PlayChannel(sound_success_round_robin, sounds[rnd % 8], 0);
                 sound_frame_index -= 100;
             }
-            continue;
         }
 
-        while (grid->add_regions(-1)) {}
-        for (GridRegion& region : grid->regions)
+        if (rep == 2)
         {
-            if (!region.stale)
-            {
-                if (region.vis_level == GRID_VIS_LEVEL_BIN)
-                        continue;
-                for (GridRule& rule : rules[game_mode])
-                {
-                    if (rule.priority < -100)
-                        continue;
-                    if (rule.deleted)
-                        continue;
-                    if (rule.apply_region_type.type == RegionType::VISIBILITY)
-                        continue;
-                    if (rule.apply_region_type.type == RegionType::SET)
-                        continue;
-
-                    while (true)
-                    {
-                        unsigned oldtime = SDL_GetTicks();
-                        Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region);
-                        unsigned newtime = SDL_GetTicks();
-                        if (newtime - oldtime)
-                            rule_times[game_mode][&rule] += newtime - oldtime;
-                        if (resp == Grid::APPLY_RULE_RESP_HIT)
-                        {
-                            //grid->apply_rule(rule, region);
-                            hit = true;
-                            break;
-                        }
-                        if (resp == Grid::APPLY_RULE_RESP_NONE)
-                        {
-                            rule.stale = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        for (GridRegion& r : grid->regions)
-            r.stale = true;
-        
-        if (grid->add_one_new_region(right_panel_mode == RIGHT_MENU_REGION ? inspected_region : NULL))
-        {
-            for (GridRegion& region : grid->regions)
-            {
-                if (!region.stale)
-                {
-                    for (int i = 1; i < 3; i++)
-                    {
-                        for (GridRule& rule : rules[game_mode])
-                        {
-                            if (rule.deleted)
-                                continue;
-                            if (rule.priority < -100)
-                                continue;
-                            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
-                            {
-                                rule.priority = 0;
-                                unsigned oldtime = SDL_GetTicks();
-                                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, &region, false);
-                                unsigned newtime = SDL_GetTicks();
-                                if (newtime - oldtime)
-                                    rule_times[game_mode][&rule] += newtime - oldtime;
-                                if (resp == Grid::APPLY_RULE_RESP_NONE)
-                                    rule.stale = true;
-                            }
-                        }
-                    }
-                }
-            }
             clue_solves.clear();
         }
-        else
+    }
+}
+
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, std::map<GridRule*, int> &rule_times, GridRegion *inspected_region)
+{
+    grid->add_base_regions();
+    // for (GridRegion& r : grid->regions)
+    //     r.stale = true;
+    
+    GridRegion* new_region = grid->add_one_new_region(inspected_region);
+
+    if (!new_region)
+        return 0;
+
+    if (new_region->vis_level != GRID_VIS_LEVEL_BIN)
+    {
+        for (GridRule& rule : rules)
         {
-            if (auto_progress && !grid->is_solved())
-                skip_level = 1;
+            if (rule.priority < -100)
+                continue;
+            if (rule.deleted)
+                continue;
+            if (rule.apply_region_type.type == RegionType::VISIBILITY)
+                continue;
+            if (rule.apply_region_type.type == RegionType::SET)
+                continue;
+            {
+                unsigned oldtime = SDL_GetTicks();
+                grid->apply_rule(rule, new_region);
+                unsigned newtime = SDL_GetTicks();
+                if (newtime - oldtime)
+                    rule_times[&rule] += newtime - oldtime;
+            }
         }
     }
+
+    for (int i = 1; i < 3; i++)
+    {
+        for (GridRule& rule : rules)
+        {
+            if (rule.deleted)
+                continue;
+            if (rule.priority < -100)
+                continue;
+            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+            {
+                rule.priority = 0;
+                unsigned oldtime = SDL_GetTicks();
+                grid->apply_rule(rule, new_region, false);
+                unsigned newtime = SDL_GetTicks();
+                if (newtime - oldtime)
+                    rule_times[&rule] += newtime - oldtime;
+            }
+        }
+    }
+
+    bool hit = false;
+    bool rpt = true;
+    while (rpt)
+    {
+        rpt = false;
+        if (!new_region->deleted)
+        {
+            for (GridRule& rule : rules)
+            {
+                if (rule.deleted)
+                    continue;
+                if (rule.priority < -100)
+                    continue;
+                if (rule.apply_region_type.type != RegionType::SET)
+                    continue;
+                rule.priority = 0;
+                unsigned oldtime = SDL_GetTicks();
+                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
+                unsigned newtime = SDL_GetTicks();
+                if (newtime - oldtime)
+                    rule_times[&rule] += newtime - oldtime;
+                if (resp == Grid::APPLY_RULE_RESP_HIT)
+                {
+                    rpt = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (hit)
+    {
+        for (GridRegion& r : grid->regions)
+        {
+            if (r.vis_cause.rule && (
+                (r.vis_cause.regions[0] && r.vis_cause.regions[0]->deleted) ||
+                (r.vis_cause.regions[1] && r.vis_cause.regions[1]->deleted) ||
+                (r.vis_cause.regions[2] && r.vis_cause.regions[2]->deleted) ||
+                (r.vis_cause.regions[3] && r.vis_cause.regions[3]->deleted) ))
+            {
+                r.vis_cause = GridRegionCause();
+                GridVisLevel prev = r.vis_level;
+                r.vis_level = GRID_VIS_LEVEL_SHOW;
+                for (int i = 1; i < 3; i++)
+                {
+                    for (GridRule& rule : rules)
+                    {
+                        if (rule.deleted)
+                            continue;
+                        if (rule.priority < -100)
+                            continue;
+                        if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                        {
+                            rule.priority = 0;
+                            unsigned oldtime = SDL_GetTicks();
+                            grid->apply_rule(rule, &r, false);
+                            unsigned newtime = SDL_GetTicks();
+                            if (newtime - oldtime)
+                                rule_times[&rule] += newtime - oldtime;
+                        }
+                    }
+                }
+                if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
+                    r.stale = false;
+            }
+        }
+        return 1;
+    }
+
+
+//    new_region->stale = true;
+    return 2;
 }
 
 void GameState::audio()
@@ -7293,7 +7281,6 @@ bool GameState::events()
             inspected_region->vis_level = GRID_VIS_LEVEL_BIN;
         if (!ctrl_held)
             inspected_region->visibility_force = GridRegion::VIS_FORCE_USER;
-        inspected_region->stale = false;
         inspected_region->vis_cause.rule = NULL;
         inspected_region->stale = false;
     }
