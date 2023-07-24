@@ -287,8 +287,15 @@ GridRule::GridRule(SaveObject* sobj)
         if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
     }
 
+    if (omap->has_key("paused"))
+        paused = omap->get_num("paused");
     if (omap->has_key("priority"))
         priority = omap->get_num("priority");
+    if (priority < -100)
+    {
+        priority = 0;
+        paused = true;
+    }
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
@@ -316,6 +323,7 @@ SaveObject* GridRule::save(bool lite)
     omap->add_num("apply_region_type", apply_region_type.as_int());
     omap->add_num("apply_region_bitmap", apply_region_bitmap);
     omap->add_num("priority", priority);
+    omap->add_num("paused", paused);
 
     SaveObjectList* region_type_list = new SaveObjectList;
     for (int i = 0; i < region_count; i++)
@@ -2593,7 +2601,7 @@ static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_cr
 
 Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[32])
 {
-    if (rule.priority < -100)
+    if (rule.paused)
         return APPLY_RULE_RESP_NONE;
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;

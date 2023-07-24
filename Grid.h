@@ -216,6 +216,7 @@ class GridRule
 {
 public:
     int8_t priority = 0;
+    bool paused = false;
     uint8_t region_count = 0;
     RegionType region_type[4] = {};
     RegionType square_counts[16] = {};

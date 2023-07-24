@@ -1105,7 +1105,7 @@ void GameState::advance(int steps)
             continue;
         if (rule.stale)
             continue;
-        if (rule.priority < -100)
+        if (rule.paused)
             continue;
         unsigned oldtime = SDL_GetTicks();
         Grid::ApplyRuleResp resp  = grid->apply_rule(rule, (GridRegion*) NULL);
@@ -1173,7 +1173,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
     {
         for (GridRule& rule : rules)
         {
-            if (rule.priority < -100)
+            if (rule.paused)
                 continue;
             if (rule.deleted)
                 continue;
@@ -1197,11 +1197,10 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
         {
             if (rule.deleted)
                 continue;
-            if (rule.priority < -100)
+            if (rule.paused)
                 continue;
             if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
             {
-                rule.priority = 0;
                 unsigned oldtime = SDL_GetTicks();
                 Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
                 unsigned newtime = SDL_GetTicks();
@@ -1219,11 +1218,10 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
         {
             if (rule.deleted)
                 continue;
-            if (rule.priority < -100)
+            if (rule.paused)
                 continue;
             if (rule.apply_region_type.type != RegionType::SET)
                 continue;
-            rule.priority = 0;
             unsigned oldtime = SDL_GetTicks();
             Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
             unsigned newtime = SDL_GetTicks();
@@ -1249,11 +1247,10 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
                             {
                                 if (rule.deleted)
                                     continue;
-                                if (rule.priority < -100)
+                                if (rule.paused)
                                     continue;
                                 if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                                 {
-                                    rule.priority = 0;
                                     unsigned oldtime = SDL_GetTicks();
                                     grid->apply_rule(rule, &r, false);
                                     unsigned newtime = SDL_GetTicks();
@@ -1336,6 +1333,9 @@ void GameState::reset_rule_gen_region()
 //    rule_gen_region_undef_num = 0;
     constructed_rule.apply_region_bitmap = 0;
     constructed_rule.priority = 0;
+    constructed_rule.paused = false;
+
+    constructed_rule.paused = false;
     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
     constructed_rule_undo.clear();
     constructed_rule_redo.clear();
@@ -3239,11 +3239,11 @@ void GameState::render(bool saving)
                     return (a.index < b.index);
                 if (col == 1)
                 {
-                    int pa = a.rule->priority;
-                    int pb = b.rule->priority;
-                    if (pa > -100 && (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET))
+                    int pa = a.rule->paused ? -10 : a.rule->priority;
+                    int pb = b.rule->paused ? -10 : b.rule->priority;
+                    if (!a.rule->paused && (a.rule->apply_region_type.type == RegionType::VISIBILITY || a.rule->apply_region_type.type == RegionType::SET))
                         pa = 3;
-                    if (pb > -100 && (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET))
+                    if (!b.rule->paused && (b.rule->apply_region_type.type == RegionType::VISIBILITY || b.rule->apply_region_type.type == RegionType::SET))
                         pb = 3;
                     return pa < pb;
                 }
@@ -3329,9 +3329,11 @@ void GameState::render(bool saving)
 
             render_number(rd.index, list_pos + XYPos(0 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
             {
-                int priority = std::clamp(int(rule.priority), -3, 2);
+                int priority = std::clamp(int(rule.priority), -2, 2);
+                if (rule.paused)
+                    priority = -3;
                 if (rule.apply_region_type.type == RegionType::VISIBILITY || rule.apply_region_type.type == RegionType::SET)
-                    if (rule.priority > -100)
+                    if (!rule.paused)
                         priority = -4;
                 SDL_Rect src_rect = {2432, 1344 + (2 - priority) * 128, 128, 128};
                 SDL_Rect dst_rect = {list_pos.x + cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + rule_index * cell_height, cell_height, cell_height};
@@ -4820,7 +4822,8 @@ void GameState::render(bool saving)
             bool pri_relevant = false;
             bool pri_paused = true;
             int priority;
-            
+            bool paused;
+
             assert(!selected_rules.empty());
             for (GridRule* rule : selected_rules)
             {
@@ -4830,11 +4833,12 @@ void GameState::render(bool saving)
                     {
                         pri_relevant = true;
                         priority = rule->priority;
+                        paused = rule->paused;
                     }
-                    if (priority != rule->priority)
+                    if (priority != rule->priority || paused != rule->paused)
                         pri_consistant = false;
                 }
-                if (rule->priority >= -100)
+                if (!rule->paused)
                     pri_paused = false;
             }
 
@@ -6113,11 +6117,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     int y = ((pos - XYPos(button_size * 0, button_size * 6)) / button_size).y;
                     int np = 2 - y;
-                    np = std::clamp(np, -3, 2);
+                    np = std::clamp(np, -2, 2);
                     for (GridRule* rule : selected_rules)
                     {
-                        if (rule->priority < -100)
+                        if (rule->paused)
+                        {
+                            rule->paused = false;
                             rule->stale = false;
+                        }
                         if (rule->apply_region_type.type < RegionType::SET)
                             rule->priority = np;
                         else
@@ -6134,18 +6141,18 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     bool all_paused = true;
                     for (GridRule* rule : selected_rules)
-                        if (rule->priority > -100)
+                        if (!rule->paused)
                             all_paused = false;
                     for (GridRule* rule : selected_rules)
                     {
                         if (all_paused)
                         {
                             rule->stale = false;
-                            rule->priority = 0;
+                            rule->paused = false;
                         }
                         else
                         {
-                            rule->priority = -128;
+                            rule->paused = true;
                         }
                     }
                 }
@@ -7326,7 +7333,7 @@ void GameState::deal_with_scores()
                         }
                     }
                 }
-                if (omap->has_key("level_gen_req"))
+                if (0 && omap->has_key("level_gen_req"))
                 {
                     if ((level_gen_req == "") && (SDL_TryLockMutex(level_gen_mutex) == 0))
                     {
