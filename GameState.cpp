@@ -1167,6 +1167,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
 
     if (!new_region)
         return 0;
+    new_region->stale = true;
 
     if (new_region->vis_level != GRID_VIS_LEVEL_BIN)
     {
@@ -1202,84 +1203,74 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
             {
                 rule.priority = 0;
                 unsigned oldtime = SDL_GetTicks();
-                grid->apply_rule(rule, new_region, false);
-                unsigned newtime = SDL_GetTicks();
-                if (newtime - oldtime)
-                    rule.cpu_time += newtime - oldtime;
-            }
-        }
-    }
-
-    bool hit = false;
-    bool rpt = true;
-    while (rpt)
-    {
-        rpt = false;
-        if (!new_region->deleted)
-        {
-            for (GridRule& rule : rules)
-            {
-                if (rule.deleted)
-                    continue;
-                if (rule.priority < -100)
-                    continue;
-                if (rule.apply_region_type.type != RegionType::SET)
-                    continue;
-                rule.priority = 0;
-                unsigned oldtime = SDL_GetTicks();
-                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
+                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
                 unsigned newtime = SDL_GetTicks();
                 if (newtime - oldtime)
                     rule.cpu_time += newtime - oldtime;
                 if (resp == Grid::APPLY_RULE_RESP_HIT)
-                {
-                    rpt = true;
                     break;
-                }
             }
         }
     }
-    if (hit)
+
+    if (!new_region->deleted)
     {
-        for (GridRegion& r : grid->regions)
+        for (GridRule& rule : rules)
         {
-            if (r.vis_cause.rule && (
-                (r.vis_cause.regions[0] && r.vis_cause.regions[0]->deleted) ||
-                (r.vis_cause.regions[1] && r.vis_cause.regions[1]->deleted) ||
-                (r.vis_cause.regions[2] && r.vis_cause.regions[2]->deleted) ||
-                (r.vis_cause.regions[3] && r.vis_cause.regions[3]->deleted) ))
+            if (rule.deleted)
+                continue;
+            if (rule.priority < -100)
+                continue;
+            if (rule.apply_region_type.type != RegionType::SET)
+                continue;
+            rule.priority = 0;
+            unsigned oldtime = SDL_GetTicks();
+            Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
+            unsigned newtime = SDL_GetTicks();
+            if (newtime - oldtime)
+                rule.cpu_time += newtime - oldtime;
+            if (resp == Grid::APPLY_RULE_RESP_HIT)
             {
-                r.vis_cause = GridRegionCause();
-                GridVisLevel prev = r.vis_level;
-                r.vis_level = GRID_VIS_LEVEL_SHOW;
-                for (int i = 1; i < 3; i++)
+                new_region->stale = false;
+                for (GridRegion& r : grid->regions)
                 {
-                    for (GridRule& rule : rules)
+                    if (r.vis_cause.rule && (
+                        (r.vis_cause.regions[0] && r.vis_cause.regions[0]->deleted) ||
+                        (r.vis_cause.regions[1] && r.vis_cause.regions[1]->deleted) ||
+                        (r.vis_cause.regions[2] && r.vis_cause.regions[2]->deleted) ||
+                        (r.vis_cause.regions[3] && r.vis_cause.regions[3]->deleted) ))
                     {
-                        if (rule.deleted)
-                            continue;
-                        if (rule.priority < -100)
-                            continue;
-                        if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                        r.vis_cause = GridRegionCause();
+                        GridVisLevel prev = r.vis_level;
+                        r.vis_level = GRID_VIS_LEVEL_SHOW;
+                        for (int i = 1; i < 3; i++)
                         {
-                            rule.priority = 0;
-                            unsigned oldtime = SDL_GetTicks();
-                            grid->apply_rule(rule, &r, false);
-                            unsigned newtime = SDL_GetTicks();
-                            if (newtime - oldtime)
-                                rule.cpu_time += newtime - oldtime;
+                            for (GridRule& rule : rules)
+                            {
+                                if (rule.deleted)
+                                    continue;
+                                if (rule.priority < -100)
+                                    continue;
+                                if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                                {
+                                    rule.priority = 0;
+                                    unsigned oldtime = SDL_GetTicks();
+                                    grid->apply_rule(rule, &r, false);
+                                    unsigned newtime = SDL_GetTicks();
+                                    if (newtime - oldtime)
+                                        rule.cpu_time += newtime - oldtime;
+                                }
+                            }
                         }
+                        if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
+                            r.stale = false;
                     }
                 }
-                if ((r.vis_level != prev) && (prev == GRID_VIS_LEVEL_BIN))
-                    r.stale = false;
+                return 1;
             }
         }
-        return 1;
     }
-
-
-//    new_region->stale = true;
+    new_region->stale = true;
     return 2;
 }
 
