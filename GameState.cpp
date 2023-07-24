@@ -2482,7 +2482,8 @@ void GameState::render(bool saving)
 {
     if (score_tables[game_mode][0].size() == 0)
         fetch_scores();
-
+    if (pirate)
+        speed_dial = std::clamp(speed_dial, 0.0, 0.5);
     if(low_contrast && contrast > 128)
         contrast--;
     if(!low_contrast && contrast < 255)
@@ -2914,8 +2915,16 @@ void GameState::render(bool saving)
                 load_level = true;
                 force_load_level = false;
                 level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.clear();
-                level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(global_level_sets[current_level_group_index][current_level_set_index]->levels.size());
-                level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = global_level_sets[current_level_group_index][current_level_set_index]->levels.size();
+                if (current_level_group_index == GLBAL_LEVEL_SETS)
+                {
+                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(server_levels[current_level_set_index].size());
+                    level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = server_levels[current_level_set_index].size();
+                }
+                else
+                {
+                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(global_level_sets[current_level_group_index][current_level_set_index]->levels.size());
+                    level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = global_level_sets[current_level_group_index][current_level_set_index]->levels.size();
+                }
                 level_progress[game_mode][current_level_group_index][current_level_set_index].star_anim_prog = 0;
                 level_progress[game_mode][current_level_group_index][current_level_set_index].unlock_anim_prog = 0;
             }
