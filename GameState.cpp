@@ -7342,7 +7342,7 @@ void GameState::deal_with_scores()
                         }
                     }
                 }
-                if (0 && omap->has_key("level_gen_req"))
+                if (omap->has_key("level_gen_req"))
                 {
                     if ((level_gen_req == "") && (SDL_TryLockMutex(level_gen_mutex) == 0))
                     {
