@@ -4858,7 +4858,7 @@ void GameState::render(bool saving)
                     {
                         SDL_Rect src_rect = {2240, 1344, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 6, button_size, button_size};
-                        if (!pri_consistant || priority != 2)
+                        if (pri_paused || !pri_consistant || priority != 2)
                             src_rect.x = 2816;
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Maximum Priority");
@@ -4866,7 +4866,7 @@ void GameState::render(bool saving)
                     {
                         SDL_Rect src_rect = {2240, 1344 + 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7, button_size, button_size};
-                        if (!pri_consistant || priority != 1)
+                        if (pri_paused || !pri_consistant || priority != 1)
                             src_rect.x = 2816;
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "High Priority");
@@ -4874,7 +4874,7 @@ void GameState::render(bool saving)
                     {
                         SDL_Rect src_rect = {2240, 1344 + 2 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 8, button_size, button_size};
-                        if (!pri_consistant || priority != 0)
+                        if (pri_paused || !pri_consistant || priority != 0)
                             src_rect.x = 2816;
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Medium Priority");
@@ -4882,7 +4882,7 @@ void GameState::render(bool saving)
                     {
                         SDL_Rect src_rect = {2240, 1344 + 3 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9, button_size, button_size};
-                        if (!pri_consistant || priority != -1)
+                        if (pri_paused || !pri_consistant || priority != -1)
                             src_rect.x = 2816;
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Low Priority");
@@ -4890,7 +4890,7 @@ void GameState::render(bool saving)
                     {
                         SDL_Rect src_rect = {2240, 1344 + 4 * 192, 192, 192};
                         SDL_Rect dst_rect = {right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10, button_size, button_size};
-                        if (!pri_consistant || priority != -2)
+                        if (pri_paused || !pri_consistant || priority != -2)
                             src_rect.x = 2816;
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                         add_tooltip(dst_rect, "Minimum Priority");
