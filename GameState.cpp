@@ -4990,7 +4990,7 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = {3008, 576, 192, 576};
                 SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size * 3};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Maximum Regions", false);
+                add_tooltip(dst_rect, "Auto-Solve Maximum Regions", false);
 
                 src_rect = {2048, 1152, 192, 64};
                 dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3 + int((1 - rule_limit_slider) * 2.6666 * button_size), button_size, button_size / 3};
@@ -5000,7 +5000,7 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = {2624, 1536, 192, 192};
                 SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Maximum Regions", false);
+                add_tooltip(dst_rect, "Auto-Solve Maximum Regions", false);
                 SDL_SetTextureColorMod(sdl_texture, 0,0,0);
                 if (rule_limit_count >= 0)
                 {
