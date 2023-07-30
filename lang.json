@@ -136,7 +136,7 @@
                 {"x": 240,  "y": 570,           "text":"Either 4 or 6"},
                 {"x": 240,  "y": 710,           "text":"Either 3, 5 or 7"},
                 {"x": 240,  "y": 850,           "text":"Odd numbers"},
-                {"x": 1000, "y": 500,           "text":"Rules can be used\nto create new regions"}
+                {"x": 900,  "y": 500,           "text":"Rules can be used\nto create new regions"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Solve levels to unlock\nlevel sets and features"},
@@ -289,7 +289,7 @@
                 {"x": 240,  "y": 570,           "text":"Enten 4 eller 6"},
                 {"x": 240,  "y": 710,           "text":"Enten 3, 5 eller 7"},
                 {"x": 240,  "y": 850,           "text":"Ulige tal"},
-                {"x": 1000, "y": 500,           "text":"Regler kan blive brugt\ntil at lave nye områder"}
+                {"x": 900,  "y": 500,           "text":"Regler kan blive brugt\ntil at lave nye områder"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Løs baner for at låse op for\nnye baner og funktioner"},
@@ -442,7 +442,7 @@
                 {"x": 240,  "y": 570,           "text":"Au choix : 4 ou 6"},
                 {"x": 240,  "y": 710,           "text":"Au choix : 3, 5 ou 7"},
                 {"x": 240,  "y": 850,           "text":"Nombres Impairs"},
-                {"x": 1000, "y": 500,           "text":"Les règles peuvent être\nutilisées pour créer\nde nouvelles Régions."}
+                {"x": 900,  "y": 500,           "text":"Les règles peuvent être\nutilisées pour créer\nde nouvelles Régions."}
             ],
             [
                 {"x": 160,  "y": 520,            "text":"Résolvez des niveaux pour\ndébloquer des nouveaux\nniveaux et fonctionnalités"},
@@ -595,7 +595,7 @@
                 {"x": 240,  "y": 567,           "text":"Entweder 4 oder 6"},
                 {"x": 240,  "y": 707,           "text":"Entweder 3, 5 oder 7"},
                 {"x": 240,  "y": 845,           "text":"Ungerade Zahlen"},
-                {"x": 1000, "y": 500,           "text":"Regeln können verwendet werden,\num neue Regionen zu erstellen"},
+                {"x": 800,  "y": 460,           "text":"Regeln können verwendet\nwerden,um neue\nRegionen zu erstellen"},
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Löse Level, um\nLevel-Sets und\nFeatures freizuschalten"},
@@ -748,7 +748,7 @@
                 {"x": 240,  "y": 570,           "text":"4 of 6"},
                 {"x": 240,  "y": 710,           "text":"3, 5 of 7"},
                 {"x": 240,  "y": 850,           "text":"Oneven nummers"},
-                {"x": 925, "y": 500,           "text":"Met regels kan je\nnieuwe regio's maken."}
+                {"x": 900,  "y": 500,           "text":"Met regels kan je\nnieuwe regio's maken."}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Los levels op om\nlevel sets en functies\nte ontgrendelen."},
@@ -901,7 +901,7 @@
                 {"x": 240,  "y": 570,           "text":"Albo 4 albo 6"},
                 {"x": 240,  "y": 710,           "text":"3, 5 lub 7"},
                 {"x": 240,  "y": 850,           "text":"Liczby nieparzyste"},
-                {"x": 1000, "y": 500,           "text":"Zasadami można tworzyć\nnowe regiony"}
+                {"x": 850,  "y": 500,           "text":"Zasadami można tworzyć\nnowe regiony"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Rozwiązuj poziomy,\naby odblokować więcej funkcji"},
@@ -1054,7 +1054,7 @@
                 {"x": 240,  "y": 570,           "text":"4 или 6"},
                 {"x": 240,  "y": 710,           "text":"3, 5 или 7"},
                 {"x": 240,  "y": 850,           "text":"Нечетные числа"},
-                {"x": 1000, "y": 500,           "text":"Правила могут\nсоздавать новые области"}
+                {"x": 900,  "y": 460,           "text":"Правила могут\nсоздавать новые\nобласти"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"Решайте уровни чтобы \nоткрыть новые наборы\nуровней и новые опции"},
@@ -1210,7 +1210,7 @@
                 {"x": 240,  "y": 570,           "text":"4 或 6"},
                 {"x": 240,  "y": 710,           "text":"3、5 或 7"},
                 {"x": 240,  "y": 850,           "text":"奇數"},
-                {"x": 1000, "y": 500,           "text":"規則可用於\n生成新的區域"}
+                {"x": 900,  "y": 500,           "text":"規則可用於\n生成新的區域"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"解決關卡就能解鎖\n新的題組與功能"},
@@ -1366,7 +1366,7 @@
                 {"x": 240,  "y": 570,           "text":"4 或 6"},
                 {"x": 240,  "y": 710,           "text":"3、5 或 7"},
                 {"x": 240,  "y": 850,           "text":"奇数"},
-                {"x": 1000, "y": 500,           "text":"规则可用于\n生成新的区域"}
+                {"x": 900,  "y": 500,           "text":"规则可用于\n生成新的区域"}
             ],
             [
                 {"x": 170,  "y": 520,            "text":"解决关卡就能解锁\n新的题组与功能"},
@@ -1519,7 +1519,7 @@
                 {"x": 240,  "y": 570,           "text":"4か6のどちらか"},
                 {"x": 240,  "y": 710,           "text":"3、5、7のいずれか"},
                 {"x": 240,  "y": 850,           "text":"奇数"},
-                {"x": 1000, "y": 500,           "text":"ルールを設定することで\n新しい領域の作成が可能"}
+                {"x": 900,  "y": 500,           "text":"ルールを設定することで\n新しい領域の作成が可能"}
             ],
             [
                 {"x": 170,  "y": 520,           "text":"レベルをクリアして\nレベルセットと機能をアンロック"},

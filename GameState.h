@@ -292,11 +292,12 @@ public:
     bool auto_progress_all = false;
     double steps_had = 0;
 
-    const static int robot_count = 8;
-    SDL_Thread* robot_threads[robot_count] = {};
-    SDL_mutex* robot_lock[robot_count];
+    const static int max_robot_count = 16;
+    SDL_Thread* robot_threads[max_robot_count] = {};
+    SDL_mutex* robot_lock[max_robot_count];
 
-    int run_robot_count = 8;
+    int robot_count = 0;
+    int run_robot_count  = 0;
     bool run_robots = false;
     bool should_run_robots = false;
 
@@ -319,7 +320,8 @@ public:
     public:
         uint64_t stats = 0;
         bool done = false;
-        bool robot_todo = false;
+        int robot_done = 0;
+        int robot_regions = 0;
     };
 
     class LevelProgress
