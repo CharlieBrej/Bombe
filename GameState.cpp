@@ -364,7 +364,9 @@ GameState::GameState(std::string& load_data, bool json)
         game_mode = 0;
     ImgClipBoard::init();
 
-    robot_count = std::min(SDL_GetCPUCount(), max_robot_count);
+    robot_count = SDL_GetCPUCount();
+    if (robot_count > max_robot_count)
+        robot_count = max_robot_count;
     run_robot_count = robot_count;
     for (int i = 0; i < robot_count; i++)
     {
@@ -1129,12 +1131,12 @@ void GameState::advance(int steps)
 
     if (!(load_level || skip_level) && !force_load_level && grid->is_solved() && !current_level_is_temp)
     {
+        skip_level = 1;
         SDL_LockMutex(level_progress_lock);
         if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].done)
         {
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
             level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].done = true;
-            skip_level = 1;
             {
                 if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
                 {
@@ -5254,9 +5256,10 @@ void GameState::render(bool saving)
                         {
                             if (!level_progress[game_mode][g][s].level_status[i].done)
                             {
-                                todo_count++;
                                 if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done)
                                     done_count++;
+                                else
+                                    todo_count++;
                             }
                         }
                     }
@@ -5855,7 +5858,7 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(5 * button_size, 11 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(9 * button_size, 10 * button_size), button_size/4, 1);
         int index = 0;
         std::string orig_lang = language;
         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
@@ -5864,7 +5867,8 @@ void GameState::render(bool saving)
             set_language(s);
             if (s == orig_lang)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
-            render_text_box(left_panel_offset + XYPos(button_size * 2, button_size * (2 + index)), s);
+            XYPos p(index / 8, index % 8);
+            render_text_box(left_panel_offset + XYPos(button_size * (2 + p.x * 4), button_size * (2 + p.y)), s);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             index++;
         }
@@ -7322,12 +7326,13 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x >= 0 && p.y >= 0 && p.x < 5)
+                    if (p.x >= 0 && p.y >= 0 && p.x < 8)
                     {
+                        int want = p.y + (p.x / 4) * 8;
                         int index = 0;
                         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
                         {
-                            if (index == p.y)
+                            if (index == want)
                             {
                                 set_language(it->first);
                             }
