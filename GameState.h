@@ -292,6 +292,14 @@ public:
     bool auto_progress_all = false;
     double steps_had = 0;
 
+    const static int robot_count = 8;
+    SDL_Thread* robot_threads[robot_count] = {};
+    SDL_mutex* robot_lock[robot_count];
+
+    int run_robot_count = 8;
+    bool run_robots = false;
+    bool should_run_robots = false;
+
     unsigned server_timeout = 0;
 
     bool last_active_was_hit = false;
@@ -306,14 +314,21 @@ public:
 
     ServerResp scores_from_server;
 
+    class LevelStatus
+    {
+    public:
+        uint64_t stats = 0;
+        bool done = false;
+        bool robot_todo = false;
+    };
+
     class LevelProgress
     {
     public:
         unsigned count_todo = 0;
         int star_anim_prog = 0;
         int unlock_anim_prog = 0;
-        std::vector<bool> level_status;
-        std::vector<uint64_t> level_stats;
+        std::vector<LevelStatus> level_status;
     };
     std::vector<std::vector<std::string>> server_levels;
     int server_levels_version = 0;
@@ -321,6 +336,7 @@ public:
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
     int max_stars = 0;
     int cur_stars = 0;
+    SDL_mutex* level_progress_lock;
 
     struct AnimationStarBurst
     {
@@ -373,6 +389,8 @@ public:
         PROG_LOCK_REGION_HINT,
         PROG_LOCK_DOUBLE_CLICK_HINT,
         PROG_LOCK_REGION_LIMIT,
+
+        PROG_LOCK_ROBOTS,
 
         PROG_LOCK_TOTAL
         };
@@ -427,6 +445,8 @@ public:
 
     bool rule_is_permitted(GridRule& rule, int mode);
     void load_grid(std::string s);
+    void pause_robots();
+    void robot_thread(int index);
     void advance(int steps);
     void audio();
     void set_language(std::string lang);

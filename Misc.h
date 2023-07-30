@@ -148,6 +148,12 @@ class Rand
 public:
     std::mt19937 gen;
 
+    Rand()
+    {
+        std::random_device rd;
+        gen.seed(rd());
+    };
+
     Rand(unsigned i)
     {
         gen.seed(i);

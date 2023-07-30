@@ -59,6 +59,20 @@ void global_mutex_unlock()
 
 static Rand rnd(1);
 
+struct RobotThread
+{
+    GameState* state;
+    int index;
+};
+
+static int robot_thread_func(void *ptr)
+{
+    RobotThread* rt = (RobotThread*)ptr;
+    rt->state->robot_thread(rt->index);
+    delete rt;
+    return 0;
+}
+
 GameState::GameState(std::string& load_data, bool json)
 {
     global_mutex = SDL_CreateMutex();
@@ -73,7 +87,6 @@ GameState::GameState(std::string& load_data, bool json)
         {
             level_progress[k][j][i].level_status.resize(global_level_sets[j][i]->levels.size());
             level_progress[k][j][i].count_todo = global_level_sets[j][i]->levels.size();
-            level_progress[k][j][i].level_stats.resize(global_level_sets[j][i]->levels.size());
         }
     }
     {
@@ -146,7 +159,6 @@ GameState::GameState(std::string& load_data, bool json)
                     {
                         level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
                         level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
-                        level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
                     }
                     for (unsigned i = 0; i < plist->get_count(); i++)
                     {
@@ -205,7 +217,7 @@ GameState::GameState(std::string& load_data, bool json)
                             {
                                 char c = s[j];
                                 int stat = c - '0';
-                                level_progress[mode][k][i].level_status[j] = stat;
+                                level_progress[mode][k][i].level_status[j].done = stat;
                                 if (stat)
                                     level_progress[mode][k][i].count_todo--;
                             }
@@ -236,6 +248,7 @@ GameState::GameState(std::string& load_data, bool json)
         current_level_group_index = 0;
     if (current_level_set_index >= global_level_sets[current_level_group_index].size())
         current_level_set_index = 0;
+
     rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
     if (rule_limit_slider >= 1.0)
         rule_limit_count = -1;
@@ -341,6 +354,8 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_REGION_HINT] = 300;
     prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] = 600;
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
+    prog_stars[PROG_LOCK_ROBOTS] = 9000;
+
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
         if (prog_stars[i] <= max_stars)
@@ -348,6 +363,14 @@ GameState::GameState(std::string& load_data, bool json)
     if (!prog_seen[PROG_LOCK_GAME_MODE])
         game_mode = 0;
     ImgClipBoard::init();
+
+    for (int i = 0; i < robot_count; i++)
+    {
+        robot_lock[i] = SDL_CreateMutex();
+        RobotThread* rt = new RobotThread{this, i};
+        robot_threads[i] = SDL_CreateThread(robot_thread_func, "Robot", (void *)rt);
+    }
+    level_progress_lock = SDL_CreateMutex();
 }
 
 SaveObject* GameState::save(bool lite)
@@ -375,9 +398,9 @@ SaveObject* GameState::save(bool lite)
             for (LevelProgress& prog : level_progress[mode][j])
             {
                 std::string sstr;
-                for (bool stat : prog.level_status)
+                for (LevelStatus& stat : prog.level_status)
                 {
-                    char c = '0' + stat;
+                    char c = '0' + stat.done;
                     sstr += c;
                 }
                 plist->add_item(new SaveObjectString(sstr));
@@ -445,6 +468,13 @@ void GameState::save(std::ostream& outfile, bool lite)
 
 GameState::~GameState()
 {
+    SHUTDOWN = true;
+    run_robots = false;
+    for (int i = 0; i < robot_count; i++)
+    {
+        SDL_WaitThread(robot_threads[i], NULL);
+    }
+
     delete grid;
     delete lang_data;
     for (const auto& [key, value] : fonts)
@@ -467,11 +497,12 @@ GameState::~GameState()
     LevelSet::delete_global();
     if (level_gen_thread)
     {
-        SHUTDOWN = true;
         SDL_WaitThread(level_gen_thread, NULL);
         level_gen_thread = NULL;
     }
+
     Z3_finalize_memory();
+    SDL_DestroyMutex(level_progress_lock);
 }
 void GameState::reset_levels()
 {
@@ -729,9 +760,9 @@ void GameState::fetch_scores()
         for (LevelProgress& prog : level_progress[game_mode][j])
         {
             std::string sstr;
-            for (bool stat : prog.level_status)
+            for (LevelStatus& stat : prog.level_status)
             {
-                char c = '0' + stat;
+                char c = '0' + stat.done;
                 sstr += c;
             }
             plist->add_item(new SaveObjectString(sstr));
@@ -860,8 +891,122 @@ void GameState::load_grid(std::string s)
 }
 static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region);
 
+void GameState::pause_robots()
+{
+    if (!run_robots)
+        return;
+    run_robots = false;
+    for (int i = 0; i < robot_count; i++)
+        SDL_LockMutex(robot_lock[i]);
+
+    for (int i = 0; i < robot_count; i++)
+        SDL_UnlockMutex(robot_lock[i]);
+}
+
+void GameState::robot_thread(int thread_index)
+{
+    Rand rnd;
+    struct RobotJob
+    {
+        unsigned level_group_index;
+        unsigned level_set_index;
+        unsigned level_index;
+    };
+
+    
+    SDL_LockMutex(robot_lock[thread_index]);
+
+    while (true)
+    {
+        if (!run_robots || run_robot_count <= thread_index)
+        {
+            SDL_UnlockMutex(robot_lock[thread_index]);
+            while (!run_robots || run_robot_count <= thread_index)
+            {
+                if (SHUTDOWN)
+                    return;
+                SDL_Delay(100);
+            }
+            SDL_LockMutex(robot_lock[thread_index]);
+        }
+        RobotJob job;
+        {
+            SDL_LockMutex(level_progress_lock);
+            std::vector<RobotJob> jobs_todo;
+            for (unsigned g = 0; g < (GLBAL_LEVEL_SETS + 1); g++)
+            {
+                for (unsigned s = 0; s < level_progress[game_mode][g].size(); s++)
+                {
+                    if (!level_is_accessible(game_mode, g, s))
+                        continue;
+                    for (unsigned i = 0; i < level_progress[game_mode][g][s].level_status.size(); i++)
+                    {
+                        if (!level_progress[game_mode][g][s].level_status[i].done && level_progress[game_mode][g][s].level_status[i].robot_todo)
+                        {
+                            jobs_todo.push_back(RobotJob{g, s, i});
+                        }
+                    }
+                }
+            }
+            if (jobs_todo.empty())
+            {
+                SDL_UnlockMutex(level_progress_lock);
+                SDL_Delay(100);
+                continue;
+            }
+            job = jobs_todo[rnd % jobs_todo.size()];
+            level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_todo = false;
+            SDL_UnlockMutex(level_progress_lock);
+        }
+
+        Grid* grid = Grid::Load((job.level_group_index == GLBAL_LEVEL_SETS) ?
+                        server_levels[job.level_set_index][job.level_index] :
+                        global_level_sets[job.level_group_index][job.level_set_index]->levels[job.level_index]);
+
+        while (true)
+        {
+            int rep = advance_grid(grid, rules[game_mode], NULL);
+
+            if (rep == 0)
+            {
+                if (grid->is_solved())
+                {
+                    SDL_LockMutex(level_progress_lock);
+                    if (!level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].done)
+                    {
+                        level_progress[game_mode][job.level_group_index][job.level_set_index].count_todo--;
+                        level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].done = true;
+                    }
+                    SDL_UnlockMutex(level_progress_lock);
+                }
+                break;
+            }
+            if (rule_limit_count >= 0)
+                if(int(grid->regions.size()) > rule_limit_count)
+                    break;
+            if (!run_robots)
+                break;
+        }
+        delete grid;
+    }
+}
+
 void GameState::advance(int steps)
 {
+    if (!run_robots && should_run_robots)
+    {
+        for (unsigned g = 0; g < GLBAL_LEVEL_SETS + 1; g++)
+        {
+            for (unsigned s = 0; s < level_progress[game_mode][g].size(); s++)
+            {
+                for (unsigned i = 0; i < level_progress[game_mode][g][s].level_status.size(); i++)
+                {
+                    level_progress[game_mode][g][s].level_status[i].robot_todo = true;
+                }
+            }
+        }
+        run_robots = true;
+    }
     if (display_help || display_menu)
         return;
     // if(grid->regions.size() > 700)
@@ -894,11 +1039,11 @@ void GameState::advance(int steps)
         {
             for (unsigned j = 0; j < level_progress[0][s][i].level_status.size(); j++)
             {
-                if (level_progress[game_mode][s][i].level_status[j])
+                if (level_progress[game_mode][s][i].level_status[j].done)
                     ccount++;
                 for (unsigned m = 0; m < GAME_MODES; m++)
                 {
-                    if (level_progress[m][s][i].level_status[j])
+                    if (level_progress[m][s][i].level_status[j].done)
                     {
                         count++;
                         break;
@@ -942,10 +1087,11 @@ void GameState::advance(int steps)
 
     if (!(load_level || skip_level) && !force_load_level && grid->is_solved() && !current_level_is_temp)
     {
-        if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index])
+        SDL_LockMutex(level_progress_lock);
+        if (!level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].done)
         {
             level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo--;
-            level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index] = true;
+            level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].done = true;
             skip_level = 1;
             {
                 if (level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo)
@@ -966,6 +1112,7 @@ void GameState::advance(int steps)
                 }
             }
         }
+        SDL_UnlockMutex(level_progress_lock);
     }
 
     if (load_level || skip_level)
@@ -999,7 +1146,7 @@ void GameState::advance(int steps)
                         }
                     }
                 }
-                while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index]);
+                while (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].done);
             }
 
             std::string& s = (current_level_group_index == GLBAL_LEVEL_SETS) ?
@@ -2905,6 +3052,14 @@ void GameState::render(bool saving)
                 col_click = 2;
         }
         {
+            SDL_Rect src_rect = {1984, 2336, 192, 192};
+            SDL_Rect dst_rect = {list_pos.x + 3 * cell_width, list_pos.y, cell_width, cell_width};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Robots");
+            if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
+                col_click = 3;
+        }
+        {
             SDL_Rect src_rect = {512, 192, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -2914,19 +3069,13 @@ void GameState::render(bool saving)
                 current_level_index = 0;
                 load_level = true;
                 force_load_level = false;
-                level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.clear();
-                if (current_level_group_index == GLBAL_LEVEL_SETS)
-                {
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(server_levels[current_level_set_index].size());
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = server_levels[current_level_set_index].size();
-                }
-                else
-                {
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.resize(global_level_sets[current_level_group_index][current_level_set_index]->levels.size());
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = global_level_sets[current_level_group_index][current_level_set_index]->levels.size();
-                }
+                SDL_LockMutex(level_progress_lock);
+                for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
+                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[i].done = false;
+                level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
                 level_progress[game_mode][current_level_group_index][current_level_set_index].star_anim_prog = 0;
                 level_progress[game_mode][current_level_group_index][current_level_set_index].unlock_anim_prog = 0;
+                SDL_UnlockMutex(level_progress_lock);
             }
         }
 
@@ -2979,11 +3128,20 @@ void GameState::render(bool saving)
                 if (col == 0)
                     return (a < b);
                 if (col == 1)
-                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_stats[a] < 
-                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_stats[b]);
+                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].stats < 
+                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].stats);
                 if (col == 2)
-                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a] < 
-                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b]);
+                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].done < 
+                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].done);
+                if (col == 3)
+                {
+                    if (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].done ==
+                        state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].done)
+                        return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].robot_todo < 
+                                state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].robot_todo);
+                    return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].done < 
+                            state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].done);
+                }
                 assert(0);
                 return false;
             }
@@ -3022,7 +3180,7 @@ void GameState::render(bool saving)
             render_number(index, list_pos + XYPos(0 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
 
             {
-                unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_stats[index];
+                unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index].stats;
 
                 std::string digits;
                 if (rep == 0)
@@ -3045,16 +3203,28 @@ void GameState::render(bool saving)
                 render_number_string(digits, list_pos + XYPos(1 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
             }
             {
-                bool rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
+                bool rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index].done;
                 SDL_Rect src_rect = {1280, rep ? 2240 : 2144, 96, 96};
                 SDL_Rect dst_rect = {list_pos.x + cell_width * 2 + (cell_width - cell_height) / 2, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
+            {
+                LevelStatus& status = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
+                if (!status.done && run_robots)
+                {
+                    SDL_Rect src_rect = {1280, 2240, 96, 96};
+                    if (status.robot_todo)
+                        src_rect = {3008, 1344, 192, 192};
+                    SDL_Rect dst_rect = {list_pos.x + cell_width * 3 + (cell_width - cell_height) / 2, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
+            }
+
 
             if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + level_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
             {
                 current_level_index = index;
-                force_load_level = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
+                force_load_level = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index].done;
                 load_level = true;
             }
 
@@ -4061,7 +4231,7 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Current Level");
-            unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_stats[current_level_index];
+            unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].stats;
 
             std::string digits;
             if (rep == 0)
@@ -4096,8 +4266,8 @@ void GameState::render(bool saving)
             for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
             {
                 LevelProgress& prog = level_progress[game_mode][current_level_group_index][i];
-                for (bool b : prog.level_status)
-                    if (b)
+                for (LevelStatus& stat : prog.level_status)
+                    if (stat.done)
                         count++;
             }
             render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
@@ -5015,6 +5185,58 @@ void GameState::render(bool saving)
                 }
                 SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             }
+        }
+        if (render_lock(PROG_LOCK_ROBOTS, XYPos(right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 2), XYPos(button_size * 2, button_size * 2)))
+        {
+            int todo_count = 0;
+            int done_count = 0;
+            {
+                for (unsigned g = 0; g < GLBAL_LEVEL_SETS + 1; g++)
+                {
+                    for (unsigned s = 0; s < level_progress[game_mode][g].size(); s++)
+                    {
+                        if (!level_is_accessible(game_mode, g, s))
+                            continue;
+                        for (unsigned i = 0; i < level_progress[game_mode][g][s].level_status.size(); i++)
+                        {
+                            if (!level_progress[game_mode][g][s].level_status[i].done)
+                            {
+                                todo_count++;
+                                if (run_robots && !level_progress[game_mode][g][s].level_status[i].robot_todo)
+                                    done_count++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            {
+                SDL_Rect src_rect = {should_run_robots ? 2816 : 3008, 1152, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Robots");
+            }
+            render_box(right_panel_offset + XYPos(button_size * 1, button_size * 3), XYPos(2 * button_size, button_size), button_size/4, 4);
+            render_box(right_panel_offset + XYPos(button_size * 1, button_size * 4), XYPos(2 * button_size, button_size), button_size/4, 4);
+            {
+                SDL_Rect src_rect = {1280, 2240, 96, 96};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 3, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 2 * button_size;
+                add_tooltip(dst_rect, "Done", false);
+            }
+            {
+                SDL_Rect src_rect = {3008, 1344, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 4, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 2 * button_size;
+                add_tooltip(dst_rect, "To Do", false);
+            }
+            {
+                render_number(done_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 3.25), XYPos(button_size * 0.9, button_size/2));
+                render_number(todo_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 4.25), XYPos(button_size * 0.9, button_size/2));
+            }
+
         }
 
     }
@@ -6048,8 +6270,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             // }
             // else
             {
+                pause_robots();
                 last_deleted_rules[game_mode].clear();
-
                 for (GridRule* rule : selected_rules)
                 {
                     rule->deleted = true;
@@ -6148,6 +6370,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 if ((pos - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size, button_size)))
                 {
+                    pause_robots();
                     bool all_paused = true;
                     for (GridRule* rule : selected_rules)
                         if (!rule->paused)
@@ -6182,6 +6405,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
         if ((pos - XYPos(button_size * 4, button_size * 1)).inside(XYPos(button_size, button_size)) && !last_deleted_rules[game_mode].empty())
         {
+            pause_robots();
             selected_rules.clear();
             for (GridRule* rule : last_deleted_rules[game_mode])
                 rule->deleted = false;
@@ -6202,6 +6426,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             rule_gen_redo();
             return;
         }
+        if ((pos - XYPos(button_size * 1, button_size * 2)).inside(XYPos(button_size, button_size)))
+        {
+            pause_robots();
+            should_run_robots = !should_run_robots;
+            return;
+        }
 
 
         if ((pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size, button_size * 3)))
@@ -6210,9 +6440,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             dragging_scroller_type = DRAGGING_SCROLLER_RULES;
             double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
             rule_limit_slider = std::clamp(p, 0.0, 1.0);
-            rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
+            int new_rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
             if (rule_limit_slider >= 1.0)
-                rule_limit_count = -1;
+                new_rule_limit_count = -1;
+            if (new_rule_limit_count > rule_limit_count)
+                pause_robots();
+            rule_limit_count = new_rule_limit_count;
             return;
         }
 
@@ -6477,6 +6710,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     {
                         if (rule_is_permitted(constructed_rule, game_mode))
                         {
+                            pause_robots();
                             std::list<GridRule>::iterator it;
                             for (it = rules[game_mode].begin(); it != rules[game_mode].end(); it++)
                             {
@@ -7002,9 +7236,12 @@ bool GameState::events()
                     else if (dragging_scroller_type == DRAGGING_SCROLLER_RULES)
                     {
                         rule_limit_slider = std::clamp(p, 0.0, 1.0);
-                        rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
+                        int new_rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
                         if (rule_limit_slider >= 1.0)
-                            rule_limit_count = -1;
+                            new_rule_limit_count = -1;
+                        if (new_rule_limit_count < 0 || (rule_limit_count > 0 && new_rule_limit_count > rule_limit_count))
+                            pause_robots();
+                        rule_limit_count = new_rule_limit_count;
                     }
                 }
                 break;
@@ -7190,6 +7427,7 @@ bool GameState::events()
                         int index = p.y;
                         if (index != game_mode)
                         {
+                            pause_robots();
                             current_level_group_index = 0;
                             current_level_set_index = 0;
                             current_level_index = 0;
@@ -7335,10 +7573,10 @@ void GameState::deal_with_scores()
                     for (unsigned j = 0; j < stats1->get_count() && j < level_progress[game_mode][i].size(); j++)
                     {
                         SaveObjectList* stats2 = stats1->get_item(j)->get_list();
-                        for (unsigned k = 0; k < stats2->get_count() && k < level_progress[game_mode][i][j].level_stats.size(); k++)
+                        for (unsigned k = 0; k < stats2->get_count() && k < level_progress[game_mode][i][j].level_status.size(); k++)
                         {
                             int64_t s = stats2->get_item(k)->get_num();
-                            level_progress[game_mode][i][j].level_stats[k] = s;
+                            level_progress[game_mode][i][j].level_status[k].stats = s;
                         }
                     }
                 }
@@ -7373,7 +7611,6 @@ void GameState::deal_with_scores()
                         {
                             level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
                             level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
-                            level_progress[m][GLBAL_LEVEL_SETS][k].level_stats.resize(plist->get_count());
                         }
 
                         for (unsigned i = 0; i < plist->get_count(); i++)
