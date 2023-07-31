@@ -1190,7 +1190,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
             }
             return LOSES_DATA;
         }
-        return OK;
     }
     else
     {
@@ -1274,7 +1273,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 seen |= 1 << square_counts[i].var;
             else
                 want |= 1 << square_counts[i].var;
-        want |= 1 << apply_region_type.var;
+        if (apply_region_type.type != RegionType::VISIBILITY)
+            want |= 1 << apply_region_type.var;
         want &= ~1;
         seen &= ~1;
         if (want)

@@ -824,10 +824,15 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
 {   
-    GridRule why;
+    // GridRule why;
     // if (rule.is_legal(why) != GridRule::OK)
     //     return false;
-    // assert(rule.is_legal(why) == GridRule::OK);
+    // GridRule::IsLogicalRep rep = rule.is_legal(why);
+    // if (rep == GridRule::OK || rep == GridRule::LOSES_DATA)
+    // {}
+    // else
+    //     assert(0);
+
     if (mode == 1 && rule.region_count == 4)
         return false;
     if (mode == 3)
@@ -3383,6 +3388,7 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Import all Rules");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                 {
+                    pause_robots();
                     import_all_rules();
                 }
             }
@@ -7374,6 +7380,7 @@ bool GameState::events()
                     {
                         if (p == XYPos(1, 4))
                         {
+                            pause_robots();
                             if (display_reset_confirm_levels_only)
                                 reset_levels();
                             else
