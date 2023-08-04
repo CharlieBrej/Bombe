@@ -3,6 +3,7 @@
 #ifndef TARGET_LINUX
 
 #include "clip/clip.h"
+
 void ImgClipBoard::init()
 {
     clip::set_error_handler(NULL);
@@ -76,6 +77,7 @@ static Window win;
 
 static std::vector<uint32_t> reply_data;
 static XYPos reply_size = XYPos(0, 0);
+static bool SHUTDOWN = false;
 
 struct Property
 {
@@ -133,6 +135,8 @@ static int clipboard_thread(void *ptr)
 	for(;;)
 	{
 		XNextEvent(disp, &e);
+		if (SHUTDOWN)
+			break;
 
 		if(e.type == SelectionClear)
 		{
@@ -247,9 +251,6 @@ static int clipboard_thread(void *ptr)
 			}
 		}
 	}
-
-
-
     return 0;
 }
 
@@ -258,6 +259,15 @@ void ImgClipBoard::init()
 	clip_mutex = SDL_CreateMutex();
     sdl_clipboard_thread = SDL_CreateThread(clipboard_thread, "ClipBoardThread", (void *)NULL);
 }
+
+void ImgClipBoard::shutdown()
+{
+	SHUTDOWN = true;
+    XConvertSelection(disp, sel, XA_TARGETS, sel, win, CurrentTime);
+    XFlush(disp);
+	SDL_WaitThread(sdl_clipboard_thread, NULL);
+}
+
 
 void ImgClipBoard::send(uint32_t* data, XYPos siz)
 {

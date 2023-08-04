@@ -147,6 +147,8 @@ public:
                                      };
     int capturing_key = -1;
 
+    bool mouse_button_pressed = false;
+    const char* last_button_hovered = NULL;
     bool dragging_speed = false;
     bool dragging_scroller = false;
     enum {
@@ -467,6 +469,7 @@ public:
     void add_clickable_highlight(SDL_Rect& dst_rect);
     bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
+    bool render_button(XYPos tpos, XYPos pos, const char* tooltip, int style = 0, int size = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz);
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
