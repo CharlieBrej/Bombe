@@ -2029,7 +2029,7 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
     render_number_string(digits, pos, siz);
 }
 
-// style 0 - normal, 1 - unclickable, 2 - warning
+// style 0 - normal, 1 - unclickable, 2 - warning, 3 - red
 bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int style, int size) 
 {
     bool pressed = false;
@@ -2046,6 +2046,8 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
         SDL_SetTextureColorMod(sdl_texture, contrast * 0x50 / 255, contrast * 0x50 / 255, contrast * 0x50 / 255);
     else if (style == 2)
         SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0xC0 / 255, contrast * 0x10 / 255);
+    else if (style == 3)
+        SDL_SetTextureColorMod(sdl_texture, contrast * 0xff / 255, contrast * 0x00 / 255, contrast * 0x00 / 255);
 
     bool hover =   ((mouse.x >= dst_rect.x) &&
                     (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -4291,13 +4293,11 @@ void GameState::render(bool saving)
         render_button(XYPos(1472, 192), XYPos(left_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 1), "Clear Filter");
 
         {
-            if (mouse_mode == MOUSE_MODE_FILTER)
-                render_box(left_panel_offset + XYPos(button_size * 4, button_size * 1), XYPos(button_size, button_size), button_size/4);
-            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter");
+            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter", (mouse_mode == MOUSE_MODE_FILTER) ? 3 : 0);
             int s = filter_pos.count();
             if (s)
             {
-                render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 6), XYPos(button_size/2, button_size/4));
+                render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 4.3), XYPos(button_size/2, button_size/4));
             }
         }
     }
@@ -4310,9 +4310,6 @@ void GameState::render(bool saving)
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size), button_size/4);
             SDL_Rect src_rect = {1536, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect.w *= 2;
-            add_tooltip(dst_rect, "Rules");
             int rule_count = 0;
             int vis_rule_count = 0;
             for (GridRule& rule : rules[game_mode])
@@ -4332,17 +4329,24 @@ void GameState::render(bool saving)
                 digits += "+" + std::to_string(rule_del_count[game_mode]);
             }
 
+            if (display_rules)
+            {
+                render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number_string(digits, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
             render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
+            if (display_rules)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            dst_rect.w *= 2;
+            add_tooltip(dst_rect, "Rules", !display_rules);
         }
         {
-            if (display_levels)
-                render_box(left_panel_offset + XYPos(button_size * 0, button_size * 3), XYPos(button_size * 2, button_size), button_size/4);
             SDL_Rect src_rect = {1408, 2144, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect.w *= 2;
-            add_tooltip(dst_rect, "Current Level");
             unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[current_level_index].stats;
 
             std::string digits;
@@ -4362,18 +4366,25 @@ void GameState::render(bool saving)
             {
                 digits = std::to_string((rep / 1000) % 10) + std::to_string((rep / 100) % 10) + "%";
             }
-
+            if (display_levels)
+            {
+                render_box(left_panel_offset + XYPos(button_size * 0, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            if (display_levels)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            dst_rect.w *= 2;
+            add_tooltip(dst_rect, "Current Level", !display_levels);
+
         }
 
         {
-            if (display_scores)
-                render_box(left_panel_offset + XYPos(button_size * 0, button_size * 4), XYPos(button_size * 2, button_size), button_size/4);
             SDL_Rect src_rect = {1728, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            dst_rect.w *= 2;
-            add_tooltip(dst_rect, "Scores");
             int count = 0;
             for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index].size(); i++)
             {
@@ -4382,7 +4393,19 @@ void GameState::render(bool saving)
                     if (stat.done)
                         count++;
             }
+
+            if (display_scores)
+            {
+                render_box(left_panel_offset + XYPos(button_size * 0, button_size * 4), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            if (display_scores)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            dst_rect.w *= 2;
+            add_tooltip(dst_rect, "Scores",  !display_scores);
         }
     }
 
@@ -4400,34 +4423,49 @@ void GameState::render(bool saving)
         for (GridRegion& region : grid->regions)
             region_vis_counts[int(region.vis_level)]++;
         {
-            if (vis_level == GRID_VIS_LEVEL_SHOW)
-                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size), button_size/4);
-            render_number(region_vis_counts[0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_Rect src_rect = {1088, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+            if (vis_level == GRID_VIS_LEVEL_SHOW)
+            {
+                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+            }
+            render_number(region_vis_counts[0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (vis_level == GRID_VIS_LEVEL_SHOW)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 2, button_size * 2, button_size};
-            add_tooltip(dst_rect, "Visible");
+            add_tooltip(dst_rect, "Visible", vis_level != GRID_VIS_LEVEL_SHOW);
         }
         {
-            if (vis_level == GRID_VIS_LEVEL_HIDE)
-                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 3), XYPos(button_size * 2, button_size), button_size/4);
-            render_number(region_vis_counts[1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_Rect src_rect = {896, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+            if (vis_level == GRID_VIS_LEVEL_HIDE)
+            {
+                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+            }
+            render_number(region_vis_counts[1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (vis_level == GRID_VIS_LEVEL_HIDE)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 3, button_size * 2, button_size};
-            add_tooltip(dst_rect, "Hidden");
+            add_tooltip(dst_rect, "Hidden", vis_level != GRID_VIS_LEVEL_HIDE);
         }
         {
-            if (vis_level == GRID_VIS_LEVEL_BIN)
-                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 4), XYPos(button_size * 2, button_size), button_size/4);
-            render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_Rect src_rect = {512, 768, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+            if (vis_level == GRID_VIS_LEVEL_BIN)
+            {
+                render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 4), XYPos(button_size * 2, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+            }
+            render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            if (vis_level == GRID_VIS_LEVEL_BIN)
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 4, button_size * 2, button_size};
-            add_tooltip(dst_rect, "Trash");
+            add_tooltip(dst_rect, "Trash", vis_level != GRID_VIS_LEVEL_BIN);
         }
     }
 
@@ -4470,7 +4508,8 @@ void GameState::render(bool saving)
             XYPos pos = left_panel_offset + XYPos(button_size * (i % 5), button_size * (i / 5 + 6.5));
             if (i == current_level_set_index)
             {
-                render_box(pos, XYPos(button_size, button_size), button_size/4, 9);
+                render_box(pos, XYPos(button_size, button_size), button_size/4, 10);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
                 if (auto_progress)
                 {
                     SDL_Rect src_rect = {1344, 1920, 128, 128};
@@ -4536,6 +4575,7 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
+            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
         }
         {
             {
@@ -4783,7 +4823,7 @@ void GameState::render(bool saving)
                 }
                 else
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Visible");
+                add_tooltip(dst_rect, "Visible", inspected_region->vis_level != GRID_VIS_LEVEL_SHOW);
             }
             {
                 SDL_Rect src_rect = {896, 384, 192, 192};
@@ -4797,7 +4837,7 @@ void GameState::render(bool saving)
                 }
                 else
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Hidden");
+                add_tooltip(dst_rect, "Hidden", inspected_region->vis_level != GRID_VIS_LEVEL_HIDE);
             }
             {
                 SDL_Rect src_rect = {512, 768, 192, 192};
@@ -4811,7 +4851,7 @@ void GameState::render(bool saving)
                 }
                 else
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Trash");
+                add_tooltip(dst_rect, "Trash", inspected_region->vis_level != GRID_VIS_LEVEL_BIN);
             }
         }
         if (render_lock(PROG_LOCK_PRIORITY2, right_panel_offset + XYPos(button_size * 0, button_size * 8), XYPos(button_size * 2, button_size)))
