@@ -44,7 +44,8 @@ public:
 	    m_CallbackGameOverlayActivated( this, &SteamGameManager::OnGameOverlayActivated ),
 	    m_OnGetTicketForWebApiResponse( this, &SteamGameManager::OnGetTicketForWebApiResponse )
     {
-        SteamUserStats()->RequestCurrentStats();
+        m_pSteamUserStats = SteamUserStats();
+        m_pSteamUserStats->RequestCurrentStats();
         HAuthTicket handle = SteamUser()->GetAuthTicketForWebApi(NULL);
     };
     void set_achievements(std::string name)
