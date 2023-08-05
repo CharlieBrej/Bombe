@@ -30,28 +30,26 @@ class SteamGameManager
 private:
 	STEAM_CALLBACK( SteamGameManager, OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived);
 	STEAM_CALLBACK( SteamGameManager, OnGameOverlayActivated, GameOverlayActivated_t, m_CallbackGameOverlayActivated );
-    STEAM_CALLBACK( SteamGameManager, OnGetAuthSessionTicketResponse, GetAuthSessionTicketResponse_t, m_OnGetAuthSessionTicketResponse);
+    STEAM_CALLBACK( SteamGameManager, OnGetTicketForWebApiResponse, GetTicketForWebApiResponse_t, m_OnGetTicketForWebApiResponse);
     ISteamUserStats *m_pSteamUserStats;
     bool stats_ready = false;
     std::set <std::string> achievements;
     bool needs_send = false;
-    bool auth_buffer_ready = false;
-    uint32 auth_buffer_size;
-    uint8 auth_buffer[1024];
+    bool steam_session_ready = false;
+    std::string steam_session_string;
 
 public:
     SteamGameManager():
     	m_CallbackUserStatsReceived( this, &SteamGameManager::OnUserStatsReceived ),
 	    m_CallbackGameOverlayActivated( this, &SteamGameManager::OnGameOverlayActivated ),
-	    m_OnGetAuthSessionTicketResponse( this, &SteamGameManager::OnGetAuthSessionTicketResponse )
+	    m_OnGetTicketForWebApiResponse( this, &SteamGameManager::OnGetTicketForWebApiResponse )
     {
-        m_pSteamUserStats = SteamUserStats();
-        m_pSteamUserStats->RequestCurrentStats();
-		HAuthTicket handle = SteamUser()->GetAuthSessionTicket(auth_buffer, 1024, &auth_buffer_size);
+        SteamUserStats()->RequestCurrentStats();
+        HAuthTicket handle = SteamUser()->GetAuthTicketForWebApi(NULL);
     };
     void set_achievements(std::string name)
     {
-        if (!stats_ready || !auth_buffer_ready)
+        if (!stats_ready || !steam_session_ready)
             return;
         if (achievements.count(name))
             return;
@@ -80,9 +78,20 @@ void SteamGameManager::OnGameOverlayActivated( GameOverlayActivated_t* pCallback
 {
 }
 
-void SteamGameManager::OnGetAuthSessionTicketResponse( GetAuthSessionTicketResponse_t* pCallback )
+void SteamGameManager::OnGetTicketForWebApiResponse( GetTicketForWebApiResponse_t* pCallback )
 {
-    auth_buffer_ready = true;
+    // auth_buffer = 
+    // auth_buffer_size = 
+
+    const char* lut = "0123456789ABCDEF";
+    steam_session_string.clear();
+    for (int i = 0; i < pCallback->m_cubTicket; i++)
+    {
+        uint8_t c = pCallback->m_rgubTicket[i];
+        steam_session_string += lut[c >> 4];
+        steam_session_string += lut[c & 0xF];
+    }
+    steam_session_ready = true;
 }
 
 void SteamGameManager::update_achievements(GameState* game_state)
@@ -97,27 +106,18 @@ void SteamGameManager::update_achievements(GameState* game_state)
         m_pSteamUserStats->StoreStats();
         needs_send = false;
     }
-    if (auth_buffer_ready && game_state->steam_session_string.empty())
+    if (steam_session_ready && game_state->steam_session_string.empty())
     {
-        const char* lut = "0123456789ABCDEF";
-        std::string str;
-        for (int i = 0; i < auth_buffer_size; i++)
-        {
-            uint8_t c = auth_buffer[i];
-            str += lut[c >> 4];
-            str += lut[c & 0xF];
-        }
-        game_state->steam_session_string = str;
+        game_state->steam_session_string = steam_session_string;
         game_state->fetch_scores();
     }
 }
 
 void SteamGameManager::get_new_ticket()
 {
-    if (auth_buffer_ready)
+    if (steam_session_ready)
     {
-        auth_buffer_ready = false;
-        HAuthTicket handle = SteamUser()->GetAuthSessionTicket(auth_buffer, 1024, &auth_buffer_size);
+		HAuthTicket handle = SteamUser()->GetAuthTicketForWebApi("brej.org");
     }
 }
 
