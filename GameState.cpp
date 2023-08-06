@@ -4523,7 +4523,9 @@ void GameState::render(bool saving)
                 SDL_Rect src_rect = {1088, 192, 192, 192};
                 SDL_Rect dst_rect = {pos.x , pos.y, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
                 render_number(need, pos + XYPos(button_size * 45 / 192 , button_size * 77 / 192), XYPos(button_size * 102 / 192, button_size * 98 / 192));
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                 continue;
             }
             else
