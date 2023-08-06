@@ -1364,7 +1364,8 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
 
     if (!new_region)
         return 0;
-    new_region->stale = true;
+    if (!new_region->stale)
+        return 2;
 
     if (new_region->vis_level != GRID_VIS_LEVEL_BIN)
     {
