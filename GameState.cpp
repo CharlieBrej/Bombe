@@ -1037,6 +1037,7 @@ void GameState::robot_thread(int thread_index)
             if (!run_robots)
                 break;
         }
+        grid->commit_level_counts();
         delete grid;
     }
 }
@@ -1364,8 +1365,31 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
 
     if (!new_region)
         return 0;
+
     if (!new_region->stale)
+    {
+        for (int i = 1; i < 3; i++)
+        {
+            for (GridRule& rule : rules)
+            {
+                if (rule.deleted)
+                    continue;
+                if (rule.paused)
+                    continue;
+                if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
+                {
+                    unsigned oldtime = SDL_GetTicks();
+                    Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
+                    unsigned newtime = SDL_GetTicks();
+                    if (newtime - oldtime)
+                        rule.cpu_time += newtime - oldtime;
+                    if (resp == Grid::APPLY_RULE_RESP_HIT)
+                        break;
+                }
+            }
+        }
         return 2;
+    }
 
     if (new_region->vis_level != GRID_VIS_LEVEL_BIN)
     {
@@ -1385,27 +1409,6 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
                 unsigned newtime = SDL_GetTicks();
                 if (newtime - oldtime)
                     rule.cpu_time += newtime - oldtime;
-            }
-        }
-    }
-
-    for (int i = 1; i < 3; i++)
-    {
-        for (GridRule& rule : rules)
-        {
-            if (rule.deleted)
-                continue;
-            if (rule.paused)
-                continue;
-            if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
-            {
-                unsigned oldtime = SDL_GetTicks();
-                Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
-                unsigned newtime = SDL_GetTicks();
-                if (newtime - oldtime)
-                    rule.cpu_time += newtime - oldtime;
-                if (resp == Grid::APPLY_RULE_RESP_HIT)
-                    break;
             }
         }
     }
