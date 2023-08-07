@@ -67,6 +67,7 @@ struct RobotThread
 
 static int robot_thread_func(void *ptr)
 {
+    SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
     RobotThread* rt = (RobotThread*)ptr;
     rt->state->robot_thread(rt->index);
     delete rt;
@@ -5022,7 +5023,7 @@ void GameState::render(bool saving)
             bool pri_consistant = true;
             bool pri_relevant = false;
             bool pri_paused = true;
-            int priority;
+            int priority = 0;
             bool paused;
 
             assert(!selected_rules.empty());

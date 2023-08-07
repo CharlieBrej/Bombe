@@ -323,7 +323,8 @@ public:
         WRAPPED_SIDE,
         WRAPPED_IN,
     } wrapped = WRAPPED_NOT;
-    bool big_regions_to_add = false;
+    bool wants_base_regions = true;
+
     std::map<XYPos, GridPlace> vals;
     std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;

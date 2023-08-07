@@ -1653,9 +1653,9 @@ bool Grid::is_determinable(XYPos q)
     tst->regions.clear();
     tst->regions_set.clear();
 
+    wants_base_regions = true;
     tst->add_base_regions();
     tst->add_new_regions();
-
     return tst->is_determinable_using_regions(q);
 }
 
@@ -2353,6 +2353,7 @@ void Grid::reveal(XYPos p)
         else
             ++it;
     }
+    wants_base_regions = true;
 }
 
 std::string Grid::to_string()
@@ -2532,6 +2533,9 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
 
 void Grid::add_base_regions(void)
 {
+    if (!wants_base_regions)
+        return;
+    wants_base_regions = false;
     for (const auto &edg : edges)
     {
         XYPos e_pos = edg.first;
@@ -3091,6 +3095,7 @@ void Grid::clear_regions()
     deleted_regions.clear();
     cell_causes.clear();
     last_cleared_regions.clear();
+    wants_base_regions = true;
 }
 
 void Grid::commit_level_counts()
