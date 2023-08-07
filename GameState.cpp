@@ -1468,7 +1468,6 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
             }
         }
     }
-    new_region->stale = true;
     return 2;
 }
 
@@ -4075,10 +4074,15 @@ void GameState::render(bool saving)
                 for(WrapPos r : wraps)
                 {
                     XYPos mgpos = grid_offset + gpos * r.size + r.pos;
+                    int siz = icon_width * r.size;
+                    if (!XYRect(mgpos, XYPos(siz, siz)).overlaps(XYRect(XYPos(0,0), window_size)))
+                        continue;
+
+
                     if (place.bomb)
                     {
                         SDL_Rect src_rect = {320, 192, 192, 192};
-                        SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(icon_width * r.size), int(icon_width * r.size)};
+                        SDL_Rect dst_rect = {mgpos.x, mgpos.y, siz, siz};
 //                        SDL_SetTextureColorMod(sdl_texture, 0,0,0);
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 //                        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);

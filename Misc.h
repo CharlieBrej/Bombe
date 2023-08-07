@@ -559,6 +559,13 @@ public:
         size(size_)
     {}
     XYRect() {}
+    bool overlaps(XYRect other)
+    {
+        return !(pos.x > other.pos.x + other.size.x && 
+                 pos.y > other.pos.y + other.size.y &&
+                 other.pos.x < pos.x + size.x &&
+                 other.pos.y < pos.y + size.y);
+    }
 };
 
 
