@@ -499,7 +499,7 @@
             "Copy Rule to Clipboard Image": "Regel in Zwischenablagebild kopieren",
             "Current Level":                "Aktuelles Level",
             "Don't Care" :                  "Egal",
-            "Done" :                        "Erledigt",
+            "Done" :                        "Fertig",
             "Duplicate Rule" :              "Regel duplizieren",
             "Edit Rule" :                   "Regel bearbeiten",
             "Filter" :                      "Filter",
@@ -520,7 +520,7 @@
             "Join Discord" :                "Discord beitreten (Englisch)",
             "Level" :                       "Level",
             "Level ID" :                    "Level-ID",
-            "Loses Information" :           "Verliert Informationen",
+            "Loses Information" :           "Informationsverlust",
             "Low Contrast" :                "Niedriger Kontrast",
             "Low Priority" :                "Niedrige Priorität",
             "Max 60 rules":                 "Maximal 60 Regeln",
@@ -569,17 +569,17 @@
             "Triangle" :                    "Dreieck",
             "Three region rules" :          "Drei Regionsregeln",
             "Times Applied" :               "Angewendungen",
-            "To Do" :                       "Machen",
+            "To Do" :                       "Zu tun",
             "Trash" :                       "Müll",
             "Unbounded" :                   "Unbegrenzt",
-            "Undelete Rules" :              "Regeln wiederherstellen",
+            "Undelete Rules" :              "Regeln widerherstellen",
             "Undo" :                        "Rückgängig",
             "Update Rule" :                 "Regel aktualisieren",
             "Visible" :                     "Sichtbar",
             "Visibility set by User" :      "Benutzerdefinierte Sichtbarkeit",
             "Volume" :                      "Soundeffekte",
             "Why Illogical" :               "Warum unlogisch",
-            "Why Loses Information" :       "Warum Informationen verloren gehen"
+            "Why Loses Information" :       "Warum geht Information verloren?"
         },
         "tutorial":
         [
@@ -708,7 +708,7 @@
             "Remove Rule" :                 "Verwijder Regel",
             "Reset Rules" :                 "Reset Regels",
             "Reset Levels" :                "Reset Levels",
-            "Robots" :                      "Robotten",
+            "Robots" :                      "Robots",
             "Rule Already Present" :        "Regel Bestaat Al",
             "Rule Constructor" :            "Regel Bouwer",
             "Rule Count Limit" :            "Regel Aantal Limiet",
@@ -728,17 +728,17 @@
             "Triangle" :                    "Driehoek",
             "Three region rules" :          "Drie Regio regels",
             "Times Applied" :               "Keren Toegepast",
-            "To Do" :                       "Te doen",
+            "To Do" :                       "Te Doen",
             "Trash" :                       "Verwijderd",
             "Unbounded" :                   "Ongelimiteerd",
-            "Undelete Rules" :              "Herstel regels ongedaan maken",
+            "Undelete Rules" :              "Herstel Regel",
             "Undo" :                        "Ongedaan maken",
             "Update Rule" :                 "Voer wijzigingen door",
             "Visible" :                     "Zichtbaar",
             "Visibility set by User" :      "Zichtbaarheid gezet door Gebruiker",
             "Volume" :                      "Volume",
             "Why Illogical" :               "Waarom Onlogisch",
-            "Why Loses Information" :       "Waarom verliest informatie"
+            "Why Loses Information" :       "Waarom gaat informatie verloren"
         },
         "tutorial":
         [
@@ -1612,7 +1612,7 @@
             "Copy Rule to Clipboard Image": "ルールをクリップボード画像にコピー",
             "Current Level":                "現在のレベル",
             "Don't Care" :                  "任意の数",
-            "Done" :                        "終わり",
+            "Done" :                        "試行済み",
             "Duplicate Rule" :              "このルールを複製",
             "Edit Rule" :                   "ルールの編集",
             "Filter" :                      "フィルター",
@@ -1633,7 +1633,7 @@
             "Join Discord" :                "discordに参加",
             "Level" :                       "レベル",
             "Level ID" :                    "レベルID",
-            "Loses Information" :           "情報の損失",
+            "Loses Information" :           "情報量の損失",
             "Low Contrast" :                "低コントラスト",
             "Low Priority" :                "低優先度",
             "Max 60 rules":                 "最大 60 ルール",
@@ -1662,7 +1662,7 @@
             "Remove Rule" :                 "ルールの削除",
             "Reset Rules" :                 "全ルールのリセット",
             "Reset Levels" :                "全レベルのリセット",
-            "Robots" :                      "ロボット",
+            "Robots" :                      "ロボットの起動",
             "Rule Already Present" :        "既に存在するルール",
             "Rule Constructor" :            "ルール設定",
             "Rule Count Limit" :            "ルール数の制限",
@@ -1682,7 +1682,7 @@
             "Triangle" :                    "トライアングル",
             "Three region rules" :          "3個に限られた領域ルール",
             "Times Applied" :               "ルールが適用された回数",
-            "To Do" :                       "やるべきこと",
+            "To Do" :                       "試行待ちのレベル",
             "Trash" :                       "適用されない領域",
             "Unbounded" :                   "無制限",
             "Undo" :                        "一手戻す",
@@ -1692,7 +1692,7 @@
             "Visibility set by User" :      "手動表示設定",
             "Volume" :                      "音量",
             "Why Illogical" :               "反例",
-            "Why Loses Information" :       "なぜ情報が失われるのか"
+            "Why Loses Information" :       "なぜ情報量が失われるのか"
         },
         "tutorial":
         [

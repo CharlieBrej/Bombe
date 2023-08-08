@@ -4340,10 +4340,7 @@ void GameState::render(bool saving)
             }
 
             if (display_rules)
-            {
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
-                src_rect.x = 1536;
-            }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number_string(digits, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
             render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
