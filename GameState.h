@@ -338,9 +338,21 @@ public:
     int server_levels_version = 0;
 
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
+    unsigned robot_solved_counts[GLBAL_LEVEL_SETS + 1] = {};
     int max_stars = 0;
     int cur_stars = 0;
     SDL_mutex* level_progress_lock;
+
+    struct AnimationRobotPlusOne
+    {
+        int level_set;
+        XYPos pos;
+        int frame;
+        AnimationRobotPlusOne(int level_set_, XYPos pos_, int frame_) :
+            level_set(level_set_), pos(pos_), frame(frame_)
+        {}
+    };
+    std::list<AnimationRobotPlusOne> robot_plus_one_animations;
 
     struct AnimationStarBurst
     {

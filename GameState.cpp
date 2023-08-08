@@ -1019,6 +1019,7 @@ void GameState::robot_thread(int thread_index)
                     {
                         level_progress[game_mode][job.level_group_index][job.level_set_index].count_todo--;
                         level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].done = true;
+                        robot_solved_counts[job.level_group_index]++;
                     }
                     SDL_UnlockMutex(level_progress_lock);
                 }
@@ -4485,7 +4486,35 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {left_panel_offset.x + (int)i * button_size, right_panel_offset.y + int(button_size * 5.5), button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
+            if (robot_solved_counts[i])
+            {
+                for (unsigned j = 0; j < robot_solved_counts[i]; j++)
+                    robot_plus_one_animations.push_back(AnimationRobotPlusOne(i, XYPos(rnd % 80, rnd % 80), 0));
+                robot_solved_counts[i] = 0;
+            }
         }
+        {
+            std::list<AnimationRobotPlusOne>::iterator it = robot_plus_one_animations.begin();
+            while (it != robot_plus_one_animations.end())
+            {
+                AnimationRobotPlusOne& anim = *it;
+                SDL_Rect src_rect = {0, 352, 32, 32};
+                XYPos dst = left_panel_offset + XYPos(anim.level_set * button_size, int(button_size * 5.5));
+                dst += (anim.pos * button_size) / 100;
+                dst.y -= (anim.frame * button_size) / 1000;
+                SDL_Rect dst_rect = {dst.x, dst.y, button_size / 5, button_size / 5};
+                SDL_SetTextureAlphaMod(sdl_texture, 255 - anim.frame / 4);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+
+                anim.frame += frame_step;
+                if (anim.frame >= 1000)
+                    it = robot_plus_one_animations.erase(it);
+                else
+                    it++;
+            }
+                SDL_SetTextureAlphaMod(sdl_texture, 255);
+        }
+
         if (server_level_anim < PROG_ANIM_MAX)
         {
             star_burst_animations.push_back(AnimationStarBurst(XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + int(button_size * 5.5)), XYPos(button_size,button_size), server_level_anim, false));
