@@ -4995,7 +4995,11 @@ void GameState::render(bool saving)
                     {
                         if (render_button(XYPos(896, 576), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Illogical", 1))
                         {
-                            render_box(right_panel_offset + XYPos(-8 * button_size, 0), XYPos(8 * button_size, 6.5 * button_size), button_size/2, 1);
+                            int w = 6;
+                            for (int i = 0; i < 5; i++)
+                                if (rule_illogical_reason_vars[i] >= 0)
+                                    w = 8;
+                            render_box(right_panel_offset + XYPos(-w * button_size, 0), XYPos(w * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Illogical");
                             render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
                             for (int i = 0; i < 5; i++)
@@ -5012,7 +5016,11 @@ void GameState::render(bool saving)
                     {
                         if (render_button(XYPos(704, 384), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Loses Information", 2))
                         {
-                            render_box(right_panel_offset + XYPos(-8 * button_size, 0), XYPos(8 * button_size, 6.5 * button_size), button_size/2, 1);
+                            int w = 6;
+                            for (int i = 0; i < 5; i++)
+                                if (rule_illogical_reason_vars[i] >= 0)
+                                    w = 8;
+                            render_box(right_panel_offset + XYPos(-w * button_size, 0), XYPos(w * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Loses Information");
                             render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
                             for (int i = 0; i < 5; i++)
