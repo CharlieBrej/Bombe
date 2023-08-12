@@ -1007,7 +1007,7 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
     }
 }
 
-GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
+GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 {
     z3::context c;
     z3::solver s(c);
@@ -1188,6 +1188,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                 why.apply_region_type.value += vals[why.apply_region_type.var - 1];
                 why.apply_region_type.var = 0;
             }
+            for (int i = 0; i < 5; i++)
+                vars[i] = vals[(1 << i) - 1];
             return LOSES_DATA;
         }
     }
@@ -1210,6 +1212,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
                         why.square_counts[i] = RegionType(RegionType::NONE, 0);
 
                     why.square_counts[i] = RegionType(RegionType::MORE, 0);
+                    for (int i = 0; i < 5; i++)
+                        vars[i] = -1;
                     return ILLOGICAL;
                 }
                 if (square_counts[i].var)
@@ -1233,9 +1237,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
 
         if (s.check() == z3::sat)
         {
+            uint32_t vars_want = 0;
             z3::model m = s.get_model();
             for (int i = 1; i < (1 << region_count); i++)
             {
+                vars_want |= why.square_counts[i].var;
                 int v = m.eval(vec[i]).get_numeral_int();
                 why.square_counts[i] = RegionType(RegionType::EQUAL, v);
             }
@@ -1248,15 +1254,19 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why)
             {
                 if (why.region_type[i].var)
                 {
+                    vars_want |= why.region_type[i].var;
                     why.region_type[i].value += vals[why.region_type[i].var - 1];
                     why.region_type[i].var = 0;
                 }
             }
             if (why.apply_region_type.var)
             {
+                vars_want |= why.apply_region_type.var;
                 why.apply_region_type.value += vals[why.apply_region_type.var - 1];
                 why.apply_region_type.var = 0;
             }
+            for (int i = 0; i < 5; i++)
+                vars[i] = ((vars_want >> i) & 1) ? vals[(1 << i) - 1] : -1;
             return ILLOGICAL;
         }
     }

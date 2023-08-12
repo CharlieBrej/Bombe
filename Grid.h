@@ -273,7 +273,7 @@ public:
     bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     typedef enum {OK, ILLOGICAL, LOSES_DATA, IMPOSSIBLE, UNBOUNDED, LIMIT} IsLogicalRep;
-    IsLogicalRep is_legal(GridRule& why);
+    IsLogicalRep is_legal(GridRule& why, int vars[5]);
     void remove_region(int index);
     void add_region(RegionType type);
     void resort_region();

@@ -250,6 +250,7 @@ public:
 
     GridRule::IsLogicalRep constructed_rule_is_logical = GridRule::OK;
     GridRule rule_illogical_reason;
+    int rule_illogical_reason_vars[5];
     GridRule* constructed_rule_is_already_present = NULL;
 
     GridRegion* mouse_hover_region = NULL;

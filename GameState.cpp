@@ -1571,7 +1571,7 @@ void GameState::update_constructed_rule()
     if (!constructed_rule.apply_region_bitmap)
         constructed_rule_is_logical = GridRule::OK;
     else
-        constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason);
+        constructed_rule_is_logical = constructed_rule.is_legal(rule_illogical_reason, rule_illogical_reason_vars);
     constructed_rule_is_already_present = NULL;
 
     std::vector<int> order;
@@ -4986,9 +4986,16 @@ void GameState::render(bool saving)
                     {
                         if (render_button(XYPos(896, 576), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Illogical", 1))
                         {
-                            render_box(right_panel_offset + XYPos(-6 * button_size, 0), XYPos(6 * button_size, 6.5 * button_size), button_size/2, 1);
+                            render_box(right_panel_offset + XYPos(-8 * button_size, 0), XYPos(8 * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Illogical");
                             render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
+                            for (int i = 0; i < 5; i++)
+                            {
+                                if (rule_illogical_reason_vars[i] < 0)
+                                    continue;
+                                std::string v = std::string(1, 'a' + i) + "g" + std::to_string(rule_illogical_reason_vars[i]);
+                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8));
+                            }
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
                     }
@@ -4996,9 +5003,16 @@ void GameState::render(bool saving)
                     {
                         if (render_button(XYPos(896, 1152), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Loses Information", 2))
                         {
-                            render_box(right_panel_offset + XYPos(-6 * button_size, 0), XYPos(6 * button_size, 6.5 * button_size), button_size/2, 1);
+                            render_box(right_panel_offset + XYPos(-8 * button_size, 0), XYPos(8 * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Loses Information");
                             render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
+                            for (int i = 0; i < 5; i++)
+                            {
+                                if (rule_illogical_reason_vars[i] < 0)
+                                    continue;
+                                std::string v = std::string(1, 'a' + i) + "g" + std::to_string(rule_illogical_reason_vars[i]);
+                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8));
+                            }
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
                     }
@@ -5232,10 +5246,10 @@ void GameState::render(bool saving)
                         {
                             if (!level_progress[game_mode][g][s].level_status[i].done)
                             {
-                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done)
-                                    done_count++;
-                                else
+                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done == 0)
                                     todo_count++;
+                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done == 2)
+                                    done_count++;
                             }
                         }
                     }
@@ -7173,7 +7187,7 @@ bool GameState::events()
                         uint32_t nv = grid_dragging_btn ? 0 : 0xFFFFFFFF;
                         for (int i = 0; i < 10; i++)
                         {
-                            XYPos lp = oppos / 10 * i + ppos / 10 * (10 - i);
+                            XYPos lp = oppos * i / 10 + ppos * (10 - i) / 10;
                             FOR_XY(p, lp - XYPos(s, s), lp + XYPos(s, s))
                             {
                                 if (!p.inside(XYPos(2048,2048)))
@@ -7307,6 +7321,7 @@ bool GameState::events()
                             else
                             {
                                 rules[game_mode].clear();
+                                last_deleted_rules[game_mode].clear();
                                 if (game_mode == 2 || game_mode == 3)
                                     reset_levels();
                                 force_load_level = true;
