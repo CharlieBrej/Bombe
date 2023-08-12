@@ -4100,13 +4100,22 @@ void GameState::render(bool saving)
         if (!overlay_texture_is_clean)
             for(WrapPos r : wraps)
             {
+                if (grid->wrapped == Grid::WRAPPED_IN)
+                {
+                    double d = log(grid_pitch.y * r.size / grid_size) * 1.2;
+                    uint8_t r = ((((sin(d) + 1) / 2) * 100 + 155) * 1) / 1;
+                    uint8_t g = ((((sin(d+2) + 1) / 2) * 100 + 155) * 1) / 1;
+                    uint8_t b = ((((sin(d+4) + 1) / 2) * 100 + 155) * 1) / 1;
+                    SDL_SetTextureColorMod(overlay_texture, r, g, b);
+                }
                 XYPos mgpos = grid_offset + r.pos;
-                XYPos mgsize = grid->get_wrapped_size(grid_pitch);
+                XYPos mgsize = (grid->wrapped == Grid::WRAPPED_SIDE) ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
                 {
                     SDL_Rect src_rect = {0, 0, 2048, 2048};
                     SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(mgsize.x * r.size), int(mgsize.y * r.size)};
                     SDL_RenderCopy(sdl_renderer, overlay_texture, &src_rect, &dst_rect);
                 }
+                SDL_SetTextureColorMod(overlay_texture, contrast, contrast, contrast);
             }
 
         if (row_col_clues)
@@ -5001,7 +5010,7 @@ void GameState::render(bool saving)
                     }
                     else if (constructed_rule_is_logical == GridRule::LOSES_DATA)
                     {
-                        if (render_button(XYPos(896, 1152), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Loses Information", 2))
+                        if (render_button(XYPos(704, 384), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Loses Information", 2))
                         {
                             render_box(right_panel_offset + XYPos(-8 * button_size, 0), XYPos(8 * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Loses Information");
@@ -7171,10 +7180,8 @@ bool GameState::events()
                     if (mouse_mode == MOUSE_MODE_PAINT)
                     {
                         XYPos pos = mouse - grid_offset - scaled_grid_offset;
-                        XYPos siz = grid->get_wrapped_size(grid_pitch);
-                        XYPos ppos = (pos * 2048) / siz;
+                        XYPos siz = (grid->wrapped == Grid::WRAPPED_SIDE) ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
                         XYPos opos = grid_dragging_last_pos - grid_offset - scaled_grid_offset;
-                        XYPos oppos = (opos * 2048) / siz;
 
                         uint32_t* pixels;
                         int pitch;
@@ -7187,9 +7194,20 @@ bool GameState::events()
                         uint32_t nv = grid_dragging_btn ? 0 : 0xFFFFFFFF;
                         for (int i = 0; i < 10; i++)
                         {
-                            XYPos lp = oppos * i / 10 + ppos * (10 - i) / 10;
-                            FOR_XY(p, lp - XYPos(s, s), lp + XYPos(s, s))
+                            XYPos lp = opos * i / 10 + pos * (10 - i) / 10;
+                            lp = grid->get_pos_from_mouse_pos(lp, grid_pitch);
+                            if (lp.x < 0)
+                                continue;
+                            lp = (lp * 2048) / siz;
+                            FOR_XY(k, - XYPos(s, s), XYPos(s, s))
                             {
+                                XYPos p = k + lp;
+                                if (grid->wrapped == Grid::WRAPPED_SIDE)
+                                {
+                                    p += XYPos(2048,2048) * 16;
+                                    p.x %= 2048;
+                                    p.y %= 2048;
+                                }
                                 if (!p.inside(XYPos(2048,2048)))
                                     continue;
                                 pixels[p.y * pitch + p.x] = nv;

@@ -3429,6 +3429,32 @@ XYPos SquareGrid::get_wrapped_size(XYPos grid_pitch)
     return size * grid_pitch;
 }
 
+XYPos SquareGrid::get_grid_size(XYPos grid_pitch)
+{
+    return size * grid_pitch;
+}
+
+XYPos SquareGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    if (grid_pitch.x < 16)
+        return XYPos(-1, -1);
+    if (grid_pitch.y < 16)
+        return XYPos(-1, -1);
+    XYPos r(pos / grid_pitch);
+    if (!r.inside(size))
+        return pos;
+    r = get_base_square(r);
+    if (wrapped == WRAPPED_IN && r == innie_pos)
+    {
+        pos = get_pos_from_mouse_pos(pos - innie_pos * grid_pitch, (grid_pitch * get_square_size(innie_pos)) / size);
+        if (pos.x >= 0 && pos.y >= 0)
+            return (pos * size) / get_square_size(innie_pos);
+        return XYPos(-1,-1);
+    }
+
+    return pos;
+}
+
 bool TriangleGrid::is_inside(XYPos pos)
 {
     if (wrapped == WRAPPED_IN)
@@ -3984,6 +4010,42 @@ XYPos TriangleGrid::get_wrapped_size(XYPos grid_pitch)
     return size * grid_pitch;
 }
 
+XYPos TriangleGrid::get_grid_size(XYPos grid_pitch)
+{
+    return (size + XYPos(1, 0)) * grid_pitch;
+}
+
+XYPos TriangleGrid::get_pos_from_mouse_pos(XYPos p, XYPos grid_pitch)
+{
+    XYPos pos = p;
+    if (grid_pitch.x < 16)
+        return XYPos(-1,-1);
+    if (grid_pitch.y < 16)
+        return XYPos(-1,-1);
+    if (wrapped == WRAPPED_IN && !(size.y / 2 & 1))
+        pos.x += grid_pitch.x;
+    XYPos rep(pos / grid_pitch);
+    XYPos rem(pos % grid_pitch);
+    if (!((rep.x ^ rep.y) & 1))
+        rem.y = grid_pitch.y - rem.y - 1;
+    rem.x = rem.x * std::sqrt(3);
+    if (rem.y > rem.x)
+        rep.x--;
+    if (!is_inside(rep))
+        return p;
+
+    rep = get_base_square(rep);
+    if (wrapped == WRAPPED_IN && rep == innie_pos)
+    {
+        p = get_pos_from_mouse_pos(pos - innie_pos * grid_pitch, (grid_pitch * (get_square_size(innie_pos) + XYPos(1,0))) / size);
+        if (p.x >= 0 && p.y >= 0)
+            return p  * size / (get_square_size(innie_pos) + XYPos(1,0));
+        return XYPos(-1,-1);
+    }
+
+    return p;
+}
+
 std::string HexagonGrid::text_desciption()
 {
     return "Hexagon " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));
@@ -4203,4 +4265,14 @@ void HexagonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderC
 XYPos HexagonGrid::get_wrapped_size(XYPos grid_pitch)
 {
     return XYPos(size.x * 3, size.y * 2) * grid_pitch;
+}
+
+XYPos HexagonGrid::get_grid_size(XYPos grid_pitch)
+{
+    return XYPos(size.x * 3 + 1, size.y * 2 + 1) * grid_pitch;
+}
+
+XYPos HexagonGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    return pos;
 }

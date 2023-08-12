@@ -369,6 +369,8 @@ public:
     virtual void add_random_merged(int count) {}
     virtual XYPos get_base_square(XYPos p) {return p;}
     virtual XYPos get_wrapped_size(XYPos grid_pitch) = 0;
+    virtual XYPos get_grid_size(XYPos grid_pitch) = 0;
+    virtual XYPos get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch) = 0;
 
     void solve_easy();
     bool is_solveable();
@@ -438,6 +440,8 @@ public:
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
     XYPos get_wrapped_size(XYPos grid_pitch);
+    XYPos get_grid_size(XYPos grid_pitch);
+    XYPos get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch);
 };
 
 class TriangleGrid : public Grid
@@ -472,6 +476,8 @@ public:
     XYPos get_square_size(XYPos p);
     XYPos get_base_square(XYPos p);
     XYPos get_wrapped_size(XYPos grid_pitch);
+    XYPos get_grid_size(XYPos grid_pitch);
+    XYPos get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch);
 };
 
 class HexagonGrid : public Grid
@@ -496,4 +502,6 @@ public:
     XYRect get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total);
     void render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmd);
     XYPos get_wrapped_size(XYPos grid_pitch);
+    XYPos get_grid_size(XYPos grid_pitch);
+    XYPos get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch);
 };
