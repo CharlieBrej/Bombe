@@ -358,6 +358,8 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_REGION_LIMIT] = 8000;
     prog_stars[PROG_LOCK_ROBOTS] = 9000;
     prog_stars[PROG_LOCK_PAINT] = 4000;
+    prog_stars[PROG_LOCK_FAST_HINT1] = 18000;
+    prog_stars[PROG_LOCK_FAST_HINT2] = 22000;
 
 
     for (int i = 0; i < PROG_LOCK_TOTAL; i++)
@@ -1251,9 +1253,16 @@ void GameState::advance(int steps)
 
     if (get_hint)
     {
-        if (steps_had < 250)
+        int steps_want = 250;
+
+        if(max_stars >= prog_stars[PROG_LOCK_FAST_HINT1])
+            steps_want = 100;
+        if(max_stars >= prog_stars[PROG_LOCK_FAST_HINT2])
+            steps_want = 1;
+
+        if (steps_had < steps_want)
             return;
-        steps_had -= 250;
+        steps_had -= steps_want;
         get_hint = false;
         std::vector<GridRegion*> my_regions;
         for (GridRegion& r : grid->regions)
@@ -4780,7 +4789,7 @@ void GameState::render(bool saving)
         if (inspected_region->visibility_force == GridRegion::VIS_FORCE_USER)
             render_button(XYPos(1472, 768), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size), "Visibility set by User");
         else if (inspected_region->visibility_force == GridRegion::VIS_FORCE_HINT)
-            render_button(XYPos(1280, 1152), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size), "Hint");
+            render_button(XYPos(1472, 960), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size), "Hint");
         else if (inspected_region->vis_cause.rule)
             render_button(XYPos(896, 768), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size), "Show Visibility Rule");
 
@@ -5334,7 +5343,7 @@ void GameState::render(bool saving)
                                (i == 1) ? button_size / 2 : button_size;
                     render_box(right_panel_offset + XYPos(3 * button_size + (button_size - size) / 2, button_size * 8 + i * button_size + (button_size - size) / 2), XYPos(size, size), size/4, 11);
 
-                    SDL_Rect dst_rect = {right_panel_offset.x + (i % 3) * button_size, right_panel_offset.y + button_size * 8 + (i / 3) * button_size, button_size, button_size };
+                    SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 8 + i * button_size, button_size, button_size};
                     add_clickable_highlight(dst_rect);
 
                 }
@@ -5613,6 +5622,27 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
+        }
+        {
+            render_box(left_panel_offset + XYPos(11 * button_size, 7 * button_size), XYPos(button_size * 4, button_size * 3), button_size/4, 4);
+            std::string t = translate("Bonus");
+            render_text_box(left_panel_offset + XYPos(11 * button_size, 7 * button_size), t, false);
+        }
+
+        if (render_lock(PROG_LOCK_FAST_HINT1, XYPos(left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size * 3)))
+        {
+            SDL_Rect src_rect = {1088, 1536, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Fast Hints", false);
+        }
+
+        if (render_lock(PROG_LOCK_FAST_HINT2, XYPos(left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size * 3)))
+        {
+            SDL_Rect src_rect = {1088, 1728, 192, 192};
+            SDL_Rect dst_rect = {left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            add_tooltip(dst_rect, "Super Fast Hints", false);
         }
 
         {

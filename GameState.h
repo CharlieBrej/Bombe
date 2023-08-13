@@ -414,6 +414,9 @@ public:
         PROG_LOCK_ROBOTS,
         PROG_LOCK_PAINT,
 
+        PROG_LOCK_FAST_HINT1,
+        PROG_LOCK_FAST_HINT2,
+
         PROG_LOCK_TOTAL
         };
 
