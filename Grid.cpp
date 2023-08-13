@@ -3445,6 +3445,11 @@ XYPos SquareGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
         return XYPos(-1, -1);
     if (grid_pitch.y < 16)
         return XYPos(-1, -1);
+    if (wrapped == Grid::WRAPPED_SIDE)
+    {
+        pos += grid_pitch * size * 100;
+        pos = pos % (grid_pitch * size);
+    }
     XYPos r(pos / grid_pitch);
     if (!r.inside(size))
         return pos;
@@ -4022,6 +4027,11 @@ XYPos TriangleGrid::get_grid_size(XYPos grid_pitch)
 
 XYPos TriangleGrid::get_pos_from_mouse_pos(XYPos p, XYPos grid_pitch)
 {
+    if (wrapped == Grid::WRAPPED_SIDE)
+    {
+        p += get_wrapped_size(grid_pitch) * 100;
+        p = p % get_wrapped_size(grid_pitch);
+    }
     XYPos pos = p;
     if (grid_pitch.x < 16)
         return XYPos(-1,-1);
@@ -4279,5 +4289,10 @@ XYPos HexagonGrid::get_grid_size(XYPos grid_pitch)
 
 XYPos HexagonGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
 {
+    if (wrapped == Grid::WRAPPED_SIDE)
+    {
+        pos += get_wrapped_size(grid_pitch) * 100;
+        pos = pos % get_wrapped_size(grid_pitch);
+    }
     return pos;
 }

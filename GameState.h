@@ -166,6 +166,10 @@ public:
     double rule_limit_slider = 1.00;
     int rule_limit_count = -1;
 
+    constexpr static uint32_t paint_colours[9] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFF00, 0x000000, 0xFFFFFF};
+    int selected_colour = 0;
+    int paint_brush_size = 1;
+
     XYPos mouse;
     XYPosFloat mouse_scale = XYPosFloat(1,1);
     enum {
@@ -408,6 +412,7 @@ public:
         PROG_LOCK_REGION_LIMIT,
 
         PROG_LOCK_ROBOTS,
+        PROG_LOCK_PAINT,
 
         PROG_LOCK_TOTAL
         };
