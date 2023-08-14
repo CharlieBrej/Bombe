@@ -7637,10 +7637,7 @@ bool GameState::events()
                     rules_list_offset -= e.wheel.y;
                     break;
                 }
-                if (e.wheel.y > 0)
-                    target_grid_zoom *= 1.1;
-                else
-                    target_grid_zoom /= 1.1;
+                target_grid_zoom *= pow(1.1, e.wheel.preciseY);
                 break;
             }
 
