@@ -1345,7 +1345,9 @@ void GridRule::remove_region(int index)
             idx |= (i >> (index)) << (index + 1);
             int idx2 = idx | (1 << index);
             int c = square_counts[idx].value + square_counts[idx | (1 << index)].value;
+            int v = square_counts[idx].var | square_counts[idx | (1 << index)].var;
             square_counts[i] = RegionType(RegionType::EQUAL, c);
+            square_counts[i].var = v;
             if ((apply_region_bitmap >> idx) & (apply_region_bitmap >> idx2) & 1)
                 new_apply_region_bitmap |= 1 << i;
     }

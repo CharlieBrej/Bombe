@@ -349,7 +349,9 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PRIORITY2] = 16000;
     prog_stars[PROG_LOCK_PAUSE] = 9000;
     prog_stars[PROG_LOCK_COLORS] = 15000;
-    prog_stars[PROG_LOCK_TABLES] = 200;
+    prog_stars[PROG_LOCK_TABLE_RULES] = 10;
+    prog_stars[PROG_LOCK_TABLE_LEVELS] = 200;
+    prog_stars[PROG_LOCK_TABLE_SCORES] = 400;
     prog_stars[PROG_LOCK_SPEED] = 3;
 
     prog_stars[PROG_LOCK_USE_DONT_CARE] = 100;
@@ -726,7 +728,10 @@ static int fetch_from_server_thread(void *ptr)
 void GameState::post_to_server(SaveObject* send, bool sync)
 {
     if (server_timeout)
+    {
+        delete send;
         return;
+    }
     SDL_Thread *thread = SDL_CreateThread(fetch_from_server_thread, "PostToServer", (void *)new ServerComms(send));
     if (sync)
         SDL_WaitThread(thread, NULL);
@@ -737,7 +742,10 @@ void GameState::post_to_server(SaveObject* send, bool sync)
 void GameState::fetch_from_server(SaveObject* send, ServerResp* resp)
 {
     if (server_timeout)
+    {
+        delete send;
         return;
+    }
     SDL_AtomicLock(&resp->working);
     resp->done = false;
     resp->error = false;
@@ -987,7 +995,8 @@ void GameState::robot_thread(int thread_index)
                             LevelStatus p = level_progress[game_mode][g][s].level_status[i];
                             if (!p.done && !p.robot_done)
                             {
-                                jobs_todo.push_back(RobotJob{g, s, i});
+                                for (int r = 0; r < int(p.stats/100 + 1); r++)
+                                    jobs_todo.push_back(RobotJob{g, s, i});
                             }
                         }
                     }
@@ -2487,6 +2496,8 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
     int min_siz = std::min(size.x, size.y);
     XYPos offset = XYPos((size.x - min_siz) / 2, (size.y - min_siz) / 2);
 
+    render_box(pos, size, button_size/4, 4);
+
     SDL_Rect src_rect = {1088, 192, 192, 192};
     SDL_Rect dst_rect = {pos.x + offset.x, pos.y + offset.y, min_siz, min_siz};
     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -3288,6 +3299,12 @@ void GameState::render(bool saving)
 
         for (int level_index = 0; level_index < row_count; level_index++)
         {
+            if (!(level_index % 2))
+            {
+                SDL_Rect src_rect = {640, 544 ,1, 1};
+                SDL_Rect dst_rect = {list_pos.x, list_pos.y + cell_width + cell_height * level_index, cell_width * 7, cell_height};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
             if (level_index + rules_list_offset >= (int)levels_list.size())
                 break;
             unsigned index = levels_list[level_index + rules_list_offset];
@@ -3420,6 +3437,7 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {704 + 0 * 192, 2144, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 0 * cell_width, list_pos.y, cell_width, cell_width};
+//            render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Rule ID");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3428,6 +3446,7 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {1984, 2144, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 1 * cell_width, list_pos.y, cell_width, cell_width};
+//            render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Priority");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3436,6 +3455,7 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {704 + 1 * 192, 2144, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 2 * cell_width, list_pos.y, cell_width, cell_width};
+//            render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Action");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3444,6 +3464,7 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {704 + 2 * 192, 2144, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 3 * cell_width, list_pos.y, cell_width, cell_width};
+//            render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             add_tooltip(dst_rect, "Regions");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3454,6 +3475,7 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {1856, 1728, 192, 192};
                 SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
+//                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Import all Rules");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3468,6 +3490,7 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {display_rules_level ? 1408 : 1600, 2144, 192, 192};
                 SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
+//                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3476,6 +3499,7 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
                 SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
+//                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Times Applied");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3484,6 +3508,7 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {512, 192, 192, 192};
                 SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
+//                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Cells Cleared");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
@@ -3627,6 +3652,12 @@ void GameState::render(bool saving)
 
         for (int rule_index = 0; rule_index < row_count; rule_index++)
         {
+            if (!(rule_index % 2))
+            {
+                SDL_Rect src_rect = {640, 544 ,1, 1};
+                SDL_Rect dst_rect = {list_pos.x, list_pos.y + cell_width + cell_height * rule_index, cell_width * 7, cell_height};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
             if (rule_index + rules_list_offset >= (int)rules_list.size())
                 break;
             RuleDiplay& rd = rules_list[rule_index + rules_list_offset];
@@ -4308,6 +4339,7 @@ void GameState::render(bool saving)
     render_button(XYPos(704 + 192 * 2, 960), XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0), "Refresh Regions");
     if (render_lock(PROG_LOCK_SPEED, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1), XYPos(button_size * 3, button_size)))
     {
+        render_box(left_panel_offset + XYPos(0, button_size), XYPos(button_size * 3, button_size * 1), button_size/4, 4);
         SDL_Rect src_rect = {704, 1920, 576, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size * 3, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -4333,11 +4365,18 @@ void GameState::render(bool saving)
             }
         }
     }
-    if (render_lock(PROG_LOCK_TABLES, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + 2 * button_size), XYPos(button_size * 2, button_size * 3)))
     {
-        render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size * 3), button_size/4, 4);
+        int h = 0;
+        if (max_stars >= prog_stars[PROG_LOCK_TABLE_RULES]) h = 1;
+        if (max_stars >= prog_stars[PROG_LOCK_TABLE_LEVELS]) h = 2;
+        if (max_stars >= prog_stars[PROG_LOCK_TABLE_SCORES]) h = 3;
+        if (h)
+            render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size * h), button_size/4, 4);
 
+
+        if (render_lock(PROG_LOCK_TABLE_RULES, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + 2 * button_size), XYPos(button_size * 2, button_size)))
         {
+            
             SDL_Rect src_rect = {1344, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
             int rule_count = 0;
@@ -4367,6 +4406,7 @@ void GameState::render(bool saving)
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Rules", !display_rules);
         }
+        if (render_lock(PROG_LOCK_TABLE_LEVELS, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + 3 * button_size), XYPos(button_size * 2, button_size)))
         {
             SDL_Rect src_rect = {1408, 2144, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
@@ -4401,6 +4441,7 @@ void GameState::render(bool saving)
 
         }
 
+        if (render_lock(PROG_LOCK_TABLE_SCORES, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + 4 * button_size), XYPos(button_size * 2, button_size)))
         {
             SDL_Rect src_rect = {1728, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
@@ -4598,6 +4639,28 @@ void GameState::render(bool saving)
                 render_number(level_progress[game_mode][current_level_group_index][i].count_todo, pos + XYPos(button_size / 32, button_size / 4), XYPos(button_size * 15 / 16 , button_size / 2));
                 SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
                 add_clickable_highlight(dst_rect);
+                if (run_robots)
+                {
+                    bool todo = false;
+                    bool active = false;
+                    for (LevelStatus& l : level_progress[game_mode][current_level_group_index][i].level_status)
+                    {
+                        if (!l.done)
+                        {
+                            if (l.robot_done == 0)
+                                todo = true;
+                            if (l.robot_done == 1)
+                                active = true;
+                        }
+                    }
+                    SDL_Rect src_rect = {896, 1344, 192, 192};
+                    if (todo)
+                        src_rect = {3008, 1344, 192, 192};
+                    if (active)
+                        src_rect = {704, 2336, 192, 192};
+                    dst_rect = {pos.x + button_size * 2 / 3, pos.y + button_size * 2 / 3, button_size / 3, button_size / 3};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
             }
             else
             {
@@ -4607,7 +4670,7 @@ void GameState::render(bool saving)
                     level_progress[game_mode][current_level_group_index][i].star_anim_prog += frame_step;
                 }
                 SDL_Rect src_rect = {512, 960, 192, 192};
-                SDL_Rect dst_rect = {pos.x, pos.y, button_size, button_size};
+                SDL_Rect dst_rect = {pos.x + button_size / 12, pos.y + button_size / 12, button_size * 5 / 6, button_size * 5 / 6};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
@@ -4793,7 +4856,7 @@ void GameState::render(bool saving)
         else if (inspected_region->vis_cause.rule)
             render_button(XYPos(896, 768), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + 4 * button_size), "Show Visibility Rule");
 
-        render_button(XYPos(1856, 576), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + 5 * button_size), "Change Colour");
+        render_button(XYPos(896, 1152), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + 5 * button_size), "Change Color");
 
         if (render_lock(PROG_LOCK_VISIBILITY4, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 3 * button_size), XYPos(button_size, button_size * 3)))
         {
@@ -5083,7 +5146,7 @@ void GameState::render(bool saving)
             render_button(XYPos(1280, 576), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2), "Edit Rule");
             render_button(XYPos(1472, 576), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2), "Duplicate Rule");
             if (max_stars >= prog_stars[PROG_LOCK_LEVELS_AND_LOCKS])
-                render_button(XYPos(1856, 1536), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6), "Copy Rule to Clipboard");
+                render_button(XYPos(1856, 1536), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6), selected_rules.size() == 1 ? "Copy Rule to Clipboard" : "Copy Rules to Clipboard");
             if (max_stars >= prog_stars[PROG_LOCK_LEVELS_AND_LOCKS] && selected_rules.size() == 1)
                 render_button(XYPos(2048, 1728), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 6), "Copy Rule to Clipboard Image");
 
@@ -5169,7 +5232,7 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, "Paused");
             }
-            if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (max_stars >= prog_stars[PROG_LOCK_TABLES]))
+            if (inspected_rule.rule->apply_region_type.type != RegionType::VISIBILITY && (max_stars >= prog_stars[PROG_LOCK_TABLE_RULES]))
             {
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 10), XYPos(3 * button_size, button_size), button_size/4, 4);
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 11), XYPos(3 * button_size, button_size), button_size/4, 4);
@@ -5629,7 +5692,7 @@ void GameState::render(bool saving)
             render_text_box(left_panel_offset + XYPos(11 * button_size, 7 * button_size), t, false);
         }
 
-        if (render_lock(PROG_LOCK_FAST_HINT1, XYPos(left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size * 3)))
+        if (render_lock(PROG_LOCK_FAST_HINT1, XYPos(left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size)))
         {
             SDL_Rect src_rect = {1088, 1536, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
@@ -5637,7 +5700,7 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Fast Hints", false);
         }
 
-        if (render_lock(PROG_LOCK_FAST_HINT2, XYPos(left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size * 3)))
+        if (render_lock(PROG_LOCK_FAST_HINT2, XYPos(left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 8), XYPos(button_size, button_size)))
         {
             SDL_Rect src_rect = {1088, 1728, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 8, button_size, button_size};
@@ -6152,7 +6215,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         speed_dial = std::clamp(p, 0.0, 1.0);
     }
 
-    if (prog_seen[PROG_LOCK_TABLES])
+    if (prog_seen[PROG_LOCK_TABLE_RULES])
     {
         if ((pos - XYPos(button_size * 0, button_size * 2)).inside(XYPos(button_size * 2, button_size)))
         {
@@ -6164,6 +6227,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
                 display_levels = false;
             }
         }
+    }
+    if (prog_seen[PROG_LOCK_TABLE_LEVELS])
+    {
         if ((pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size * 2, button_size)))
         {
             display_levels = !display_levels;
@@ -6174,6 +6240,9 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
                 display_scores = false;
             }
         }
+    }
+    if (prog_seen[PROG_LOCK_TABLE_SCORES])
+    {
         if ((pos - XYPos(button_size * 0, button_size * 4)).inside(XYPos(button_size * 2, button_size)))
         {
             display_scores = !display_scores;
@@ -7772,7 +7841,7 @@ void GameState::deal_with_scores()
             scores_from_server.resp = NULL;
         }
         else
-            server_timeout = 1000;
+            server_timeout = 1000 * 60;
     }
 }
 
