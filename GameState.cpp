@@ -319,6 +319,7 @@ GameState::GameState(std::string& load_data, bool json)
         assert(music);
         assert(Mix_PlayMusic(music, -1) == 0);
     }
+    SDL_GameControllerEventState(SDL_ENABLE);
 
     grid = Grid::Load("ABBA!");
 
@@ -3836,6 +3837,8 @@ void GameState::render(bool saving)
                     constructed_rule = rule;
                     right_panel_mode = RIGHT_MENU_RULE_GEN;
                     update_constructed_rule();
+                    replace_rule = &rule;
+                    duplicate_rule = true;
                 }
                 display_rules_click_line = true;
 
@@ -4437,7 +4440,7 @@ void GameState::render(bool saving)
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
             dst_rect.w *= 2;
-            add_tooltip(dst_rect, "Current Level", !display_levels);
+            add_tooltip(dst_rect, "Levels", !display_levels);
 
         }
 
@@ -5771,7 +5774,7 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10.5 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, 10.5 * button_size), button_size/4, 1);
         {
             std::string t = translate("Remap Keys");
             render_text_box(left_panel_offset + XYPos(1.5 * button_size, 1.5 * button_size), t);
@@ -5781,70 +5784,70 @@ void GameState::render(bool saving)
                     SDL_Rect src_rect = {704, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Help");
                 }
                 {
                     SDL_Rect src_rect = {1472, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Hint");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 3, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Next Level");
                 }
                 {
                     SDL_Rect src_rect = {704 + 192 * 2, 960, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Refresh Regions");
                 }
                 {
                     SDL_Rect src_rect = {1472, 1152, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Full Screen");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Visible");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Hidden");
                 }
                 {
                     SDL_Rect src_rect = {2432, 576 + 192 * 2, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Trash");
                 }
                 {
                     SDL_Rect src_rect = {1856, 768, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Undo");
                 }
                 {
                     SDL_Rect src_rect = {1856, 960, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 7, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    dst_rect.w = 3.9 * button_size;
+                    dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Redo");
                 }
             }
@@ -5891,10 +5894,10 @@ void GameState::render(bool saving)
                         reg.type = types[i];
                     }
                     SDL_Rect src_rect = {2624, 576, 192, 192};
-                    SDL_Rect dst_rect = {left_panel_offset.x + (2 + (i / 5) * 4) * button_size, left_panel_offset.y + button_size * (3 + i % 5) , button_size, button_size};
+                    SDL_Rect dst_rect = {left_panel_offset.x + (2 + (i / 5) * 5) * button_size, left_panel_offset.y + button_size * (3 + i % 5) , button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                    render_region_type(reg, left_panel_offset + XYPos((2 + (i / 5) * 4) * button_size, button_size * (3 + i % 5)), button_size);
-                    dst_rect.w = 3.9 * button_size;
+                    render_region_type(reg, left_panel_offset + XYPos((2 + (i / 5) * 5) * button_size, button_size * (3 + i % 5)), button_size);
+                    dst_rect.w = 4.9 * button_size;
                     if (tip)
                         add_tooltip(dst_rect, tip);
                     else
@@ -5905,11 +5908,20 @@ void GameState::render(bool saving)
             for (int i = 0; i < 10; i++)
             {
                 int a = key_remap_page_index * 10 + i;
-                std::string s = SDL_GetKeyName(key_codes[a]);
+                std::string s;
+                if (key_codes[a] >> 48 == 1)
+                    s = SDL_GameControllerGetStringForButton(SDL_GameControllerButton(key_codes[a] & 0xFFFFFFFF));
+                else
+                    s = SDL_GetKeyName(key_codes[a] & 0xFFFFFFFF);
+                int m = (key_codes[a] >> 32) & 0x3;
+                const std::string key_mod[] = {"", "Shift+", "Ctrl+", "ShCtr+"};
+                s = key_mod[m] + s;
+                if (key_codes[a] >> 48 == 1)
+                    s = "Pad:" + s;
+
                 if (a == capturing_key)
                     s = "[?]";
-                
-                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 4) * button_size, (3.14 + (i % 5)) * button_size), s, false, button_size * 2.5);
+                render_text_box(left_panel_offset + XYPos((3.2 + (i / 5) * 5) * button_size, (3.14 + (i % 5)) * button_size), s, false, button_size * 3.5);
             }
 
 
@@ -6958,6 +6970,331 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
     }
 }
 
+void GameState::button_down(uint64_t key)
+{
+    if (capturing_key >= 0)
+    {
+        key_codes[capturing_key] = key;
+        capturing_key = -1;
+        return;
+    }
+    if (key == SDLK_PAGEUP)
+    {
+        if (display_rules || display_scores || display_levels)
+        {
+            rules_list_offset -= 16;
+            return;
+        }
+    }
+    if (key == SDLK_PAGEDOWN)
+    {
+        if (display_rules || display_scores || display_levels)
+        {
+            rules_list_offset += 16;
+            return;
+        }
+    }
+    if (display_help || display_language_chooser || display_menu || display_key_select || display_about)
+    {
+        if ((key == key_codes[KEY_CODE_HELP]) ||
+            (key == SDLK_ESCAPE))
+        {
+            display_help = false;    
+            display_language_chooser = false;
+            display_key_select = false;
+            display_menu = false;
+            display_about = false;
+        }
+        if (key == key_codes[KEY_CODE_FULL_SCREEN])
+        {
+            full_screen = !full_screen;
+            SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+            SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowInputFocus(sdl_window);
+        }
+        return;
+    }
+    {
+        if (key == key_codes[KEY_CODE_UNDO])
+            rule_gen_undo();
+        else if (key == key_codes[KEY_CODE_REDO])
+            rule_gen_redo();
+        else if (key == key_codes[KEY_CODE_G_VISIBLE])
+            key_held = 'Q';
+        else if (key == key_codes[KEY_CODE_G_HIDDEN])
+            key_held = 'W';
+        else if (key == key_codes[KEY_CODE_G_TRASH])
+            key_held = 'E';
+        else if (key == SDLK_ESCAPE)
+            display_menu = true;
+        else if (key == key_codes[KEY_CODE_HELP])
+            display_help = true;
+        else if (key == key_codes[KEY_CODE_HINT])
+        {
+            if (shift_held)
+            {
+                for (GridRegion& r : grid->regions)
+                    if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
+                    {
+                        r.visibility_force = GridRegion::VIS_FORCE_NONE;
+                        r.vis_level = GRID_VIS_LEVEL_SHOW;
+                    }
+                get_hint = false;
+                return;
+            }
+            if (get_hint)
+            {
+                get_hint = false;
+                return;
+            }
+            clue_solves.clear();
+            XYSet grid_squares = grid->get_squares();
+            FOR_XY_SET(pos, grid_squares)
+            {
+                if (grid->is_determinable_using_regions(pos, true))
+                    clue_solves.insert(pos);
+            }
+            get_hint = true;
+        }
+        else if (key == key_codes[KEY_CODE_SKIP])
+        {
+            skip_level = (shift_held) ? -1 : 1;
+            force_load_level = false;
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_REFRESH])
+        {
+            clue_solves.clear();
+            grid_regions_animation.clear();
+            grid_regions_fade.clear();
+            grid->clear_regions();
+            reset_rule_gen_region();
+            get_hint = false;
+            return;
+        }
+        else if (key == SDLK_F5)
+        {
+            if (mouse_mode != MOUSE_MODE_PAINT)
+                mouse_mode = MOUSE_MODE_PAINT;
+            else
+                mouse_mode = MOUSE_MODE_NONE;
+            return;
+        }
+        else if (key == SDLK_F6)
+        {
+            debug_bits[0] = !debug_bits[0];
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_FULL_SCREEN])
+        {
+            full_screen = !full_screen;
+            SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+            SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowInputFocus(sdl_window);
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_DONT_CARE])
+        {
+            region_type = RegionType(RegionType::NONE, 0);
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_CLEAR])
+        {
+            region_type = RegionType(RegionType::SET, 0);
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_BOMB])
+        {
+            region_type = RegionType(RegionType::SET, 1);
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_HIDE])
+        {
+            region_type = RegionType(RegionType::VISIBILITY, 1);
+            return;
+        }
+        else if (key == key_codes[KEY_CODE_TRASH])
+        {
+            region_type = RegionType(RegionType::VISIBILITY, 2);
+            return;
+        }
+        else if(prog_seen[PROG_LOCK_NUMBER_TYPES])
+        {
+            if (key == key_codes[KEY_CODE_VAR1])
+            {
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1])
+                {
+                    select_region_type.var ^= (1 << 0);
+                    region_type = select_region_type;
+                }
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_VAR2])
+            {
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS2])
+                {
+                    select_region_type.var ^= (1 << 1);
+                    region_type = select_region_type;
+                }
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_VAR3])
+            {
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS3])
+                {
+                    select_region_type.var ^= (1 << 2);
+                    region_type = select_region_type;
+                }
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_VAR4])
+            {
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS4])
+                {
+                    select_region_type.var ^= (1 << 3);
+                    region_type = select_region_type;
+                }
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_VAR5])
+            {
+                if (game_mode != 3 && prog_seen[PROG_LOCK_VARS5])
+                {
+                    select_region_type.var ^= (1 << 4);
+                    region_type = select_region_type;
+                }
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_0])
+            {
+                select_region_type.value = 0;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_1])
+            {
+                select_region_type.value = 1;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_2])
+            {
+                select_region_type.value = 2;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_3])
+            {
+                select_region_type.value = 3;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_4])
+            {
+                select_region_type.value = 4;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_5])
+            {
+                select_region_type.value = 5;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_6])
+            {
+                select_region_type.value = 6;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_7])
+            {
+                select_region_type.value = 7;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_8])
+            {
+                select_region_type.value = 8;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_9])
+            {
+                select_region_type.value = 9;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_EQUAL])
+            {
+                select_region_type.type = RegionType::EQUAL;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_NOTEQUAL])
+            {
+                select_region_type.type = RegionType::NOTEQUAL;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_PLUS])
+            {
+                select_region_type.type = RegionType::MORE;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_MINUS])
+            {
+                select_region_type.type = RegionType::LESS;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_XOR3])
+            {
+                select_region_type.type = RegionType::XOR3;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_XOR2])
+            {
+                select_region_type.type = RegionType::XOR2;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_XOR22])
+            {
+                select_region_type.type = RegionType::XOR22;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_PARITY])
+            {
+                select_region_type.type = RegionType::PARITY;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_XOR1])
+            {
+                select_region_type.type = RegionType::XOR1;
+                region_type = select_region_type;
+                return;
+            }
+            else if (key == key_codes[KEY_CODE_XOR11])
+            {
+                select_region_type.type = RegionType::XOR11;
+                region_type = select_region_type;
+                return;
+            }
+            else
+            {
+                printf("Uncaught key: %lx\n", key);
+            }
+        }
+    }
+}
+
 bool GameState::events()
 {
     bool quit = false;
@@ -6990,9 +7327,12 @@ bool GameState::events()
             case SDL_QUIT:
 		        quit = true;
                 break;
+            case SDL_CONTROLLERDEVICEADDED:
+                SDL_GameControllerOpen(e.cdevice.which);
+                break;
             case SDL_KEYDOWN:
             {
-                int key = e.key.keysym.sym;
+                uint64_t key = e.key.keysym.sym;
                 if (key == SDLK_LCTRL)
                 {
                     ctrl_held |= 1;
@@ -7013,337 +7353,21 @@ bool GameState::events()
                     shift_held |= 2;
                     break;
                 }
+                if (shift_held)
+                    key |= 1ull << 32;
+                if (ctrl_held)
+                    key |= 1ull << 33;
                 if (key == SDLK_F12 && ctrl_held)
                 {
                     display_debug = !display_debug;
                     break;
                 }
-                if (capturing_key >= 0)
-                {
-                    key_codes[capturing_key] = e.key.keysym.sym;
-                    capturing_key = -1;
-                    break;
-                }
-                if (key == SDLK_PAGEUP)
-                {
-                    if (display_rules || display_scores || display_levels)
-                    {
-                        rules_list_offset -= 16;
-                        break;
-                    }
-                }
-                if (key == SDLK_PAGEDOWN)
-                {
-                    if (display_rules || display_scores || display_levels)
-                    {
-                        rules_list_offset += 16;
-                        break;
-                    }
-                }
-                if (display_help || display_language_chooser || display_menu || display_key_select || display_about)
-                {
-                    if ((e.key.keysym.sym == key_codes[KEY_CODE_HELP]) ||
-                        (e.key.keysym.sym == SDLK_ESCAPE))
-                    {
-                        display_help = false;    
-                        display_language_chooser = false;
-                        display_key_select = false;
-                        display_menu = false;
-                        display_about = false;
-                    }
-                    if (e.key.keysym.sym == key_codes[KEY_CODE_FULL_SCREEN])
-                    {
-                        full_screen = !full_screen;
-                        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-                        SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                        SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                        SDL_SetWindowInputFocus(sdl_window);
-                    }
-                    break;
-                }
-                {
-                    if (key == key_codes[KEY_CODE_UNDO])
-                        rule_gen_undo();
-                    else if (key == key_codes[KEY_CODE_REDO])
-                        rule_gen_redo();
-                    else if (key == key_codes[KEY_CODE_G_VISIBLE])
-                        key_held = 'Q';
-                    else if (key == key_codes[KEY_CODE_G_HIDDEN])
-                        key_held = 'W';
-                    else if (key == key_codes[KEY_CODE_G_TRASH])
-                        key_held = 'E';
-                    else if (key == SDLK_ESCAPE)
-                        display_menu = true;
-                    else if (key == key_codes[KEY_CODE_HELP])
-                        display_help = true;
-                    else if (key == key_codes[KEY_CODE_HINT])
-                    {
-                        if (shift_held)
-                        {
-                            for (GridRegion& r : grid->regions)
-                                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
-                                {
-                                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
-                                    r.vis_level = GRID_VIS_LEVEL_SHOW;
-                                }
-                            get_hint = false;
-                            break;
-                        }
-                        if (get_hint)
-                        {
-                            get_hint = false;
-                            break;
-                        }
-                        clue_solves.clear();
-                        XYSet grid_squares = grid->get_squares();
-                        FOR_XY_SET(pos, grid_squares)
-                        {
-                            if (grid->is_determinable_using_regions(pos, true))
-                                clue_solves.insert(pos);
-                        }
-                        get_hint = true;
-                    }
-                    else if (key == key_codes[KEY_CODE_SKIP])
-                    {
-                        skip_level = (shift_held) ? -1 : 1;
-                        force_load_level = false;
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_REFRESH])
-                    {
-                        clue_solves.clear();
-                        grid_regions_animation.clear();
-                        grid_regions_fade.clear();
-                        grid->clear_regions();
-                        reset_rule_gen_region();
-                        get_hint = false;
-                        break;
-                    }
-                    else if (key == SDLK_F5)
-                    {
-                        if (mouse_mode != MOUSE_MODE_PAINT)
-                            mouse_mode = MOUSE_MODE_PAINT;
-                        else
-                            mouse_mode = MOUSE_MODE_NONE;
-                        break;
-                    }
-                    else if (key == SDLK_F6)
-                    {
-                        debug_bits[0] = !debug_bits[0];
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_FULL_SCREEN])
-                    {
-                        full_screen = !full_screen;
-                        SDL_SetWindowFullscreen(sdl_window, full_screen? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-                        SDL_SetWindowBordered(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                        SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
-                        SDL_SetWindowInputFocus(sdl_window);
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_DONT_CARE])
-                    {
-                        region_type = RegionType(RegionType::NONE, 0);
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_CLEAR])
-                    {
-                        region_type = RegionType(RegionType::SET, 0);
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_BOMB])
-                    {
-                        region_type = RegionType(RegionType::SET, 1);
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_HIDE])
-                    {
-                        region_type = RegionType(RegionType::VISIBILITY, 1);
-                        break;
-                    }
-                    else if (key == key_codes[KEY_CODE_TRASH])
-                    {
-                        region_type = RegionType(RegionType::VISIBILITY, 2);
-                        break;
-                    }
-                    else if(prog_seen[PROG_LOCK_NUMBER_TYPES])
-                    {
-                        if (key == key_codes[KEY_CODE_VAR1])
-                        {
-                            if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1])
-                            {
-                                select_region_type.var ^= (1 << 0);
-                                region_type = select_region_type;
-                            }
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_VAR2])
-                        {
-                            if (game_mode != 3 && prog_seen[PROG_LOCK_VARS2])
-                            {
-                                select_region_type.var ^= (1 << 1);
-                                region_type = select_region_type;
-                            }
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_VAR3])
-                        {
-                            if (game_mode != 3 && prog_seen[PROG_LOCK_VARS3])
-                            {
-                                select_region_type.var ^= (1 << 2);
-                                region_type = select_region_type;
-                            }
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_VAR4])
-                        {
-                            if (game_mode != 3 && prog_seen[PROG_LOCK_VARS4])
-                            {
-                                select_region_type.var ^= (1 << 3);
-                                region_type = select_region_type;
-                            }
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_VAR5])
-                        {
-                            if (game_mode != 3 && prog_seen[PROG_LOCK_VARS5])
-                            {
-                                select_region_type.var ^= (1 << 4);
-                                region_type = select_region_type;
-                            }
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_0])
-                        {
-                            select_region_type.value = 0;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_1])
-                        {
-                            select_region_type.value = 1;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_2])
-                        {
-                            select_region_type.value = 2;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_3])
-                        {
-                            select_region_type.value = 3;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_4])
-                        {
-                            select_region_type.value = 4;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_5])
-                        {
-                            select_region_type.value = 5;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_6])
-                        {
-                            select_region_type.value = 6;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_7])
-                        {
-                            select_region_type.value = 7;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_8])
-                        {
-                            select_region_type.value = 8;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_9])
-                        {
-                            select_region_type.value = 9;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_EQUAL])
-                        {
-                            select_region_type.type = RegionType::EQUAL;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_NOTEQUAL])
-                        {
-                            select_region_type.type = RegionType::NOTEQUAL;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_PLUS])
-                        {
-                            select_region_type.type = RegionType::MORE;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_MINUS])
-                        {
-                            select_region_type.type = RegionType::LESS;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_XOR3])
-                        {
-                            select_region_type.type = RegionType::XOR3;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_XOR2])
-                        {
-                            select_region_type.type = RegionType::XOR2;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_XOR22])
-                        {
-                            select_region_type.type = RegionType::XOR22;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_PARITY])
-                        {
-                            select_region_type.type = RegionType::PARITY;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_XOR1])
-                        {
-                            select_region_type.type = RegionType::XOR1;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else if (key == key_codes[KEY_CODE_XOR11])
-                        {
-                            select_region_type.type = RegionType::XOR11;
-                            region_type = select_region_type;
-                            break;
-                        }
-                        else
-                        {
-                            printf("Uncaught key: %d\n", key);
-                        }
-                    }
-                }
+                button_down(key);
                 break;
             }
             case SDL_KEYUP:
             {
-                int key = e.key.keysym.sym;
+                uint64_t key = e.key.keysym.sym;
                 if (key == SDLK_LCTRL)
                     ctrl_held &= ~1;
                 if (key == SDLK_RCTRL)
@@ -7352,6 +7376,23 @@ bool GameState::events()
                     shift_held &= ~1;
                 if (key == SDLK_RSHIFT)
                     shift_held &= ~2;
+                if (key == (key_codes[KEY_CODE_G_VISIBLE] & ~0xF00000000ull) || 
+                    key == (key_codes[KEY_CODE_G_HIDDEN] & ~0xF00000000ull) ||
+                    key == (key_codes[KEY_CODE_G_TRASH] & ~0xF00000000ull))
+                        key_held = 0;
+                break;
+            }
+            case SDL_CONTROLLERBUTTONDOWN:
+            {
+                uint64_t key = e.cbutton.button;
+                key |= 1ull << 48;
+                button_down(key);
+                break;
+            }
+            case SDL_CONTROLLERBUTTONUP:
+            {
+                uint64_t key = e.cbutton.button;
+                key |= 1ull << 48;
                 if (key == key_codes[KEY_CODE_G_VISIBLE] || 
                     key == key_codes[KEY_CODE_G_HIDDEN] ||
                     key == key_codes[KEY_CODE_G_TRASH])
@@ -7498,9 +7539,9 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,3);
-                    if (p.x >= 0 && p.y >= 0 && p.y < 5 && p.x <= 6)
+                    if (p.x >= 0 && p.y >= 0 && p.y < 5 && p.x <= 10)
                     {
-                        int index = p.y + (p.x / 4) * 5 + key_remap_page_index * 10;
+                        int index = p.y + (p.x / 5) * 5 + key_remap_page_index * 10;
 
                         if (index < KEY_CODE_TOTAL)
                             capturing_key = index;

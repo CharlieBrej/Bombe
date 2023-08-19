@@ -284,7 +284,7 @@ int main( int argc, char* argv[] )
 		return 1;
 #endif
 
-    SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO);
+    SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER);
     IMG_Init(IMG_INIT_PNG);
     SDLNet_Init();
     TTF_Init();

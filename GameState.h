@@ -140,11 +140,11 @@ public:
         KEY_CODE_XOR11,
         KEY_CODE_TOTAL,
         };
-    int key_codes[KEY_CODE_TOTAL] = {SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F11, SDLK_q, SDLK_w, SDLK_e, SDLK_z, SDLK_y,
-                                     SDLK_QUESTION, SDLK_SPACE, SDLK_TAB, SDLK_COMMA, SDLK_PERIOD, SDLK_a, SDLK_s, SDLK_d, SDLK_f, SDLK_g,
-                                     SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7, SDLK_8, SDLK_9,
-                                     SDLK_EQUALS, SDLK_EXCLAIM, SDLK_PLUS, SDLK_MINUS, SDLK_x, SDLK_c, SDLK_v, SDLK_b, SDLK_n, SDLK_m
-                                     };
+    uint64_t key_codes[KEY_CODE_TOTAL] = {SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F11, SDLK_q, SDLK_w, SDLK_e, SDLK_z, SDLK_y,
+                                          SDLK_SLASH, SDLK_SPACE, SDLK_TAB, SDLK_COMMA, SDLK_PERIOD, SDLK_a, SDLK_s, SDLK_d, SDLK_f, SDLK_g,
+                                          SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7, SDLK_8, SDLK_9,
+                                          SDLK_EQUALS, SDLK_n, SDLK_p, SDLK_MINUS, SDLK_x, SDLK_c, SDLK_v, SDLK_b, SDLK_n, SDLK_m
+                                          };
     int capturing_key = -1;
 
     bool mouse_button_pressed = false;
@@ -506,6 +506,7 @@ public:
     void grid_click(XYPos pos, int clicks, int btn);
     void left_panel_click(XYPos pos, int clicks, int btn);
     void right_panel_click(XYPos pos, int clicks, int btn);
+    void button_down(uint64_t key);
     bool events();
     void deal_with_scores();
     void export_all_rules_to_clipboard();

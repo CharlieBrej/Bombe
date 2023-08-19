@@ -44,6 +44,7 @@
             "Infinite" :                    "Infinite",
             "Join Discord" :                "Join Discord",
             "Level" :                       "Level",
+            "Levels" :                      "Levels",
             "Level ID" :                    "Level ID",
             "Loses Information" :           "Loses Information",
             "Low Contrast" :                "Low Contrast",
@@ -153,10 +154,10 @@
             ],
             [],
             [
-                {"x":400,  "y": 100,           "text":"Normal visible"},
-                {"x":400,  "y": 290,           "text":"Hidden, but still used by rules"},
-                {"x":400,  "y": 490,           "text":"Trash, ignored by rules"},
-                {"x":1050,  "y": 700,           "text":"Rules can be used to\nchange visibility of regions"}
+                {"x":400,  "y": 100,             "text":"Normal visible"},
+                {"x":400,  "y": 290,             "text":"Hidden, but still used by rules"},
+                {"x":400,  "y": 490,             "text":"Trash, ignored by rules"},
+                {"x":1050,  "y": 700,            "text":"Rules can be used to\nchange visibility of regions"}
             ]
         ]
     },
@@ -264,7 +265,14 @@
             "Visibility set by User" :      "Synlighed bestemt af bruger",
             "Volume" :                      "Lydstyrke",
             "Why Illogical" :               "Hvorfor ulogisk",
-            "Why Loses Information" :       "Hvorfor mister information"
+            "Why Loses Information" :       "Hvorfor mister information",
+            "Bonus" :                       "Bonus",
+            "Fast Hints" :                  "Hurtige tip",
+            "Super Fast Hints" :            "Superhurtige tip",
+            "Paint" :                       "Maling",
+            "Reset Paint" :                 "Nulstil maling",
+            "Levels" :                      "Niveauer",
+
         },
         "tutorial":
         [
@@ -424,7 +432,13 @@
             "Visibility set by User" :      "Visibilité fixée par le Joueur",
             "Volume" :                      "Volume",
             "Why Illogical" :               "Pourquoi c'est Illogique",
-            "Why Loses Information" :       "Pourquoi perd des informations"
+            "Why Loses Information" :       "Pourquoi perd des informations",
+            "Bonus" :                       "Bonus",
+            "Fast Hints" :                  "Hurtige tip",
+            "Super Fast Hints" :            "Superhurtige tip",
+            "Paint" :                       "Maling",
+            "Reset Paint" :                 "Nulstil maling",
+            "Levels" :                      "Niveauer",
         },
         "tutorial":
         [
@@ -511,7 +525,7 @@
             "Full Screen" :                 "Vollbildmodus",
             "Game Mode" :                   "Spielmodus",
             "Global" :                      "Global",
-            "Go to Rule Constructor" :      "Gehen zum Regelkonstruktor",
+            "Go to Rule Constructor" :      "Zum Regelkonstruktor",
             "Help" :                        "Hilfe",
             "Hexagon" :                     "Hexagon",
             "Hidden" :                      "Versteckt",
@@ -564,7 +578,6 @@
             "Score" :                       "Punkte",
             "Scores" :                      "Topliste",
             "Select Language" :             "Sprache",
-            "Weekly Levels" :               "Wöchentliche Levels",
             "Show Creation Rule" :          "Erstellungsregel anzeigen",
             "Show Row Clues" :              "Zeilenhinweise anzeigen",
             "Show Visibility Rule" :        "Sichtbarkeitsregel anzeigen",
@@ -583,8 +596,15 @@
             "Visible" :                     "Sichtbar",
             "Visibility set by User" :      "Benutzerdefinierte Sichtbarkeit",
             "Volume" :                      "Soundeffekte",
+            "Weekly Levels":                "Wöchentliche Level",
             "Why Illogical" :               "Warum unlogisch",
-            "Why Loses Information" :       "Warum geht Information verloren?"
+            "Why Loses Information" :       "Warum geht Information verloren?",
+            "Bonus":                        "Bonus",
+            "Fast Hints":                   "Schnelle Hinweise",
+            "Super Fast Hints":             "Superschnelle Hinweise",
+            "Paint":                        "Pinsel",
+            "Reset Paint":                  "Pinsel zurücksetzen",
+            "Levels":                       "Level"
         },
         "tutorial":
         [
@@ -744,7 +764,13 @@
             "Visibility set by User" :      "Zichtbaarheid gezet door Gebruiker",
             "Volume" :                      "Volume",
             "Why Illogical" :               "Waarom Onlogisch",
-            "Why Loses Information" :       "Waarom gaat informatie verloren"
+            "Why Loses Information" :       "Waarom gaat informatie verloren",
+            "Bonus" :                       "Bonus",
+            "Fast Hints" :                  "Snelle tips",
+            "Super Fast Hints" :            "Supersnelle tips",
+            "Paint" :                       "Verf",
+            "Reset Paint" :                 "Verf resetten",
+            "Levels" :                      "Niveaus"
         },
         "tutorial":
         [
@@ -904,7 +930,13 @@
             "Visibility set by User" :      "Widzialność ustawiona przez użytkownika",
             "Volume" :                      "Głośność",
             "Why Illogical" :               "Czemu nielogiczne?",
-            "Why Loses Information" :       "Dlaczego traci informacje"
+            "Why Loses Information" :       "Dlaczego traci informacje",
+            "Bonus" :                       "Premia",
+            "Fast Hints" :                  "Szybkie wskazówki",
+            "Super Fast Hints" :            "Superszybkie podpowiedzi",
+            "Paint" :                       "Farba",
+            "Reset Paint" :                 "Resetuj malowanie",
+            "Levels" :                      "Poziomy",
         },
         "tutorial":
         [
@@ -1064,7 +1096,13 @@
             "Visibility set by User": "Видимость установлена пользователем",
             "Volume": "Громкость",
             "Why Illogical": "Почему нелогично",
-            "Why Loses Information" : "Почему теряется информация"
+            "Why Loses Information" : "Почему теряется информация",
+            "Bonus" :                      "Бонус",
+            "Fast Hints" :                 "Быстрые подсказки",
+            "Super Fast Hints" :           "Супербыстрые подсказки",
+            "Paint" :                      "Краска",
+            "Reset Paint" :                "Сбросить краску",
+            "Levels" :                     "Уровни",
         },
         "tutorial":
         [
@@ -1224,7 +1262,13 @@
             "Visibility set by User" :      "Synlighet bestämd av Användare",
             "Volume" :                      "Volym",
             "Why Illogical" :               "Varför Ologisk",
-            "Why Loses Information" :       "Varför Förlorar Information"
+            "Why Loses Information" :       "Varför Förlorar Information",
+            "Bonus" :                       "Bonus",
+            "Fast Hints" :                  "Snabba tips",
+            "Super Fast Hints" :            "Supersnabba tips",
+            "Paint" :                       "Måla",
+            "Reset Paint" :                 "Återställ färg",
+            "Levels" :                      "Nivåer",
         },
         "tutorial":
         [
@@ -1290,6 +1334,7 @@
             "Add to Rule Constructor" :     "添加到規則生成器",
             "Auto-Solve Maximum Regions" :  "自動解題\n區域數上限",
             "Bomb" :                        "炸彈",
+            "Bonus" :                       "獎勵",
             "Cancel" :                      "取消",
             "Cells Cleared" :               "消除格子數",
             "Change Color":                 "換個顏色",
@@ -1307,6 +1352,7 @@
             "Done" :                        "已完成",
             "Duplicate Rule" :              "複製規則",
             "Edit Rule" :                   "編輯規則",
+            "Fast Hints" :                  "高速提示",
             "Filter" :                      "篩選",
             "Full Screen" :                 "全螢幕",
             "Game Mode" :                   "遊戲模式",
@@ -1324,6 +1370,7 @@
             "Infinite" :                    "無邊際",
             "Join Discord" :                "加入Discord",
             "Level" :                       "本關卡",
+            "Levels" :                      "關卡",
             "Level ID" :                    "關卡編號",
             "Loses Information" :           "會遺失資料",
             "Low Contrast" :                "低螢幕對比",
@@ -1337,6 +1384,7 @@
             "Next Level" :                  "下一關",
             "Next Page" :                   "下一頁",
             "No variables, max 300 rules" : "無變數,最多300條規則",
+            "Paint" :                       "畫筆",
             "Pass Rate" :                   "通關率",
             "Paused" :                      "暫停",
             "Position" :                    "順位",
@@ -1354,6 +1402,7 @@
             "Remove Rule" :                 "刪除規則",
             "Reset Rules" :                 "重置規則",
             "Reset Levels" :                "重置關卡",
+            "Reset Paint" :                 "清除塗鴉",
             "Robots" :                      "機器人",
             "Rule Already Present" :        "規則已經存在",
             "Rule Constructor" :            "規則生成器",
@@ -1371,6 +1420,7 @@
             "Solved" :                      "已完成",
             "Speed" :                       "區域生成速度",
             "Square" :                      "四角形",
+            "Super Fast Hints" :            "超高速提示",
             "To Do" :                       "待完成",
             "Triangle" :                    "三角形",
             "Three region rules" :          "三區域規則",
@@ -1382,7 +1432,7 @@
             "Update Rule" :                 "更新規則",
             "Visible" :                     "可見的",
             "Visibility set by User" :      "玩家設定的可見性",
-            "Volume" :			    "音量",
+            "Volume" :			            "音量",
             "Why Illogical" :               "哪裡不合邏輯",
             "Why Loses Information" :       "為何會遺失資料"
         },
@@ -1450,6 +1500,7 @@
             "Add to Rule Constructor" :     "添加到规则生成器",
             "Auto-Solve Maximum Regions" :  "自动解题\n区域数上限",
             "Bomb" :                        "炸弹",
+            "Bonus" :                       "奖励",
             "Cancel" :                      "取消",
             "Cells Cleared" :               "消除格子数",
             "Change Color":                 "换个颜色",
@@ -1467,6 +1518,7 @@
             "Done" :                        "已完成",
             "Duplicate Rule" :              "复制规则",
             "Edit Rule" :                   "编辑规则",
+            "Fast Hints" :                  "高速提示",
             "Filter" :                      "筛选",
             "Full Screen" :                 "全屏",
             "Game Mode" :                   "游戏模式",
@@ -1484,6 +1536,7 @@
             "Infinite" :                    "无边际",
             "Join Discord" :                "加入Discord",
             "Level" :                       "本关卡",
+            "Levels" :                      "关卡",
             "Level ID" :                    "关卡编号",
             "Loses Information" :           "会遗失资料",
             "Low Contrast" :                "低屏幕对比",
@@ -1497,6 +1550,7 @@
             "Next Level" :                  "跳过关卡",
             "Next Page" :                   "下一页",
             "No variables, max 300 rules" : "无变数,最多300条规则",
+            "Paint" :                       "划笔",
             "Pass Rate" :                   "通关率",
             "Paused" :                      "暂停",
             "Position" :                    "顺位",
@@ -1514,6 +1568,7 @@
             "Remove Rule" :                 "删除规则",
             "Reset Rules" :                 "重置规则",
             "Reset Levels" :                "重置关卡",
+            "Reset Paint" :                 "清除涂鸦",
             "Robots" :                      "机器人",
             "Rule Already Present" :        "规则已经存在",
             "Rule Constructor" :            "规则生成器",
@@ -1531,6 +1586,7 @@
             "Solved" :                      "已完成",
             "Speed" :                       "动画速度",
             "Square" :                      "四角形",
+            "Super Fast Hints" :            "超高速提示",
             "To Do" :                       "待完成",
             "Triangle" :                    "三角形",
             "Three region rules" :          "三区域规则",
@@ -1704,7 +1760,13 @@
             "Visibility set by User" :      "手動表示設定",
             "Volume" :                      "音量",
             "Why Illogical" :               "反例",
-            "Why Loses Information" :       "なぜ情報量が失われるのか"
+            "Why Loses Information" :       "なぜ情報量が失われるのか",
+            "Bonus" :                       "ボーナス",
+            "Fast Hints" :                  "クイックヒント",
+            "Super Fast Hints" :            "超高速ヒント",
+            "Paint" :                       "ペイント",
+            "Reset Paint" :                 "ペイントをリセット",
+            "Levels" :                      "レベル",
         },
         "tutorial":
         [
