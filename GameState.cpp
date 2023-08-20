@@ -281,7 +281,7 @@ GameState::GameState(std::string& load_data, bool json)
         SDL_SetWindowIcon(sdl_window, icon_surface);
 	    SDL_FreeSurface(icon_surface);
     }
-    overlay_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 2048, 2048);
+    overlay_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 2048, 2048);
     SDL_SetTextureBlendMode(overlay_texture, SDL_BLENDMODE_BLEND);
     clear_overlay();
 
@@ -7423,7 +7423,7 @@ bool GameState::events()
                         uint32_t cg = (selected_colour & 2) ? 128 : 255;
                         uint32_t cb = (selected_colour & 4) ? 128 : 255;
 
-                        uint32_t nv = 0xFF | cr << 24 | cg << 16 | cb << 8;
+                        uint32_t nv = 0xFF << 24 | cr << 16 | cg << 8 | cb << 0;
                         
                         if (grid_dragging_btn || (selected_colour == 8))
                         {
@@ -7442,6 +7442,8 @@ bool GameState::events()
                             FOR_XY(k, - XYPos(s, s), XYPos(s, s))
                             {
                                 XYPos p = k + lp;
+                                if (grid->wrapped == Grid::WRAPPED_SIDE)
+                                    p = p % XYPos(2048,2048);
                                 if (!p.inside(XYPos(2048,2048)))
                                     continue;
                                 pixels[p.y * pitch + p.x] = nv;

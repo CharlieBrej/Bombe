@@ -59,6 +59,7 @@
             "Next Page" :                   "Next Page",
             "No variables, max 300 rules" : "No variables, max 300 rules",
             "Pass Rate" :                   "Pass Rate",
+            "Paint" :                       "Paint",
             "Paused" :                      "Paused",
             "Position" :                    "Position",
             "Priority" :                    "Priority",
@@ -766,11 +767,11 @@
             "Why Illogical" :               "Waarom Onlogisch",
             "Why Loses Information" :       "Waarom gaat informatie verloren",
             "Bonus" :                       "Bonus",
-            "Fast Hints" :                  "Snelle tips",
-            "Super Fast Hints" :            "Supersnelle tips",
+            "Fast Hints" :                  "Snelle Hints",
+            "Super Fast Hints" :            "Super Snelle Hints",
             "Paint" :                       "Verf",
-            "Reset Paint" :                 "Verf resetten",
-            "Levels" :                      "Niveaus"
+            "Reset Paint" :                 "Verf Resetten",
+            "Levels" :                      "Levels"
         },
         "tutorial":
         [
@@ -1762,10 +1763,10 @@
             "Why Illogical" :               "反例",
             "Why Loses Information" :       "なぜ情報量が失われるのか",
             "Bonus" :                       "ボーナス",
-            "Fast Hints" :                  "クイックヒント",
-            "Super Fast Hints" :            "超高速ヒント",
-            "Paint" :                       "ペイント",
-            "Reset Paint" :                 "ペイントをリセット",
+            "Fast Hints" :                  "ファストヒント",
+            "Super Fast Hints" :            "スーパーファストヒント",
+            "Paint" :                       "メモモード",
+            "Reset Paint" :                 "全てのメモを消去",
             "Levels" :                      "レベル",
         },
         "tutorial":
