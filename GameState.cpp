@@ -813,16 +813,17 @@ void GameState::clear_overlay()
 {
     if (overlay_texture_is_clean)
         return;
-    uint32_t* pixels;
-    int pitch;
-    int r = SDL_LockTexture(overlay_texture, NULL, (void**)&pixels, &pitch);
-    assert(r == 0);
-    pitch /= 4;
+    if (!overlay_texture_pixels)
+    {
+        int r = SDL_LockTexture(overlay_texture, NULL, (void**)&overlay_texture_pixels, &overlay_texture_pitch);
+        assert(r == 0);
+        overlay_texture_pitch /= 4;
+    }
     FOR_XY(p, XYPos(0, 0), XYPos(2048, 2048))
     {
-        pixels[p.y * pitch + p.x] = 0;
+        overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = 0;
     }
-    SDL_UnlockTexture(overlay_texture);
+//    SDL_UnlockTexture(overlay_texture);
     overlay_texture_is_clean = true;
 }
 
@@ -2784,6 +2785,8 @@ void GameState::render(bool saving)
             display_help = true;
             tutorial_index = 3;
             prog_seen[PROG_LOCK_DONT_CARE]++;
+            walkthrough = true;
+            walkthrough_step = 10;
         }
     }
     if (prog_seen[PROG_LOCK_NUMBER_TYPES] == 0)
@@ -4142,6 +4145,13 @@ void GameState::render(bool saving)
             }
         }
         if (!overlay_texture_is_clean)
+        {
+            if (overlay_texture_pixels)
+            {
+                SDL_UnlockTexture(overlay_texture);
+                overlay_texture_pixels = NULL;
+            }   
+
             for(WrapPos r : wraps)
             {
                 if (grid->wrapped == Grid::WRAPPED_IN)
@@ -4161,6 +4171,7 @@ void GameState::render(bool saving)
                 }
                 SDL_SetTextureColorMod(overlay_texture, contrast, contrast, contrast);
             }
+        }
 
         if (row_col_clues)
         {
@@ -6014,6 +6025,16 @@ void GameState::render(bool saving)
         {
             walkthrough_region = XYRect(right_panel_offset + XYPos(button_size * 4, button_size * 1), XYPos(button_size, button_size));
         }
+        else if (walkthrough_step == 10)
+        {
+            walkthrough_region = XYRect(grid_offset + XYPos(button_size * 0.93, button_size * 0.3), XYPos(button_size * 1, button_size  * 1));
+            walkthrough_double_click = true;
+        }
+        else if (walkthrough_step == 11)
+        {
+            walkthrough_region = XYRect(grid_offset + XYPos(button_size * 6.8, button_size * 0.3), XYPos(button_size * 1, button_size  * 1));
+            walkthrough_double_click = true;
+        }
         {
             SDL_Rect src_rect = {2624, 1920, 192, 192};
             SDL_Rect dst_rect = {walkthrough_region.pos.x - walkthrough_region.size.x * 3, walkthrough_region.pos.y - walkthrough_region.size.y * 3, walkthrough_region.size.x * 7, walkthrough_region.size.y * 7};
@@ -7411,11 +7432,12 @@ bool GameState::events()
                         XYPos siz = (grid->wrapped == Grid::WRAPPED_SIDE) ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
                         XYPos opos = grid_dragging_last_pos - grid_offset - scaled_grid_offset;
 
-                        uint32_t* pixels;
-                        int pitch;
-                        int r = SDL_LockTexture(overlay_texture, NULL, (void**)&pixels, &pitch);
-                        assert(r == 0);
-                        pitch /= 4;
+                        if (!overlay_texture_pixels)
+                        {
+                            int r = SDL_LockTexture(overlay_texture, NULL, (void**)&overlay_texture_pixels, &overlay_texture_pitch);
+                            assert(r == 0);
+                            overlay_texture_pitch /= 4;
+                        }
                         int s = (paint_brush_size == 0) ? 5 :
                                 (paint_brush_size == 1) ? 10 : 20;
 
@@ -7446,12 +7468,12 @@ bool GameState::events()
                                     p = p % XYPos(2048,2048);
                                 if (!p.inside(XYPos(2048,2048)))
                                     continue;
-                                pixels[p.y * pitch + p.x] = nv;
+                                overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = nv;
                             }
                         }
                         if (grid_dragging_btn == 0)
                             overlay_texture_is_clean = false;
-                        SDL_UnlockTexture(overlay_texture);
+//                        SDL_UnlockTexture(overlay_texture);
                     }
                     else
                     {
@@ -7719,7 +7741,9 @@ bool GameState::events()
                     if ((XYPosFloat(p).distance()  < XYPosFloat(walkthrough_region.size).distance() / 2) && ((e.button.clicks > 1) || !walkthrough_double_click))
                     {
                         walkthrough_step++;
-                        if (walkthrough_step >= 4)
+                        if (walkthrough_step == 4)
+                            walkthrough = false;
+                        if (walkthrough_step == 12)
                             walkthrough = false;
                     }
                     else

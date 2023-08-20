@@ -46,6 +46,8 @@ public:
     int tut_page_count = 3;
     SDL_Texture* overlay_texture;
     bool overlay_texture_is_clean = true;
+    uint32_t* overlay_texture_pixels = NULL;
+    int overlay_texture_pitch;
 
     std::string steam_session_string;
     std::set <std::string> achievements;
@@ -299,7 +301,7 @@ public:
     bool auto_progress_all = false;
     double steps_had = 0;
 
-    const static int max_robot_count = 16;
+    const static int max_robot_count = 64;
     SDL_Thread* robot_threads[max_robot_count] = {};
     SDL_mutex* robot_lock[max_robot_count];
 
