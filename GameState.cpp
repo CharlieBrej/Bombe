@@ -6752,6 +6752,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             if (right_panel_mode == RIGHT_MENU_RULE_GEN)
             {
+                if (ctrl_held)
+                {
+                    region_type = constructed_rule.region_type[region_index];
+                    select_region_type = region_type;
+                    return;
+                }
                 if (btn == 2)
                 {
                     update_constructed_rule_pre();
@@ -6916,38 +6922,62 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 if (!hover_rulemaker_lower_right)
                 {
-                    update_constructed_rule_pre();
-                    uint8_t square_counts[16];
-                    GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                    RegionType new_region_type = region_type;
-                    if (region_type.type >= 50)
+                    if (ctrl_held)
                     {
-                        new_region_type = RegionType(RegionType::NONE, 0);
-                        // if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
-                        //     (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
-                        //     new_region_type = RegionType(RegionType::EQUAL, 0);
+                        if (constructed_rule.apply_region_bitmap & 1 << hover_rulemaker_bits)
+                        {
+                            region_type = constructed_rule.square_counts[hover_rulemaker_bits];
+                            if ((region_type.type != RegionType::VISIBILITY) && (region_type.type != RegionType::NONE) && (region_type.type != RegionType::SET))
+                                select_region_type = region_type;
+                        }
                     }
-                    if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
+                    else
                     {
-                        constructed_rule.square_counts[hover_rulemaker_bits] = RegionType(RegionType::EQUAL, square_counts[hover_rulemaker_bits]);
+                        update_constructed_rule_pre();
+                        uint8_t square_counts[16];
+                        GridRule::get_square_counts(square_counts, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                        RegionType new_region_type = region_type;
+                        if (region_type.type >= 50)
+                        {
+                            new_region_type = RegionType(RegionType::NONE, 0);
+                            // if ((constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::NONE, 0)) ||
+                            //     (constructed_rule.square_counts[hover_rulemaker_bits] == RegionType(RegionType::EQUAL, 0) && square_counts[hover_rulemaker_bits]))
+                            //     new_region_type = RegionType(RegionType::EQUAL, 0);
+                        }
+                        if (constructed_rule.square_counts[hover_rulemaker_bits] == new_region_type)
+                        {
+                            constructed_rule.square_counts[hover_rulemaker_bits] = RegionType(RegionType::EQUAL, square_counts[hover_rulemaker_bits]);
+                        }
+                        else //if (new_region_type.type == RegionType::NONE || new_region_type.apply_int_rule(square_counts[hover_rulemaker_bits]))
+                        {
+                            constructed_rule.square_counts[hover_rulemaker_bits] = new_region_type;
+                        }
+    //                    rule_gen_region_undef_num ^= 1 << hover_rulemaker_bits;
+                        update_constructed_rule();
                     }
-                    else //if (new_region_type.type == RegionType::NONE || new_region_type.apply_int_rule(square_counts[hover_rulemaker_bits]))
-                    {
-                        constructed_rule.square_counts[hover_rulemaker_bits] = new_region_type;
-                    }
-//                    rule_gen_region_undef_num ^= 1 << hover_rulemaker_bits;
-                    update_constructed_rule();
                 }
-                else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
+                else
                 {
-                    update_constructed_rule_pre();
-                    constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                    if (ctrl_held)
                     {
-                        if (constructed_rule.apply_region_type != region_type)
-                            constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
-                        constructed_rule.apply_region_type = region_type;
+                        if (constructed_rule.apply_region_bitmap & 1 << hover_rulemaker_bits)
+                        {
+                            region_type = constructed_rule.apply_region_type;
+                            if ((region_type.type != RegionType::VISIBILITY) && (region_type.type != RegionType::NONE) && (region_type.type != RegionType::SET))
+                                select_region_type = region_type;
+                        }
                     }
-                    update_constructed_rule();
+                    else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
+                    {
+                        update_constructed_rule_pre();
+                        constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                        {
+                            if (constructed_rule.apply_region_type != region_type)
+                                constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                            constructed_rule.apply_region_type = region_type;
+                        }
+                        update_constructed_rule();
+                    }
                 }
             }
         }
