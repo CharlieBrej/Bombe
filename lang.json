@@ -74,6 +74,7 @@
             "Regular" :                     "Regular",
             "Remap Keys" :                  "Remap Keys",
             "Remove Rule" :                 "Remove Rule",
+            "Reset" :                       "Reset",
             "Reset Paint" :                 "Reset Paint",
             "Reset Rules" :                 "Reset Rules",
             "Reset Levels" :                "Reset Levels",
@@ -274,6 +275,7 @@
             "Paint" :                       "Maling",
             "Reset Paint" :                 "Nulstil maling",
             "Levels" :                      "Niveauer",
+            "Reset" :                       "Nulstil",
 
         },
         "tutorial":
@@ -441,6 +443,7 @@
             "Paint" :                       "Maling",
             "Reset Paint" :                 "Nulstil maling",
             "Levels" :                      "Niveauer",
+            "Reset" :                       "Nulstil",
         },
         "tutorial":
         [
@@ -606,7 +609,8 @@
             "Super Fast Hints":             "Superschnelle Hinweise",
             "Paint":                        "Pinsel",
             "Reset Paint":                  "Pinsel zurücksetzen",
-            "Levels":                       "Level"
+            "Levels":                       "Level",
+            "Reset" :                       "Pinsel",
         },
         "tutorial":
         [
@@ -772,7 +776,8 @@
             "Super Fast Hints" :            "Super Snelle Hints",
             "Paint" :                       "Verf",
             "Reset Paint" :                 "Verf Resetten",
-            "Levels" :                      "Levels"
+            "Levels" :                      "Levels",
+            "Reset" :                       "Resetten",
         },
         "tutorial":
         [
@@ -939,6 +944,7 @@
             "Paint" :                       "Farba",
             "Reset Paint" :                 "Resetuj malowanie",
             "Levels" :                      "Poziomy",
+            "Reset" :                       "Resetuj",
         },
         "tutorial":
         [
@@ -1105,6 +1111,7 @@
             "Paint" :                      "Краска",
             "Reset Paint" :                "Сбросить краску",
             "Levels" :                     "Уровни",
+            "Reset" :                       "Сбросить",
         },
         "tutorial":
         [
@@ -1271,6 +1278,7 @@
             "Paint" :                       "Måla",
             "Reset Paint" :                 "Återställ färg",
             "Levels" :                      "Nivåer",
+            "Reset" :                       "Återställ",
         },
         "tutorial":
         [
@@ -1436,7 +1444,8 @@
             "Visibility set by User" :      "玩家設定的可見性",
             "Volume" :			            "音量",
             "Why Illogical" :               "哪裡不合邏輯",
-            "Why Loses Information" :       "為何會遺失資料"
+            "Why Loses Information" :       "為何會遺失資料",
+            "Reset" :                       "重置",
         },
         "tutorial":
         [
@@ -1602,7 +1611,8 @@
             "Visibility set by User" :      "玩家设定的可见性",
             "Volume" :			            "音量",
             "Why Illogical" :               "为何不合逻辑",
-            "Why Loses Information" :       "为何会遗失资料"
+            "Why Loses Information" :       "为何会遗失资料",
+            "Reset" :                       "重置"
         },
         "tutorial":
         [
@@ -1769,6 +1779,7 @@
             "Paint" :                       "メモモード",
             "Reset Paint" :                 "全てのメモを消去",
             "Levels" :                      "レベル",
+            "Reset" :                       "リセット"
         },
         "tutorial":
         [

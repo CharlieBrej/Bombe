@@ -102,6 +102,8 @@ GameState::GameState(std::string& load_data, bool json)
         lang_data = SaveObject::load(loadfile)->get_map();
     }
     window_size = XYPos(1920/2, 1080/2);
+    for (unsigned k = 0; k < KEY_CODE_TOTAL; k++)
+        key_codes[k] = default_key_codes[k];
     try
     {
         if (!load_data.empty())
@@ -5977,6 +5979,8 @@ void GameState::render(bool saving)
             if (key_remap_page_index < 3)
                 render_button(XYPos(1088, 1344), XYPos(left_panel_offset.x + 5 * button_size, left_panel_offset.y + button_size * 9), "Next Page");
 
+            render_button(XYPos(1088, 960), XYPos(left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 9), "Reset", 2);
+
             render_button(XYPos(704, 384), XYPos(left_panel_offset.x + 9 * button_size, left_panel_offset.y + button_size * 9), "OK");
 
 
@@ -6924,7 +6928,6 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     if (ctrl_held)
                     {
-                        if (constructed_rule.apply_region_bitmap & 1 << hover_rulemaker_bits)
                         {
                             region_type = constructed_rule.square_counts[hover_rulemaker_bits];
                             if ((region_type.type != RegionType::VISIBILITY) && (region_type.type != RegionType::NONE) && (region_type.type != RegionType::SET))
@@ -7644,6 +7647,10 @@ bool GameState::events()
                     if (p == XYPos(3,6))
                         if (key_remap_page_index < 3)
                             key_remap_page_index++;
+                    if (p == XYPos(5,6))
+                        for (unsigned k = 0; k < KEY_CODE_TOTAL; k++)
+                            key_codes[k] = default_key_codes[k];
+
                     if (p == XYPos(7,6))
                     {
                         capturing_key = -1;
