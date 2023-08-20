@@ -193,6 +193,7 @@ public:
     int tutorial_index = 0;
     int key_remap_page_index = 0;
 
+    int arrow_key_pressed = 0;
     int rules_list_offset = 0;
     bool display_rules_click = false;
     XYPos display_rules_click_pos;

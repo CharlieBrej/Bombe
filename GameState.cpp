@@ -3650,6 +3650,41 @@ void GameState::render(bool saving)
         std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, grid, debug_bits[0]));
         std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, grid, debug_bits[0]));
 
+        if (arrow_key_pressed)
+        {
+                        // right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                        // inspected_rule = GridRegionCause(&rule, NULL, NULL, NULL, NULL);
+                        // selected_rules.clear();
+                        // selected_rules.insert(&rule);
+            GridRule* pre_sel = NULL;
+            GridRule* post_sel = NULL;
+            bool seen_sel = false;
+            bool sel = false;
+
+            for (RuleDiplay& r : rules_list)
+            {
+                if (sel)
+                    post_sel = r.rule;
+                sel = false;
+                if (((right_panel_mode == RIGHT_MENU_RULE_INSPECT) && ((r.rule == inspected_rule.rule) || selected_rules.count(r.rule))) ||
+                    ((right_panel_mode == RIGHT_MENU_RULE_GEN) && (r.rule == replace_rule)))
+                {
+                    sel = true;
+                    seen_sel = true;
+                }
+                if (!seen_sel)
+                    pre_sel = r.rule;
+            }
+            GridRule* new_sel = (arrow_key_pressed == 1) ? post_sel : pre_sel;
+            if (new_sel)
+            {
+                right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                inspected_rule = GridRegionCause(new_sel, NULL, NULL, NULL, NULL);
+                selected_rules.clear();
+                selected_rules.insert(new_sel);
+            }
+        }
+
         if (rules_list_offset + row_count > (int)rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
@@ -7094,14 +7129,6 @@ void GameState::button_down(uint64_t key)
             get_hint = false;
             return;
         }
-        else if (key == SDLK_F5)
-        {
-            if (mouse_mode != MOUSE_MODE_PAINT)
-                mouse_mode = MOUSE_MODE_PAINT;
-            else
-                mouse_mode = MOUSE_MODE_NONE;
-            return;
-        }
         else if (key == SDLK_F6)
         {
             debug_bits[0] = !debug_bits[0];
@@ -7319,6 +7346,7 @@ void GameState::button_down(uint64_t key)
 bool GameState::events()
 {
     bool quit = false;
+    arrow_key_pressed = 0;
     // if (grid->regions.size() > 500)
     //     quit = true;
     SDL_Event e;
@@ -7374,15 +7402,25 @@ bool GameState::events()
                     shift_held |= 2;
                     break;
                 }
-                if (shift_held)
-                    key |= 1ull << 32;
-                if (ctrl_held)
-                    key |= 1ull << 33;
+                if (key == SDLK_UP)
+                {
+                    arrow_key_pressed = -1;
+                    break;
+                }
+                if (key == SDLK_DOWN)
+                {
+                    arrow_key_pressed = 1;
+                    break;
+                }
                 if (key == SDLK_F12 && ctrl_held)
                 {
                     display_debug = !display_debug;
                     break;
                 }
+                if (shift_held)
+                    key |= 1ull << 32;
+                if (ctrl_held)
+                    key |= 1ull << 33;
                 button_down(key);
                 break;
             }
