@@ -28,6 +28,7 @@
             "Duplicate Rule" :              "Duplicate Rule",
             "Edit Rule" :                   "Edit Rule",
             "Filter" :                      "Filter",
+            "Fast Hints" :                  "Fast Hints",
             "Full Screen" :                 "Full Screen",
             "Game Mode" :                   "Game Mode",
             "Global" :                      "Global",
@@ -94,6 +95,7 @@
             "Show Visibility Rule" :        "Show Visibility Rule",
             "Solved" :                      "Solved",
             "Speed" :                       "Speed",
+            "Super Fast Hints" :            "Super Fast Hints",
             "Square" :                      "Square",
             "To Do" :                       "To Do",
             "Triangle" :                    "Triangle",
@@ -108,7 +110,7 @@
             "Visibility set by User" :      "Visibility set by User",
             "Volume" :                      "Volume",
             "Why Illogical" :               "Why Illogical",
-            "Why Loses Information" :       "Why Loses Information"
+            "Why Loses Information" :       "Why Loses Information",
         },
         "tutorial":
         [

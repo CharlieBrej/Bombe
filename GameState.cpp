@@ -498,10 +498,12 @@ GameState::~GameState()
     ImgClipBoard::shutdown();
 
     if (has_sound)
+    {
         for (int i = 0; i < 16; i++)
             if (sounds[i])
                 Mix_FreeChunk(sounds[i]);
-    Mix_FreeMusic(music);
+        Mix_FreeMusic(music);
+    }
 
     SDL_DestroyTexture(sdl_texture);
     for (int i = 0; i < tut_texture_count; i++)
@@ -1511,11 +1513,13 @@ void GameState::set_language(std::string lang)
 
 void GameState::rule_gen_undo()
 {
+    if (constructed_rule_undo.empty())
+        return;
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
         right_panel_mode = RIGHT_MENU_RULE_GEN;
     }
-    else if (!constructed_rule_undo.empty())
+    else
     {
         constructed_rule_redo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
         ConstructedRuleState& s = constructed_rule_undo.front();
@@ -1528,13 +1532,14 @@ void GameState::rule_gen_undo()
 
 void GameState::rule_gen_redo()
 {
+    if (constructed_rule_redo.empty())
+        return;
     if (right_panel_mode != RIGHT_MENU_RULE_GEN)
     {
         right_panel_mode = RIGHT_MENU_RULE_GEN;
         if (constructed_rule.region_count)
             return;
     }
-    if (!constructed_rule_redo.empty())
     {
         constructed_rule_undo.push_front(ConstructedRuleState(constructed_rule, rule_gen_region));
         ConstructedRuleState& s = constructed_rule_redo.front();
@@ -2760,6 +2765,9 @@ void GameState::render(bool saving)
 {
     if (score_tables[game_mode][0].size() == 0)
         fetch_scores();
+    if (mouse_mode == MOUSE_MODE_PAINT && right_panel_mode != RIGHT_MENU_NONE)
+        mouse_mode = MOUSE_MODE_NONE;
+
     if (pirate)
         speed_dial = std::clamp(speed_dial, 0.0, 0.5);
     if(low_contrast && contrast > 128)
@@ -5331,13 +5339,13 @@ void GameState::render(bool saving)
             render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
         }
         if (display_rules && !display_clipboard_rules)
-        render_button(XYPos(1856, 1536), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6), "Copy All Rules to Clipboard");
+            render_button(XYPos(1856, 1536), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 6), "Copy All Rules to Clipboard");
         if (!last_deleted_rules[game_mode].empty())
-        render_button(XYPos(1088, 1152), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Undelete Rules");
+            render_button(XYPos(1088, 1152), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Undelete Rules");
         if (!constructed_rule_undo.empty())
-        render_button(XYPos(1856, 768), XYPos(right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2), "Undo");
+            render_button(XYPos(1856, 768), XYPos(right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2), "Undo");
         if (!constructed_rule_redo.empty())
-        render_button(XYPos(1856, 960), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2), "Redo");
+            render_button(XYPos(1856, 960), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2), "Redo");
 
         if (render_lock(PROG_LOCK_REGION_LIMIT, XYPos(right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 2), XYPos(button_size, button_size * 4)))
         {
@@ -6776,12 +6784,15 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (region_type.type == RegionType::VISIBILITY)
                 {
                     update_constructed_rule_pre();
-                    constructed_rule.apply_region_bitmap ^= 1 << region_index;
                     if (constructed_rule.apply_region_type != region_type)
                     {
+                        if ((constructed_rule.apply_region_type.type != RegionType::VISIBILITY) ||
+                            !(constructed_rule.apply_region_bitmap & (1 << region_index)))
+                            constructed_rule.apply_region_bitmap = 1 << region_index;
                         constructed_rule.apply_region_type = region_type;
-                        constructed_rule.apply_region_bitmap = 1 << region_index;
                     }
+                    else
+                        constructed_rule.apply_region_bitmap ^= 1 << region_index;
                     update_constructed_rule();
                     return;
                 } 
@@ -6973,11 +6984,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                     {
                         update_constructed_rule_pre();
-                        constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                        if (constructed_rule.apply_region_type != region_type)
                         {
-                            if (constructed_rule.apply_region_type != region_type)
-                                constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
                             constructed_rule.apply_region_type = region_type;
+                            if ((constructed_rule.apply_region_type.type == RegionType::VISIBILITY) ||
+                                !(constructed_rule.apply_region_bitmap & (1 << hover_rulemaker_bits)))
+                                constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                        }
+                        else
+                        {
+                            constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
                         }
                         update_constructed_rule();
                     }
@@ -7003,6 +7019,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     {
                         if (rule_is_permitted(constructed_rule, game_mode))
                         {
+                            constructed_rule.cpu_time = 0;
                             pause_robots();
                             std::list<GridRule>::iterator it;
                             for (it = rules[game_mode].begin(); it != rules[game_mode].end(); it++)
