@@ -6997,16 +6997,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                                 select_region_type = region_type;
                         }
                     }
-                    else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::SET && region_type.type != RegionType::NONE)
+                    else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                     {
                         update_constructed_rule_pre();
                         if (constructed_rule.apply_region_type != region_type)
                         {
-                            constructed_rule.apply_region_type = region_type;
-                            if ((constructed_rule.apply_region_type.type == RegionType::VISIBILITY) ||
-                                (constructed_rule.apply_region_type.type == RegionType::SET) ||
+                            if ((constructed_rule.apply_region_type.type == RegionType::SET) ||
+                                (region_type.type == RegionType::SET) ||
                                 !(constructed_rule.apply_region_bitmap & (1 << hover_rulemaker_bits)))
                                 constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
+                            constructed_rule.apply_region_type = region_type;
                         }
                         else
                         {
