@@ -142,10 +142,24 @@ static const char* server_level_types[] = { "A5400000700000", "B4400000700000","
                                             "A5400000000007", "B4400000000007","C6400000000007","A6610000000007", "B6610000000007",
                                             NULL};
 static const int game_version = 8;
+
+class Player
+{
+public:
+    std::string name;
+    uint64_t weekly_scores[GAME_MODE_TYPES][10] = {};
+    Player(std::string _name) :
+        name(_name)
+    {}
+    Player()
+    {}
+};
+
+
 class Database
 {
 public:
-    std::map<uint64_t, std::string> players;
+    std::map<uint64_t, Player> players;
     ScoreTable scores[GAME_MODE_TYPES][LEVEL_TYPES];
     std::map<std::string, uint64_t> steam_sessions;
     std::vector<std::vector<std::string>> server_levels;
@@ -156,7 +170,7 @@ public:
 
     void update_name(uint64_t steam_id, std::string& steam_username)
     {
-        players[steam_id] = steam_username;
+        players[steam_id] = Player(steam_username);
     }
 
     void load(SaveObject* sobj)
@@ -175,6 +189,17 @@ public:
             uint64_t id = omap->get_num("id");
             omap->get_string("steam_username", name);
             update_name(id, name);
+
+            if (omap->has_key("scores"))
+            {
+                SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
+                for (unsigned j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
+                {
+                    SaveObjectList* score_list = score_list2->get_item(j)->get_list();
+                    for (unsigned i = 0; (i < 10) && (i < score_list->get_count()); i++)
+                        players[id].weekly_scores[j][i] = score_list->get_num(i);
+                }
+            }
         }
         if (load_game_version == game_version)
         {
@@ -228,7 +253,19 @@ public:
         {
             SaveObjectMap* player_map = new SaveObjectMap;
             player_map->add_num("id", player_pair.first);
-            player_map->add_string("steam_username", player_pair.second);
+            player_map->add_string("steam_username", player_pair.second.name);
+            {
+                SaveObjectList* score_list2 = new SaveObjectList;
+                for (unsigned j = 0; j < GAME_MODE_TYPES; j++)
+                {
+                    SaveObjectList* score_list = new SaveObjectList;
+                    for (unsigned i = 0; i < 10; i++)
+                        score_list->add_num(player_pair.second.weekly_scores[j][i]);
+                    score_list2->add_item(score_list);
+                }
+                player_map->add_item("scores", score_list2);
+            }
+
             player_list->add_item(player_map);
         }
         omap->add_item("players", player_list);
@@ -320,7 +357,7 @@ public:
                 // }
                 SaveObjectMap* score_map = new SaveObjectMap();
                 score_map->add_num("pos", pos);
-                score_map->add_string("name", players[rit->second]);
+                score_map->add_string("name", players[rit->second].name);
                 score_map->add_num("score", scores[mode][i].user_score[rit->second]);
                 if (fr)
                     score_map->add_num("friend", fr);
@@ -749,18 +786,26 @@ int main(int argc, char *argv[])
                 db.next_server_levels.clear();
                 db.server_levels_version++;
                 week = new_week;
+
+                int windex = db.server_levels_version % 10;
                 for (int i = 0; i < GAME_MODE_TYPES; i++)
                 {
-                    for (auto& [key, val] : db.scores[i][LEVEL_TYPES - 1].user_score)
-                        val = val * 0.9;
-                    for (auto& [key, val] : db.scores[i][LEVEL_TYPES - 2].user_score)
+                    db.scores[i][LEVEL_TYPES - 1].reset();
+                    for(auto& [id, val] : db.players)
                     {
-                        int score = val;
-                        if (db.scores[i][LEVEL_TYPES - 1].user_score.count(key) > 0)
-                            score += db.scores[i][LEVEL_TYPES - 1].user_score[key];
-                        db.scores[i][LEVEL_TYPES - 1].add_score(key, score, true);
-                    }
+                        uint64_t score = 0;
+                        if (db.scores[i][LEVEL_TYPES-2].user_score.count(id))
+                            score = db.scores[i][LEVEL_TYPES-2].user_score[id];
+                        val.weekly_scores[i][windex] = score;
 
+                        score = 0;
+                        for (int j = 1 ; j <= 10; j++)
+                        {
+                            score += val.weekly_scores[i][(j + windex) % 10] * j / 10;
+                        }
+                        if (score)
+                            db.scores[i][LEVEL_TYPES - 1].add_score(id, score);
+                    }
                     db.scores[i][LEVEL_TYPES - 2].reset();
                 }
             }
@@ -803,7 +848,7 @@ int main(int argc, char *argv[])
         }
     }
     close(sockid);
-    if (0)
+    if (1)
     {
         std::ofstream outfile ("db.save");
         SaveObject* savobj = db.save(false);

@@ -3058,12 +3058,19 @@ GridRegion* Grid::add_one_new_region(GridRegion* r)
     while (it != regions_to_add.end())
     {
         GridRegionCause c = (*it).gen_cause;
-        if (regions_set.count(&*it) ||
-            ((c.rule && c.rule->apply_region_type.type != RegionType::SET) &&
+        bool del = false;
+
+        if (regions_set.count(&*it))
+            del = true;
+        if (c.rule && c.rule->paused)
+            del = true;
+        if ((c.rule && c.rule->apply_region_type.type != RegionType::SET) &&
             ((c.regions[0] && (c.regions[0]->vis_level == GRID_VIS_LEVEL_BIN || c.regions[0]->deleted)) ||
              (c.regions[1] && (c.regions[1]->vis_level == GRID_VIS_LEVEL_BIN || c.regions[1]->deleted)) ||
              (c.regions[2] && (c.regions[2]->vis_level == GRID_VIS_LEVEL_BIN || c.regions[2]->deleted)) ||
-             (c.regions[3] && (c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN || c.regions[3]->deleted)))))
+             (c.regions[3] && (c.regions[3]->vis_level == GRID_VIS_LEVEL_BIN || c.regions[3]->deleted))))
+            del = true;
+        if (del)
         {
             remove_from_regions_to_add_multiset(&(*it));
             it = regions_to_add.erase(it);

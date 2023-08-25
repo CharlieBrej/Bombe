@@ -917,7 +917,7 @@ void GameState::load_grid(std::string s)
         right_panel_mode = RIGHT_MENU_NONE;
 
 }
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region);
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region, bool skip_hide = false);
 
 void GameState::pause_robots()
 {
@@ -1026,7 +1026,7 @@ void GameState::robot_thread(int thread_index)
 
         while (true)
         {
-            int rep = advance_grid(grid, rules[game_mode], NULL);
+            int rep = advance_grid(grid, rules[game_mode], NULL, true);
 
             if (rep == 0)
             {
@@ -1340,6 +1340,12 @@ void GameState::advance(int steps)
         if (resp == Grid::APPLY_RULE_RESP_HIT)
             return;
         rule.stale = true;
+        unsigned diff = SDL_GetTicks() - oldtime;
+        if (diff > 20)
+        {
+            steps_had = 0;
+            return;
+        }
         
     }
 
@@ -1382,7 +1388,7 @@ void GameState::advance(int steps)
     }
 }
 
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region)
+static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region, bool skip_hide)
 {
     grid->add_base_regions();
     // for (GridRegion& r : grid->regions)
@@ -1479,6 +1485,8 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
                                     continue;
                                 if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                                 {
+                                    if (skip_hide && rule.apply_region_type.value == 1)
+                                        continue;
                                     unsigned oldtime = SDL_GetTicks();
                                     grid->apply_rule(rule, &r, false);
                                     unsigned newtime = SDL_GetTicks();
@@ -5600,6 +5608,7 @@ void GameState::render(bool saving)
             prog_seen[PROG_LOCK_USE_DONT_CARE] += frame_step;
         }
     }
+    
     if (prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] < PROG_ANIM_MAX)
     {
         if (prog_stars[PROG_LOCK_DOUBLE_CLICK_HINT] <= max_stars)
@@ -5610,6 +5619,8 @@ void GameState::render(bool saving)
                 {
                     display_help = true;
                     tutorial_index = 5;
+                    walkthrough = true;
+                    walkthrough_step = 20;
                 }
                 else
                 {
@@ -6080,6 +6091,11 @@ void GameState::render(bool saving)
         else if (walkthrough_step == 11)
         {
             walkthrough_region = XYRect(grid_offset + XYPos(button_size * 6.8, button_size * 0.3), XYPos(button_size * 1, button_size  * 1));
+            walkthrough_double_click = true;
+        }
+        else if (walkthrough_step == 20)
+        {
+            walkthrough_region = XYRect(left_panel_offset + XYPos(button_size * 0, button_size * 5.5), XYPos(button_size * 1, button_size  * 1));
             walkthrough_double_click = true;
         }
         {
@@ -6981,13 +6997,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                                 select_region_type = region_type;
                         }
                     }
-                    else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
+                    else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::SET && region_type.type != RegionType::NONE)
                     {
                         update_constructed_rule_pre();
                         if (constructed_rule.apply_region_type != region_type)
                         {
                             constructed_rule.apply_region_type = region_type;
                             if ((constructed_rule.apply_region_type.type == RegionType::VISIBILITY) ||
+                                (constructed_rule.apply_region_type.type == RegionType::SET) ||
                                 !(constructed_rule.apply_region_bitmap & (1 << hover_rulemaker_bits)))
                                 constructed_rule.apply_region_bitmap = 1 << hover_rulemaker_bits;
                         }
@@ -7836,6 +7853,8 @@ bool GameState::events()
                         if (walkthrough_step == 4)
                             walkthrough = false;
                         if (walkthrough_step == 12)
+                            walkthrough = false;
+                        if (walkthrough_step == 21)
                             walkthrough = false;
                     }
                     else
