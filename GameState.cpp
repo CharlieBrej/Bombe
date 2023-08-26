@@ -5129,6 +5129,10 @@ void GameState::render(bool saving)
                 {
                     render_button(XYPos(1856, 1152), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Impossible", 1);
                 }
+                else if (constructed_rule_is_logical == GridRule::USELESS)
+                {
+                    render_button(XYPos(1280, 1152), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Tautology", 1);
+                }
                 else if (constructed_rule.apply_region_bitmap)
                 {
                     if (constructed_rule_is_logical == GridRule::ILLOGICAL)
@@ -5141,7 +5145,7 @@ void GameState::render(bool saving)
                                     w = 8;
                             render_box(right_panel_offset + XYPos(-w * button_size, 0), XYPos(w * button_size, 6.5 * button_size), button_size/2, 1);
                             std::string t = translate("Why Illogical");
-                            render_text_box(right_panel_offset + XYPos(-6 * button_size, 0 * button_size), t);
+                            render_text_box(right_panel_offset + XYPos(-w * button_size, 0 * button_size), t);
                             for (int i = 0; i < 5; i++)
                             {
                                 if (rule_illogical_reason_vars[i] < 0)
@@ -5883,21 +5887,21 @@ void GameState::render(bool saving)
                     add_tooltip(dst_rect, "Full Screen");
                 }
                 {
-                    SDL_Rect src_rect = {2432, 576, 192, 192};
+                    SDL_Rect src_rect = {1088, 384, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Visible");
                 }
                 {
-                    SDL_Rect src_rect = {2432, 576 + 192, 192, 192};
+                    SDL_Rect src_rect = {896, 384, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     dst_rect.w = 4.9 * button_size;
                     add_tooltip(dst_rect, "Hidden");
                 }
                 {
-                    SDL_Rect src_rect = {2432, 576 + 192 * 2, 192, 192};
+                    SDL_Rect src_rect = {512, 768, 192, 192};
                     SDL_Rect dst_rect = {left_panel_offset.x + 7 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     dst_rect.w = 4.9 * button_size;
@@ -6604,6 +6608,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         has_reg = true;
                 if (has_reg && (pos - XYPos(button_size * 0, button_size * 6)).inside(XYPos(button_size, button_size * 5)))
                 {
+                    pause_robots();
                     int y = ((pos - XYPos(button_size * 0, button_size * 6)) / button_size).y;
                     int np = 2 - y;
                     np = std::clamp(np, -2, 2);

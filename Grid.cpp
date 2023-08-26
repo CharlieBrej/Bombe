@@ -1016,6 +1016,54 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
     z3::expr_vector var_vec(c);
     why = *this;
 
+    if (region_count == 0)
+        return IMPOSSIBLE;
+
+    if(region_count > 1)
+        for (int r = 0; r < region_count; r++)
+        {
+            bool lap = false;
+            for (int i = 1; i < (1 << region_count); i++)
+            {
+                if (!((i >> r) & 1))
+                    continue;
+                if (i == 1 << r)
+                    continue;
+                if (square_counts[i].max())
+                    lap = true;
+                if (square_counts[i].var)
+                    lap = true;
+            }
+            if (!lap)
+                return IMPOSSIBLE;
+        }
+
+    for (int r = 0; r < region_count; r++)
+    {
+        bool ots = false;
+        if (region_type[r] != apply_region_type)
+            ots = true;
+        for (int i = 1; i < (1 << region_count); i++)
+        {
+            if ((i >> r) & 1)
+            {
+                if (!((apply_region_bitmap >> i) & 1))
+                {
+                    if (square_counts[i].max() || square_counts[i].var)
+                        ots = true;
+                }
+            }
+            else
+            {
+                if (((apply_region_bitmap >> i) & 1) &&
+                    (square_counts[i].max() || square_counts[i].var))
+                    ots = true;
+            }
+        }
+        if (!ots)
+            return USELESS;
+    }
+
     for (int v = 1; v < 32; v++)
     {
         std::stringstream x_name;
@@ -1038,8 +1086,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
     }
 
     vec.push_back(c.bool_const("DUMMY"));
-    if (region_count == 0)
-        return IMPOSSIBLE;
 
     for (int i = 1; i < (1 << region_count); i++)
     {
