@@ -1413,6 +1413,8 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
                     continue;
                 if (rule.apply_region_type.type == RegionType::VISIBILITY && rule.apply_region_type.value == i)
                 {
+                    if (skip_hide && rule.apply_region_type.value == 1)
+                        continue;
                     unsigned oldtime = SDL_GetTicks();
                     Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
                     unsigned newtime = SDL_GetTicks();
@@ -4125,7 +4127,7 @@ void GameState::render(bool saving)
             bool has_hover = false;
             for (GridRegion& region : grid->regions)
             {
-                if (!filter_pos.none() && !region.elements.contains(filter_pos))
+                if (!ctrl_held && !filter_pos.none() && !region.elements.contains(filter_pos))
                     continue;
                 if (mouse_filter_pos.x >= 0 && !filter_pos.empty() && !region.elements.contains(mouse_filter_pos))
                     continue;
@@ -5228,7 +5230,7 @@ void GameState::render(bool saving)
             }
             render_button(XYPos( 192*3+128, 192*3), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size), "Cancel");
             if (!inspected_rule.rule->deleted)
-                render_button(XYPos(1664, 960), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Remove Rule");
+                render_button(XYPos(1664, 960), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), selected_rules.size() > 1 ? "Remove Rules" : "Remove Rule");
             render_button(XYPos(1280, 576), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size * 2), "Edit Rule");
             render_button(XYPos(1472, 576), XYPos( right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size * 2), "Duplicate Rule");
             if (max_stars >= prog_stars[PROG_LOCK_LEVELS_AND_LOCKS])
@@ -6316,7 +6318,6 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         grid_regions_animation.clear();
         grid_regions_fade.clear();
         grid->clear_regions();
-        reset_rule_gen_region();
         inspected_rule.regions[0] = NULL;
         inspected_rule.regions[1] = NULL;
         inspected_rule.regions[2] = NULL;
