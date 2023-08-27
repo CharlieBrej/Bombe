@@ -6326,6 +6326,12 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         inspected_rule.regions[1] = NULL;
         inspected_rule.regions[2] = NULL;
         inspected_rule.regions[3] = NULL;
+        if (right_panel_mode == RIGHT_MENU_REGION)
+        {
+            right_panel_mode = RIGHT_MENU_NONE;
+            inspected_region = NULL;
+        }
+            
 
         get_hint = false;
     }
