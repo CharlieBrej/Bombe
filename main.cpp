@@ -214,6 +214,7 @@ void mainloop()
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
             save_index = (save_index + 1) % 10;
+            std::string out_data = compress_string(omap->to_string());
 
 #ifdef _WIN32
             std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
@@ -222,7 +223,6 @@ void mainloop()
             std::ofstream outfile1 (save_filename.c_str());
             std::ofstream outfile2 (my_save_filename.c_str());
 #endif
-            std::string out_data = compress_string(omap->to_string());
             outfile1 << out_data;
             outfile2 << out_data;
             delete omap;
@@ -250,12 +250,12 @@ void mainloop()
     SDL_HideWindow(game_state->sdl_window);
     {
         SaveObject* omap = game_state->save();
+        std::string out_data = compress_string(omap->to_string());
 #ifdef _WIN32
         std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
 #else
         std::ofstream outfile1 (save_filename.c_str());
 #endif
-        std::string out_data = compress_string(omap->to_string());
         outfile1 << out_data;
         delete omap;
     }

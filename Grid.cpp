@@ -1127,6 +1127,28 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
     }
 
+    if (apply_region_type.type != RegionType::VISIBILITY)
+    {
+        bool has = false;
+        uint32_t vars = 0;
+        for (int i = 1; i < (1 << region_count); i++)
+            if ((apply_region_bitmap >> i) & 1)
+            {
+                if(square_counts[i].max())
+                    has = true;
+                vars |= 1 << square_counts[i].var;
+            }
+        if (!has)
+        {
+            z3::expr cnt = c.int_val(0);
+            for (int i = 1; i < 32; i++)
+                if ((vars >> i) & 1)
+                    cnt = cnt + var_vec[i - 1];
+            s.add(cnt > 0);
+        }
+    }
+
+
     if (s.check() != z3::sat)
     {
         return IMPOSSIBLE;
