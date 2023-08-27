@@ -85,6 +85,7 @@ public:
     bool display_scores = false;
     bool display_levels = false;
     bool display_levels_center_current = false;
+    bool display_rules_center_current = false;
     bool display_modes = false;
 
     bool debug_bits[10] = {};
@@ -197,6 +198,9 @@ public:
 
     int arrow_key_pressed = 0;
     int rules_list_offset = 0;
+    int levels_list_offset = 0;
+    int scores_list_offset = 0;
+
     bool display_rules_click = false;
     XYPos display_rules_click_pos;
     bool display_rules_click_drag = false;
