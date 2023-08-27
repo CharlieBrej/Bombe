@@ -5477,7 +5477,11 @@ void GameState::render(bool saving)
                     }
                     else
                     {
-                        set_region_colour(sdl_texture, i, 0, 255);
+                        bool alt = (i == selected_colour) ? selected_colour_alt : ctrl_held;
+                        uint32_t cr = (i & 1) ? (alt ? 0 : 128) : 255;
+                        uint32_t cg = (i & 2) ? (alt ? 0 : 128) : 255;
+                        uint32_t cb = (i & 4) ? (alt ? 0 : 128) : 255;
+                        SDL_SetTextureColorMod(sdl_texture, cr, cg, cb);
                         render_box(right_panel_offset + XYPos((i % 3) * button_size, button_size * 8 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 11);
                         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     }
@@ -6742,6 +6746,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             XYPos p = pos - XYPos(button_size * 0, button_size * 8);
             p /= button_size;
             selected_colour = p.x + p.y * 3;
+            selected_colour_alt = ctrl_held;
             return;
         }
 
@@ -7585,9 +7590,9 @@ bool GameState::events()
                         int s = (paint_brush_size == 0) ? 5 :
                                 (paint_brush_size == 1) ? 10 : 20;
 
-                        uint32_t cr = (selected_colour & 1) ? 128 : 255;
-                        uint32_t cg = (selected_colour & 2) ? 128 : 255;
-                        uint32_t cb = (selected_colour & 4) ? 128 : 255;
+                        uint32_t cr = (selected_colour & 1) ? (selected_colour_alt ? 0 : 128) : 255;
+                        uint32_t cg = (selected_colour & 2) ? (selected_colour_alt ? 0 : 128) : 255;
+                        uint32_t cb = (selected_colour & 4) ? (selected_colour_alt ? 0 : 128) : 255;
 
                         uint32_t nv = 0xFF << 24 | cr << 16 | cg << 8 | cb << 0;
                         
@@ -7605,14 +7610,20 @@ bool GameState::events()
                             if (lp.x < 0)
                                 continue;
                             lp = (lp * 2048) / siz;
-                            FOR_XY(k, - XYPos(s, s), XYPos(s, s))
+                            FOR_XY(k, - XYPos(s + 2, s + 2), XYPos(s + 2, s + 2))
                             {
                                 XYPos p = k + lp;
                                 if (grid->wrapped == Grid::WRAPPED_SIDE)
                                     p = p % XYPos(2048,2048);
                                 if (!p.inside(XYPos(2048,2048)))
                                     continue;
-                                overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = nv;
+                                if ((k.x < -s) || (k.y < -s) || (k.x >= s) || (k.y >= s))
+                                {
+                                    if (overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] != nv)
+                                        overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = 0xFF << 24;
+                                }
+                                else
+                                    overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = nv;
                             }
                         }
                         if (grid_dragging_btn == 0)

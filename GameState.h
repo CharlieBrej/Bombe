@@ -173,6 +173,7 @@ public:
 
     constexpr static uint32_t paint_colours[9] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFF00, 0x000000, 0xFFFFFF};
     int selected_colour = 0;
+    bool selected_colour_alt = false;
     int paint_brush_size = 1;
 
     XYPos mouse;
