@@ -2660,6 +2660,7 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
         reg.gen_cause = cell_causes[cause];
     }
     reg.gen_cause_pos = cause;
+    reg.priority = 3;
     return add_region(reg, true);
 }
 
@@ -2826,7 +2827,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         GridRegion reg(typ);
         reg.elements = to_reveal;
         reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
-        reg.priority = rule.priority;
         float f = 0;
         for (int i = 0; i < rule.region_count; i++)
             f += r[i]->priority;
