@@ -161,6 +161,7 @@ public:
         DRAGGING_SCROLLER_MUSIC,
         DRAGGING_SCROLLER_COLOUR,
         DRAGGING_SCROLLER_RULES,
+        DRAGGING_SCROLLER_ROBOTS,
         }
         dragging_scroller_type = DRAGGING_SCROLLER_VOLUME;
 
@@ -170,6 +171,7 @@ public:
     double colors = 0.00;
     double rule_limit_slider = 1.00;
     int rule_limit_count = -1;
+    double robot_limit_slider = 1.00;
 
     constexpr static uint32_t paint_colours[9] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFF00, 0x000000, 0xFFFFFF};
     int selected_colour = 0;

@@ -5409,7 +5409,7 @@ void GameState::render(bool saving)
                 SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             }
         }
-        if (render_lock(PROG_LOCK_ROBOTS, XYPos(right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 2), XYPos(button_size * 2, button_size * 2)))
+        if (render_lock(PROG_LOCK_ROBOTS, XYPos(right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 3), XYPos(button_size * 3, button_size * 3)))
         {
             int todo_count = 0;
             int done_count = 0;
@@ -5434,26 +5434,43 @@ void GameState::render(bool saving)
                 }
             }
 
-            render_button(XYPos(should_run_robots ? 2816 : 3008, 1152), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 2), "Robots", should_run_robots ? 0 : 1);
-            render_box(right_panel_offset + XYPos(button_size * 1, button_size * 3), XYPos(2 * button_size, button_size), button_size/4, 4);
+            render_button(XYPos(should_run_robots ? 2816 : 3008, 1152), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 3), "Robots", should_run_robots ? 0 : 1);
             render_box(right_panel_offset + XYPos(button_size * 1, button_size * 4), XYPos(2 * button_size, button_size), button_size/4, 4);
+            render_box(right_panel_offset + XYPos(button_size * 1, button_size * 5), XYPos(2 * button_size, button_size), button_size/4, 4);
             {
                 SDL_Rect src_rect = {1280, 2240, 96, 96};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 3, button_size, button_size};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 4, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 dst_rect.w = 2 * button_size;
                 add_tooltip(dst_rect, "Done", false);
             }
             {
                 SDL_Rect src_rect = {3008, 1344, 192, 192};
-                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 4, button_size, button_size};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 5, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 dst_rect.w = 2 * button_size;
                 add_tooltip(dst_rect, "To Do", false);
             }
             {
-                render_number(done_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 3.25), XYPos(button_size * 0.9, button_size/2));
-                render_number(todo_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 4.25), XYPos(button_size * 0.9, button_size/2));
+                render_number(done_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 4.25), XYPos(button_size * 0.9, button_size/2));
+                render_number(todo_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 5.25), XYPos(button_size * 0.9, button_size/2));
+            }
+            {
+                render_box(right_panel_offset + XYPos(button_size * 2, button_size * 3), XYPos(button_size, button_size), button_size/4, 4);
+                render_number(run_robot_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 3.25), XYPos(button_size * 0.9, button_size/2));
+                SDL_Rect dst_rect = {right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size};
+                add_tooltip(dst_rect, "Robots", false);
+            }
+
+            {
+                SDL_Rect src_rect = {2432, 576, 192, 576};
+                SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                bool hover = add_tooltip(dst_rect, "Robots", false);
+
+                src_rect = {2048, hover ? 1216 : 1152, 192, 64};
+                dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 3 + int((1 - robot_limit_slider) * 2.6666 * button_size), button_size, button_size / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
 
         }
@@ -6727,13 +6744,23 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             rule_gen_redo();
             return;
         }
-        if ((pos - XYPos(button_size * 1, button_size * 2)).inside(XYPos(button_size, button_size)))
+        if ((prog_stars[PROG_LOCK_ROBOTS] <= max_stars) && (pos - XYPos(button_size * 1, button_size * 3)).inside(XYPos(button_size, button_size)))
         {
             pause_robots();
             should_run_robots = !should_run_robots;
             return;
         }
-        if ((pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
+        if ((prog_stars[PROG_LOCK_ROBOTS] <= max_stars) && (pos - XYPos(button_size * 3, button_size * 3)).inside(XYPos(button_size, button_size * 3)))
+        {
+            dragging_scroller = true;
+            dragging_scroller_type = DRAGGING_SCROLLER_ROBOTS;
+            double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+            robot_limit_slider = std::clamp(p, 0.0, 1.0);
+            run_robot_count = 1 + (robot_count - 1) * robot_limit_slider;
+            robot_limit_slider = double(run_robot_count - 1) / double(robot_count - 1);
+            return;
+        }
+        if ((prog_stars[PROG_LOCK_PAINT] <= max_stars) && (pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
         {
             if(mouse_mode == MOUSE_MODE_PAINT)
                 mouse_mode = MOUSE_MODE_NONE;
@@ -6764,9 +6791,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             return;
         }
 
-
-
-        if ((pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size, button_size * 3)))
+        if ((prog_stars[PROG_LOCK_REGION_LIMIT] <= max_stars) && (pos - XYPos(button_size * 0, button_size * 3)).inside(XYPos(button_size, button_size * 3)))
         {
             dragging_scroller = true;
             dragging_scroller_type = DRAGGING_SCROLLER_RULES;
@@ -7675,6 +7700,12 @@ bool GameState::events()
                         if (new_rule_limit_count < 0 || (rule_limit_count > 0 && new_rule_limit_count > rule_limit_count))
                             pause_robots();
                         rule_limit_count = new_rule_limit_count;
+                    }
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_ROBOTS)
+                    {
+                        robot_limit_slider = std::clamp(p, 0.0, 1.0);
+                        run_robot_count = 1 + (robot_count - 1) * robot_limit_slider;
+                        robot_limit_slider = double(run_robot_count - 1) / double(robot_count - 1);
                     }
                 }
                 break;
