@@ -296,6 +296,8 @@ GridRule::GridRule(SaveObject* sobj)
         priority = 0;
         paused = true;
     }
+    if (omap->has_key("group"))
+        group = omap->get_num("group");
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
 
@@ -324,6 +326,7 @@ SaveObject* GridRule::save(bool lite)
     omap->add_num("apply_region_bitmap", apply_region_bitmap);
     omap->add_num("priority", priority);
     omap->add_num("paused", paused);
+    omap->add_num("group", group);
 
     SaveObjectList* region_type_list = new SaveObjectList;
     for (int i = 0; i < region_count; i++)

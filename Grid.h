@@ -222,6 +222,7 @@ public:
     RegionType square_counts[16] = {};
     RegionType apply_region_type;
     uint16_t apply_region_bitmap = 0;
+    int8_t group = 0;
     bool stale = false;
     bool deleted = false;
     unsigned used_count = 0;

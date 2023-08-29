@@ -421,6 +421,7 @@ public:
         PROG_LOCK_TABLE_SCORES,
 
         PROG_LOCK_SPEED,
+        PROG_LOCK_GROUPS,
 
         PROG_LOCK_USE_DONT_CARE,
         PROG_LOCK_REGION_HINT,
