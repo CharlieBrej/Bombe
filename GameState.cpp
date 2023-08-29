@@ -5474,22 +5474,22 @@ void GameState::render(bool saving)
             }
 
         }
-        if (render_lock(PROG_LOCK_PAINT, XYPos(right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 7), XYPos(button_size * 2, button_size * 1)))
+        if (render_lock(PROG_LOCK_PAINT, XYPos(right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 9), XYPos(button_size * 1, button_size * 1)))
         {
-            render_button(XYPos(1856, 576), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 7), "Paint", (mouse_mode == MOUSE_MODE_PAINT) ? 3 : 0);
+            render_button(XYPos(1856, 576), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 9), "Paint", (mouse_mode == MOUSE_MODE_PAINT) ? 3 : 0);
             if (!overlay_texture_is_clean)
-                render_button(XYPos(896, 1536), XYPos(right_panel_offset.x + button_size * 1, right_panel_offset.y + button_size * 7), "Reset Paint", 0);
+                render_button(XYPos(896, 1536), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 10), "Reset Paint", 0);
             if (mouse_mode == MOUSE_MODE_PAINT)
             {
-                render_box(right_panel_offset + XYPos(button_size * 0, button_size * 8), XYPos(button_size * 3, button_size * 3), button_size/4, 4);
+                render_box(right_panel_offset + XYPos(button_size * 1, button_size * 9), XYPos(button_size * 3, button_size * 3), button_size/4, 4);
                 for (int i = 0; i < 9; i++)
                 {
                     if (i == selected_colour)
-                        render_box(right_panel_offset + XYPos((i % 3) * button_size, button_size * 8 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 10);
+                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 10);
                     if (i == 8)
                     {
                         SDL_Rect src_rect = {704, 1536, 192, 192};
-                        SDL_Rect dst_rect = {right_panel_offset.x + (i % 3) * button_size, right_panel_offset.y + button_size * 8 + (i / 3) * button_size, button_size, button_size };
+                        SDL_Rect dst_rect = {right_panel_offset.x + (i % 3 + 1) * button_size, right_panel_offset.y + button_size * 9 + (i / 3) * button_size, button_size, button_size };
                         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                     }
                     else
@@ -5499,23 +5499,23 @@ void GameState::render(bool saving)
                         uint32_t cg = (i & 2) ? (alt ? 0 : 128) : 255;
                         uint32_t cb = (i & 4) ? (alt ? 0 : 128) : 255;
                         SDL_SetTextureColorMod(sdl_texture, cr, cg, cb);
-                        render_box(right_panel_offset + XYPos((i % 3) * button_size, button_size * 8 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 11);
+                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 11);
                         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     }
-                    SDL_Rect dst_rect = {right_panel_offset.x + (i % 3) * button_size, right_panel_offset.y + button_size * 8 + (i / 3) * button_size, button_size, button_size };
+                    SDL_Rect dst_rect = {right_panel_offset.x + (i % 3 + 1) * button_size, right_panel_offset.y + button_size * 9 + (i / 3) * button_size, button_size, button_size };
                     add_clickable_highlight(dst_rect);
                 }
-                render_box(right_panel_offset + XYPos(button_size * 3, button_size * 8), XYPos(button_size * 1, button_size * 3), button_size/4, 4);
+                render_box(right_panel_offset + XYPos(button_size * 4, button_size * 9), XYPos(button_size * 1, button_size * 3), button_size/4, 4);
                 for (int i = 0; i < 3; i++)
                 {
                     if (i == paint_brush_size)
-                        render_box(right_panel_offset + XYPos(button_size * 3, button_size * 8 + i * button_size), XYPos(button_size, button_size), button_size/4, 10);
+                        render_box(right_panel_offset + XYPos(button_size * 4, button_size * 9 + i * button_size), XYPos(button_size, button_size), button_size/4, 10);
                     
                     int size = (i == 0) ? button_size / 4 :
                                (i == 1) ? button_size / 2 : button_size;
-                    render_box(right_panel_offset + XYPos(3 * button_size + (button_size - size) / 2, button_size * 8 + i * button_size + (button_size - size) / 2), XYPos(size, size), size/4, 11);
+                    render_box(right_panel_offset + XYPos(4 * button_size + (button_size - size) / 2, button_size * 9 + i * button_size + (button_size - size) / 2), XYPos(size, size), size/4, 11);
 
-                    SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 8 + i * button_size, button_size, button_size};
+                    SDL_Rect dst_rect = {right_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 9 + i * button_size, button_size, button_size};
                     add_clickable_highlight(dst_rect);
 
                 }
@@ -6760,7 +6760,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             robot_limit_slider = double(run_robot_count - 1) / double(robot_count - 1);
             return;
         }
-        if ((prog_stars[PROG_LOCK_PAINT] <= max_stars) && (pos - XYPos(button_size * 0, button_size * 7)).inside(XYPos(button_size, button_size)))
+        if ((prog_stars[PROG_LOCK_PAINT] <= max_stars) && (pos - XYPos(button_size * 0, button_size * 9)).inside(XYPos(button_size, button_size)))
         {
             if(mouse_mode == MOUSE_MODE_PAINT)
                 mouse_mode = MOUSE_MODE_NONE;
@@ -6768,24 +6768,24 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 mouse_mode = MOUSE_MODE_PAINT;
             return;
         }
-        if ((pos - XYPos(button_size * 1, button_size * 7)).inside(XYPos(button_size, button_size)))
+        if ((prog_stars[PROG_LOCK_PAINT] <= max_stars) && (pos - XYPos(button_size * 0, button_size * 10)).inside(XYPos(button_size, button_size)))
         {
             if(!overlay_texture_is_clean)
                 clear_overlay();
             return;
         }
-        if (mouse_mode == MOUSE_MODE_PAINT && (pos - XYPos(button_size * 0, button_size * 8)).inside(XYPos(button_size * 3, button_size * 3)))
+        if (mouse_mode == MOUSE_MODE_PAINT && (pos - XYPos(button_size * 1, button_size * 9)).inside(XYPos(button_size * 3, button_size * 3)))
         {
-            XYPos p = pos - XYPos(button_size * 0, button_size * 8);
+            XYPos p = pos - XYPos(button_size * 1, button_size * 9);
             p /= button_size;
             selected_colour = p.x + p.y * 3;
             selected_colour_alt = ctrl_held;
             return;
         }
 
-        if (mouse_mode == MOUSE_MODE_PAINT && (pos - XYPos(button_size * 3, button_size * 8)).inside(XYPos(button_size * 1, button_size * 3)))
+        if (mouse_mode == MOUSE_MODE_PAINT && (pos - XYPos(button_size * 4, button_size * 9)).inside(XYPos(button_size * 1, button_size * 3)))
         {
-            XYPos p = pos - XYPos(button_size * 3, button_size * 8);
+            XYPos p = pos - XYPos(button_size * 4, button_size * 9);
             p /= button_size;
             paint_brush_size = p.y;
             return;
