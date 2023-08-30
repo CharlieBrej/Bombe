@@ -1577,8 +1577,8 @@ void GameState::reset_rule_gen_region()
     constructed_rule.apply_region_bitmap = 0;
     constructed_rule.priority = 0;
     constructed_rule.paused = false;
+    constructed_rule.group = 0;
 
-    constructed_rule.paused = false;
     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
     constructed_rule_undo.clear();
     constructed_rule_redo.clear();
@@ -7157,7 +7157,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     {
                         if (rule_is_permitted(constructed_rule, game_mode))
                         {
-                            constructed_rule = GridRule();
+                            constructed_rule.cpu_time = 0;
                             pause_robots();
                             std::list<GridRule>::iterator it;
                             for (it = rules[game_mode].begin(); it != rules[game_mode].end(); it++)
@@ -7318,7 +7318,16 @@ void GameState::button_down(uint64_t key)
             grid_regions_animation.clear();
             grid_regions_fade.clear();
             grid->clear_regions();
-            reset_rule_gen_region();
+            inspected_rule.regions[0] = NULL;
+            inspected_rule.regions[1] = NULL;
+            inspected_rule.regions[2] = NULL;
+            inspected_rule.regions[3] = NULL;
+            rule_gen_region[0] = NULL;
+            rule_gen_region[1] = NULL;
+            rule_gen_region[2] = NULL;
+            rule_gen_region[3] = NULL;
+            if (right_panel_mode == RIGHT_MENU_REGION)
+                right_panel_mode = RIGHT_MENU_NONE;
             get_hint = false;
             return;
         }
