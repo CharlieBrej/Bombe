@@ -3863,7 +3863,7 @@ void GameState::render(bool saving)
                 }
             }
 
-            if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
+            if (display_rules_click && ((display_rules_click_pos - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 8, cell_height))))
             {
                 if (!display_clipboard_rules)
                 {
