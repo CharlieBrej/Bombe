@@ -134,9 +134,15 @@ static int clipboard_thread(void *ptr)
 	XEvent e;
 	for(;;)
 	{
-		XNextEvent(disp, &e);
+		while (!XPending(disp))
+		{
+			if (SHUTDOWN)
+				break;
+			SDL_Delay(100);
+		}
 		if (SHUTDOWN)
 			break;
+		XNextEvent(disp, &e);
 
 		if(e.type == SelectionClear)
 		{
@@ -263,8 +269,6 @@ void ImgClipBoard::init()
 void ImgClipBoard::shutdown()
 {
 	SHUTDOWN = true;
-    XConvertSelection(disp, sel, XA_TARGETS, sel, win, CurrentTime);
-    XFlush(disp);
 	SDL_WaitThread(sdl_clipboard_thread, NULL);
 }
 
