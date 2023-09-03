@@ -7269,11 +7269,11 @@ void GameState::button_down(uint64_t key)
             rule_gen_undo();
         else if (key == key_codes[KEY_CODE_REDO])
             rule_gen_redo();
-        else if (key == key_codes[KEY_CODE_G_VISIBLE])
+        else if ((key & ~0xF00000000ull) == (key_codes[KEY_CODE_G_VISIBLE] & ~0xF00000000ull))
             key_held = 'Q';
-        else if (key == key_codes[KEY_CODE_G_HIDDEN])
+        else if ((key & ~0xF00000000ull) == (key_codes[KEY_CODE_G_HIDDEN] & ~0xF00000000ull))
             key_held = 'W';
-        else if (key == key_codes[KEY_CODE_G_TRASH])
+        else if ((key & ~0xF00000000ull) == (key_codes[KEY_CODE_G_TRASH] & ~0xF00000000ull))
             key_held = 'E';
         else if (key == SDLK_ESCAPE)
             display_menu = true;
