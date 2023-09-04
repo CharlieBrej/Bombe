@@ -4561,8 +4561,6 @@ void GameState::render(bool saving)
             }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-            if (display_scores)
-                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Scores",  !display_scores);
         }
@@ -5576,7 +5574,7 @@ void GameState::render(bool saving)
     {
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(14 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
         for (int i = 0; i < GAME_MODES; i++)
         {
             static const char* mode_names[4] = {"Regular", "Three region rules", "Max 60 rules", "No variables, max 300 rules"};
@@ -5584,13 +5582,36 @@ void GameState::render(bool saving)
             std::string tname = translate(name);
             {
                 render_button(XYPos(2240, 576 + (i * 192)), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
-
             }
 
             if (i == game_mode)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
-            render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname);
+            render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname, false, 10 * button_size);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            render_box(left_panel_offset + XYPos(button_size * 13, int(button_size * (2 + i))), XYPos(button_size, button_size), button_size/4, 4);
+
+            int count = 0;
+            for (unsigned m = 0; m < GLBAL_LEVEL_SETS - 1; m++)
+            {
+                for (unsigned l = 0; l < level_progress[i][m].size(); l++)
+                {
+                    LevelProgress& prog = level_progress[i][m][l];
+                    for (LevelStatus& stat : prog.level_status)
+                        if (stat.done)
+                            count++;
+                }
+            }
+            SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
+
+            {
+                SDL_Rect src_rect = {1728, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * (2 + i), button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Scores",  !display_scores);
+            }
+
+            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            render_number(count, left_panel_offset + XYPos(button_size * 13 + button_size / 8, button_size * (2 + i) + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
         }
     }
 
