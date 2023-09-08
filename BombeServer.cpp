@@ -170,7 +170,7 @@ public:
 
     void update_name(uint64_t steam_id, std::string& steam_username)
     {
-        players[steam_id] = Player(steam_username);
+        players[steam_id].name = steam_username;
     }
 
     void load(SaveObject* sobj)
