@@ -723,7 +723,8 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
 
 }
 
-static int count_subregion_size_r4(int i, const uint64_t* a, const uint64_t* b, const uint64_t* c, const uint64_t* d)
+template<int i>
+static int count_subregion_size_r4(const uint64_t* a, const uint64_t* b, const uint64_t* c, const uint64_t* d)
 {
     int count = 0;
     for (int j = 0; j < 16; j += 1) {
@@ -735,7 +736,17 @@ static int count_subregion_size_r4(int i, const uint64_t* a, const uint64_t* b, 
     }
     return count;
 }
-static int count_subregion_size_r3(int i, const uint64_t* a, const uint64_t* b, const uint64_t* c)
+using S4_FUNC = int(const uint64_t* a, const uint64_t* b, const uint64_t* c, const uint64_t* d);
+S4_FUNC *s4_funcs[17] = {
+    nullptr,
+    &count_subregion_size_r4<1>, &count_subregion_size_r4<2>, &count_subregion_size_r4<3>, &count_subregion_size_r4<4>,
+    &count_subregion_size_r4<5>, &count_subregion_size_r4<6>, &count_subregion_size_r4<7>, &count_subregion_size_r4<8>,
+    &count_subregion_size_r4<9>, &count_subregion_size_r4<10>, &count_subregion_size_r4<11>, &count_subregion_size_r4<12>,
+    &count_subregion_size_r4<13>, &count_subregion_size_r4<14>, &count_subregion_size_r4<15>, nullptr,
+};
+
+template<int i>
+static int count_subregion_size_r3(const uint64_t* a, const uint64_t* b, const uint64_t* c)
 {
     int count = 0;
     for (int j = 0; j < 16; j += 1) {
@@ -746,7 +757,17 @@ static int count_subregion_size_r3(int i, const uint64_t* a, const uint64_t* b, 
     }
     return count;
 }
-static int count_subregion_size_r2(int i, const uint64_t* a, const uint64_t* b)
+using S3_FUNC = int(const uint64_t* a, const uint64_t* b, const uint64_t* c);
+S3_FUNC *s3_funcs[17] = {
+    nullptr,
+    &count_subregion_size_r3<1>, &count_subregion_size_r3<2>, &count_subregion_size_r3<3>, &count_subregion_size_r3<4>,
+    &count_subregion_size_r3<5>, &count_subregion_size_r3<6>, &count_subregion_size_r3<7>, &count_subregion_size_r3<8>,
+    &count_subregion_size_r3<9>, &count_subregion_size_r3<10>, &count_subregion_size_r3<11>, &count_subregion_size_r3<12>,
+    &count_subregion_size_r3<13>, &count_subregion_size_r3<14>, &count_subregion_size_r3<15>, nullptr,
+};
+
+template<int i>
+static int count_subregion_size_r2(const uint64_t* a, const uint64_t* b)
 {
     int count = 0;
     for (int j = 0; j < 16; j += 1) {
@@ -756,7 +777,16 @@ static int count_subregion_size_r2(int i, const uint64_t* a, const uint64_t* b)
     }
     return count;
 }
-static int count_subregion_size_r1(int i, const uint64_t* a)
+using S2_FUNC = int(const uint64_t* a, const uint64_t* b);
+S2_FUNC *s2_funcs[17] = {
+    nullptr,
+    &count_subregion_size_r2<1>, &count_subregion_size_r2<2>, &count_subregion_size_r2<3>, &count_subregion_size_r2<4>,
+    &count_subregion_size_r2<5>, &count_subregion_size_r2<6>, &count_subregion_size_r2<7>, &count_subregion_size_r2<8>,
+    &count_subregion_size_r2<9>, &count_subregion_size_r2<10>, &count_subregion_size_r2<11>, &count_subregion_size_r2<12>,
+    &count_subregion_size_r2<13>, &count_subregion_size_r2<14>, &count_subregion_size_r2<15>, nullptr,
+};
+template<int i>
+static int count_subregion_size_r1(const uint64_t* a)
 {
     int count = 0;
     for (int j = 0; j < 16; j += 1) {
@@ -765,6 +795,14 @@ static int count_subregion_size_r1(int i, const uint64_t* a)
     }
     return count;
 }
+using S1_FUNC = int(const uint64_t* a);
+S1_FUNC *s1_funcs[17] = {
+    nullptr,
+    &count_subregion_size_r1<1>, &count_subregion_size_r1<2>, &count_subregion_size_r1<3>, &count_subregion_size_r1<4>,
+    &count_subregion_size_r1<5>, &count_subregion_size_r1<6>, &count_subregion_size_r1<7>, &count_subregion_size_r1<8>,
+    &count_subregion_size_r1<9>, &count_subregion_size_r1<10>, &count_subregion_size_r1<11>, &count_subregion_size_r1<12>,
+    &count_subregion_size_r1<13>, &count_subregion_size_r1<14>, &count_subregion_size_r1<15>, nullptr,
+};
 
 static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
@@ -773,13 +811,13 @@ static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegio
     const uint64_t *c = reinterpret_cast<const uint64_t*>(&r3->elements);
     const uint64_t *d = reinterpret_cast<const uint64_t*>(&r4->elements);
     if (r4) {
-        return count_subregion_size_r4(i, a, b, c, d);
+        return s4_funcs[i](a, b, c, d);
     } else if (r3) {
-        return count_subregion_size_r3(i, a, b, c);
+        return s3_funcs[i](a, b, c);
     } else if (r2) {
-        return count_subregion_size_r2(i, a, b);
+        return s2_funcs[i](a, b);
     } else { // r1 is supposed to be always non-null
-        return count_subregion_size_r1(i, a);
+        return s1_funcs[i](a);
     }
 }
 
