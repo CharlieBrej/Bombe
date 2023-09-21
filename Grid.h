@@ -60,11 +60,11 @@ public:
         return rep;
     }
     inline XYSet operator~() const {return XYSet(~d); }
-    inline XYSet operator&(const XYSet other) const {return XYSet(d & other.d); }
-    inline void operator&=(const XYSet other) {d &= other.d;}
-    inline XYSet operator|(const XYSet other) const {return XYSet(d | other.d); }
-    inline void operator|=(const XYSet other) {d |= other.d;}
-    inline bool overlaps(const XYSet other) const {return (d & other.d).any(); }
+    inline XYSet operator&(const XYSet &other) const {return XYSet(d & other.d); }
+    inline void operator&=(const XYSet &other) {d &= other.d;}
+    inline XYSet operator|(const XYSet &other) const {return XYSet(d | other.d); }
+    inline void operator|=(const XYSet &other) {d |= other.d;}
+    inline bool overlaps(const XYSet &other) const {return (d & other.d).any(); }
 
 
 };
