@@ -723,25 +723,64 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
 
 }
 
+static int count_subregion_size_r4(int i, const uint64_t* a, const uint64_t* b, const uint64_t* c, const uint64_t* d)
+{
+    int count = 0;
+    for (int j = 0; j < 16; j += 1) {
+        uint64_t p = (i&1) ? a[j] : ~a[j];
+        p &= (i&2) ? b[j] : ~b[j];
+        p &= (i&4) ? c[j] : ~c[j];
+        p &= (i&8) ? d[j] : ~d[j];
+        count += std::popcount(p);
+    }
+    return count;
+}
+static int count_subregion_size_r3(int i, const uint64_t* a, const uint64_t* b, const uint64_t* c)
+{
+    int count = 0;
+    for (int j = 0; j < 16; j += 1) {
+        uint64_t p = (i&1) ? a[j] : ~a[j];
+        p &= (i&2) ? b[j] : ~b[j];
+        p &= (i&4) ? c[j] : ~c[j];
+        count += std::popcount(p);
+    }
+    return count;
+}
+static int count_subregion_size_r2(int i, const uint64_t* a, const uint64_t* b)
+{
+    int count = 0;
+    for (int j = 0; j < 16; j += 1) {
+        uint64_t p = (i&1) ? a[j] : ~a[j];
+        p &= (i&2) ? b[j] : ~b[j];
+        count += std::popcount(p);
+    }
+    return count;
+}
+static int count_subregion_size_r1(int i, const uint64_t* a)
+{
+    int count = 0;
+    for (int j = 0; j < 16; j += 1) {
+        uint64_t p = (i&1) ? a[j] : ~a[j];
+        count += std::popcount(p);
+    }
+    return count;
+}
+
 static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     const uint64_t *a = reinterpret_cast<const uint64_t*>(&r1->elements);
     const uint64_t *b = reinterpret_cast<const uint64_t*>(&r2->elements);
     const uint64_t *c = reinterpret_cast<const uint64_t*>(&r3->elements);
     const uint64_t *d = reinterpret_cast<const uint64_t*>(&r4->elements);
-    int count = 0;
-    for (int j = 0; j < 16; j += 1) {
-        uint64_t p = (i&1) ? a[j] : ~a[j];
-        if (r2)
-            p &= (i&2) ? b[j] : ~b[j];
-        if (r3)
-            p &= (i&4) ? c[j] : ~c[j];
-        if (r4)
-            p &= (i&8) ? d[j] : ~d[j];
-        count += std::popcount(p);
+    if (r4) {
+        return count_subregion_size_r4(i, a, b, c, d);
+    } else if (r3) {
+        return count_subregion_size_r3(i, a, b, c);
+    } else if (r2) {
+        return count_subregion_size_r2(i, a, b);
+    } else { // r1 is supposed to be always non-null
+        return count_subregion_size_r1(i, a);
     }
-
-    return count;
 }
 
 bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
