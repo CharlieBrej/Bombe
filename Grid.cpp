@@ -722,6 +722,18 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
 
 }
 
+static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
+{
+    XYSet s = (i & 1) ? r1->elements : ~r1->elements;
+    if (r2)
+        s &= ((i & 2) ? r2->elements : ~r2->elements);
+    if (r3)
+        s &= ((i & 4) ? r3->elements : ~r3->elements);
+    if (r4)
+        s &= ((i & 8) ? r4->elements : ~r4->elements);
+    return s.count();
+}
+
 bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
 {
     GridRegion* grid_regions[4] = {r1, r2, r3, r4};
@@ -739,30 +751,18 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
             case FastOp::CELL_COUNT:
             {
                 int i = op.p1;
-                XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-                if (r2)
-                    s &= ((i & 2) ? r2->elements : ~r2->elements);
-                if (r3)
-                    s &= ((i & 4) ? r3->elements : ~r3->elements);
-                if (r4)
-                    s &= ((i & 8) ? r4->elements : ~r4->elements);
-                v = s.count() - square_counts[i].value;
+                int count = count_subregion_size(i, r1, r2, r3, r4);
+                v = count - square_counts[i].value;
                 break;
             }
             case FastOp::MIN_CELL_COUNT:
             {
                 int i = op.vi;
-                XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-                if (r2)
-                    s &= ((i & 2) ? r2->elements : ~r2->elements);
-                if (r3)
-                    s &= ((i & 4) ? r3->elements : ~r3->elements);
-                if (r4)
-                    s &= ((i & 8) ? r4->elements : ~r4->elements);
+                int count = count_subregion_size(i, r1, r2, r3, r4);
                 int c = op.p1;
                 if (op.p2)
                     c += var_counts[op.p2 - 1];
-                if (int(s.count()) < c)
+                if (int(count) < c)
                 {
                     return false;
                 }
@@ -809,14 +809,8 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
         {
             if (square_counts[i].type == RegionType::NONE)
                 continue;
-            XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-            if (r2)
-                s &= ((i & 2) ? r2->elements : ~r2->elements);
-            if (r3)
-                s &= ((i & 4) ? r3->elements : ~r3->elements);
-            if (r4)
-                s &= ((i & 8) ? r4->elements : ~r4->elements);
-            if (!square_counts[i].apply_int_rule(s.count(), var_counts))
+            int count = count_subregion_size(i, r1, r2, r3, r4);
+            if (!square_counts[i].apply_int_rule(count, var_counts))
                 return false;
         }
     }
@@ -854,16 +848,10 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
     {
         if ((square_counts[i].type == RegionType::EQUAL) && square_counts[i].var)
         {
-            XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-            if (r2)
-                s &= ((i & 2) ? r2->elements : ~r2->elements);
-            if (r3)
-                s &= ((i & 4) ? r3->elements : ~r3->elements);
-            if (r4)
-                s &= ((i & 8) ? r4->elements : ~r4->elements);
+            int count = count_subregion_size(i, r1, r2, r3, r4);
 
             int vi = square_counts[i].var - 1;
-            int v = s.count() - square_counts[i].value;
+            int v = count - square_counts[i].value;
             if (v < 0)
                 return false;
             if (var_counts[vi] < 0)
@@ -959,14 +947,8 @@ bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegio
     {
         if (square_counts[i].type == RegionType::NONE)
             continue;
-        XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-        if (r2)
-            s &= ((i & 2) ? r2->elements : ~r2->elements);
-        if (r3)
-            s &= ((i & 4) ? r3->elements : ~r3->elements);
-        if (r4)
-            s &= ((i & 8) ? r4->elements : ~r4->elements);
-        if (!square_counts[i].apply_int_rule(s.count(), var_counts))
+        int count = count_subregion_size(i, r1, r2, r3, r4);
+        if (!square_counts[i].apply_int_rule(count, var_counts))
             return false;
     }
     return true;
