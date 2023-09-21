@@ -2,6 +2,7 @@
 
 
 #include "Grid.h"
+#include <bit>
 #include <sstream>
 
 bool IS_DEMO = false;
@@ -724,14 +725,23 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
 
 static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
-    XYSet s = (i & 1) ? r1->elements : ~r1->elements;
-    if (r2)
-        s &= ((i & 2) ? r2->elements : ~r2->elements);
-    if (r3)
-        s &= ((i & 4) ? r3->elements : ~r3->elements);
-    if (r4)
-        s &= ((i & 8) ? r4->elements : ~r4->elements);
-    return s.count();
+    const uint64_t *a = reinterpret_cast<const uint64_t*>(&r1->elements);
+    const uint64_t *b = reinterpret_cast<const uint64_t*>(&r2->elements);
+    const uint64_t *c = reinterpret_cast<const uint64_t*>(&r3->elements);
+    const uint64_t *d = reinterpret_cast<const uint64_t*>(&r4->elements);
+    int count = 0;
+    for (int j = 0; j < 16; j += 1) {
+        uint64_t p = (i&1) ? a[j] : ~a[j];
+        if (r2)
+            p &= (i&2) ? b[j] : ~b[j];
+        if (r3)
+            p &= (i&4) ? c[j] : ~c[j];
+        if (r4)
+            p &= (i&8) ? d[j] : ~d[j];
+        count += std::popcount(p);
+    }
+
+    return count;
 }
 
 bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
