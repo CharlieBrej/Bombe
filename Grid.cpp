@@ -828,54 +828,36 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
     for (FastOp& op : fast_ops)
     {
         int v = -1;
-        switch (op.op)
-        {
-            case FastOp::REG_TYPE:
+
+        if (op.op == FastOp::VAR_ADD) {
+            v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1];
+        } else if (op.op == FastOp::VAR_SUB) {
+            v = var_counts[op.p2 - 1] - var_counts[op.p1 - 1];
+        } else if (op.op == FastOp::REG_TYPE) {
+            v = grid_regions[op.p1]->type.value - region_type[op.p1].value;
+        } else if (op.op == FastOp::CELL_COUNT) {
+            int i = op.p1;
+            int count = count_subregion_size(i, r1, r2, r3, r4);
+            v = count - square_counts[i].value;
+        } else if (op.op == FastOp::MIN_CELL_COUNT) {
+            int i = op.vi;
+            int count = count_subregion_size(i, r1, r2, r3, r4);
+            int c = op.p1;
+            if (op.p2)
+                c += var_counts[op.p2 - 1];
+            if (int(count) < c)
             {
-                v = grid_regions[op.p1]->type.value - region_type[op.p1].value;
-                break;
+                return false;
             }
-            case FastOp::CELL_COUNT:
-            {
-                int i = op.p1;
-                int count = count_subregion_size(i, r1, r2, r3, r4);
-                v = count - square_counts[i].value;
-                break;
-            }
-            case FastOp::MIN_CELL_COUNT:
-            {
-                int i = op.vi;
-                int count = count_subregion_size(i, r1, r2, r3, r4);
-                int c = op.p1;
-                if (op.p2)
-                    c += var_counts[op.p2 - 1];
-                if (int(count) < c)
-                {
-                    return false;
-                }
-                continue;
-            }
-            case FastOp::VAR_ADD:
-            {
-                v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1];
-                break;
-            }
-            case FastOp::VAR_SUB:
-            {
-                v = var_counts[op.p2 - 1] - var_counts[op.p1 - 1];
-                break;
-            }
-            case FastOp::VAR_TRIPLE:
-            {
-                int x = op.p1 ^ op.p2;
-                v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] + var_counts[x - 1];
-                if (v % 2)
-                    return false;
-                v /= 2;
-                break;
-            }
-            default:
-                assert(0);
+            continue;
+        } else if (op.op == FastOp::VAR_TRIPLE) {
+            int x = op.p1 ^ op.p2;
+            v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] + var_counts[x - 1];
+            if (v % 2)
+                return false;
+            v /= 2;
+        } else {
+            assert(0);
         }
         if (v < 0)
             return false;
