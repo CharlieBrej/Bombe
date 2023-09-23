@@ -107,11 +107,8 @@ void SteamGameManager::update_achievements(GameState* game_state)
         m_pSteamUserStats->StoreStats();
         needs_send = false;
     }
-    if (steam_session_ready && game_state->steam_session_string.empty())
-    {
-        game_state->steam_session_string = steam_session_string;
-        game_state->fetch_scores();
-    }
+    game_state->steam_session_string = steam_session_string;
+    game_state->fetch_scores();
 }
 
 void SteamGameManager::get_new_ticket()
@@ -209,8 +206,12 @@ void mainloop()
 #endif
         if (save_time < 0)
         {
-            game_state->render(true);
+#ifdef STEAM
+            steam_manager.get_new_ticket();
+#else
             game_state->fetch_scores();
+#endif
+            game_state->render(true);
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
             save_index = (save_index + 1) % 10;
