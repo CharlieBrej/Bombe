@@ -107,8 +107,11 @@ void SteamGameManager::update_achievements(GameState* game_state)
         m_pSteamUserStats->StoreStats();
         needs_send = false;
     }
-    game_state->steam_session_string = steam_session_string;
-    game_state->fetch_scores();
+    if (game_state->steam_session_string != steam_session_string)
+    {
+        game_state->steam_session_string = steam_session_string;
+        game_state->fetch_scores();
+    }
 }
 
 void SteamGameManager::get_new_ticket()
@@ -207,6 +210,7 @@ void mainloop()
         if (save_time < 0)
         {
 #ifdef STEAM
+            game_state->steam_session_string = "";
             steam_manager.get_new_ticket();
 #else
             game_state->fetch_scores();
