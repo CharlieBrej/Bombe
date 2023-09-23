@@ -7,7 +7,7 @@ STEAM_FLAGS =
 STEAM_LDADD =  -lsteam_api
 endif
 
-EXTRA_FLAGS =
+EXTRA_FLAGS = -mpopcnt
 EXTRA_LDADD = 
 EXTRA_LD_FLAGS = 
 EXTRA_SRC = 
