@@ -105,7 +105,9 @@ public:
     {
         if (!force && (user_score.count(steam_id)) && (score <= user_score[steam_id]))
             return;
-        
+        if (!steam_id)
+            return;
+
         for (auto it = sorted_scores.begin(); it != sorted_scores.end(); )
         {
            if (it->second == steam_id)
@@ -489,7 +491,7 @@ public:
                     uint64_t steam_id = omap->get_num("steam_id");
                     inbuf.erase(0, length);
                     length = -1;
-                    if (steam_id != SECRET_ID)
+                    if (steam_id != SECRET_ID && steam_id != 0)
                     {
                         std::string steam_session;
                         omap->get_string("steam_session", steam_session);
@@ -525,10 +527,17 @@ public:
                             }
                             std::cout << steam_id  << " " << response << "\n";
 
-                            SaveObjectMap* omap = SaveObject::load(response)->get_map()->get_item("response")->get_map();
-                            db.steam_sessions[steam_session] = 0;
-                            uint64_t server_steam_id = std::stoull(omap->get_item("params")->get_map()->get_string("steamid"));
-                            db.steam_sessions[steam_session] = server_steam_id;
+                            try
+                            {
+                                SaveObjectMap* omap = SaveObject::load(response)->get_map()->get_item("response")->get_map();
+                                db.steam_sessions[steam_session] = 0;
+                                uint64_t server_steam_id = std::stoull(omap->get_item("params")->get_map()->get_string("steamid"));
+                                db.steam_sessions[steam_session] = server_steam_id;
+                            }
+                            catch (const std::runtime_error& error)
+                            {
+                                std::cout << "Exception " << error.what() << "\n";
+                            }
                         }
                         
                         if (db.steam_sessions.count(steam_session) &&
@@ -580,9 +589,9 @@ public:
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (unsigned lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES - 1; lset++)
                         {
-                            if (steam_id == 76561198083927051ull)
+                            if (steam_id == SECRET_ID)
                                 continue;
-                            if (steam_id == 1337420ull)
+                            if (steam_id == 0ull)
                                 continue;
                             if (omap->has_key("server_levels_version") && (omap->get_num("server_levels_version") != db.server_levels_version))
                                 continue;

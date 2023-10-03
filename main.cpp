@@ -129,7 +129,11 @@ void mainloop()
 {
     int save_index = 0;
     char* save_path = SDL_GetPrefPath("CharlieBrej", "Bombe");
+#ifdef STEAM
     std::string save_filename = std::string(save_path) + "bombe.save";
+#else
+    std::string save_filename = std::string(save_path) + "test_bombe.save";
+#endif
 
     SDL_free(save_path);
 

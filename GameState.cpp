@@ -2781,7 +2781,7 @@ void GameState::render(bool saving)
     if (mouse_mode == MOUSE_MODE_PAINT && right_panel_mode != RIGHT_MENU_NONE)
         mouse_mode = MOUSE_MODE_NONE;
 
-    if (pirate)
+    if (pirate > 10)
         speed_dial = std::clamp(speed_dial, 0.0, 0.5);
     if(low_contrast && contrast > 128)
         contrast--;
@@ -6151,7 +6151,7 @@ void GameState::render(bool saving)
     }
 
     render_tooltip();
-    if (pirate)
+    if (pirate > 10)
     {
         XYPos pos = grid_offset + XYPos(grid_size / 2, grid_size / 2);
         XYPos siz = XYPos(grid_size / 8, grid_size / 8);
@@ -8100,11 +8100,13 @@ void GameState::deal_with_scores()
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
                 if (omap->has_key("pirate"))
                 {
-                    if (pirate)
+                    if (pirate > 10)
                         server_timeout = 1000 * 60 * 60;
-                    pirate = true;
+                    pirate++;
                     steam_session_string = "";
                 }
+                else
+                    pirate = 0;
                 SaveObjectList* lvls = omap->get_item("scores")->get_list();
                 for (int i = 0; i < GLBAL_LEVEL_SETS + 2; i++)
                 {

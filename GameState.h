@@ -39,7 +39,7 @@ public:
     SaveObjectMap* lang_data;
     unsigned frame = 0;
     int frame_step = 0;
-    bool pirate = false;
+    int pirate = 0;
 
     static const int tut_texture_count = 8;
     SDL_Texture* tutorial_texture[tut_texture_count] = {};
