@@ -213,12 +213,7 @@ void mainloop()
 #endif
         if (save_time < 0)
         {
-#ifdef STEAM
-            game_state->steam_session_string = "";
-            steam_manager.get_new_ticket();
-#else
             game_state->fetch_scores();
-#endif
             game_state->render(true);
             SaveObject* omap = game_state->save();
             std::string my_save_filename = save_filename + std::to_string(save_index);
