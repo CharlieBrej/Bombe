@@ -110,6 +110,7 @@ public:
     bool operator<(const RegionType& other) const { return (type_priority(type) < type_priority(other.type)) || ((type == other.type) && ((value < other.value) || ((value == other.value) && (var < other.var)))); }
     unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
     std::string val_as_str(int offset = 0);
+    bool mapper_based_equal(const RegionType& other, uint8_t mapper[32]);
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
     template<class RESP, class IN, class VAR_ARR> RESP apply_rule(IN in, VAR_ARR& vars);

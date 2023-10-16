@@ -63,6 +63,23 @@ std::string RegionType::val_as_str(int offset)
     return s;
 }
 
+bool RegionType::mapper_based_equal(const RegionType& other, uint8_t mapper[32])
+{
+    if (type != other.type)
+        return false;
+    if (value != other.value)
+        return false;
+    if (std::popcount(var) != std::popcount(other.var))
+        return false;
+    if (!var)
+        return true;
+    assert(var < 32);
+    if (mapper[var])
+        return (mapper[var] == other.var);
+    mapper[var] = other.var;
+    return true;
+}
+
 template<class RESP, class IN, class OTHER>
 RESP RegionType::apply_rule_imp(IN in, OTHER other)
 {
@@ -442,19 +459,84 @@ bool GridRule::covers(GridRule& other)
     if (deleted || other.deleted)
         return false;
     if (region_count != other.region_count)
-        return false; 
+        return false;
+    uint8_t mapper[32] = {};
+
     for (int i = 0; i < region_count; i++)
-        if (region_type[i] != other.region_type[i])
+        if (!region_type[i].mapper_based_equal(other.region_type[i], mapper))
             return false;
     for (int i = 0; i < (1 << region_count); i++)
     {
-        if (square_counts[i] != other.square_counts[i])
+        if (!square_counts[i].mapper_based_equal(other.square_counts[i], mapper))
             return false;
         if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
             return false;
     }
-    if (apply_region_type != other.apply_region_type)
+    if (!apply_region_type.mapper_based_equal(other.apply_region_type, mapper))
         return false;
+    for (int i = 1; i < 32; i++)
+    {
+        if (!mapper[i])
+            continue;
+        for (int j = i + 1; j < 32; j++)
+        {
+            if (!mapper[j])
+                continue;
+            if (!(i & j) )   //try adding
+            {
+                if (mapper[i] & mapper[j])
+                    return false;
+                if (mapper[i | j])
+                {
+                    if (mapper[i | j] != (mapper[i] | mapper[j]))
+                        return false;
+                }
+                else
+                {
+                    mapper[i | j] = mapper[i] | mapper[j];
+                    i = 0;
+                    break;
+                }
+            }
+            else if ((i & j) == i)   //try subtracting
+            {
+                if ((mapper[i] & mapper[j]) != mapper[i])
+                    return false;
+                if (mapper[j & ~i])
+                {
+                    if (mapper[j & ~i] != (mapper[j] & ~mapper[i]))
+                        return false;
+                }
+                else
+                {
+                    mapper[j & ~i] = (mapper[j] & ~mapper[i]);
+                    i = 0;
+                    break;
+                }
+            }
+            else
+            {
+                uint8_t x = i ^ j;
+                uint8_t y = mapper[i] ^ mapper[j];
+                if (std::popcount(x) != std::popcount(y))
+                    return false;
+                if (mapper[x])
+                {
+                    if (mapper[x] != y)
+                        return false;
+                }
+                else
+                {
+                    mapper[x] = y;
+                    i = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+
+
     return true;
 }
 
