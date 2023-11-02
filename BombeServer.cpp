@@ -97,6 +97,8 @@ public:
                 SaveObjectList* stat = sub_stats_list->get_item(j)->get_list();
                 stats[i][j].completed = stat->get_item(0)->get_num();
                 stats[i][j].total = stat->get_item(1)->get_num();
+                if (stats[i][j].completed < 30)
+                    stats[i][j].completed = 0;
             }
         }
     }
@@ -584,7 +586,9 @@ public:
                         int mode = 0;
                         if (omap->has_key("game_mode"))
                             mode = omap->get_num("game_mode");
-                        printf("scores: %s %lu (%d)", steam_username.c_str(), steam_id, mode);
+                        char ip4[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, &(clientaddr.sin_addr), ip4, INET_ADDRSTRLEN);
+                        printf("scores: %s [%s] %lu (%d)", steam_username.c_str(), ip4, steam_id, mode);
 
                         SaveObjectList* progress_list = omap->get_item("level_progress")->get_list();
                         for (unsigned lset = 0; lset < progress_list->get_count() && lset < LEVEL_TYPES - 1; lset++)

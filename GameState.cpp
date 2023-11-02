@@ -265,7 +265,7 @@ GameState::GameState(std::string& load_data, bool json)
         SDL_SetWindowResizable(sdl_window, full_screen ? SDL_FALSE : SDL_TRUE);
         SDL_SetWindowInputFocus(sdl_window);
     }
-
+    SDL_DisableScreenSaver();
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	sdl_texture = loadTexture("texture.png");
 
@@ -995,6 +995,8 @@ void GameState::robot_thread(int thread_index)
             {
                 for (unsigned g = 0; g < (GLBAL_LEVEL_SETS + 1); g++)
                 {
+                    if (!prog_seen[PROG_LOCK_HEX + g])
+                        continue;
                     for (unsigned s = 0; s < level_progress[game_mode][g].size(); s++)
                     {
                         if (!level_is_accessible(game_mode, g, s))
@@ -1107,6 +1109,8 @@ void GameState::advance(int steps)
     int totcount = 0;
     for (int s = 0; s < GLBAL_LEVEL_SETS; s++)
     {
+        if (!prog_seen[PROG_LOCK_HEX + s])
+            continue;
         int ccount = 0;
         int count = 0;
         for (unsigned i = 0; i < level_progress[0][s].size(); i++)
@@ -5452,6 +5456,8 @@ void GameState::render(bool saving)
             {
                 for (unsigned g = 0; g < GLBAL_LEVEL_SETS + 1; g++)
                 {
+                    if (!prog_seen[PROG_LOCK_HEX + g])
+                        continue;
                     for (unsigned s = 0; s < level_progress[game_mode][g].size(); s++)
                     {
                         if (!level_is_accessible(game_mode, g, s))
@@ -5460,10 +5466,10 @@ void GameState::render(bool saving)
                         {
                             if (!level_progress[game_mode][g][s].level_status[i].done)
                             {
-                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done == 0)
-                                    todo_count++;
                                 if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done == 2)
                                     done_count++;
+                                else
+                                    todo_count++;
                             }
                         }
                     }
