@@ -6279,7 +6279,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
     {
         if (mouse_hover_region)
         {
-            if (ctrl_held)
+            if (ctrl_held && !key_held)
             {
                 region_type = mouse_hover_region->type;
                 select_region_type = region_type;
