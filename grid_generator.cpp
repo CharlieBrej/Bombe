@@ -232,9 +232,10 @@ void* exec(void* dummy)
                 int parity = req[11] - '0';
                 int xor1 = req[12] - '0';
                 int xor11 = req[13] - '0';
+                int prime = req[14] - '0';
 
                 g->randomize(siz, Grid::WrapType(wrap), merged, rows);
-                g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11);
+                g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime);
 
                 std::string s = g->to_string();
                 {

@@ -47,8 +47,16 @@ std::string RegionType::val_as_str(int offset)
         {
             if (dig == 1)
                 s += '^';
-            s += '+';
-            s += std::to_string(value + offset);
+            if (value + offset > 0)
+            {
+                s += '+';
+                s += std::to_string(value + offset);
+            }
+            else
+            {
+                s += '-';
+                s += std::to_string(-(value + offset));
+            }
             s += '^';
         }
         else if (dig > 1)
@@ -131,6 +139,18 @@ RESP RegionType::apply_rule_imp(IN in, OTHER other)
     {
         return (in == other) || (in == (other + 1))  || (in == (other + 2));
     }
+    if (type == PRIME)
+    {
+        return (((in - other) == 2) || ((in - other) == 3) || ((in - other) == 5) || ((in - other) == 7) || ((in - other) == 11) || ((in - other) == 13) || ((in - other) == 17) || ((in - other) == 19) || ((in - other) == 23) || ((in - other) == 29) || ((in - other) == 31));
+    }
+    if (type == TRIANGLE)
+    {
+        return (((in - other) == 0) || ((in - other) == 1) || ((in - other) == 3) || ((in - other) == 6) || ((in - other) == 10) || ((in - other) == 15) || ((in - other) == 21) || ((in - other) == 28));
+    }
+    if (type == POW2)
+    {
+        return (((in - other) == 1) || ((in - other) == 2) || ((in - other) == 4) || ((in - other) == 8) || ((in - other) == 16) || ((in - other) == 32));
+    }
     assert(0);
 }
 
@@ -194,6 +214,12 @@ int RegionType::max()
         return value + 1;
     if (type == XOR11)
         return value + 2;
+    if (type == PRIME)
+        return -1;
+    if (type == TRIANGLE)
+        return -1;
+    if (type == POW2)
+        return -1;
     assert(0);
 }
 
@@ -223,6 +249,12 @@ int RegionType::min()
         return value;
     if (type == XOR11)
         return value;
+    if (type == PRIME)
+        return value < -2 ? 0 : value + 2;
+    if (type == TRIANGLE)
+        return value;
+    if (type == POW2)
+        return value < -1 ? 0 : value + 1;
     assert(0);
 }
 
@@ -2250,7 +2282,7 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
-void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11)
+void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11, int prime)
 {
 
     XYSet grid_squares = get_squares();
@@ -2382,6 +2414,154 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                 {
                     tst = *this;
                     tst->get_clue(p).type = RegionType::PARITY;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+            }
+            if (prime)
+            {
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 10))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::TRIANGLE;
+                    tst->get_clue(p).value -= 10;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 8))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::POW2;
+                    tst->get_clue(p).value -= 8;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 7))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PRIME;
+                    tst->get_clue(p).value -= 7;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 6))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::TRIANGLE;
+                    tst->get_clue(p).value -= 6;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 5))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PRIME;
+                    tst->get_clue(p).value -= 5;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 4))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::POW2;
+                    tst->get_clue(p).value -= 4;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::TRIANGLE;
+                    tst->get_clue(p).value -= 3;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PRIME;
+                    tst->get_clue(p).value -= 3;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::POW2;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::PRIME;
+                    tst->get_clue(p).value -= 2;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::TRIANGLE;
+                    tst->get_clue(p).value -= 1;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::POW2;
+                    tst->get_clue(p).value -= 1;
+                    if (tst->is_solveable())
+                    {
+                        get_clue(p) = tst->get_clue(p);
+                        continue;
+                    }
+                }
+                if (int(rnd % 10) < prime && (get_clue(p).value >= 0))
+                {
+                    tst = *this;
+                    tst->get_clue(p).type = RegionType::TRIANGLE;
+                    tst->get_clue(p).value -= 0;
                     if (tst->is_solveable())
                     {
                         get_clue(p) = tst->get_clue(p);
@@ -2788,7 +2968,8 @@ bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
         clue.value = 0;
         clue.type = RegionType::EQUAL;
     }
-    assert (clue.value >= 0);
+    if (clue.type != RegionType::PRIME && clue.type != RegionType::TRIANGLE && clue.type != RegionType::POW2)
+        assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
     if (cell_causes.count(cause))

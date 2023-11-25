@@ -89,6 +89,9 @@ public:
         PARITY,
         XOR1,
         XOR11,
+        PRIME,
+        TRIANGLE,
+        POW2,
         SET = 100,
         VISIBILITY = 101,
     } type = NONE;
@@ -97,7 +100,7 @@ public:
 
 
     RegionType() : type (NONE), value(0) {}
-    RegionType(char dummy, unsigned t) : type (Type((t >> 8) & 0xFF)), value(t & 255), var((t >> 16) & 0xFF) {}
+    RegionType(char dummy, unsigned t) : type (Type((t >> 8) & 0xFF)), value(t & 0xFF), var((t >> 16) & 0xFF) {}
     RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
     static int type_priority(Type t)
     {
@@ -108,8 +111,8 @@ public:
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value) && (var == other.var); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type_priority(type) < type_priority(other.type)) || ((type == other.type) && ((value < other.value) || ((value == other.value) && (var < other.var)))); }
-    unsigned as_int() const { return (int(var) << 16 | int(type) << 8 | value); }
     std::string val_as_str(int offset = 0);
+    unsigned as_int() const { return ((unsigned(var) & 0xFF) << 16 | (unsigned(type) & 0xFF) << 8 | (unsigned(value) & 0xFF)); }
     bool mapper_based_equal(const RegionType& other, uint8_t mapper[32]);
 
     template<class RESP, class IN, class OTHER> RESP apply_rule_imp(IN in, OTHER other);
@@ -380,7 +383,7 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
 //    bool has_solution(void);
-    void make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11);
+    void make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11, int prime);
     void reveal(XYPos p);
     bool is_solved(void);
 

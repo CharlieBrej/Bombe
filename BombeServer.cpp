@@ -138,14 +138,14 @@ public:
     // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)
     //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
 
-static const char* server_level_types[] = { "A5400000700000", "B4400000700000","C6400000700000","A6610000700000", "B6610000700000",
-                                            "A5400000070000", "B4400000070000","C6400000070000","A6610000070000", "B6610000070000",
-                                            "A5400000007000", "B4400000007000","C6400000007000","A6610000007000", "B6610000007000",
-                                            "A5400000000700", "B4400000000700","C6400000000700","A6610000000700", "B6610000000700",
-                                            "A5400000000070", "B4400000000070","C6400000000070","A6610000000070", "B6610000000070",
-                                            "A5400000000007", "B4400000000007","C6400000000007","A6610000000007", "B6610000000007",
+static const char* server_level_types[] = { "A65000007000007", "B55000007000007","C85000007000007","A77100007000007", "B77100007000007",
+                                            "A65000000700007", "B55000000700007","C85000000700007","A77100000700007", "B77100000700007",
+                                            "A65000000070007", "B55000000070007","C85000000070007","A77100000070007", "B77100000070007",
+                                            "A65000000007007", "B55000000007007","C85000000007007","A77100000007007", "B77100000007007",
+                                            "A65000000000707", "B55000000000707","C85000000000707","A77100000000707", "B77100000000707",
+                                            "A65000000000077", "B55000000000077","C85000000000077","A77100000000077", "B77100000000077",
                                             NULL};
-static const int game_version = 8;
+static const int game_version = 9;
 
 class Player
 {
@@ -205,7 +205,7 @@ public:
                 }
             }
         }
-        if (load_game_version == game_version)
+//        if (load_game_version == game_version)
         {
             SaveObjectList* score_list2 = omap->get_item("scores")->get_list();
             for (unsigned j = 0; j < GAME_MODE_TYPES && (j < score_list2->get_count()); j++)
@@ -769,6 +769,14 @@ int main(int argc, char *argv[])
             {
                 week = 0;
                 std::remove("NEW_SERVER_LEVELS");
+            }
+        }
+        {
+            std::ifstream loadfile("CLEAR_NEXT_SERVER_LEVELS");
+            if (!loadfile.fail() && !loadfile.eof())
+            {
+                db.next_server_levels.clear();
+                std::remove("CLEAR_NEXT_SERVER_LEVELS");
             }
         }
         {

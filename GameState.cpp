@@ -206,7 +206,6 @@ GameState::GameState(std::string& load_data, bool json)
                         rules[mode].push_back(r);
                 }
 
-                if (version == game_version)
                 {
                     SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
                     for (unsigned k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
@@ -313,7 +312,8 @@ GameState::GameState(std::string& load_data, bool json)
         sounds[7] = Mix_LoadWAV( "snd/plop7.wav" );
         sounds[8] = Mix_LoadWAV( "snd/success1.wav" );
         sounds[9] = Mix_LoadWAV( "snd/success2.wav" );
-        for (int i = 0; i < 10; i++)
+        sounds[10] = Mix_LoadWAV( "snd/success1x.wav" );
+        for (int i = 0; i < 11; i++)
             assert(sounds[i]);
         Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
         Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
@@ -633,9 +633,10 @@ static int level_gen_thread_func(void *ptr)
     int parity = req[11] - '0';
     int xor1 = req[12] - '0';
     int xor11 = req[13] - '0';
+    int prime = req[14] - '0';
 
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10);
-    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11);
+    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
     game_state->level_gen_resp = g->to_string();
@@ -1178,7 +1179,15 @@ void GameState::advance(int steps)
                     {
                         sound_success_round_robin = (sound_success_round_robin + 1) % 32;
                         if (has_sound)
-                            Mix_PlayChannel(sound_success_round_robin, sounds[8], 0);
+                        {
+                            if (current_level_group_index == GLBAL_LEVEL_SETS)
+                            {
+                                Mix_PlayChannel(sound_success_round_robin, sounds[10], 0);
+                                sound_frame_index -= 100;
+                            }
+                            else
+                                Mix_PlayChannel(sound_success_round_robin, sounds[8], 0);
+                        }
                         sound_frame_index -= 100;
                     }
                 }
@@ -2403,6 +2412,42 @@ void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
             digits = "2f";
         render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
     }
+    else if (reg.type == RegionType::PRIME)
+    {
+        XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
+        std::string digits;
+        if (!reg.var && reg.value < 0)
+            digits = "h" + reg.val_as_str(0);
+        else if (!reg.var && !reg.value)
+            digits = "h";
+        else
+            digits = "h+" + reg.val_as_str(0);
+        render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+    }
+    else if (reg.type == RegionType::TRIANGLE)
+    {
+        XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
+        std::string digits;
+        if (!reg.var && reg.value < 0)
+            digits = "i" + reg.val_as_str(0);
+        else if (!reg.var && !reg.value)
+            digits = "i";
+        else
+            digits = "i+" + reg.val_as_str(0);
+        render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+    }
+    else if (reg.type == RegionType::POW2)
+    {
+        XYPos numsiz = XYPos(siz * 6 / 8, siz * 6 / 8);
+        std::string digits;
+        if (!reg.var && reg.value < 0)
+            digits = "j" + reg.val_as_str(0);
+        else if (!reg.var && !reg.value)
+            digits = "j";
+        else
+            digits = "j+" + reg.val_as_str(0);
+        render_number_string(digits, pos + XYPos(int(siz) / 8,int(siz) / 8), numsiz);
+    }
     else if (reg.type == RegionType::VISIBILITY)
     {
         if (reg.value > 2)
@@ -2964,6 +3009,33 @@ void GameState::render(bool saving)
                 scaled_grid_offset.y += wrap_size.y;
         }
 
+    }
+
+    if (current_level_group_index == GLBAL_LEVEL_SETS)
+    {
+        const int RMAX = 0x10000000;
+        Rand rnd(12345678);
+        for (int i = 0; i < 200; i++)
+        {
+            double x = double(rnd % RMAX) / RMAX;
+            double s = 0.01 + (double(rnd % RMAX) / RMAX) * 0.03;
+            double y = fmod((double(frame + double(rnd % RMAX)) * s * 0.001), 1);
+            double spin = sin((double(rnd % RMAX)) / 1000);
+            double r = (frame * spin) / 10;
+            double sway = sin((frame + double(rnd % RMAX)) / 1000);
+            r += sway * 100;
+            y -= s;
+            y *= 1 + s;
+            x += sway * s;
+            {
+                SDL_Rect src_rect = {704, 1728, 192, 192};
+                SDL_Rect dst_rect = {int(grid_offset.x + grid_size * x), int(grid_offset.y + grid_size * y), int(grid_size * s), int(grid_size * s)};
+                SDL_Point rot_center = {int(grid_size * s / 2), int(grid_size * s / 2)};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, r, &rot_center, SDL_FLIP_NONE);
+
+            }
+
+        }
     }
 
     tooltip_string = "";
