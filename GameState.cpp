@@ -8167,7 +8167,10 @@ bool GameState::events()
         inspected_region->vis_cause.rule = NULL;
         inspected_region->stale = false;
     }
-
+    if (select_region_type.value < 0)
+        select_region_type.value = 0;
+    if (region_type.value < 0)
+        region_type.value = 0;
 
     return quit;
 }
