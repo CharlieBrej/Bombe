@@ -4516,7 +4516,7 @@ void GameState::render(bool saving)
     render_button(XYPos(704 + 192 * 2, 960), XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0), "Refresh Regions");
     if (render_lock(PROG_LOCK_SPEED, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1), XYPos(button_size * 3, button_size)))
     {
-        render_box(left_panel_offset + XYPos(0, button_size), XYPos(button_size * 3, button_size * 1), button_size/4, 4);
+        render_box(left_panel_offset + XYPos(0, button_size), XYPos(button_size * 3, button_size * 1), button_size/4, (speed_dial == 0) ? 2 : 4);
         SDL_Rect src_rect = {704, 1920, 576, 192};
         SDL_Rect dst_rect = {left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1, button_size * 3, button_size};
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
