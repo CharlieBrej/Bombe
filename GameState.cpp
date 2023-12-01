@@ -4910,6 +4910,8 @@ void GameState::render(bool saving)
 
                 XYPos bpos = right_panel_offset + pos * button_size + XYPos(0, button_size * 9.6);
                 r_type.value = pos.y * 5 + pos.x;
+                if (region_type.value < 0)
+                    r_type.value = -r_type.value;
                 if (region_type == r_type)
                     render_box(bpos, XYPos(button_size, button_size), button_size/4, 10);
                 render_region_type(r_type, bpos, button_size);
@@ -7113,6 +7115,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 XYPos region_item_selected = (pos - XYPos(0, button_size * 9.6)) / button_size;
                 select_region_type.value = region_item_selected.x + (region_item_selected.y) * 5;
+                if (region_type.value < 0)
+                    select_region_type.value = -select_region_type.value;
                 region_type = select_region_type;
                 if (clicks >= 2 && constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
                 {
