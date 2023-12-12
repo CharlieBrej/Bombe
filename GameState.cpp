@@ -6213,7 +6213,7 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(9 * button_size, 10 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(13 * button_size, 10 * button_size), button_size/4, 1);
         int index = 0;
         std::string orig_lang = language;
         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
@@ -6223,7 +6223,7 @@ void GameState::render(bool saving)
             if (s == orig_lang)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
             XYPos p(index / 8, index % 8);
-            render_text_box(left_panel_offset + XYPos(button_size * (2 + p.x * 4), button_size * (2 + p.y)), s);
+            render_text_box(left_panel_offset + XYPos(button_size * (2 + p.x * 6), button_size * (2 + p.y)), s);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             index++;
         }
@@ -7904,9 +7904,9 @@ bool GameState::events()
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x >= 0 && p.y >= 0 && p.x < 8)
+                    if (p.x >= 0 && p.y >= 0 && p.x < 12)
                     {
-                        int want = p.y + (p.x / 4) * 8;
+                        int want = p.y + (p.x / 6) * 8;
                         int index = 0;
                         for (std::map<std::string, SaveObject*>::iterator it = lang_data->omap.begin(); it != lang_data->omap.end(); ++it)
                         {
