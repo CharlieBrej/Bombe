@@ -1047,7 +1047,7 @@ void GameState::robot_thread(int thread_index)
                     }
                     SDL_UnlockMutex(level_progress_lock);
                 }
-                level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_done = 2;
+                level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_done = 3;
                 break;
             }
             {
@@ -3373,8 +3373,15 @@ void GameState::render(bool saving)
                 {
                     if (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].done ==
                         state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].done)
+                    {
+                        if (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].robot_done >= 2 &&
+                            (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].robot_done ==
+                                state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].robot_done))
+                            return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].robot_regions <
+                                    state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].robot_regions);
                         return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].robot_done < 
                                 state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].robot_done);
+                    }
                     return (state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[a].done < 
                             state.level_progress[state.game_mode][state.current_level_group_index][state.current_level_set_index].level_status[b].done);
                 }
@@ -3454,22 +3461,26 @@ void GameState::render(bool saving)
                 LevelStatus& status = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index];
                 if (!status.done && run_robots)
                 {
-                    if (status.robot_done == 1)
-                    {
-                        SDL_Rect src_rect = {704, 2336, 192, 192};
-                        SDL_Rect dst_rect = {list_pos.x + cell_width * 3, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
-                        SDL_Point rot_center = {cell_height / 2, cell_height / 2};
-                        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, level_index + double(frame) * 0.01, &rot_center, SDL_FLIP_NONE);
-                        render_number(status.robot_regions, list_pos + XYPos(3 * cell_width + cell_height, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width - cell_height, cell_height*8/10));
-                    }
-                    else
                     {
                         SDL_Rect src_rect = {3008, 1344, 192, 192};
-                        SDL_Rect dst_rect = {list_pos.x + cell_width * 3 + (cell_width - cell_height) / 2, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
+                        if (status.robot_done == 1)
+                            src_rect = {704, 2336, 192, 192};
                         if (status.robot_done == 2)
-                            src_rect = {1280, 2240, 96, 96};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                            src_rect = {1664, 1728, 192, 192};
+                        if (status.robot_done == 3)
+                            src_rect = {1664, 1920, 192, 192};
+
+                        SDL_Rect dst_rect = {list_pos.x + cell_width * 3, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
+                        SDL_Point rot_center = {cell_height / 2, cell_height / 2};
+
+                        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (status.robot_done == 1) ? level_index + double(frame) * 0.01 : 0, &rot_center, SDL_FLIP_NONE);
+                        render_number(status.robot_regions, list_pos + XYPos(3 * cell_width + cell_height, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width - cell_height, cell_height*8/10));
                     }
+                    // else
+                    // {
+                    //     SDL_Rect dst_rect = {list_pos.x + cell_width * 3 + (cell_width - cell_height) / 2, list_pos.y + cell_width * 1 + level_index * cell_height, cell_height, cell_height};
+                    //     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    // }
                 }
             }
 
@@ -5540,7 +5551,7 @@ void GameState::render(bool saving)
                         {
                             if (!level_progress[game_mode][g][s].level_status[i].done)
                             {
-                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done == 2)
+                                if (run_robots && level_progress[game_mode][g][s].level_status[i].robot_done >= 2)
                                     done_count++;
                                 else
                                     todo_count++;
