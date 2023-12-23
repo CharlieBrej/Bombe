@@ -1180,12 +1180,12 @@ void GameState::advance(int steps)
                         sound_success_round_robin = (sound_success_round_robin + 1) % 32;
                         if (has_sound)
                         {
-                            if (current_level_group_index == GLBAL_LEVEL_SETS)
-                            {
-                                Mix_PlayChannel(sound_success_round_robin, sounds[10], 0);
-                                sound_frame_index -= 100;
-                            }
-                            else
+                            // if (current_level_group_index == GLBAL_LEVEL_SETS)
+                            // {
+                            //     Mix_PlayChannel(sound_success_round_robin, sounds[10], 0);
+                            //     sound_frame_index -= 100;
+                            // }
+                            // else
                                 Mix_PlayChannel(sound_success_round_robin, sounds[8], 0);
                         }
                         sound_frame_index -= 100;
@@ -3011,32 +3011,32 @@ void GameState::render(bool saving)
 
     }
 
-    if (current_level_group_index == GLBAL_LEVEL_SETS)
-    {
-        const int RMAX = 0x10000000;
-        Rand rnd(12345678);
-        for (int i = 0; i < 200; i++)
-        {
-            double x = double(rnd % RMAX) / RMAX;
-            double s = 0.01 + (double(rnd % RMAX) / RMAX) * 0.03;
-            double y = fmod((double(frame + double(rnd % RMAX)) * s * 0.001), 1);
-            double spin = sin((double(rnd % RMAX)) / 1000);
-            double r = (frame * spin) / 10;
-            double sway = sin((frame + double(rnd % RMAX)) / 1000);
-            r += sway * 100;
-            y -= s;
-            y *= 1 + s;
-            x += sway * s;
-            {
-                SDL_Rect src_rect = {704, 1728, 192, 192};
-                SDL_Rect dst_rect = {int(grid_offset.x + grid_size * x), int(grid_offset.y + grid_size * y), int(grid_size * s), int(grid_size * s)};
-                SDL_Point rot_center = {int(grid_size * s / 2), int(grid_size * s / 2)};
-                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, r, &rot_center, SDL_FLIP_NONE);
+    // if (current_level_group_index == GLBAL_LEVEL_SETS)
+    // {
+    //     const int RMAX = 0x10000000;
+    //     Rand rnd(12345678);
+    //     for (int i = 0; i < 200; i++)
+    //     {
+    //         double x = double(rnd % RMAX) / RMAX;
+    //         double s = 0.01 + (double(rnd % RMAX) / RMAX) * 0.03;
+    //         double y = fmod((double(frame + double(rnd % RMAX)) * s * 0.001), 1);
+    //         double spin = sin((double(rnd % RMAX)) / 1000);
+    //         double r = (frame * spin) / 10;
+    //         double sway = sin((frame + double(rnd % RMAX)) / 1000);
+    //         r += sway * 100;
+    //         y -= s;
+    //         y *= 1 + s;
+    //         x += sway * s;
+    //         {
+    //             SDL_Rect src_rect = {704, 1728, 192, 192};
+    //             SDL_Rect dst_rect = {int(grid_offset.x + grid_size * x), int(grid_offset.y + grid_size * y), int(grid_size * s), int(grid_size * s)};
+    //             SDL_Point rot_center = {int(grid_size * s / 2), int(grid_size * s / 2)};
+    //             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, r, &rot_center, SDL_FLIP_NONE);
 
-            }
+    //         }
 
-        }
-    }
+    //     }
+    // }
 
     tooltip_string = "";
     tooltip_rect = XYRect(-1,-1,-1,-1);
