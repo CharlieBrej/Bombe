@@ -3422,6 +3422,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                             for (int i = 0; i < 32; i++)
                                 var_counts2[i] = -1;
                             bool m2 = rule.matches(r0, r1, r2, r3, var_counts2);
+                            if (!m2)
+                                continue;
                             if (m != m2)
                             {
                                 m = rule.matches(r0, r1, r2, r3, var_counts);
