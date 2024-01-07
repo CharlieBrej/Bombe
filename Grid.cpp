@@ -3564,6 +3564,22 @@ void Grid::commit_level_counts()
         rule->clear_count += count;
 }
 
+void Grid::remove_from_regions_to_add_for_rule(GridRule* rule)
+{
+    std::list<GridRegion>::iterator it = regions_to_add.begin();
+    while (it != regions_to_add.end())
+    {
+        GridRegion* rp = &(*it);
+        if(rp->gen_cause.rule == rule)
+        {
+            remove_from_regions_to_add_multiset(&(*it));
+            it = regions_to_add.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
 std::string SquareGrid::text_desciption()
 {
     return "Square " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));

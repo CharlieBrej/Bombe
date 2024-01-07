@@ -6743,6 +6743,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     if (rule->apply_region_type.type != RegionType::VISIBILITY && (game_mode == 2 || game_mode == 3))
                         rule_del_count[game_mode]++;
                     last_deleted_rules[game_mode].insert(rule);
+                    grid->remove_from_regions_to_add_for_rule(rule);
                 }
             }
             right_panel_mode = RIGHT_MENU_NONE;
@@ -6851,6 +6852,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         else
                         {
                             rule->paused = true;
+                            grid->remove_from_regions_to_add_for_rule(rule);
                         }
                     }
                 }
@@ -6894,6 +6896,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         rule_del_count[game_mode]--;
                 }
                 rule->deleted = false;
+                rule->stale = false;
             }
             selected_rules = last_deleted_rules[game_mode];
             last_deleted_rules[game_mode].clear();
@@ -7297,6 +7300,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                                         rule_del_count[game_mode]++;
                                 }
                                 replace_rule->deleted = true;
+                                grid->remove_from_regions_to_add_for_rule(replace_rule);
+
                             }
                             it = rules[game_mode].insert(it, constructed_rule);
                             inspected_rule = GridRegionCause(&*it, rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);

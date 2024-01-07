@@ -16,3 +16,5 @@ depmod
 install-sh
 missing
 depcomp
+Android
+android
