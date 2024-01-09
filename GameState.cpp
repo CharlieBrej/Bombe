@@ -1640,7 +1640,7 @@ void GameState::update_constructed_rule()
         GridRule prule = constructed_rule.permute(order);
         for (GridRule& rule : rules[game_mode])
         {
-            if (!rule.deleted && rule.covers(prule))
+            if (!rule.deleted && rule.covers(prule) && (&rule != replace_rule || duplicate_rule))
             {
                 constructed_rule_is_already_present = &rule;
             }
