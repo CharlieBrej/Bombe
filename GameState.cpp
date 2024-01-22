@@ -5682,7 +5682,7 @@ void GameState::render(bool saving)
             render_box(left_panel_offset + XYPos(button_size * 13, int(button_size * (2 + i))), XYPos(button_size, button_size), button_size/4, 4);
 
             int count = 0;
-            for (unsigned m = 0; m < GLBAL_LEVEL_SETS - 1; m++)
+            for (unsigned m = 0; m < GLBAL_LEVEL_SETS; m++)
             {
                 for (unsigned l = 0; l < level_progress[i][m].size(); l++)
                 {
