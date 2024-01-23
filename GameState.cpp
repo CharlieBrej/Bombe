@@ -3040,6 +3040,8 @@ void GameState::render(bool saving)
 
     tooltip_string = "";
     tooltip_rect = XYRect(-1,-1,-1,-1);
+    GridRule* tooltip_hover_rule = NULL;
+
     bool hover_rulemaker = false;
     XYSet hover_squares_highlight;
     int hover_rulemaker_bits = 0;
@@ -3879,7 +3881,12 @@ void GameState::render(bool saving)
                 render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
             }
 
-            if (!display_clipboard_rules && display_rules_click_drag && display_rules_click_line && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 7, cell_height))))
+            if ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 8, cell_height)))
+            {
+                tooltip_hover_rule = &rule;
+            }
+
+            if (!display_clipboard_rules && display_rules_click_drag && display_rules_click_line && !display_rules_click && ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 8, cell_height))))
             {
                 // if (selected_rules.empty())
                 // {
@@ -4063,7 +4070,6 @@ void GameState::render(bool saving)
 
             render_box(list_pos + XYPos(cell_width * 8, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-
         if (rules_list_offset + row_count > (int)rules_list.size())
             rules_list_offset = rules_list.size() - row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
@@ -5659,6 +5665,26 @@ void GameState::render(bool saving)
             it++;
         }
         star_burst_animations.clear();
+    }
+    if (tooltip_hover_rule)
+    {
+        XYPos siz;
+        if (tooltip_hover_rule->region_count == 1)
+            siz = XYPos(1, 2);
+        else if (tooltip_hover_rule->region_count == 2)
+            siz = XYPos(3, 2);
+        else if (tooltip_hover_rule->region_count == 3)
+            siz = XYPos(5, 3);
+        else
+            siz = XYPos(5, 5);
+        siz += XYPos(1, 1);
+
+        XYPos k_pos = mouse + XYPos(-(siz.x * button_size + button_size / 4), button_size / 4);
+
+        if (k_pos.y + siz.y * button_size > window_size.y)
+            k_pos.y =  window_size.y - siz.y * button_size;
+        render_box(k_pos, siz * button_size, button_size/4, 1);
+        render_rule(*tooltip_hover_rule, k_pos + XYPos(button_size / 2, button_size / 2), button_size, -1);
     }
 
     if (display_modes)
@@ -8367,7 +8393,7 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
     if (rule.region_count == 1)
         siz = XYPos(100, 200);
     else if (rule.region_count == 2)
-        siz = XYPos(300, 208);
+        siz = XYPos(300, 200);
     else if (rule.region_count == 3)
         siz = XYPos(500, 300);
     else
