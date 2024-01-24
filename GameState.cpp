@@ -5617,8 +5617,10 @@ void GameState::render(bool saving)
                 render_box(right_panel_offset + XYPos(button_size * 1, button_size * 9), XYPos(button_size * 3, button_size * 3), button_size/4, 4);
                 for (int i = 0; i < 9; i++)
                 {
-                    if (i == selected_colour)
+                    if (i == selected_colour[0])
                         render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 10);
+                    if (i == selected_colour[1])
+                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 0);
                     if (i == 8)
                     {
                         SDL_Rect src_rect = {704, 1536, 192, 192};
@@ -5627,7 +5629,7 @@ void GameState::render(bool saving)
                     }
                     else
                     {
-                        bool alt = (i == selected_colour) ? selected_colour_alt : ctrl_held;
+                        bool alt = (i == selected_colour[0]) ? selected_colour_alt[0] : ctrl_held;
                         uint32_t cr = (i & 1) ? (alt ? 0 : 128) : 255;
                         uint32_t cg = (i & 2) ? (alt ? 0 : 128) : 255;
                         uint32_t cb = (i & 4) ? (alt ? 0 : 128) : 255;
@@ -6976,8 +6978,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             XYPos p = pos - XYPos(button_size * 1, button_size * 9);
             p /= button_size;
-            selected_colour = p.x + p.y * 3;
-            selected_colour_alt = ctrl_held;
+            int ci = btn ? 1 : 0;
+
+            selected_colour[ci] = p.x + p.y * 3;
+            selected_colour_alt[ci] = ctrl_held;
             return;
         }
 
@@ -7831,14 +7835,15 @@ bool GameState::events()
                         }
                         int s = (paint_brush_size == 0) ? 5 :
                                 (paint_brush_size == 1) ? 10 : 20;
+                        int ci = grid_dragging_btn ? 1 : 0;
 
-                        uint32_t cr = (selected_colour & 1) ? (selected_colour_alt ? 0 : 128) : 255;
-                        uint32_t cg = (selected_colour & 2) ? (selected_colour_alt ? 0 : 128) : 255;
-                        uint32_t cb = (selected_colour & 4) ? (selected_colour_alt ? 0 : 128) : 255;
+                        uint32_t cr = (selected_colour[ci] & 1) ? (selected_colour_alt[ci] ? 0 : 128) : 255;
+                        uint32_t cg = (selected_colour[ci] & 2) ? (selected_colour_alt[ci] ? 0 : 128) : 255;
+                        uint32_t cb = (selected_colour[ci] & 4) ? (selected_colour_alt[ci] ? 0 : 128) : 255;
 
                         uint32_t nv = 0xFF << 24 | cr << 16 | cg << 8 | cb << 0;
                         
-                        if (grid_dragging_btn || (selected_colour == 8))
+                        if (selected_colour[ci] == 8)
                         {
                             s *= 3;
                             nv = 0x00000000;
