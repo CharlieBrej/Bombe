@@ -319,6 +319,7 @@ public:
     int run_robot_count  = 0;
     bool run_robots = false;
     bool should_run_robots = false;
+    bool restart_robots_on_all_levels = false;
 
     unsigned server_timeout = 0;
 
@@ -487,7 +488,7 @@ public:
 
     bool rule_is_permitted(GridRule& rule, int mode);
     void load_grid(std::string s);
-    void pause_robots();
+    void pause_robots(bool restart_all = true);
     void robot_thread(int index);
     void advance(int steps);
     void audio();

@@ -923,8 +923,10 @@ void GameState::load_grid(std::string s)
 }
 static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region, bool skip_hide = false);
 
-void GameState::pause_robots()
+void GameState::pause_robots(bool restart_all)
 {
+    if (restart_all)
+        restart_robots_on_all_levels = true;
     if (!run_robots)
         return;
     run_robots = false;
@@ -1052,13 +1054,12 @@ void GameState::robot_thread(int thread_index)
             }
             {
                 int region_count = grid->regions.size();
+                level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_regions = region_count;
                 if(rule_limit_count >= 0 && region_count > rule_limit_count)
                 {
                     level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_done = 2;
                     break;
                 }
-                else
-                    level_progress[game_mode][job.level_group_index][job.level_set_index].level_status[job.level_index].robot_regions = region_count;
             }
             if (!run_robots)
                 break;
@@ -1078,11 +1079,15 @@ void GameState::advance(int steps)
             {
                 for (unsigned i = 0; i < level_progress[game_mode][g][s].level_status.size(); i++)
                 {
-                    level_progress[game_mode][g][s].level_status[i].robot_done = 0;
+                    if (restart_robots_on_all_levels ||
+                        level_progress[game_mode][g][s].level_status[i].robot_done == 1 || 
+                        (level_progress[game_mode][g][s].level_status[i].robot_done == 2  && level_progress[game_mode][g][s].level_status[i].robot_regions < rule_limit_count))
+                        level_progress[game_mode][g][s].level_status[i].robot_done = 0;
                 }
             }
         }
         run_robots = true;
+        restart_robots_on_all_levels = false;
     }
     if (display_help || display_menu)
         return;
@@ -6946,7 +6951,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         if ((prog_stars[PROG_LOCK_ROBOTS] <= max_stars) && (pos - XYPos(button_size * 1, button_size * 3)).inside(XYPos(button_size, button_size)))
         {
-            pause_robots();
+            pause_robots(false);
             should_run_robots = !should_run_robots;
             return;
         }
@@ -7003,7 +7008,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if (rule_limit_slider >= 1.0)
                 new_rule_limit_count = -1;
             if (new_rule_limit_count > rule_limit_count)
-                pause_robots();
+                pause_robots(false);
             rule_limit_count = new_rule_limit_count;
             return;
         }
@@ -7914,7 +7919,7 @@ bool GameState::events()
                         if (rule_limit_slider >= 1.0)
                             new_rule_limit_count = -1;
                         if (new_rule_limit_count < 0 || (rule_limit_count > 0 && new_rule_limit_count > rule_limit_count))
-                            pause_robots();
+                            pause_robots(false);
                         rule_limit_count = new_rule_limit_count;
                     }
                     else if (dragging_scroller_type == DRAGGING_SCROLLER_ROBOTS)
