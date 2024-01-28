@@ -303,6 +303,7 @@ public:
     bool full_screen = false;
     std::string tooltip_string = "";
     XYRect tooltip_rect;
+    std::string rule_already_present_str;
 
     int skip_level = 0;
     bool load_level = true;

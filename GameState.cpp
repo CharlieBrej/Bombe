@@ -1997,9 +1997,17 @@ std::string GameState::translate(std::string s)
 {
     SaveObjectMap* lang = lang_data->get_item(language)->get_map();
     SaveObjectMap* trans = lang->get_item("translate")->get_map();
+
+    std::string append;
+    size_t pos;
+    if ((pos = s.find(":")) != std::string::npos)
+    {
+        append = s.substr(pos + 1);
+        s = s.substr(0, pos);
+    }
     if (trans->has_key(s))
-        return trans->get_string(s);
-    std::cout << s << std::endl;
+        s = trans->get_string(s);
+    s += append;
     return s;
 }
 void GameState::render_tooltip()
@@ -5322,7 +5330,20 @@ void GameState::render(bool saving)
                     }
                     else if (constructed_rule_is_already_present)
                     {
-                        render_button(XYPos(1088, 768), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), "Rule Already Present", 1);
+                        int cnt = 0;
+                        for (GridRule& rule : rules[game_mode])
+                        {
+                            if (!rule.deleted)
+                            {
+                                if (constructed_rule_is_already_present == &rule)
+                                    break;
+                                cnt++;
+                            }
+                        }
+
+                        rule_already_present_str = "Rule Already Present: #" + std::to_string(cnt);
+
+                        render_button(XYPos(1088, 768), XYPos(right_panel_offset.x + button_size * 4, right_panel_offset.y + button_size), rule_already_present_str.c_str(), 1);
                     }
                     else if (replace_rule && !duplicate_rule)
                     {
