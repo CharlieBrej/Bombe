@@ -365,6 +365,8 @@ GridRule::GridRule(SaveObject* sobj)
         used_count = omap->get_num("used_count");
     if (omap->has_key("clear_count"))
         clear_count = omap->get_num("clear_count");
+    if (omap->has_key("cpu_time"))
+        cpu_time = omap->get_num("cpu_time");
 //    assert(is_legal() == GridRule::OK);
 }
 
@@ -391,6 +393,7 @@ SaveObject* GridRule::save(bool lite)
     {
         omap->add_num("used_count", used_count);
         omap->add_num("clear_count", clear_count);
+        omap->add_num("cpu_time", cpu_time);
     }
     return omap;
 }

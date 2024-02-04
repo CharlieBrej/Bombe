@@ -214,6 +214,7 @@ public:
     int display_rules_sort_col_2nd = 1;
     bool display_rules_sort_dir_2nd = true;
     bool display_rules_level = false;
+    bool display_rules_cpu = false;
     int display_levels_sort_col = 0;
     bool display_levels_sort_dir = true;
     int display_levels_sort_col_2nd = 1;

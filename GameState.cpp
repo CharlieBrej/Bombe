@@ -3629,28 +3629,59 @@ void GameState::render(bool saving)
         {
             {
                 SDL_Rect src_rect = {display_rules_level ? 1408 : 1600, 2144, 192, 192};
+                if (display_rules_cpu)
+                {
+                    src_rect.x = 2432;
+                    src_rect.y = 2304;
+                }
+                
                 SDL_Rect dst_rect = {list_pos.x + 5 * cell_width, list_pos.y, cell_width, cell_width};
 //                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
+                if (display_rules_cpu)
+                    add_tooltip(dst_rect, "CPU");
+                else
+                    add_tooltip(dst_rect, display_rules_level ? "Level" : "Global");
+                    
+
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
-                    display_rules_level = !display_rules_level;
+                {
+                    if (display_rules_cpu)
+                    {
+                        display_rules_cpu = false;
+                        display_rules_level = false;
+                    }
+                    else if (display_rules_level)
+                        display_rules_cpu = true;
+                    else
+                        display_rules_level = true;
+                }
             }
             {
                 SDL_Rect src_rect = {704 + 0 * 192, 2336, 192, 192};
+                if (display_rules_cpu)
+                {
+                    src_rect.x = 2816;
+                    src_rect.y = 2304;
+                }
                 SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
 //                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Times Applied");
+                add_tooltip(dst_rect, display_rules_cpu ? "CPU Time" : "Times Applied");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                     col_click = 6;
             }
             {
                 SDL_Rect src_rect = {512, 192, 192, 192};
+                if (display_rules_cpu)
+                {
+                    src_rect.x = 3008;
+                    src_rect.y = 2304;
+                }
                 SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width, cell_width};
 //                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-                add_tooltip(dst_rect, "Cells Cleared");
+                add_tooltip(dst_rect, display_rules_cpu ? "CPU Time per Cell Cleared" : "Cells Cleared");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                     col_click = 7;
             }
@@ -3741,8 +3772,31 @@ void GameState::render(bool saving)
                 {
                     if (a.rule->cpu_time < b.rule->cpu_time)
                         return true;
-                    if (b.rule->cpu_time < a.rule->cpu_time)
+                    else
                         return false;
+                }
+                if (cpu_debug && (col == 7))
+                {
+                    if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        b_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return false;
+                    if (b_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                        a_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                            return true;
+
+                    if (!a.rule->clear_count && a.rule->cpu_time)
+                        return false;
+                    if (!b.rule->clear_count && b.rule->cpu_time)
+                        return true;
+
+                    double fa = (double)a.rule->cpu_time / (double)a.rule->clear_count;
+                    double fb = (double)b.rule->cpu_time / (double)b.rule->clear_count;
+                    if (!a.rule->cpu_time)
+                        fa = 0;
+                    if (!b.rule->cpu_time)
+                        fb = 0;
+
+                    return fa < fb;
                 }
                 if (col == 6)
                 {
@@ -3785,8 +3839,8 @@ void GameState::render(bool saving)
             i++;
         }
 
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, grid, debug_bits[0]));
-        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, grid, debug_bits[0]));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col_2nd, display_rules_sort_dir_2nd, display_rules_level, grid, display_rules_cpu));
+        std::stable_sort (rules_list.begin(), rules_list.end(), RuleDiplaySort(display_rules_sort_col, display_rules_sort_dir, display_rules_level, grid, display_rules_cpu));
 
         if (arrow_key_pressed)
         {
@@ -3882,19 +3936,35 @@ void GameState::render(bool saving)
             {
                 render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(4 * cell_width + i * cell_height, cell_width + rule_index * cell_height), cell_height);
             }
-            if(debug_bits[0])
+            if(!display_clipboard_rules)
             {
-                render_number(rule.cpu_time, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
-            }
-            else if(!display_clipboard_rules && rule.apply_region_type.type != RegionType::VISIBILITY)
-            {
-                int num_used = display_rules_level ? grid->level_used_count[&rule] : rule.used_count;
-                int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
-                render_number(num_used, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
-                render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                if(display_rules_cpu)
+                {
+                    render_number(rule.cpu_time, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                    if (rule.clear_count)
+                    {
+                        double f = (double)rule.cpu_time / (double)rule.clear_count;
+                        std::string s = std::to_string(f);
+                        render_number_string(s, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                    }
+                    else if (rule.apply_region_type.type != RegionType::VISIBILITY)
+                    {
+                        SDL_Rect src_rect = {2304, 384, 192, 192};
+                        SDL_Rect dst_rect = {list_pos.x + 7 * cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + rule_index * cell_height, cell_height, cell_height};
+                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    }
+                        
+                }
+                else if (rule.apply_region_type.type != RegionType::VISIBILITY)
+                {
+                    int num_used = display_rules_level ? grid->level_used_count[&rule] : rule.used_count;
+                    int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
+                    render_number(num_used, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                    render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                }
             }
 
-            if ((mouse - list_pos - XYPos(0, cell_width + rule_index * cell_height)).inside(XYPos(cell_width * 8, cell_height)))
+            if ((mouse - list_pos - XYPos(cell_width * 4, cell_width + rule_index * cell_height)).inside(XYPos(cell_width, cell_height)))
             {
                 tooltip_hover_rule = &rule;
             }
@@ -7510,11 +7580,6 @@ void GameState::button_down(uint64_t key)
             if (right_panel_mode == RIGHT_MENU_REGION)
                 right_panel_mode = RIGHT_MENU_NONE;
             get_hint = false;
-            return;
-        }
-        else if (key == SDLK_F6)
-        {
-            debug_bits[0] = !debug_bits[0];
             return;
         }
         else if (key == key_codes[KEY_CODE_FULL_SCREEN])
