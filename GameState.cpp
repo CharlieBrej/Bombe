@@ -886,7 +886,8 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
 
 void GameState::load_grid(std::string s)
 {
-    filter_pos.clear();
+    filter_pos_and.clear();
+    filter_pos_not.clear();
     grid->commit_level_counts();
     delete grid;
     grid = Grid::Load(s);
@@ -2127,6 +2128,8 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
         SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0xC0 / 255, contrast * 0x10 / 255);
     else if (style == 3)
         SDL_SetTextureColorMod(sdl_texture, contrast * 0xff / 255, contrast * 0x00 / 255, contrast * 0x00 / 255);
+    else if (style == 4)
+        SDL_SetTextureColorMod(sdl_texture, contrast * 0x00 / 255, contrast * 0x00 / 255, contrast * 0xff / 255);
 
     bool hover =   ((mouse.x >= dst_rect.x) &&
                     (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -4250,9 +4253,13 @@ void GameState::render(bool saving)
                 {
                     bg_col = Colour(0, contrast, 0);
                 }
-                if (filter_pos.get(pos))
+                if (filter_pos_and.get(pos))
                 {
-                    bg_col = Colour(contrast ,0, 0);
+                    bg_col = Colour(contrast, 0, 0);
+                }
+                if (filter_pos_not.get(pos))
+                {
+                    bg_col = Colour(0, 0, contrast);
                 }
                 if (hover_rulemaker && hover_squares_highlight.get(pos))
                 {
@@ -4334,9 +4341,9 @@ void GameState::render(bool saving)
             bool has_hover = false;
             for (GridRegion& region : grid->regions)
             {
-                if (!ctrl_held && !filter_pos.none() && !region.elements.contains(filter_pos))
+                if (!ctrl_held && !filter_pos_and.none() && !region.elements.contains(filter_pos_and))
                     continue;
-                if (mouse_filter_pos.x >= 0 && !filter_pos.empty() && !region.elements.contains(mouse_filter_pos))
+                if (!ctrl_held && !filter_pos_not.none() && (region.elements & filter_pos_not).any())
                     continue;
                 if (region.vis_level == vis_level)
                 {
@@ -4640,15 +4647,17 @@ void GameState::render(bool saving)
     if (render_lock(PROG_LOCK_FILTER, XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + 1 * button_size), XYPos(button_size, button_size)))
     {
         render_box(left_panel_offset + XYPos(button_size * 3, button_size * 1), XYPos(button_size * 2, button_size), button_size/4, 4);
-        if (!filter_pos.empty())
-        render_button(XYPos(1472, 192), XYPos(left_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 1), "Clear Filter");
+        if (!filter_pos_not.empty() || !filter_pos_and.empty())
+            render_button(XYPos(1472, 192), XYPos(left_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 1), "Clear Filter");
 
         {
-            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter", (mouse_mode == MOUSE_MODE_FILTER) ? 3 : 0);
-            int s = filter_pos.count();
-            if (s)
+            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter", (mouse_mode == MOUSE_MODE_FILTER) ? (filter_mode ? 4 : 3) : 0);
+            int s = filter_pos_and.count();
+            int r = filter_pos_not.count();
+            if (s || r)
             {
-                render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size / 4, button_size * 1 + button_size / 4.3), XYPos(button_size/2, button_size/4));
+                render_number(s, left_panel_offset + XYPos(button_size * 4 + button_size * 0.1, button_size * 1 + button_size * 0.6), XYPos(button_size/4, button_size/4));
+                render_number(r, left_panel_offset + XYPos(button_size * 4 + button_size * 0.65, button_size * 1 + button_size * 0.6), XYPos(button_size/4, button_size/4));
             }
         }
     }
@@ -6487,7 +6496,21 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
     {
         XYPos gpos = grid->get_square_from_mouse_pos(pos - grid_offset - scaled_grid_offset, grid_pitch);
         if (gpos.x >= 0)
-            filter_pos.flip(gpos);
+        {
+            if (filter_mode != bool(btn != 0))
+            {
+                filter_pos_not.flip(gpos);
+                if (filter_pos_not.get(gpos) && filter_pos_and.get(gpos))
+                    filter_pos_and.clear(gpos);
+
+            }
+            else
+            {
+                filter_pos_and.flip(gpos);
+                if (filter_pos_not.get(gpos) && filter_pos_and.get(gpos))
+                    filter_pos_not.clear(gpos);
+            }
+        }
     }
     else if (mouse_mode == MOUSE_MODE_PAINT)
     {
@@ -6564,10 +6587,15 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     if (prog_seen[PROG_LOCK_FILTER])
     {
         if ((pos - XYPos(button_size * 3, button_size * 1)).inside(XYPos(button_size,button_size)))
-            filter_pos.clear();
+        {
+            filter_pos_and.clear();
+            filter_pos_not.clear();
+        }
         if ((pos - XYPos(button_size * 4, button_size * 1)).inside(XYPos(button_size,button_size)))
         {
-            if(mouse_mode == MOUSE_MODE_FILTER)
+            if (btn)
+                filter_mode = !filter_mode;
+            else if(mouse_mode == MOUSE_MODE_FILTER)
                 mouse_mode = MOUSE_MODE_NONE;
             else
                 mouse_mode = MOUSE_MODE_FILTER;

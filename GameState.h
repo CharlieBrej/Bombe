@@ -275,7 +275,9 @@ public:
     GridRegionCause inspected_rule;
     std::set<GridRule*> selected_rules;
     bool rule_gen_target_square_count = false;
-    XYSet filter_pos;
+    XYSet filter_pos_and;
+    XYSet filter_pos_not;
+    bool filter_mode = false;
 
     XYPos window_size;
     int grid_size;
