@@ -2097,8 +2097,15 @@ void GameState::render_box(XYPos pos, XYPos size, int corner_size, int style)
 
 void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
 {
-    std::string digits = std::to_string(num);
-    render_number_string(digits, pos, siz);
+    std::string s = std::to_string(num);
+    int n = s.length() - 3;
+    int end = (num >= 0) ? 0 : 1;
+    while (n > end)
+    {
+        s.insert(n, " ");
+        n -= 3;
+    }
+    render_number_string(s, pos, siz);
 }
 
 // style 0 - normal, 1 - unclickable, 2 - warning, 3 - red
@@ -2153,7 +2160,7 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
     return hover;
 }
 
-static void get_char_texture(char c, char pc, int& pos, int &width, int &cwidth)
+static void get_char_texture(char c, char pc, int& pos, float &width, float &cwidth)
 {
     cwidth = -1;
     if (c == '0')
@@ -2196,6 +2203,10 @@ static void get_char_texture(char c, char pc, int& pos, int &width, int &cwidth)
     {
         pos = 26; width = 2;
     }
+    else if (c == ' ' )
+    {
+        pos = 48; width = 0.5;
+    }
     else if (c >= 'a' && c <= 'z')
     {
         pos = 28 + (c - 'a') * 2; width = 2;
@@ -2208,7 +2219,7 @@ static void get_char_texture(char c, char pc, int& pos, int &width, int &cwidth)
 
 void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, XYPos style)
 {
-    int width = 0;
+    float width = 0;
     char pc = 0;
     for (unsigned i = 0; i < digits.size(); i++)
     {
@@ -2220,8 +2231,8 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
         }
         char c = digits[i];
         int p;
-        int w;
-        int cw;
+        float w;
+        float cw;
         get_char_texture(c, pc, p, w, cw);
         width += w;
         pc = c;
@@ -2290,12 +2301,12 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
     {
         char c = digits[i];
         int p;
-        int w;
-        int cw;
+        float w;
+        float cw;
         get_char_texture(c, pc, p, w, cw);
         pc = c;
         
-        SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, cw * texture_char_width, 3 * texture_char_width};
+        SDL_Rect src_rect = {p * texture_char_width, texture_char_pos, int(cw * texture_char_width), 3 * texture_char_width};
         SDL_Rect dst_rect = {pos.x + int((w - cw) * s / 2), pos.y, int(cw * cs), int(3 * cs)};
 
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
