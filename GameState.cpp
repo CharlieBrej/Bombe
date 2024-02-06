@@ -2096,7 +2096,7 @@ void GameState::render_box(XYPos pos, XYPos size, int corner_size, int style)
         SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom right
 }
 
-void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
+void GameState::render_number(unsigned num, XYPos pos, XYPos siz, XYPos style)
 {
     std::string s = std::to_string(num);
     int n = s.length() - 3;
@@ -2106,7 +2106,7 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz)
         s.insert(n, " ");
         n -= 3;
     }
-    render_number_string(s, pos, siz);
+    render_number_string(s, pos, siz, style);
 }
 
 // style 0 - normal, 1 - unclickable, 2 - warning, 3 - red
@@ -3206,7 +3206,7 @@ void GameState::render(bool saving)
             if (s.hidden)
                 continue;
 
-            render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10), XYPos(1,0));
 
             {
                 SDL_Color color = {contrast, contrast, contrast};
@@ -3231,7 +3231,7 @@ void GameState::render(bool saving)
                 SDL_FreeSurface(text_surface);
 
             }
-            render_number(s.score, list_pos + XYPos(6 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(s.score, list_pos + XYPos(6 * cell_width, cell_width + score_index * cell_height + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10), XYPos(1,0));
         }
         {
             SDL_Rect src_rect = {1664, 1344, 64, 64};
@@ -3455,7 +3455,7 @@ void GameState::render(bool saving)
             {
                 render_box(list_pos + XYPos(0, cell_width + level_index * cell_height), XYPos(cell_width * 7, cell_height), cell_height / 4);
             }
-            render_number(index, list_pos + XYPos(0 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(index, list_pos + XYPos(0 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10),XYPos(1,0));
 
             {
                 unsigned rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index].stats;
@@ -3478,7 +3478,7 @@ void GameState::render(bool saving)
                     digits = std::to_string((rep / 1000) % 10) + std::to_string((rep / 100) % 10) + "." + std::to_string((rep / 10) % 10) + std::to_string((rep / 1) % 10) + "%";
                 }
 
-                render_number_string(digits, list_pos + XYPos(1 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+                render_number_string(digits, list_pos + XYPos(1 * cell_width, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10),XYPos(1,0));
             }
             {
                 bool rep = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[index].done;
@@ -3503,7 +3503,7 @@ void GameState::render(bool saving)
                         SDL_Point rot_center = {cell_height / 2, cell_height / 2};
 
                         SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (status.robot_done == 1) ? level_index + double(frame) * 0.01 : 0, &rot_center, SDL_FLIP_NONE);
-                        render_number(status.robot_regions, list_pos + XYPos(3 * cell_width + cell_height, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width - cell_height, cell_height*8/10));
+                        render_number(status.robot_regions, list_pos + XYPos(3 * cell_width + cell_height, cell_width + level_index * cell_height + cell_height/10), XYPos(cell_width - cell_height, cell_height*8/10),XYPos(-1,0));
                     }
                     // else
                     // {
@@ -3923,7 +3923,7 @@ void GameState::render(bool saving)
                 render_box(list_pos + XYPos(0, cell_width + rule_index * cell_height), XYPos(cell_width * 8, cell_height), cell_height / 4, 9);
             }
 
-            render_number(rd.index, list_pos + XYPos(0 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width, cell_height*8/10));
+            render_number(rd.index, list_pos + XYPos(0 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10),XYPos(1,0));
             {
                 XYPos sp = XYPos(rule.group / 4, rule.group % 4) * 192 + XYPos(2816, 1536);
                 SDL_Rect src_rect = {sp.x, sp.y, 192, 192};
@@ -3954,12 +3954,14 @@ void GameState::render(bool saving)
             {
                 if(display_rules_cpu)
                 {
-                    render_number(rule.cpu_time, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                    render_number(rule.cpu_time, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
                     if (rule.clear_count)
                     {
                         double f = (double)rule.cpu_time / (double)rule.clear_count;
-                        std::string s = std::to_string(f);
-                        render_number_string(s, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                        std::ostringstream out;
+                        out << std::fixed << std::setprecision(6) << f;
+                        std::string s = std::move(out).str().substr(0, 7);;
+                        render_number_string(s, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
                     }
                     else if (rule.apply_region_type.type != RegionType::VISIBILITY)
                     {
@@ -3973,8 +3975,8 @@ void GameState::render(bool saving)
                 {
                     int num_used = display_rules_level ? grid->level_used_count[&rule] : rule.used_count;
                     int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
-                    render_number(num_used, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
-                    render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height/10), XYPos(cell_width * 9 / 10, cell_height*8/10));
+                    render_number(num_used, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
+                    render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
                 }
             }
 
@@ -4697,8 +4699,8 @@ void GameState::render(bool saving)
             if (display_rules)
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            render_number_string(digits, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
-            render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size, button_size * 8 / 20));
+            render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 20), XYPos(button_size * 3 / 4, button_size * 8 / 20), XYPos(1,0));
+            render_number(vis_rule_count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 2 + button_size / 2 + button_size / 20), XYPos(button_size * 3 / 4, button_size * 8 / 20), XYPos(1,0));
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Rules", !display_rules);
         }
@@ -4731,7 +4733,7 @@ void GameState::render(bool saving)
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Levels", !display_levels);
 
@@ -4756,7 +4758,7 @@ void GameState::render(bool saving)
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 4), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            render_number(count, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Scores",  !display_scores);
         }
@@ -4782,7 +4784,7 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            render_number(region_vis_counts[0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 2, button_size * 2, button_size};
             add_tooltip(dst_rect, "Visible", vis_level != GRID_VIS_LEVEL_SHOW);
@@ -4794,7 +4796,7 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            render_number(region_vis_counts[1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 3, button_size * 2, button_size};
             add_tooltip(dst_rect, "Hidden", vis_level != GRID_VIS_LEVEL_HIDE);
@@ -4806,7 +4808,7 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 4), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+            render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 4, button_size * 2, button_size};
             add_tooltip(dst_rect, "Trash", vis_level != GRID_VIS_LEVEL_BIN);
@@ -5384,7 +5386,7 @@ void GameState::render(bool saving)
                                 if (rule_illogical_reason_vars[i] < 0)
                                     continue;
                                 std::string v = std::string(1, 'a' + i) + "g" + std::to_string(rule_illogical_reason_vars[i]);
-                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8));
+                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8),XYPos(-1, 0));
                             }
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
@@ -5405,7 +5407,7 @@ void GameState::render(bool saving)
                                 if (rule_illogical_reason_vars[i] < 0)
                                     continue;
                                 std::string v = std::string(1, 'a' + i) + "g" + std::to_string(rule_illogical_reason_vars[i]);
-                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8));
+                                render_number_string(v, right_panel_offset + XYPos(int(-7.7 * button_size), (i + 1) * button_size), XYPos(button_size * 1.6, button_size * 0.8),XYPos(-1, 0));
                             }
                             render_rule(rule_illogical_reason, right_panel_offset + XYPos(-5.5 * button_size, button_size), button_size, -1, true);
                         }
@@ -5601,10 +5603,10 @@ void GameState::render(bool saving)
                     add_tooltip(dst_rect, "Cells Cleared", false);
                 }
 
-                render_number(grid->level_used_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-                render_number(inspected_rule.rule->used_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-                render_number(grid->level_clear_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
-                render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
+                render_number(grid->level_used_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+                render_number(inspected_rule.rule->used_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+                render_number(grid->level_clear_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+                render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
             }
         }
     }
@@ -5701,8 +5703,8 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "To Do", false);
             }
             {
-                render_number(done_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 4.25), XYPos(button_size * 0.9, button_size/2));
-                render_number(todo_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 5.25), XYPos(button_size * 0.9, button_size/2));
+                render_number(done_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 4.25), XYPos(button_size * 0.9, button_size/2), XYPos(1, 0));
+                render_number(todo_count, XYPos(right_panel_offset.x + 2 * button_size, right_panel_offset.y + button_size * 5.25), XYPos(button_size * 0.9, button_size/2), XYPos(1, 0));
             }
             {
                 render_box(right_panel_offset + XYPos(button_size * 2, button_size * 3), XYPos(button_size, button_size), button_size/4, 4);
