@@ -1436,7 +1436,7 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
                     if (skip_hide && rule.apply_region_type.value == 1)
                         continue;
                     unsigned oldtime = SDL_GetTicks();
-                    Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region, false);
+                    Grid::ApplyRuleResp resp  = grid->apply_rule(rule, new_region);
                     unsigned newtime = SDL_GetTicks();
                     if (newtime - oldtime)
                         rule.cpu_time += newtime - oldtime;
@@ -3814,12 +3814,12 @@ void GameState::render(bool saving)
                 }
                 if (col == 6)
                 {
-                    if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
-                        b_.rule->apply_region_type.type != RegionType::VISIBILITY)
-                            return false;
-                    if (b_.rule->apply_region_type.type == RegionType::VISIBILITY &&
-                        a_.rule->apply_region_type.type != RegionType::VISIBILITY)
-                            return true;
+                    // if (a_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                    //     b_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                    //         return false;
+                    // if (b_.rule->apply_region_type.type == RegionType::VISIBILITY &&
+                    //     a_.rule->apply_region_type.type != RegionType::VISIBILITY)
+                    //         return true;
                     if (cur_level)
                         return (grid->level_used_count[a.rule] < grid->level_used_count[b.rule]);
                     else
@@ -3984,12 +3984,15 @@ void GameState::render(bool saving)
                     }
                         
                 }
-                else if (rule.apply_region_type.type != RegionType::VISIBILITY)
+                else
                 {
                     int num_used = display_rules_level ? grid->level_used_count[&rule] : rule.used_count;
-                    int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
                     render_number(num_used, list_pos + XYPos(6 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
-                    render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
+                    if (rule.apply_region_type.type != RegionType::VISIBILITY)
+                    {
+                        int num_clear = display_rules_level ? grid->level_clear_count[&rule] : rule.clear_count;
+                        render_number(num_clear, list_pos + XYPos(7 * cell_width, cell_width + rule_index * cell_height + cell_height*0.25), XYPos(cell_width * 9 / 10, cell_height*5/10),XYPos(1,0));
+                    }
                 }
             }
 

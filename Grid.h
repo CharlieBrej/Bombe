@@ -397,8 +397,8 @@ public:
         APPLY_RULE_RESP_HIT
     };
 
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[32]);
-    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region, bool always_ignore_bin = false);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* regions[4], int var_counts[32], bool update_stats = true);
+    ApplyRuleResp apply_rule(GridRule& rule, GridRegion* region, bool update_stats = true);
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();

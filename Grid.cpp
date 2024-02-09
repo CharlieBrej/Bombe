@@ -3056,7 +3056,7 @@ static void add_clear_count(GridRegion* region, std::set<GridRule*>& rules_to_cr
     }
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[32])
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_counts[32], bool update_stats)
 {
     if (rule.paused)
         return APPLY_RULE_RESP_NONE;
@@ -3075,6 +3075,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
                     r[i]->vis_level = vis_level;
                     r[i]->visibility_force = GridRegion::VIS_FORCE_NONE;
                     r[i]->vis_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+                    if (update_stats)
+                        level_used_count[&rule]++;
                 }
             }
         }
@@ -3339,7 +3341,7 @@ static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRe
     return false;
 }
 
-Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region, bool always_ignore_bin)
+Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region, bool update_stats)
 {
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
@@ -3373,8 +3375,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                 if ((r.vis_level == GRID_VIS_LEVEL_BIN) && (rule.apply_region_type.type != RegionType::VISIBILITY))
                     continue;
                 if ((r.vis_level == GRID_VIS_LEVEL_BIN) && (r.visibility_force == GridRegion::VIS_FORCE_USER))
-                    continue;
-                if ((r.vis_level == GRID_VIS_LEVEL_BIN) && always_ignore_bin)
                     continue;
 
                 pos_regions[i].push_back(&r);
@@ -3439,7 +3439,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                                 assert(rule.matches(r0, r1, r2, r3, var_counts));
                                 if (!are_connected(r0, r1, r2, r3)) continue;
                                 GridRegion* regions[4] = {r0, r1, r2, r3};
-                                ApplyRuleResp resp = apply_rule(rule, regions, var_counts);
+                                ApplyRuleResp resp = apply_rule(rule, regions, var_counts, update_stats);
                                 if ((resp != APPLY_RULE_RESP_NONE) && (rule.apply_region_type.type == RegionType::SET))
                                     return resp;
                                 if (resp == APPLY_RULE_RESP_HIT)
