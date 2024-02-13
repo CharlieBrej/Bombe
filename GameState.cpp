@@ -7342,6 +7342,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1 + i])
                 {
                     select_region_type.var ^= (1 << i);
+                    if (select_region_type.type != RegionType::NONE &&
+                        select_region_type.type != RegionType::SET &&
+                        select_region_type.type != RegionType::VISIBILITY)
                     region_type.var = select_region_type.var;
                 }
             }
