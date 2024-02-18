@@ -3147,10 +3147,9 @@ void GameState::render(bool saving)
 
     if (display_scores)
     {
-        unsigned row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 7.5;
-        int cell_height = (rules_list_size - cell_width) / row_count;
+        int cell_height = (rules_list_size - cell_width) / display_table_row_count;
         XYPos list_pos = left_panel_offset + XYPos(panel_size.x, 0);
         {
             SDL_Rect src_rect = {704 + 0 * 192, 2144, 192, 192};
@@ -3193,11 +3192,11 @@ void GameState::render(bool saving)
                 grp_index = current_level_group_index + 1;
         if (scores_list_offset < 0)
             scores_list_offset = 0;
-        if (scores_list_offset + row_count > score_tables[game_mode][grp_index].size())
-            scores_list_offset = score_tables[game_mode][grp_index].size() - row_count;
+        if (scores_list_offset + display_table_row_count > int(score_tables[game_mode][grp_index].size()))
+            scores_list_offset = score_tables[game_mode][grp_index].size() - display_table_row_count;
         scores_list_offset = std::max(scores_list_offset, 0);
 
-        for (unsigned score_index = 0; score_index < row_count; score_index++)
+        for (unsigned score_index = 0; score_index < unsigned(display_table_row_count); score_index++)
         {
 
             if (score_index + scores_list_offset >= score_tables[game_mode][grp_index].size())
@@ -3248,8 +3247,8 @@ void GameState::render(bool saving)
                 scores_list_offset++;
         }
 
-        if (scores_list_offset + row_count > score_tables[game_mode][grp_index].size())
-            scores_list_offset = score_tables[game_mode][grp_index].size() - row_count;
+        if (scores_list_offset + display_table_row_count > int(score_tables[game_mode][grp_index].size()))
+            scores_list_offset = score_tables[game_mode][grp_index].size() - display_table_row_count;
         scores_list_offset = std::max(scores_list_offset, 0);
 
         {
@@ -3258,16 +3257,16 @@ void GameState::render(bool saving)
             int box_height = full_size;
             int box_pos = 0;
 
-            if (all_count > row_count)
+            if (int(all_count) > display_table_row_count)
             {
-                box_height = (row_count * full_size) / all_count;
+                box_height = (display_table_row_count * full_size) / all_count;
                 box_height = std::max(cell_width / 4, box_height);
-                box_pos = (scores_list_offset * (full_size - box_height)) / (all_count - row_count);
+                box_pos = (scores_list_offset * (full_size - box_height)) / (all_count - display_table_row_count);
                 if (display_rules_click_drag && ((display_rules_click_pos - list_pos - XYPos(cell_width * 7, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 5.5))))
                 {
                     int p = mouse.y - list_pos.y - cell_width * 1.5 - box_height / 2;
                     p = std::max(p, 0);
-                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    p = (p * (all_count - display_table_row_count)) / (full_size - box_height);
                     scores_list_offset = p;
 
                 }
@@ -3275,18 +3274,17 @@ void GameState::render(bool saving)
 
             render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-        if (scores_list_offset + row_count > score_tables[game_mode][grp_index].size())
-            scores_list_offset = score_tables[game_mode][grp_index].size() - row_count;
+        if (scores_list_offset + display_table_row_count > int(score_tables[game_mode][grp_index].size()))
+            scores_list_offset = score_tables[game_mode][grp_index].size() - display_table_row_count;
         scores_list_offset = std::max(scores_list_offset, 0);
         display_rules_click = false;
 
     }
     else if (display_levels)
     {
-        int row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 7.5;
-        int cell_height = (rules_list_size - cell_width) / row_count;
+        int cell_height = (rules_list_size - cell_width) / display_table_row_count;
         int col_click = -1;
         XYPos list_pos = left_panel_offset + XYPos(panel_size.x, 0);
         {
@@ -3435,11 +3433,11 @@ void GameState::render(bool saving)
                     break;
                 }
         display_levels_center_current = false;
-        if (levels_list_offset + row_count > (int)levels_list.size())
-            levels_list_offset = levels_list.size() - row_count;
+        if (levels_list_offset + display_table_row_count > (int)levels_list.size())
+            levels_list_offset = levels_list.size() - display_table_row_count;
         levels_list_offset = std::max(levels_list_offset, 0);
 
-        for (int level_index = 0; level_index < row_count; level_index++)
+        for (int level_index = 0; level_index < display_table_row_count; level_index++)
         {
             if (!(level_index % 2))
             {
@@ -3540,8 +3538,8 @@ void GameState::render(bool saving)
                 levels_list_offset++;
         }
 
-        if (levels_list_offset + row_count > (int)levels_list.size())
-            levels_list_offset = levels_list.size() - row_count;
+        if (levels_list_offset + display_table_row_count > (int)levels_list.size())
+            levels_list_offset = levels_list.size() - display_table_row_count;
         levels_list_offset = std::max(levels_list_offset, 0);
 
         {
@@ -3550,15 +3548,15 @@ void GameState::render(bool saving)
             int box_height = full_size;
             int box_pos = 0;
 
-            if (all_count > row_count)
+            if (all_count > display_table_row_count)
             {
-                box_height = (row_count * full_size) / all_count;
+                box_height = (display_table_row_count * full_size) / all_count;
                 box_height = std::max(cell_width / 4, box_height);
-                box_pos = (levels_list_offset * (full_size - box_height)) / (all_count - row_count);
+                box_pos = (levels_list_offset * (full_size - box_height)) / (all_count - display_table_row_count);
                 if (display_rules_click_drag && ((display_rules_click_pos - list_pos - XYPos(cell_width * 7, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 5.5))))
                 {
                     int p = mouse.y - list_pos.y - cell_width * 1.5 - box_height / 2;
-                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    p = (p * (all_count - display_table_row_count)) / (full_size - box_height);
                     levels_list_offset = p;
                 }
             }
@@ -3566,17 +3564,16 @@ void GameState::render(bool saving)
             render_box(list_pos + XYPos(cell_width * 7, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
 
-        if (levels_list_offset + row_count > (int)levels_list.size())
-            levels_list_offset = levels_list.size() - row_count;
+        if (levels_list_offset + display_table_row_count > (int)levels_list.size())
+            levels_list_offset = levels_list.size() - display_table_row_count;
         levels_list_offset = std::max(levels_list_offset, 0);
         display_rules_click = false;
     }
     else if (display_rules)
     {
-        int row_count = 16;
         int rules_list_size = panel_size.y;
         int cell_width = rules_list_size / 8.5;
-        int cell_height = (rules_list_size - cell_width) / row_count;
+        int cell_height = (rules_list_size - cell_width) / display_table_row_count;
 
         int col_click = -1;
         XYPos list_pos = left_panel_offset + XYPos(panel_size.x, 0);
@@ -3901,11 +3898,11 @@ void GameState::render(bool saving)
                 }
         display_rules_center_current = false;
 
-        if (rules_list_offset + row_count > (int)rules_list.size())
-            rules_list_offset = rules_list.size() - row_count;
+        if (rules_list_offset + display_table_row_count > (int)rules_list.size())
+            rules_list_offset = rules_list.size() - display_table_row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
-        for (int rule_index = 0; rule_index < row_count; rule_index++)
+        for (int rule_index = 0; rule_index < display_table_row_count; rule_index++)
         {
             if (!(rule_index % 2))
             {
@@ -4160,8 +4157,8 @@ void GameState::render(bool saving)
                 rules_list_offset++;
         }
 
-        if (rules_list_offset + row_count > (int)rules_list.size())
-            rules_list_offset = rules_list.size() - row_count;
+        if (rules_list_offset + display_table_row_count > (int)rules_list.size())
+            rules_list_offset = rules_list.size() - display_table_row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
 
         {
@@ -4170,23 +4167,23 @@ void GameState::render(bool saving)
             int box_height = full_size;
             int box_pos = 0;
 
-            if (all_count > row_count)
+            if (all_count > display_table_row_count)
             {
-                box_height = (row_count * full_size) / all_count;
+                box_height = (display_table_row_count * full_size) / all_count;
                 box_height = std::max(cell_width / 4, box_height);
-                box_pos = (rules_list_offset * (full_size - box_height)) / (all_count - row_count);
+                box_pos = (rules_list_offset * (full_size - box_height)) / (all_count - display_table_row_count);
                 if (display_rules_click_drag && ((display_rules_click_pos - list_pos - XYPos(cell_width * 8, cell_width * 1.5)).inside(XYPos(cell_width/2, cell_width * 6.5))))
                 {
                     int p = mouse.y - list_pos.y - cell_width * 1.5 - box_height / 2;
-                    p = (p * (all_count - row_count)) / (full_size - box_height);
+                    p = (p * (all_count - display_table_row_count)) / (full_size - box_height);
                     rules_list_offset = p;
                 }
             }
 
             render_box(list_pos + XYPos(cell_width * 8, cell_width * 1.5 + box_pos), XYPos(cell_width / 2, box_height), std::min(box_height/2, cell_width / 4));
         }
-        if (rules_list_offset + row_count > (int)rules_list.size())
-            rules_list_offset = rules_list.size() - row_count;
+        if (rules_list_offset + display_table_row_count > (int)rules_list.size())
+            rules_list_offset = rules_list.size() - display_table_row_count;
         rules_list_offset = std::max(rules_list_offset, 0);
         display_rules_click = false;
         if (!display_rules_click_drag)
@@ -8346,7 +8343,15 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
-                if (display_rules)
+                if ((display_rules || display_levels || display_scores) && ctrl_held)
+                {
+                    display_table_row_count *= pow(1.1, -e.wheel.preciseY);
+                    if (display_table_row_count < 15)
+                        display_table_row_count = 15;
+                    if (display_table_row_count > 64)
+                        display_table_row_count = 64;
+                }
+                else if (display_rules)
                     rules_list_offset -= e.wheel.y;
                 else if (display_levels)
                     levels_list_offset -= e.wheel.y;

@@ -87,6 +87,7 @@ public:
     bool display_levels_center_current = false;
     bool display_rules_center_current = false;
     bool display_modes = false;
+    int display_table_row_count = 16;
 
     bool debug_bits[10] = {};
 
