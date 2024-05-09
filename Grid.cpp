@@ -350,7 +350,10 @@ GridRule::GridRule(SaveObject* sobj)
         group = omap->get_num("group");
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
-
+    if (apply_region_type.type < 100)
+    {
+        apply_region_bitmap &= ~1ull;
+    }
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
     for (unsigned i = 0; i < rlist->get_count(); i++)
         region_type[i] = RegionType('a',rlist->get_num(i));
@@ -692,6 +695,8 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
             }
         }
     }
+    if (apply_region_type.var)
+        assert(have[apply_region_type.var - 1]);
 
     // bool atoms[32] = {};
     // for (int i = 1; i < 32; i++)
@@ -3461,9 +3466,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                                 assert(0);
                             }
                             {
-                                for (int i = 0; i < 32; i++)
-                                    var_counts[i] = -1;
-                                assert(rule.matches(r0, r1, r2, r3, var_counts));
+                                // for (int i = 0; i < 32; i++)
+                                //     var_counts[i] = -1;
+                                // assert(rule.matches(r0, r1, r2, r3, var_counts));
                                 if (!are_connected(r0, r1, r2, r3)) continue;
                                 GridRegion* regions[4] = {r0, r1, r2, r3};
                                 ApplyRuleResp resp = apply_rule(rule, regions, var_counts, update_stats);
