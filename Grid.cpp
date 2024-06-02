@@ -2913,8 +2913,8 @@ bool Grid::add_region(GridRegion& reg, bool front)
     {
         GridRegion& r = **i;
         cnt++;
-        if (cnt > 100)
-            return false;
+        // if (cnt > 100)
+        //     return false;
         if (r.gen_cause == reg.gen_cause)
         {
             return false;
