@@ -4,6 +4,7 @@
 #include "Grid.h"
 #include <bit>
 #include <sstream>
+#include <algorithm>
 
 bool IS_DEMO = false;
 bool IS_PLAYTEST = false;
@@ -634,7 +635,7 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                             break;
                         }
                     }
-                    else if (have[(i ^ j) - 1])
+                    else if (have[(i ^ j) - 1]) // AB+BC+CA -> 2ABC
                     {
                         int vi = (i | j) - 1;
                         if (!have[vi])
@@ -643,6 +644,31 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                             add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_TRIPLE, true, vi, i, j, i ^ j));
                             i = 0;
                             break;
+                        }
+                    }
+                    else // ABX+CDX-ACX -> BDX
+                    {
+                        for (int k = 1; k < 32; k++)
+                        {
+                            if (k == i)
+                                continue;
+                            if (k == j)
+                                continue;
+                            if ((k & (i | j)) != k)
+                                continue;
+                            int both = i & j;
+                            if ((k & both) != both)
+                                continue;
+                            int cov = i ^ j;
+                            int vi = (k ^ cov) - 1;
+                            if (!have[vi])
+                            {
+                                have[vi] = true;
+                                add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_QUAD, true, vi, i, j, k));
+                                i = 0;
+                                j = 32;
+                                break;
+                            }
                         }
                     }
                 }
@@ -986,6 +1012,9 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
             if (v % 2)
                 return false;
             v /= 2;
+        } else if (op.op == FastOp::VAR_QUAD) {
+            v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] - var_counts[op.p3 - 1];
+//            assert(!(v & 1));
         } else {
             assert(0);
         }
@@ -2905,6 +2934,8 @@ bool Grid::is_solved(void)
 
 bool Grid::add_region(GridRegion& reg, bool front)
 {
+    assert(region_is_correct(&reg));
+
     if (regions_set.count(&reg)) 
         return false;
     int cnt = 0;
@@ -2933,7 +2964,7 @@ bool Grid::add_region(GridRegion& reg, bool front)
             cnt++;
     }
     assert(!reg.type.var);
-    if (cnt >= 0)
+//    if (cnt >= 0)
         assert((reg.type.apply_rule_imp<bool,int>(cnt, reg.type.value)));
 
 
@@ -3451,12 +3482,12 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                             for (int i = 0; i < 32; i++)
                                 var_counts2[i] = -1;
                             bool m2 = rule.matches(r0, r1, r2, r3, var_counts2);
-                            // if (!m2)
-                            //     continue;
-                            // for (int i = 0; i < 32; i++)
-                            // {
-                            //     assert(var_counts2[i] == var_counts[i]);
-                            // }
+                            if (!m2)
+                                continue;
+                            for (int i = 0; i < 32; i++)
+                            {
+                                assert(var_counts2[i] == var_counts[i]);
+                            }
                             if (m != m2)
                             {
                                 for (int i = 0; i < 32; i++)
@@ -3466,9 +3497,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                                 assert(0);
                             }
                             {
-                                // for (int i = 0; i < 32; i++)
-                                //     var_counts[i] = -1;
-                                // assert(rule.matches(r0, r1, r2, r3, var_counts));
+                                for (int i = 0; i < 32; i++)
+                                    var_counts[i] = -1;
+                                assert(rule.matches(r0, r1, r2, r3, var_counts));
                                 if (!are_connected(r0, r1, r2, r3)) continue;
                                 GridRegion* regions[4] = {r0, r1, r2, r3};
                                 ApplyRuleResp resp = apply_rule(rule, regions, var_counts, update_stats);
@@ -3508,6 +3539,21 @@ void Grid::add_new_regions()
     }
     regions.splice(regions.end(), regions_to_add);
     regions_to_add_multiset.clear();
+}
+
+bool Grid::region_is_correct(GridRegion* r)
+{
+    unsigned bombs = 0;
+    FOR_XY_SET(pos, r->elements)
+    {
+        if (vals[pos].bomb)
+            bombs++;
+    }
+    int dummy[32] = {};
+    
+    bool valid = r->type.apply_int_rule(bombs, dummy);
+    assert(valid);
+    return valid;
 }
 
 GridRegion* Grid::add_one_new_region(GridRegion* r)
@@ -3570,6 +3616,7 @@ GridRegion* Grid::add_one_new_region(GridRegion* r)
         }
         it++;
     }
+    assert(region_is_correct(&*best_reg));
     if ((*best_reg).gen_cause.rule && (*best_reg).gen_cause.rule->apply_region_type.type != RegionType::SET)
         level_used_count[(*best_reg).gen_cause.rule]++;
 

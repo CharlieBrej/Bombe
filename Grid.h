@@ -250,6 +250,7 @@ public:
             VAR_ADD,
             VAR_SUB,
             VAR_TRIPLE,
+            VAR_QUAD,
             MIN_CELL_COUNT,
         };
         OpType op;
@@ -402,6 +403,7 @@ public:
 //    ApplyRuleResp apply_rule(GridRule& rule, bool force = false);
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
+    bool region_is_correct(GridRegion* r);
     GridRegion* add_one_new_region(GridRegion* r);
     void clear_regions();
     void commit_level_counts();

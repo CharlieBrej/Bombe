@@ -848,9 +848,10 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 bool GameState::rule_is_permitted(GridRule& rule, int mode)
 {   
     // GridRule why;
-    // if (rule.is_legal(why) != GridRule::OK)
+    // int vars[5];
+    // if (rule.is_legal(why, vars) != GridRule::OK)
     //     return false;
-    // GridRule::IsLogicalRep rep = rule.is_legal(why);
+    // GridRule::IsLogicalRep rep = rule.is_legal(why, vars);
     // if (rep == GridRule::OK || rep == GridRule::LOSES_DATA)
     // {}
     // else
@@ -1472,8 +1473,10 @@ static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *insp
 
     if (!new_region->deleted)
     {
+        int idx = -1;
         for (GridRule& rule : rules)
         {
+            idx++;
             if (rule.deleted)
                 continue;
             if (rule.paused)
