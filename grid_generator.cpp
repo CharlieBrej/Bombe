@@ -1,5 +1,6 @@
 #include "Grid.h"
 #include "LevelSet.h"
+#include <algorithm>
 
 static pthread_mutex_t glob_mutex;
 
