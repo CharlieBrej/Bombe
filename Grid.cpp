@@ -650,17 +650,27 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                     {
                         for (int k = 1; k < 32; k++)
                         {
+                            if (!have[k-1])
+                                continue;
                             if (k == i)
                                 continue;
                             if (k == j)
                                 continue;
+                            if ((j & i) == j)
+                                continue;
                             if ((k & (i | j)) != k)
                                 continue;
+                            if (k == (i | j))
+                                continue;
                             int both = i & j;
+                            if (!both)
+                                continue;
                             if ((k & both) != both)
                                 continue;
                             int cov = i ^ j;
                             int vi = (k ^ cov) - 1;
+                            if (!(k ^ cov))
+                                continue;
                             if (!have[vi])
                             {
                                 have[vi] = true;
