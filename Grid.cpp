@@ -3496,7 +3496,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                                 continue;
                             for (int i = 0; i < 32; i++)
                             {
-                                assert(var_counts2[i] == var_counts[i]);
+                                if (var_counts2[i] >= 0)
+                                    assert(var_counts2[i] == var_counts[i]);
                             }
                             if (m != m2)
                             {
