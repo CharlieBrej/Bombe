@@ -857,6 +857,9 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode)
     // else
     //     assert(0);
 
+    if (constructed_rule.apply_region_type.type == RegionType::VISIBILITY)
+        constructed_rule.apply_region_type.var = 0;
+
     if (mode == 1 && rule.region_count == 4)
         return false;
     if (mode == 3)

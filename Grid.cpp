@@ -337,6 +337,8 @@ GridRule::GridRule(SaveObject* sobj)
         if (apply_type == HIDE) apply_region_type = RegionType(RegionType::VISIBILITY, 1);
         if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
     }
+    if (apply_region_type.type == RegionType::VISIBILITY)
+        apply_region_type.var = 0;
 
     if (omap->has_key("paused"))
         paused = omap->get_num("paused");
