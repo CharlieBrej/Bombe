@@ -97,7 +97,7 @@ public:
                 SaveObjectList* stat = sub_stats_list->get_item(j)->get_list();
                 stats[i][j].completed = stat->get_item(0)->get_num();
                 stats[i][j].total = stat->get_item(1)->get_num();
-                if (stats[i][j].completed < 30)
+                if (stats[i][j].completed < 120)
                     stats[i][j].completed = 0;
             }
         }
@@ -145,7 +145,7 @@ static const char* server_level_types[] = { "A65000007000000", "B55000007000000"
                                             "A65000000000700", "B55000000000700","C85000000000700","A87100000000700", "B77100000000700",
                                             "A65000000000070", "B55000000000070","C85000000000070","A87100000000070", "B77100000000070",
                                             NULL};
-static const int game_version = 9;
+static const int game_version = 10;
 
 class Player
 {

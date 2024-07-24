@@ -111,8 +111,6 @@ GameState::GameState(std::string& load_data, bool json)
             SaveObjectMap* omap;
             omap = SaveObject::load(load_data)->get_map();
             int version = omap->get_num("version");
-            if (json && version > 6) 
-                version = 6;
             if (version < 2)
                 throw(std::runtime_error("Bad Version"));
             if (omap->has_key("language"))
@@ -219,6 +217,8 @@ GameState::GameState(std::string& load_data, bool json)
                             {
                                 char c = s[j];
                                 int stat = c - '0';
+                                if ((max_stars == 24000) && (version != game_version))
+                                    stat = 0;
                                 level_progress[mode][k][i].level_status[j].done = stat;
                                 if (stat)
                                     level_progress[mode][k][i].count_todo--;
