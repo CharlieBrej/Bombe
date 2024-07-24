@@ -3510,9 +3510,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                                 assert(0);
                             }
                             {
-                                for (int i = 0; i < 32; i++)
-                                    var_counts[i] = -1;
-                                assert(rule.matches(r0, r1, r2, r3, var_counts));
+                                // for (int i = 0; i < 32; i++)
+                                //     var_counts[i] = -1;
+                                // assert(rule.matches(r0, r1, r2, r3, var_counts));
                                 if (!are_connected(r0, r1, r2, r3)) continue;
                                 GridRegion* regions[4] = {r0, r1, r2, r3};
                                 ApplyRuleResp resp = apply_rule(rule, regions, var_counts, update_stats);
