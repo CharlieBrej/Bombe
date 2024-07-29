@@ -1241,6 +1241,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
     z3::expr_vector var_vec(c);
     why = *this;
 
+    bool loses_data = false;
+
     if (region_count == 0)
         return IMPOSSIBLE;
 
@@ -1535,7 +1537,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             }
             for (int i = 0; i < 5; i++)
                 vars[i] = ((vars_want >> i) & 1) ? vals[(1 << i) - 1] : -1;
-            return LOSES_DATA;
+            loses_data = true;
         }
     }
     else
@@ -1680,6 +1682,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
         if (want & ~seen)
             return UNBOUNDED;
+        if (loses_data)
+            return LOSES_DATA;
         return OK;
     }
 }
