@@ -7627,6 +7627,10 @@ void GameState::button_down(uint64_t key)
                 get_hint = false;
                 return;
             }
+            for (GridRegion& r : grid->regions)
+                if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
+                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
+
             clue_solves.clear();
             XYSet grid_squares = grid->get_squares();
             FOR_XY_SET(pos, grid_squares)
