@@ -1314,38 +1314,36 @@ void GameState::advance(int steps)
         std::random_device rd;
         std::mt19937 rnd_gen(rd());
         std::shuffle(my_regions.begin(), my_regions.end(), rnd_gen);
-        if (!filter_pos_and.empty() || !filter_pos_not.empty())
-        {
-            std::ranges::sort(my_regions, [this](GridRegion* a, GridRegion* b) {
-                return a->matches_filters(filter_pos_and, filter_pos_not) < b->matches_filters(filter_pos_and, filter_pos_not);
-                });
-        }
 
-        for (GridRegion* r_ptr : my_regions)
+        for (int matches = 0; matches <= 1; matches++)
         {
-            GridRegion& r = *r_ptr;
-            if (r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
+            for (GridRegion* r_ptr : my_regions)
             {
-                get_hint = true;
-                r.visibility_force = GridRegion::VIS_FORCE_HINT;
-                r.vis_cause.rule = NULL;
-                r.vis_level = GRID_VIS_LEVEL_HIDE;
+                GridRegion& r = *r_ptr;
+                if (r.matches_filters(filter_pos_and, filter_pos_not) == matches && 
+                    r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
+                {
+                    get_hint = true;
+                    r.visibility_force = GridRegion::VIS_FORCE_HINT;
+                    r.vis_cause.rule = NULL;
+                    r.vis_level = GRID_VIS_LEVEL_HIDE;
 
-                std::set<XYPos> new_clue_solves;
+                    std::set<XYPos> new_clue_solves;
 
-                for (const XYPos& pos : clue_solves)
-                {
-                    if (grid->is_determinable_using_regions(pos, true))
-                        new_clue_solves.insert(pos);
-                }
-                if (new_clue_solves.empty())
-                {
-                    r.vis_level = GRID_VIS_LEVEL_SHOW;
-                }
-                else
-                {
-                    clue_solves = new_clue_solves;
-                    return;
+                    for (const XYPos& pos : clue_solves)
+                    {
+                        if (grid->is_determinable_using_regions(pos, true))
+                            new_clue_solves.insert(pos);
+                    }
+                    if (new_clue_solves.empty())
+                    {
+                        r.vis_level = GRID_VIS_LEVEL_SHOW;
+                    }
+                    else
+                    {
+                        clue_solves = new_clue_solves;
+                        return;
+                    }
                 }
             }
         }
