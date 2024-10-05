@@ -861,19 +861,20 @@ int main(int argc, char *argv[])
         time(&new_time);
         if ((old_time + 60) < new_time)
         {
-            old_time = new_time;
-            std::ofstream outfile ("db.save");
             SaveObject* savobj = db.save(false);
-            savobj->save(outfile);
+            std::string out_data = savobj->to_string();
+            std::ofstream outfile ("db.save");
+            outfile << out_data;
             delete savobj;
         }
     }
     close(sockid);
     if (1)
     {
-        std::ofstream outfile ("db.save");
         SaveObject* savobj = db.save(false);
-        savobj->save(outfile);
+        std::string out_data = savobj->to_string();
+        std::ofstream outfile ("db.save");
+        outfile << out_data;
         delete savobj;
     }
     curl_global_cleanup();
