@@ -3573,7 +3573,7 @@ bool Grid::region_is_correct(GridRegion* r)
     return valid;
 }
 
-GridRegion* Grid::add_one_new_region(GridRegion* r)
+GridRegion* Grid::add_one_new_region(GridRegion* ancestor, const XYSet& filter_pos_and, const XYSet& filter_pos_not)
 {
     for (GridRegion& r : regions)
     {
@@ -3622,10 +3622,12 @@ GridRegion* Grid::add_one_new_region(GridRegion* r)
     while (it != regions_to_add.end())
     {
         float pri = (*it).priority;
-        if (r && (*it).has_ancestor(r, has, hasnt))
+        if (ancestor && (*it).has_ancestor(ancestor, has, hasnt))
+            pri += 10;
+        if (it->matches_filters(filter_pos_and, filter_pos_not))
             pri += 10;
         if (!(*it).gen_cause.rule || (*it).gen_cause.rule->apply_region_type.type == RegionType::SET)
-            pri += 20;
+            pri += 30;
         if (pri > best_pri)
         {
             best_pri = pri;

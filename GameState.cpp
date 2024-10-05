@@ -25,6 +25,7 @@
 #include <string>
 #include <sstream>
 #include <codecvt>
+#include <inttypes.h>
 
 #ifdef _WIN32
     #define NOMINMAX
@@ -926,7 +927,7 @@ void GameState::load_grid(std::string s)
         right_panel_mode = RIGHT_MENU_NONE;
 
 }
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region, bool skip_hide = false);
+static int advance_grid(Grid* grid, std::list<GridRule>& rules, GridRegion* inspected_region, const XYSet& filter_pos_and, const XYSet& filter_pos_not, bool skip_hide = false);
 
 void GameState::pause_robots(bool restart_all)
 {
@@ -1039,7 +1040,8 @@ void GameState::robot_thread(int thread_index)
 
         while (true)
         {
-            int rep = advance_grid(grid, rules[game_mode], NULL, true);
+            static const XYSet emptyFilter{};
+            int rep = advance_grid(grid, rules[game_mode], NULL, emptyFilter, emptyFilter, true);
 
             if (rep == 0)
             {
@@ -1312,6 +1314,12 @@ void GameState::advance(int steps)
         std::random_device rd;
         std::mt19937 rnd_gen(rd());
         std::shuffle(my_regions.begin(), my_regions.end(), rnd_gen);
+        if (!filter_pos_and.empty() || !filter_pos_not.empty())
+        {
+            std::ranges::sort(my_regions, [this](GridRegion* a, GridRegion* b) {
+                return a->matches_filters(filter_pos_and, filter_pos_not) < b->matches_filters(filter_pos_and, filter_pos_not);
+                });
+        }
 
         for (GridRegion* r_ptr : my_regions)
         {
@@ -1388,7 +1396,7 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
-        int rep = advance_grid(grid, rules[game_mode], inspected_region);
+        int rep = advance_grid(grid, rules[game_mode], inspected_region, filter_pos_and, filter_pos_not);
 
         if (rep == 0)
         {
@@ -1414,13 +1422,13 @@ void GameState::advance(int steps)
     }
 }
 
-static int advance_grid(Grid* grid, std::list<GridRule> &rules, GridRegion *inspected_region, bool skip_hide)
+static int advance_grid(Grid* grid, std::list<GridRule>& rules, GridRegion* inspected_region, const XYSet& filter_pos_and, const XYSet& filter_pos_not, bool skip_hide)
 {
     grid->add_base_regions();
     // for (GridRegion& r : grid->regions)
     //     r.stale = true;
     
-    GridRegion* new_region = grid->add_one_new_region(inspected_region);
+    GridRegion* new_region = grid->add_one_new_region(inspected_region, filter_pos_and, filter_pos_not);
 
     if (!new_region)
         return 0;
@@ -4365,11 +4373,8 @@ void GameState::render(bool saving)
             bool has_hover = false;
             for (GridRegion& region : grid->regions)
             {
-                if (!ctrl_held && !filter_pos_and.none() && !region.elements.contains(filter_pos_and))
-                    continue;
-                if (!ctrl_held && !filter_pos_not.none() && (region.elements & filter_pos_not).any())
-                    continue;
-                if (region.vis_level == vis_level)
+                if ((ctrl_held || region.matches_filters(filter_pos_and, filter_pos_not)) &&
+                    (region.vis_level == vis_level))
                 {
                     display_regions.push_back(&region);
                     if (&region == mouse_hover_region)
@@ -4796,9 +4801,11 @@ void GameState::render(bool saving)
     if (render_lock(PROG_LOCK_VISIBILITY, XYPos(left_panel_offset.x + 3 * button_size, left_panel_offset.y + 2 * button_size), XYPos(2 * button_size, 3 * button_size)))
     {
         render_box(left_panel_offset + XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size * 3), button_size/4, 4);
-        int region_vis_counts[3] = {0,0,0};
+        int region_vis_counts[3][2] = {};
         for (GridRegion& region : grid->regions)
-            region_vis_counts[int(region.vis_level)]++;
+        {
+            region_vis_counts[int(region.vis_level)][!region.matches_filters(filter_pos_and, filter_pos_not)]++;
+        }
         {
             SDL_Rect src_rect = {1088, 384, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -4806,7 +4813,15 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 2), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
+            if (region_vis_counts[0][1] == 0)
+            {
+                render_number(region_vis_counts[0][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+            }
+            else
+            {
+                render_number(region_vis_counts[0][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size * 3 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+                render_number(region_vis_counts[0][1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 2 + button_size * 9 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+            }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 2, button_size * 2, button_size};
             add_tooltip(dst_rect, "Visible", vis_level != GRID_VIS_LEVEL_SHOW);
@@ -4818,7 +4833,15 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
+            if (region_vis_counts[1][1] == 0)
+            {
+                render_number(region_vis_counts[1][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+            }
+            else
+            {
+                render_number(region_vis_counts[1][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size * 3 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+                render_number(region_vis_counts[1][1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 3 + button_size * 9 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+            }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 3, button_size * 2, button_size};
             add_tooltip(dst_rect, "Hidden", vis_level != GRID_VIS_LEVEL_HIDE);
@@ -4830,7 +4853,15 @@ void GameState::render(bool saving)
             {
                 render_box(left_panel_offset+ XYPos(button_size * 3, button_size * 4), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
-            render_number(region_vis_counts[2], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
+            if (region_vis_counts[2][1] == 0)
+            {
+                render_number(region_vis_counts[2][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+            }
+            else
+            {
+                render_number(region_vis_counts[2][0], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size * 3 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+                render_number(region_vis_counts[2][1], left_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 4 + button_size * 9 / 16), XYPos(button_size * 3 / 4, button_size / 4), XYPos(1, 0));
+            }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             dst_rect = {left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 4, button_size * 2, button_size};
             add_tooltip(dst_rect, "Trash", vis_level != GRID_VIS_LEVEL_BIN);
@@ -7868,7 +7899,7 @@ void GameState::button_down(uint64_t key)
             }
             else
             {
-                printf("Uncaught key: %lx\n", key);
+                printf("Uncaught key: %" PRIu64 "\n", key);
             }
         }
     }

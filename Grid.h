@@ -24,26 +24,26 @@ public:
     XYSet(){}
     XYSet(const std::bitset<SIZE> d_) : d(d_){}
 
-    unsigned p2i(XYPos p) { return p.x + p.y * WIDTH; }
-    XYPos i2p(unsigned i) { return XYPos(i % WIDTH, i / WIDTH); }
-    bool get(unsigned i) {return d[i];}
-    bool get(XYPos p) {return get(p2i(p));}
+    unsigned p2i(XYPos p) const { return p.x + p.y * WIDTH; }
+    XYPos i2p(unsigned i) const { return XYPos(i % WIDTH, i / WIDTH); }
+    bool get(unsigned i) const {return d[i];}
+    bool get(XYPos p) const {return get(p2i(p));}
     void set(unsigned i) {d[i] = 1;}
     void set(XYPos p) {set(p2i(p));}
     void clear(unsigned i) {d[i] = 0;}
     void clear(XYPos p) {clear(p2i(p));}
     void flip(unsigned i) {d.flip(i);}
     void flip(XYPos p) {flip(p2i(p));}
-    unsigned count() {return d.count();}
-    bool any() {return d.any();}
-    bool none() {return d.none();}
+    unsigned count() const {return d.count();}
+    bool any() const {return d.any();}
+    bool none() const {return d.none();}
     XYPos first() {if (get(0)) return XYPos(0,0); else return next(XYPos(0,0));}
     XYPos next(XYPos p) {unsigned i = p2i(p); do {i++; if (i>= SIZE) return XYPos(-1,-1);} while(!get(i)); return i2p(i);}
     void clear() { d.reset(); }
     void insert(XYPos p) { set(p); }
 
-    bool contains(XYPos p) {return get(p);}
-    bool contains(XYSet p) {return !(p & ~*this).any();}
+    bool contains(XYPos p) const {return get(p);}
+    bool contains(XYSet p) const {return !(p & ~*this).any();}
     bool empty() {return d.none();}
     inline bool operator==(const XYSet& other) const { return (d == other.d); }
     inline bool operator<(const XYSet& other) const
@@ -214,6 +214,10 @@ public:
     void next_colour();
     bool has_ancestor(GridRegion* other, std::set<GridRegion*>& has, std::set<GridRegion*>& hasnt);
 
+    bool matches_filters(const XYSet& _and, const XYSet& _not) const {
+        return (_and.none() || elements.contains(_and)) &&
+            (_not.none() || !(elements & _not).any());
+    }
 };
 
 class GridRule
@@ -404,7 +408,7 @@ public:
     void remove_from_regions_to_add_multiset(GridRegion*);
     void add_new_regions();
     bool region_is_correct(GridRegion* r);
-    GridRegion* add_one_new_region(GridRegion* r);
+    GridRegion* add_one_new_region(GridRegion* ancestor, const XYSet& filter_pos_and, const XYSet& filter_pos_not);
     void clear_regions();
     void commit_level_counts();
     void remove_from_regions_to_add_for_rule(GridRule* rule);
