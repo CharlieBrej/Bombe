@@ -4060,7 +4060,14 @@ void GameState::render(bool saving)
                         }
                         else
                         {
-                            for (GridRule* s_rule : selected_rules)
+                            std::list<GridRule*> rules_to_move;
+                            for (GridRule& rule : rules[game_mode])
+                            {
+                                if (selected_rules.count(&rule))
+                                    rules_to_move.push_back(&rule);
+                            }
+
+                            for (GridRule* s_rule : rules_to_move)
                             {
                                 std::list<GridRule>::iterator from, to = rules[game_mode].end();
 
