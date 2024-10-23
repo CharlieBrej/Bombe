@@ -7013,10 +7013,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 SaveObjectMap* omap = new SaveObjectMap;
                 SaveObjectList* rlist = new SaveObjectList;
-                for (GridRule* rule : selected_rules)
+                for (GridRule& rule : rules[game_mode])
                 {
-                    if (!rule->deleted)
-                        rlist->add_item(rule->save(true));
+                    if (!rule.deleted && selected_rules.count(&rule))
+                        rlist->add_item(rule.save(true));
                 }
                 omap->add_item("rules", rlist);
                 std::string title = "Rules (" + std::to_string(rlist->get_count()) + ")";
