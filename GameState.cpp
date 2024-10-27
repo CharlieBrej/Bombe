@@ -84,11 +84,11 @@ GameState::GameState(std::string& load_data, bool json)
     for (int k = 0; k < GAME_MODES; k++)
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        level_progress[k][j].resize(((game_mode == 4) ? second_global_level_sets : global_level_sets)[j].size());
+        level_progress[k][j].resize(((k == 4) ? second_global_level_sets : global_level_sets)[j].size());
         for (unsigned i = 0; i < global_level_sets[j].size(); i++)
         {
-            level_progress[k][j][i].level_status.resize(((game_mode == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size());
-            level_progress[k][j][i].count_todo = ((game_mode == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size();
+            level_progress[k][j][i].level_status.resize(((k == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size());
+            level_progress[k][j][i].count_todo = ((k == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size();
         }
     }
     {
@@ -1131,13 +1131,13 @@ void GameState::advance(int steps)
             continue;
         int ccount = 0;
         int count = 0;
-        for (unsigned i = 0; i < level_progress[0][s].size(); i++)
+        for (unsigned i = 0; i < level_progress[game_mode][s].size(); i++)
         {
-            for (unsigned j = 0; j < level_progress[0][s][i].level_status.size(); j++)
+            for (unsigned j = 0; j < level_progress[game_mode][s][i].level_status.size(); j++)
             {
                 if (level_progress[game_mode][s][i].level_status[j].done)
                     ccount++;
-                for (unsigned m = 0; m < GAME_MODES; m++)
+                for (unsigned m = 0; m < 4; m++)
                 {
                     if (level_progress[m][s][i].level_status[j].done)
                     {
