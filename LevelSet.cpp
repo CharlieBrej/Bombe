@@ -18,7 +18,9 @@ LevelSet::LevelSet(SaveObjectMap* omap)
 
     for (unsigned i = 0; i < rlist->get_count(); i++)
     {
-        levels.push_back(rlist->get_string(i));
+        std::string s = rlist->get_string(i);
+        if (s != "")
+            levels.push_back(s);
         // std::string s = rlist->get_string(i);
         // Grid* grid = Grid::Load(s);
         // s = grid->to_string();
