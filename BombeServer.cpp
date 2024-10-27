@@ -24,7 +24,7 @@
 
 bool power_down = false;
 const int LEVEL_TYPES = 6;
-const int GAME_MODE_TYPES = 4;
+const int GAME_MODE_TYPES = 5;
 
 typedef int64_t Score;
 

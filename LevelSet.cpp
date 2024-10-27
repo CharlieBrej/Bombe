@@ -10,6 +10,7 @@
 #endif
 
 std::vector<LevelSet*> global_level_sets[GLBAL_LEVEL_SETS];
+std::vector<LevelSet*> second_global_level_sets[GLBAL_LEVEL_SETS];
 
 LevelSet::LevelSet(SaveObjectMap* omap)
 {
@@ -56,6 +57,7 @@ void LevelSet::init_global()
 
     SaveObjectMap* omap = SaveObject::load(str)->get_map();
     SaveObjectList* llist = omap->get_item("level_sets")->get_list();
+    SaveObjectList* sllist = omap->get_item("second_level_sets")->get_list();
     delete_global();
 
     for (unsigned j = 0; (j < llist->get_count()) && (j < GLBAL_LEVEL_SETS); j++)
@@ -67,7 +69,23 @@ void LevelSet::init_global()
             global_level_sets[j].push_back(lset);
         }
     }
+    for (unsigned j = 0; (j < sllist->get_count()) && (j < GLBAL_LEVEL_SETS); j++)
+    {
+        SaveObjectList* rlist = sllist->get_item(j)->get_list();
+        for (unsigned i = 0; i < rlist->get_count(); i++)
+        {
+            LevelSet *lset = new LevelSet(rlist->get_item(i)->get_map());
+            second_global_level_sets[j].push_back(lset);
+        }
+    }
     delete omap;
+
+
+
+
+
+
+
 }
 void LevelSet::delete_global()
 {
@@ -78,6 +96,11 @@ void LevelSet::delete_global()
             delete level_set;
         }
         global_level_sets[i].clear();
+        for (LevelSet* level_set : second_global_level_sets[i])
+        {
+            delete level_set;
+        }
+        second_global_level_sets[i].clear();
     }
 }
 
@@ -95,8 +118,21 @@ void LevelSet::save_global()
         }
         llist->add_item(rlist);
     }
-
     omap->add_item("level_sets", llist);
+
+    llist = new SaveObjectList;
+    for (int i = 0; i < GLBAL_LEVEL_SETS; i++)
+    {
+        SaveObjectList* rlist = new SaveObjectList;
+        for (LevelSet* level_set : second_global_level_sets[i])
+        {
+            rlist->add_item(level_set->save());
+        }
+        llist->add_item(rlist);
+    }
+    omap->add_item("second_level_sets", llist);
+
+
 #ifdef _WIN32
             std::ofstream outfile (std::filesystem::path((char8_t*)"levels.data"), std::ios::binary);
 #else

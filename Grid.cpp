@@ -19,6 +19,24 @@ void grid_set_rnd(int a)
 {
     rnd.gen.seed(a);
 }
+static unsigned get_valid_cells_mask(int region_count, int neg_reg_count)
+{
+    unsigned mask = 0;
+    for (int i = 0; i < (1 << region_count); i++)
+    {
+        mask |= 1 << i;
+        if (neg_reg_count == 1)
+            mask |= 1 << (i | ((i & 1) << 3));
+        if (neg_reg_count == 2)
+        {
+            mask |= 1 << (i | ((i & 1) << 2));
+            mask |= 1 << (i | ((i & 2) << 2));
+            mask |= 1 << (i | ((i & 3) << 2));
+        }
+    }
+    return mask;
+}
+
 
 std::string RegionType::val_as_str(int offset)
 {
@@ -270,16 +288,6 @@ bool GridRegion::overlaps(GridRegion& other)
     return elements.overlaps(other.elements);
 }
 
-bool GridRegion::contains_all(std::set<XYPos>& other)
-{
-    for (const XYPos& p : other)
-    {
-        if (!elements.contains(p))
-            return false;
-    }
-    return true;
-}
-
 void GridRegion::next_colour()
 {
     colour = colours_used[type.value]++;
@@ -318,6 +326,8 @@ GridRule::GridRule(SaveObject* sobj)
 {
     SaveObjectMap* omap = sobj->get_map();
     region_count = omap->get_num("region_count");
+    if (omap->has_key("neg_reg_count"))
+        neg_reg_count = omap->get_num("neg_reg_count");
     apply_region_type = RegionType('a',omap->get_num("apply_region_type"));
 
     if (omap->has_key("apply_type"))
@@ -353,6 +363,8 @@ GridRule::GridRule(SaveObject* sobj)
         group = omap->get_num("group");
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
+    if (omap->has_key("neg_apply_region_bitmap"))
+        neg_apply_region_bitmap = omap->get_num("neg_apply_region_bitmap");
     if (apply_region_type.type < 100)
     {
         apply_region_bitmap &= ~1ull;
@@ -383,8 +395,12 @@ SaveObject* GridRule::save(bool lite)
 {
     SaveObjectMap* omap = new SaveObjectMap;
     omap->add_num("region_count", region_count);
+    if (neg_reg_count)
+        omap->add_num("neg_reg_count", neg_reg_count);
     omap->add_num("apply_region_type", apply_region_type.as_int());
     omap->add_num("apply_region_bitmap", apply_region_bitmap);
+    if (neg_apply_region_bitmap)
+        omap->add_num("neg_apply_region_bitmap", neg_apply_region_bitmap);
     omap->add_num("priority", priority);
     omap->add_num("paused", paused);
     omap->add_num("group", group);
@@ -395,7 +411,7 @@ SaveObject* GridRule::save(bool lite)
     omap->add_item("region_type", region_type_list);
 
     SaveObjectList* square_counts_list = new SaveObjectList;
-    for (int i = 0; i < (1<<region_count); i++)
+    for (int i = 0; i < 16; i++)
         square_counts_list->add_num(square_counts[i].as_int());
     omap->add_item("square_counts", square_counts_list);
     if (!lite)
@@ -415,41 +431,65 @@ void GridRule::get_square_counts(uint8_t square_counts[16], GridRegion* r1, Grid
     if (!r1)
         return;
 
+    XYSet a0 = r1->elements;
+    XYSet a0_neg = r1->elements_neg;
     if (!r2)
     {
-        XYSet a0 = r1->elements;
-        square_counts[1] = (a0).count();
-        return;
-    }
-    if (!r3)
-    {
-        XYSet a0 = r1->elements;
-        XYSet a1 = r2->elements;
-        square_counts[1] =  (a0 & ~a1).count();
-        square_counts[2] = (~a0 &  a1).count();
-        square_counts[3] = ( a0 &  a1).count();
-        return;
-    }
-    if (!r4)
-    {
-        XYSet a0 = r1->elements;
-        XYSet a1 = r2->elements;
-        XYSet a2 = r3->elements;
-        square_counts[1] =  (a0 & ~a1 & ~a2).count();
-        square_counts[2] = (~a0 &  a1 & ~a2).count();
-        square_counts[3] = ( a0 &  a1 & ~a2).count();
-        square_counts[4] = (~a0 & ~a1 &  a2).count();
-        square_counts[5] = ( a0 & ~a1 &  a2).count();
-        square_counts[6] = (~a0 &  a1 &  a2).count();
-        square_counts[7] = ( a0 &  a1 &  a2).count();
+        square_counts[1] = (a0 & ~a0_neg).count();
+        square_counts[9] = (a0 &  a0_neg).count();
         return;
     }
 
+    XYSet a1 = r2->elements;
+    if (!r3)
     {
-        XYSet a0 = r1->elements;
-        XYSet a1 = r2->elements;
-        XYSet a2 = r3->elements;
-        XYSet a3 = r4->elements;
+        XYSet a1_neg = r2->elements_neg;
+        if (a1_neg.any())
+        {
+            square_counts[1]  = ( a0 & ~a1 & ~a0_neg          ).count();
+            square_counts[2]  = (~a0 &  a1           & ~a1_neg).count();
+            square_counts[3]  = ( a0 &  a1 & ~a0_neg & ~a1_neg).count();
+
+            square_counts[5]  = ( a0 & ~a1 &  a0_neg          ).count();
+            square_counts[7]  = ( a0 &  a1 &  a0_neg & ~a1_neg).count();
+
+            square_counts[10] = (~a0 &  a1 &            a1_neg).count();
+            square_counts[11] = ( a0 &  a1 & ~a0_neg &  a1_neg).count();
+
+            square_counts[15] = ( a0 &  a1 &  a0_neg &  a1_neg).count();
+        }
+        else
+        {
+            square_counts[1]  = ( a0 & ~a1 & ~a0_neg).count();
+            square_counts[2]  = (~a0 &  a1          ).count();
+            square_counts[3]  = ( a0 &  a1 & ~a0_neg).count();
+
+            square_counts[9]  = ( a0 & ~a1 &  a0_neg).count();
+            square_counts[11] = ( a0 &  a1 &  a0_neg).count();
+        }
+        return;
+    }
+
+    XYSet a2 = r3->elements;
+    if (!r4)
+    {
+        square_counts[1] =  ( a0 & ~a1 & ~a2 & ~a0_neg).count();
+        square_counts[2] =  (~a0 &  a1 & ~a2          ).count();
+        square_counts[3] =  ( a0 &  a1 & ~a2 & ~a0_neg).count();
+        square_counts[4] =  (~a0 & ~a1 &  a2          ).count();
+        square_counts[5] =  ( a0 & ~a1 &  a2 & ~a0_neg).count();
+        square_counts[6] =  (~a0 &  a1 &  a2          ).count();
+        square_counts[7] =  ( a0 &  a1 &  a2 & ~a0_neg).count();
+
+        square_counts[9] =   (a0 & ~a1 & ~a2 &  a0_neg).count();
+        square_counts[11] =  (a0 &  a1 & ~a2 &  a0_neg).count();
+        square_counts[13] =  (a0 & ~a1 &  a2 &  a0_neg).count();
+        square_counts[15] =  (a0 &  a1 &  a2 &  a0_neg).count();
+        return;
+    }
+
+    XYSet a3 = r4->elements;
+    {
         square_counts[1] =  ( a0 & ~a1 & ~a2 & ~a3).count();
         square_counts[2] =  (~a0 &  a1 & ~a2 & ~a3).count();
         square_counts[3] =  ( a0 &  a1 & ~a2 & ~a3).count();
@@ -474,6 +514,7 @@ GridRule GridRule::permute(std::vector<int>& p)
     GridRule r;
     r.region_count = region_count;
     r.apply_region_type = apply_region_type;
+    r.neg_reg_count = neg_reg_count;
     
     for (int i = 0; i < region_count; i++)
         r.region_type[i] = region_type[p[i]];
@@ -481,14 +522,17 @@ GridRule GridRule::permute(std::vector<int>& p)
     for (int i = 0; i < (1 << region_count); i++)
     {
         int p_index = 0;
-        for (int a = 0; a < region_count; a++)
+        for (int a = 0; a < region_count; a++)                                              // FIXME
         {
             if ((i >> a) & 1)
                 p_index |= 1 << p[a];
         }
         r.square_counts[i] = square_counts[p_index];
         if (apply_region_type.type != RegionType::VISIBILITY)
+        {
             r.apply_region_bitmap |= ((apply_region_bitmap >> p_index) & 1) << i;
+            r.neg_apply_region_bitmap |= ((neg_apply_region_bitmap >> p_index) & 1) << i;
+        }
 
     }
     if (apply_region_type.type == RegionType::VISIBILITY)
@@ -504,16 +548,20 @@ bool GridRule::covers(GridRule& other)
         return false;
     if (region_count != other.region_count)
         return false;
+    if (neg_reg_count != other.neg_reg_count)
+        return false;
     uint8_t mapper[32] = {};
 
     for (int i = 0; i < region_count; i++)
         if (!region_type[i].mapper_based_equal(other.region_type[i], mapper))
             return false;
-    for (int i = 0; i < (1 << region_count); i++)
+    for (int i = 0; i < 16; i++)
     {
         if (!square_counts[i].mapper_based_equal(other.square_counts[i], mapper))
             return false;
         if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
+            return false;
+        if (((neg_apply_region_bitmap >> i) & 1) != ((other.neg_apply_region_bitmap >> i) & 1))
             return false;
     }
     if (!apply_region_type.mapper_based_equal(other.apply_region_type, mapper))
@@ -693,6 +741,7 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
 void GridRule::jit_preprocess(FastOpGroup& fast_ops)
 {
     bool have[32] = {};
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
 
     for (int r = 0; r < region_count; r++)
     {
@@ -707,8 +756,10 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
             }
         }
     }
-    for (int i = 1; i < (1 << region_count); i++)
+    for (int i = 0; i < 16; i++)
     {
+        if (!((mask >> i) & 1))
+            continue;
         if (square_counts[i].var)
         {
             if (square_counts[i].type == RegionType::EQUAL)
@@ -722,8 +773,10 @@ void GridRule::jit_preprocess(FastOpGroup& fast_ops)
         }
     }
 
-    for (int i = 1; i < (1 << region_count); i++)
+    for (int i = 1; i < 16; i++)
     {
+        if (!((mask >> i) & 1))
+            continue;
         if (square_counts[i].var)
         {
             if ((square_counts[i].type != RegionType::EQUAL))
@@ -973,17 +1026,37 @@ S1_FUNC *s1_funcs[17] = {
 
 static int count_subregion_size(int i, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
+    bool neg = r1->elements_neg.any() && (i & 1);
+    bool neg2 = r2 && r2->elements_neg.any();
+
     const uint64_t *a = reinterpret_cast<const uint64_t*>(&r1->elements);
+    const uint64_t *a_neg = reinterpret_cast<const uint64_t*>(&r1->elements_neg);
     const uint64_t *b = reinterpret_cast<const uint64_t*>(&r2->elements);
+    const uint64_t *b_neg = reinterpret_cast<const uint64_t*>(&r2->elements_neg);
     const uint64_t *c = reinterpret_cast<const uint64_t*>(&r3->elements);
     const uint64_t *d = reinterpret_cast<const uint64_t*>(&r4->elements);
     if (r4) {
         return s4_funcs[i](a, b, c, d);
     } else if (r3) {
+        if (neg)
+            return s4_funcs[i](a, b, c, a_neg);
         return s3_funcs[i](a, b, c);
     } else if (r2) {
+        if (neg2)
+        {
+            if ((i & 3) == 3)
+                return s4_funcs[i](a, b, a_neg, b_neg);
+            if ((i & 3) == 2)
+                return s3_funcs[2 | ((i&8) >> 1)](a, b, b_neg);
+            if ((i & 3) == 1)
+                return s3_funcs[i](a, b, a_neg);
+        }
+        if (neg)
+            return s3_funcs[(i&3) | ((i&8) >> 1)](a, b, a_neg);
         return s2_funcs[i](a, b);
     } else { // r1 is supposed to be always non-null
+        if (neg)
+            return s2_funcs[(i&1) | ((i&8) >> 2)](a, a_neg);
         return s1_funcs[i](a);
     }
 }
@@ -1006,17 +1079,6 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
             int i = op.p1;
             int count = count_subregion_size(i, r1, r2, r3, r4);
             v = count - square_counts[i].value;
-        } else if (op.op == FastOp::MIN_CELL_COUNT) {
-            int i = op.vi;
-            int count = count_subregion_size(i, r1, r2, r3, r4);
-            int c = op.p1;
-            if (op.p2)
-                c += var_counts[op.p2 - 1];
-            if (int(count) < c)
-            {
-                return false;
-            }
-            continue;
         } else if (op.op == FastOp::VAR_TRIPLE) {
             int x = op.p1 ^ op.p2;
             v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] + var_counts[x - 1];
@@ -1045,8 +1107,11 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
     }
     if (final)
     {
-        for (int i = 1; i < (1 << region_count); i++)
+        unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+        for (int i = 1; i < 16; i++)
         {
+            if (!((mask >> i) & 1))
+                continue;
             if (square_counts[i].type == RegionType::NONE)
                 continue;
             int count = count_subregion_size(i, r1, r2, r3, r4);
@@ -1058,164 +1123,176 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
 }
 
 
-bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
-{
-    GridRegion* grid_regions[4] = {r1, r2, r3, r4};
+// bool GridRule::matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32])
+// {
+//     GridRegion* grid_regions[4] = {r1, r2, r3, r4};
 
-    for (int i = 0; i < region_count; i++)
-    {
-        if (region_type[i].type != RegionType::NONE)
-            assert(region_type[i].type == grid_regions[i]->type.type);
-        if (region_type[i].var)
-        {
-            int vi = region_type[i].var - 1;
-            if (var_counts[vi] < 0)
-            {
-                int v = grid_regions[i]->type.value - region_type[i].value;
-                if (v < 0)
-                    return false;
-                var_counts[vi] = v;
-            }
-            else
-            {
-                if (var_counts[vi] != (grid_regions[i]->type.value - region_type[i].value))
-                    return false;
-            }
-        }
-    }
+//     for (int i = 0; i < region_count; i++)
+//     {
+//         if (region_type[i].type != RegionType::NONE)
+//             assert(region_type[i].type == grid_regions[i]->type.type);
+//         if (region_type[i].var)
+//         {
+//             int vi = region_type[i].var - 1;
+//             if (var_counts[vi] < 0)
+//             {
+//                 int v = grid_regions[i]->type.value - region_type[i].value;
+//                 if (v < 0)
+//                     return false;
+//                 var_counts[vi] = v;
+//             }
+//             else
+//             {
+//                 if (var_counts[vi] != (grid_regions[i]->type.value - region_type[i].value))
+//                     return false;
+//             }
+//         }
+//     }
 
-    for (int i = 1; i < (1 << region_count); i++)
-    {
-        if ((square_counts[i].type == RegionType::EQUAL) && square_counts[i].var)
-        {
-            int count = count_subregion_size(i, r1, r2, r3, r4);
+//     for (int i = 1; i < (1 << region_count); i++)
+//     {
+//         if ((square_counts[i].type == RegionType::EQUAL) && square_counts[i].var)
+//         {
+//             int count = count_subregion_size(i, r1, r2, r3, r4);
 
-            int vi = square_counts[i].var - 1;
-            int v = count - square_counts[i].value;
-            if (v < 0)
-                return false;
-            if (var_counts[vi] < 0)
-                var_counts[vi] = v;
-        }
-    }
-    for (int i = 1; i < 32; i++)
-    {
-        if (var_counts[i-1] >= 0)
-        {
-            for (int j = 1; j < 32; j++)
-            {
-                if ((var_counts[j-1] >= 0) && (i != j))
-                {
-                    if ((i & j) == 0)
-                    {
-                        if (var_counts[(i | j) - 1] >= 0)
-                        {
-                            if (var_counts[(i | j) - 1] != var_counts[i - 1] + var_counts[j - 1])
-                                return false;
-                        }
-                        else
-                            var_counts[(i | j) - 1] = var_counts[i - 1] + var_counts[j - 1];
-                    }
-                    else if ((i & j) == i)
-                    {
-                        if (var_counts[(j & ~i) - 1] >= 0)
-                        {
-                            if (var_counts[(j & ~i) - 1] != var_counts[j - 1] - var_counts[i - 1])
-                                return false;
-                        }
-                        else
-                        {
-                            int v = var_counts[j - 1] - var_counts[i - 1];
-                            if (v < 0)
-                                return false;
-                            var_counts[(j & ~i) - 1] = v;
-                            if (i > ((j & ~i) - 1))
-                            {
-                                i = (j & ~i) - 1;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        int x = i ^ j;
-                        if (var_counts[x - 1] >= 0)
-                        {
-                            int v = var_counts[i - 1] + var_counts[j - 1] + var_counts[x - 1];
-                            if (v % 2)
-                                return false;
-                            v /= 2;
-                            if (var_counts[(j | i) - 1] >= 0)
-                            {
-                                if (var_counts[(j | i) - 1] != v)
-                                    return false;
-                            }
-                            else
-                                var_counts[(j | i) - 1] = v;
-                        }
+//             int vi = square_counts[i].var - 1;
+//             int v = count - square_counts[i].value;
+//             if (v < 0)
+//                 return false;
+//             if (var_counts[vi] < 0)
+//                 var_counts[vi] = v;
+//         }
+//     }
+//     for (int i = 1; i < 32; i++)
+//     {
+//         if (var_counts[i-1] >= 0)
+//         {
+//             for (int j = 1; j < 32; j++)
+//             {
+//                 if ((var_counts[j-1] >= 0) && (i != j))
+//                 {
+//                     if ((i & j) == 0)
+//                     {
+//                         if (var_counts[(i | j) - 1] >= 0)
+//                         {
+//                             if (var_counts[(i | j) - 1] != var_counts[i - 1] + var_counts[j - 1])
+//                                 return false;
+//                         }
+//                         else
+//                             var_counts[(i | j) - 1] = var_counts[i - 1] + var_counts[j - 1];
+//                     }
+//                     else if ((i & j) == i)
+//                     {
+//                         if (var_counts[(j & ~i) - 1] >= 0)
+//                         {
+//                             if (var_counts[(j & ~i) - 1] != var_counts[j - 1] - var_counts[i - 1])
+//                                 return false;
+//                         }
+//                         else
+//                         {
+//                             int v = var_counts[j - 1] - var_counts[i - 1];
+//                             if (v < 0)
+//                                 return false;
+//                             var_counts[(j & ~i) - 1] = v;
+//                             if (i > ((j & ~i) - 1))
+//                             {
+//                                 i = (j & ~i) - 1;
+//                                 break;
+//                             }
+//                         }
+//                     }
+//                     else
+//                     {
+//                         int x = i ^ j;
+//                         if (var_counts[x - 1] >= 0)
+//                         {
+//                             int v = var_counts[i - 1] + var_counts[j - 1] + var_counts[x - 1];
+//                             if (v % 2)
+//                                 return false;
+//                             v /= 2;
+//                             if (var_counts[(j | i) - 1] >= 0)
+//                             {
+//                                 if (var_counts[(j | i) - 1] != v)
+//                                     return false;
+//                             }
+//                             else
+//                                 var_counts[(j | i) - 1] = v;
+//                         }
 
-                    }
-                }
-            }
-        }
-    }
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    // if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
-    // {
-    //     var_counts[2] = var_counts[0] + var_counts[1];
-    // }
-    // if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
-    // {
-    //     var_counts[0] = var_counts[2] - var_counts[1];
-    //     if (var_counts[0] < 0)
-    //         return false;
-    // }
-    // if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
-    // {
-    //     var_counts[1] = var_counts[2] - var_counts[0];
-    //     if (var_counts[1] < 0)
-    //         return false;
-    // }
+//     // if (var_counts[2] < 0 && var_counts[0] >= 0 && var_counts[1] >= 0)
+//     // {
+//     //     var_counts[2] = var_counts[0] + var_counts[1];
+//     // }
+//     // if (var_counts[0] < 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+//     // {
+//     //     var_counts[0] = var_counts[2] - var_counts[1];
+//     //     if (var_counts[0] < 0)
+//     //         return false;
+//     // }
+//     // if (var_counts[1] < 0 && var_counts[0] >= 0 && var_counts[2] >= 0)
+//     // {
+//     //     var_counts[1] = var_counts[2] - var_counts[0];
+//     //     if (var_counts[1] < 0)
+//     //         return false;
+//     // }
 
-    // if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
-    // {
-    //     if (var_counts[2] != var_counts[0] + var_counts[1])
-    //         return false;
-    // }
+//     // if (var_counts[0] >= 0 && var_counts[1] >= 0 && var_counts[2] >= 0)
+//     // {
+//     //     if (var_counts[2] != var_counts[0] + var_counts[1])
+//     //         return false;
+//     // }
 
-    for (int i = 1; i < (1 << region_count); i++)
-    {
-        if (square_counts[i].type == RegionType::NONE)
-            continue;
-        int count = count_subregion_size(i, r1, r2, r3, r4);
-        if (!square_counts[i].apply_int_rule(count, var_counts))
-            return false;
-    }
-    return true;
-}
+//     for (int i = 1; i < (1 << region_count); i++)
+//     {
+//         if (square_counts[i].type == RegionType::NONE)
+//             continue;
+//         int count = count_subregion_size(i, r1, r2, r3, r4);
+//         if (!square_counts[i].apply_int_rule(count, var_counts))
+//             return false;
+//     }
+//     return true;
+// }
 
 void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
 {
     region_count = 0;
+    neg_reg_count = 0;
     apply_region_bitmap = 0;
-
+    neg_apply_region_bitmap = 0;
     if (r1)
     {
         region_count = 1;
         region_type[0] = r1->type;
+        if (r1->elements_neg.any())
+            neg_reg_count = 1;
     }
     if (r2)
     {
         region_count = 2;
         region_type[1] = r2->type;
+        if (r2->elements_neg.any())
+        {
+            neg_reg_count = 2;
+            assert(neg_reg_count);
+        }
     }
     if (r3)
     {
+        assert (!r3->elements_neg.any());
+        assert(neg_reg_count < 2);
         region_count = 3;
         region_type[2] = r3->type;
     }
-    if (r4)
+    if (r4 && region_count < 1)
     {
+        assert (!r4->elements_neg.any());
+        assert(neg_reg_count < 1);
         region_count = 4;
         region_type[3] = r4->type;
     }
@@ -1223,12 +1300,11 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
     uint8_t sqc[16];
     get_square_counts(sqc, r1, r2, r3, r4);
 
-    for (int i = 1; i < 16; i++)
-        square_counts[i] = RegionType(RegionType::NONE, 0);
-
-    for (int i = 1; i < (1 << region_count); i++)
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+    for (int i = 0; i < 16; i++)
     {
-        square_counts[i] = RegionType(RegionType::EQUAL, sqc[i]);
+        if ((mask >> i) & 1)
+            square_counts[i] = RegionType(RegionType::EQUAL, sqc[i]);
     }
 }
 
@@ -1238,6 +1314,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
     z3::solver s(c);
 
     z3::expr_vector vec(c);
+    z3::expr_vector neg_vec(c);
     z3::expr_vector var_vec(c);
     why = *this;
 
@@ -1250,8 +1327,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         for (int r = 0; r < region_count; r++)
         {
             bool lap = false;
-            for (int i = 1; i < (1 << region_count); i++)
+            unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+            for (int i = 0; i < 16; i++)
             {
+                if (!((mask >> i) & 1))
+                    continue;
                 if (!((i >> r) & 1))
                     continue;
                 if (i == 1 << r)
@@ -1270,21 +1350,30 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         bool ots = false;
         if (region_type[r] != apply_region_type)
             ots = true;
-        for (int i = 1; i < (1 << region_count); i++)
+
+        unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+        for (int i = 0; i < 16; i++)
         {
-            if ((i >> r) & 1)
+            if ((mask >> i) & 1)
             {
-                if (!((apply_region_bitmap >> i) & 1))
+                if ((i >> r) & 1)
                 {
-                    if (square_counts[i].max() || square_counts[i].var)
+                    if (!((apply_region_bitmap >> i) & 1))
+                    {
+                        if (square_counts[i].max() || square_counts[i].var)
+                            ots = true;
+                    }
+                    else
+                    {
+                        
+                    }
+                }
+                else
+                {
+                    if (((apply_region_bitmap >> i) & 1) &&
+                        (square_counts[i].max() || square_counts[i].var))
                         ots = true;
                 }
-            }
-            else
-            {
-                if (((apply_region_bitmap >> i) & 1) &&
-                    (square_counts[i].max() || square_counts[i].var))
-                    ots = true;
             }
         }
         if (!ots)
@@ -1314,7 +1403,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
     vec.push_back(c.bool_const("DUMMY"));
 
-    for (int i = 1; i < (1 << region_count); i++)
+    for (int i = 1; i < 16; i++)
     {
         std::stringstream x_name;
         x_name << "A" << i;
@@ -1331,34 +1420,63 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
     }
 
-    if (region_count == 1)
+    if (neg_reg_count == 0)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1], var_vec));
+        if (region_count == 1)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1], var_vec));
+        }
+        if (region_count == 2)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec));
+        }
+        if (region_count == 3)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec));
+            s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7], var_vec));
+        }
+        if (region_count == 4)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec));
+            s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+            s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+        }
     }
-    if (region_count == 2)
+    else if (neg_reg_count == 1)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec));
+        if (region_count == 1)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] - vec[9], var_vec));
+        }
+        if (region_count == 2)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] - vec[9] - vec[11], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[11], var_vec));
+        }
+        if (region_count == 3)
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] - vec[9] - vec[11] - vec[13] - vec[15], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[11] + vec[15], var_vec));
+            s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[13] + vec[15], var_vec));
+        }
     }
-    if (region_count == 3)
+    else if (neg_reg_count == 2)
     {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec));
-        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7], var_vec));
-    }
-    if (region_count == 4)
-    {
-        s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec));
-        s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec));
-        s.add(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
-        s.add(region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec));
+        assert (region_count == 2);
+        {
+            s.add(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[11] - vec[5] - vec[7] - vec[15], var_vec));
+            s.add(region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[7] - vec[10] - vec[11] - vec[15], var_vec));
+        }
     }
 
     if (apply_region_type.type != RegionType::VISIBILITY)
     {
         bool has = false;
         uint32_t vars = 0;
-        for (int i = 1; i < (1 << region_count); i++)
+        for (int i = 1; i < 16; i++)
             if ((apply_region_bitmap >> i) & 1)
             {
                 if(square_counts[i].max())
@@ -1381,14 +1499,14 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         return IMPOSSIBLE;
     }
 
-    if (apply_region_type.type == RegionType::VISIBILITY)
+    if (apply_region_type.type == RegionType::VISIBILITY)                               // FIXME
     {
         uint32_t vars_want = 0;
         z3::expr_vector vec2(c);
 
         vec2.push_back(c.bool_const("DUMMY2"));
 
-        for (int i = 1; i < (1 << region_count); i++)
+        for (int i = 1; i < 16; i++)
         {
             std::stringstream x_name;
             x_name << "B" << i;
@@ -1547,11 +1665,15 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
         assert (apply_region_bitmap);
 
-        for (int i = 1; i < (1 << region_count); i++)
+        for (int i = 1; i < 16; i++)
         {
             if ((apply_region_bitmap >> i) & 1)
             {
-                e = e + vec[i];
+                if ((neg_apply_region_bitmap >> i) & 1)
+                    e = e - vec[i];
+                else
+                    e = e + vec[i];
+
                 int m = square_counts[i].max();
                 if ((m < 0) && (apply_region_type == RegionType(RegionType::SET, 1)))
                 {
@@ -1586,7 +1708,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             uint32_t vars_want = 0;
             z3::model m = s.get_model();
-            for (int i = 1; i < (1 << region_count); i++)
+            for (int i = 1; i < 16; i++)
             {
                 vars_want |= why.square_counts[i].var;
                 int v = m.eval(vec[i]).get_numeral_int();
@@ -1691,14 +1813,17 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 void GridRule::remove_region(int index)
 {
     region_count--;
+    if (index < neg_reg_count)
+        neg_reg_count--;
     for (int i = index; i < region_count; i++)
         region_type[i] = region_type[i + 1];
     region_type[region_count] = RegionType();
 
     uint16_t new_apply_region_bitmap = 0;
+    uint16_t new_neg_apply_region_bitmap = 0;
     for (int i = 1; i < (1 << region_count); i++)
     {
-            int idx = i & ((1 << (index)) - 1);
+            int idx = i & ((1 << (index)) - 1);                 // FIXME
             idx |= (i >> (index)) << (index + 1);
             int idx2 = idx | (1 << index);
             int c = square_counts[idx].value + square_counts[idx | (1 << index)].value;
@@ -1707,8 +1832,11 @@ void GridRule::remove_region(int index)
             square_counts[i].var = v;
             if ((apply_region_bitmap >> idx) & (apply_region_bitmap >> idx2) & 1)
                 new_apply_region_bitmap |= 1 << i;
+            if ((neg_apply_region_bitmap >> idx) & (neg_apply_region_bitmap >> idx2) & 1)
+                new_neg_apply_region_bitmap |= 1 << i;
     }
     apply_region_bitmap = new_apply_region_bitmap;
+    neg_apply_region_bitmap = new_neg_apply_region_bitmap;
 }
 
 void GridRule::add_region(RegionType type)
@@ -1744,7 +1872,7 @@ RegionType GridRule::get_region_sorted(int index)
     return region_type[(sort_perm >> (index * 2)) & 0x3];
 }
 
-void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_percent)
+void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_percent, int negated_percent)
 {
     size = size_;
     wrapped = wrapped_;
@@ -1754,6 +1882,8 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
     FOR_XY_SET(p, grid_squares)
     {
         vals[p] = GridPlace((unsigned(rnd)%100) < 40, true);
+        if ((unsigned(rnd) % 100) < negated_percent)
+            vals[p].negated = true;
     }
 
     FOR_XY_SET(p, grid_squares)
@@ -1763,7 +1893,15 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
             int cnt = 0;
             XYSet neigh = get_neighbors(p);
             FOR_XY_SET(t, neigh)
-                cnt += get(t).bomb;
+            {
+                if (get(t).bomb)
+                {
+                    if (get(t).negated)
+                        cnt--;
+                    else
+                        cnt++;
+                }
+            }
 
             vals[p].clue.type = RegionType::EQUAL;
             vals[p].clue.value = cnt;
@@ -1782,7 +1920,12 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
                 XYSet grid_squares = get_row(i, j);
                 FOR_XY_SET(n, grid_squares)
                     if (get(n).bomb)
-                        c++;
+                    {
+                        if (get(n).negated)
+                            c--;
+                        else
+                            c++;
+                    }
                 edges[XYPos(i, j)] = RegionType(RegionType::EQUAL, c);
             }
         }
@@ -1856,14 +1999,17 @@ void Grid::from_string(std::string s)
             c = s[i++];
         }
 
+        if (c == '~')
+        {
+            vals[p].negated = true;
+            if (i >= s.length()) return;
+            c = s[i++];
+        }
+
+
         if (c == '!')
         {
             vals[p].bomb = true;
-        }
-        else if (c == '?')
-        {
-            vals[p].bomb = false;
-            vals[p].clue = RegionType(RegionType::NONE, 1);
         }
         else
         {
@@ -2042,11 +2188,21 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     {
         if ((r.vis_level != GRID_VIS_LEVEL_SHOW) && hidden)
           continue;
-        FOR_XY_SET (p, r.elements)
+        FOR_XY_SET (p, (r.elements & ~r.elements_neg))
         {
             set_index++;
             unsigned v = pos_to_set[p];
-            FOR_XY_SET (p2, r.elements)
+            FOR_XY_SET (p2, (r.elements & ~r.elements_neg))
+            {
+                if (pos_to_set[p2] == v)
+                    pos_to_set[p2] = set_index;
+            }
+        }
+        FOR_XY_SET (p, (r.elements & r.elements_neg))
+        {
+            set_index++;
+            unsigned v = pos_to_set[p];
+            FOR_XY_SET (p2, (r.elements & r.elements_neg))
             {
                 if (pos_to_set[p2] == v)
                     pos_to_set[p2] = set_index;
@@ -2081,12 +2237,6 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
     {
         if (value == si)
         {
-            if (get(key).clue == RegionType(RegionType::NONE, 1))
-            {
-                bom_count++;
-                clr_count++;
-                break;
-            }
             if (get(key).bomb)
                 bom_count++;
             else
@@ -2138,8 +2288,16 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
             if (!seen.count(si))
             {
                 seen.insert(si);
-                e = e + vec[si];
-                uid += std::to_string(si) + ",";
+                if (r.elements_neg.get(p))
+                {
+                    e = e - vec[si];
+                    uid += "-" + std::to_string(si) + ",";
+                }
+                else
+                {
+                    e = e + vec[si];
+                    uid += std::to_string(si) + ",";
+                }
             }
         }
         s.add(r.type.apply_z3_rule(e, dummy_vec));
@@ -2917,14 +3075,14 @@ std::string Grid::to_string()
         {
             s += '_';
         }
+        if (g.negated)
+        {
+            s += '~';
+        }
 
         if (g.bomb)
         {
             s += '!';
-        }
-        else if (g.clue == RegionType(RegionType::NONE, 1))
-        {
-            s += '?';
         }
         else
         {
@@ -2971,17 +3129,16 @@ bool Grid::add_region(GridRegion& reg, bool front)
     cnt = 0;
     FOR_XY_SET(p, reg.elements)
     {
-        if (vals[p].clue == RegionType(RegionType::NONE, 1))
-        {
-            cnt = -1;
-            break;
-        }
         if (vals[p].bomb)
-            cnt++;
+        {
+            if (reg.elements_neg.get(p))
+                cnt--;
+            else
+                cnt++;
+        }
     }
     assert(!reg.type.var);
-//    if (cnt >= 0)
-        assert((reg.type.apply_rule_imp<bool,int>(cnt, reg.type.value)));
+    assert((reg.type.apply_rule_imp<bool,int>(cnt, reg.type.value)));
 
 
     if (front)
@@ -2997,57 +3154,145 @@ bool Grid::add_region(GridRegion& reg, bool front)
     return true;
 }
 
-bool Grid::add_region(XYSet& elements, RegionType clue, XYPos cause)
+bool Grid::add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYPos cause)
 {
     if (!elements.count())
         return false;
-    if (clue.value < 0 && clue.type == RegionType::XOR222)
+    if (elements_neg == elements)
     {
-        clue.value += 2;
-        clue.type = RegionType::XOR22;
+        elements_neg.clear();
+        if (clue.type == RegionType::MORE)
+            clue.type = RegionType::LESS;
+        else if (clue.type == RegionType::LESS)
+            clue.type = RegionType::MORE;
+        
+        if (clue.type == RegionType::XOR2)
+            clue.value = -clue.value - 2;
+        else if (clue.type == RegionType::XOR22)
+            clue.value = -clue.value - 4;
+        else if (clue.type == RegionType::XOR3)
+            clue.value = -clue.value - 3;
+        else if (clue.type == RegionType::XOR1)
+            clue.value = -clue.value - 1;
+        else if (clue.type == RegionType::XOR11)
+            clue.value = -clue.value - 2;
+        else if (clue.type == RegionType::PARITY)
+        {
+            if (clue.value >= -5)
+            {
+                clue.type = RegionType::XOR22;
+                clue.value &= 1;
+            }
+            else
+            {
+                assert(0);
+                elements_neg = elements;
+            }
+        }
+        else
+            clue.value = -clue.value;
     }
-    if (clue.value < 0 && clue.type == RegionType::XOR22)
+    if (elements_neg.any())
     {
-        clue.value += 2;
-        clue.type = RegionType::XOR2;
+        if (clue.value < 0 && clue.type == RegionType::EQUAL)
+        {
+            clue.value = -clue.value;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value < 0 && clue.type == RegionType::NOTEQUAL)
+        {
+            clue.value = -clue.value;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value < 0 && clue.type == RegionType::MORE)
+        {
+            clue.value = -clue.value;
+            elements_neg = elements & ~elements_neg;
+            clue.type = RegionType::LESS;
+        }
+        if (clue.value < 0 && clue.type == RegionType::LESS)
+        {
+            clue.value = -clue.value;
+            elements_neg = elements & ~elements_neg;
+            clue.type = RegionType::MORE;
+        }
+        if (clue.value <= -2 && clue.type == RegionType::XOR2)
+        {
+            clue.value = -clue.value - 2;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value <= -4 && clue.type == RegionType::XOR22)
+        {
+            clue.value = -clue.value - 4;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value <= -3 && clue.type == RegionType::XOR3)
+        {
+            clue.value = -clue.value - 3;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value <= -1 && clue.type == RegionType::XOR1)
+        {
+            clue.value = -clue.value - 1;
+            elements_neg = elements & ~elements_neg;
+        }
+        if (clue.value <= -2 && clue.type == RegionType::XOR11)
+        {
+            clue.value = -clue.value - 2;
+            elements_neg = elements & ~elements_neg;
+        }
     }
-    if (clue.value < 0 && clue.value >= -2 && clue.type == RegionType::XOR2)
+    else
     {
-        clue.value += 2;
-        clue.type = RegionType::EQUAL;
+        if (clue.value < 0 && clue.type == RegionType::XOR222)
+        {
+            clue.value += 2;
+            clue.type = RegionType::XOR22;
+        }
+        if (clue.value < 0 && clue.type == RegionType::XOR22)
+        {
+            clue.value += 2;
+            clue.type = RegionType::XOR2;
+        }
+        if (clue.value < 0 && clue.value >= -2 && clue.type == RegionType::XOR2)
+        {
+            clue.value += 2;
+            clue.type = RegionType::EQUAL;
+        }
+        if (clue.value < 0 && clue.value >= -3 && clue.type == RegionType::XOR3)
+        {
+            clue.value += 3;
+            clue.type = RegionType::EQUAL;
+        }
+        if (clue.value < 0 && clue.type == RegionType::NOTEQUAL)
+        {
+            return false;
+        }
+        if (clue.value < 0 && clue.type == RegionType::MORE)
+        {
+            return false;
+        }
+        if (clue.value < 0 && clue.type == RegionType::PARITY)
+        {
+            clue.value &= 1;
+        }
+        if (clue.value < 0 && clue.type == RegionType::XOR11)
+        {
+            clue.value++;
+            clue.type = RegionType::XOR1;
+        }
+        if (clue.value < 0 && clue.type == RegionType::XOR1)
+        {
+            assert(clue.value == -1);
+            clue.value = 0;
+            clue.type = RegionType::EQUAL;
+        }
+        if (clue.type != RegionType::PRIME && clue.type != RegionType::TRIANGLE && clue.type != RegionType::POW2)
+            assert (clue.value >= 0);
     }
-    if (clue.value < 0 && clue.value >= -3 && clue.type == RegionType::XOR3)
-    {
-        clue.value += 3;
-        clue.type = RegionType::EQUAL;
-    }
-    if (clue.value < 0 && clue.type == RegionType::NOTEQUAL)
-    {
-        return false;
-    }
-    if (clue.value < 0 && clue.type == RegionType::MORE)
-    {
-        return false;
-    }
-    if (clue.value < 0 && clue.type == RegionType::PARITY)
-    {
-        clue.value &= 1;
-    }
-    if (clue.value < 0 && clue.type == RegionType::XOR11)
-    {
-        clue.value++;
-        clue.type = RegionType::XOR1;
-    }
-    if (clue.value < 0 && clue.type == RegionType::XOR1)
-    {
-        assert(clue.value == -1);
-        clue.value = 0;
-        clue.type = RegionType::EQUAL;
-    }
-    if (clue.type != RegionType::PRIME && clue.type != RegionType::TRIANGLE && clue.type != RegionType::POW2)
-        assert (clue.value >= 0);
     GridRegion reg(clue);
     reg.elements = elements;
+    reg.elements_neg = elements_neg;
     if (cell_causes.count(cause))
     {
         reg.gen_cause = cell_causes[cause];
@@ -3070,24 +3315,31 @@ void Grid::add_base_regions(void)
             continue;
         XYSet line = get_row(e_pos.x, e_pos.y);
         XYSet elements;
+        XYSet elements_neg;
         FOR_XY_SET(n, line)
         {
             if (!get(n).revealed)
             {
                 elements.set(n);
+                if (get(n).negated)
+                    elements_neg.set(n);
             }
             else if (get(n).bomb)
             {
-                clue.value--;
+                if (get(n).negated)
+                    clue.value++;
+                else
+                    clue.value--;
             }
         }
-        add_region(elements, clue, XYPos(e_pos.x + 1000,e_pos.y));
+        add_region(elements, elements_neg, clue, XYPos(e_pos.x + 1000,e_pos.y));
     }
 
     XYSet grid_squares = get_squares();
     FOR_XY_SET(p, grid_squares)
     {
         XYSet elements;
+        XYSet elements_neg;
         GridPlace g = vals[p];
         if (g.revealed && !g.bomb && ((g.clue.type != RegionType::NONE)))
         {
@@ -3098,12 +3350,21 @@ void Grid::add_base_regions(void)
                 FOR_XY_SET(n, neigh)
                 {
                     if (!get(n).revealed)
+                    {
                         elements.set(n);
+                        if (get(n).negated)
+                            elements_neg.set(n);
+                    }
                     else if (get(n).bomb)
-                        clue.value--;
+                    {
+                        if (get(n).negated)
+                            clue.value++;
+                        else
+                            clue.value--;
+                    }
                 }
             }
-            add_region(elements, clue, p);
+            add_region(elements, elements_neg, clue, p);
         }
     }
     return;
@@ -3157,18 +3418,28 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
     }
 
     XYSet to_reveal;
+    XYSet neg_to_reveal;
     for (int i = 0; i < 16; i++)
     {
         if ((rule.apply_region_bitmap >> i) & 1)
         {
             XYSet s = (i & 1) ? r[0]->elements : ~r[0]->elements;
+            if (rule.neg_reg_count == 1)
+                s &= ((i & 8) ? r[0]->elements_neg : ~r[0]->elements_neg);
+            if (rule.neg_reg_count == 2)
+                s &= ((i & 4) ? r[0]->elements_neg : ~r[0]->elements_neg);
             if (r[1])
                 s &= ((i & 2) ? r[1]->elements : ~r[1]->elements);
+            if (rule.neg_reg_count == 2)
+                s &= ((i & 8) ? r[1]->elements_neg : ~r[1]->elements_neg);
+
             if (r[2])
                 s &= ((i & 4) ? r[2]->elements : ~r[2]->elements);
             if (r[3])
                 s &= ((i & 8) ? r[3]->elements : ~r[3]->elements);
             to_reveal |= s;
+            if ((rule.neg_apply_region_bitmap >> i) & 1)
+                neg_to_reveal |= s;
         }
     }
     if (to_reveal.empty())
@@ -3177,10 +3448,9 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
 
     if (rule.apply_region_type.type == RegionType::SET)
     {
+        assert(neg_to_reveal.none());
         FOR_XY_SET(pos, to_reveal)
         {
-            if (vals[pos].clue == RegionType(RegionType::NONE, 1))
-                continue;
             if (vals[pos].bomb != bool(rule.apply_region_type.value))
             {
                 printf("wrong\n");
@@ -3191,8 +3461,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         FOR_XY_SET(pos, to_reveal)
         {
             reveal(pos);
-            if (vals[pos].clue == RegionType(RegionType::NONE, 1))
-                vals[pos].bomb = bool(rule.apply_region_type.value);
             cell_causes[pos] = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
             c++;
         }
@@ -3221,6 +3489,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         }
         GridRegion reg(typ);
         reg.elements = to_reveal;
+        reg.elements_neg =  neg_to_reveal;
         reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
         float f = 0;
         for (int i = 0; i < rule.region_count; i++)
@@ -3425,6 +3694,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
     {
         for (int i = 0; i < rule.region_count; i++)
         {
+            bool has_neg = unstale_region->elements_neg.any();
+            bool want_neg = (i < rule.neg_reg_count);
+            if (has_neg != want_neg)
+                continue;
+
             if (unstale_region->type == rule.region_type[i] || rule.region_type[i].type == RegionType::NONE || (rule.region_type[i].var && (unstale_region->type.type == rule.region_type[i].type)))
                 places_for_reg |= 1 << i;
         }
@@ -3449,6 +3723,11 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                     continue;
                 if ((r.vis_level == GRID_VIS_LEVEL_BIN) && (r.visibility_force == GridRegion::VIS_FORCE_USER))
                     continue;
+                bool has_neg = r.elements_neg.any();
+                bool want_neg = (i < rule.neg_reg_count);
+                if (has_neg != want_neg)
+                    continue;
+
 
                 pos_regions[i].push_back(&r);
             }
@@ -3494,25 +3773,25 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                             bool m = rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts);
                             if (!m)
                                 continue;
-                            int var_counts2[32];
-                            for (int i = 0; i < 32; i++)
-                                var_counts2[i] = -1;
-                            bool m2 = rule.matches(r0, r1, r2, r3, var_counts2);
-                            if (!m2)
-                                continue;
-                            for (int i = 0; i < 32; i++)
-                            {
-                                if (var_counts2[i] >= 0)
-                                    assert(var_counts2[i] == var_counts[i]);
-                            }
-                            if (m != m2)
-                            {
-                                for (int i = 0; i < 32; i++)
-                                    var_counts2[i] = -1;
-                                m2 = rule.matches(r0, r1, r2, r3, var_counts2);
-                                m = rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts);
-                                assert(0);
-                            }
+                            // int var_counts2[32];
+                            // for (int i = 0; i < 32; i++)
+                            //     var_counts2[i] = -1;
+                            // bool m2 = rule.matches(r0, r1, r2, r3, var_counts2);
+                            // if (!m2)
+                            //     continue;
+                            // for (int i = 0; i < 32; i++)
+                            // {
+                            //     if (var_counts2[i] >= 0)
+                            //         assert(var_counts2[i] == var_counts[i]);
+                            // }
+                            // if (m != m2)
+                            // {
+                            //     for (int i = 0; i < 32; i++)
+                            //         var_counts2[i] = -1;
+                            //     m2 = rule.matches(r0, r1, r2, r3, var_counts2);
+                            //     m = rule.jit_matches(fast_ops.ops[3], (rule.region_count == 4), r0, r1, r2, r3, var_counts);
+                            //     assert(0);
+                            // }
                             {
                                 // for (int i = 0; i < 32; i++)
                                 //     var_counts[i] = -1;
@@ -3563,8 +3842,15 @@ bool Grid::region_is_correct(GridRegion* r)
     unsigned bombs = 0;
     FOR_XY_SET(pos, r->elements)
     {
+        // if (!r->gen_cause.rule)
+        //     assert(get(pos).negated == r->elements_neg.get(pos));
         if (vals[pos].bomb)
-            bombs++;
+        {
+            if (r->elements_neg.get(pos))
+                bombs--;
+            else
+                bombs++;
+        }
     }
     int dummy[32] = {};
     

@@ -69,7 +69,7 @@ public:
 
 };
 
-#define FOR_XY_SET(NAME, SET) for (XYPos NAME = SET.first(); NAME.x >= 0; NAME = SET.next(NAME))
+#define FOR_XY_SET(NAME, SET) for (XYPos NAME = (SET).first(); NAME.x >= 0; NAME = (SET).next(NAME))
 
 
 class RegionType
@@ -131,6 +131,8 @@ class GridPlace
 public:
     bool bomb;
     bool revealed;
+    bool negated = false;
+
     RegionType clue = RegionType(RegionType::NONE, 0);
 
     GridPlace(bool bomb_ = false, bool revealed_ = false) :
@@ -191,6 +193,7 @@ public:
     bool stale = false;
     bool deleted = false;
     XYSet elements;
+    XYSet elements_neg;
 
     XYPos gen_cause_pos;
     GridRegionCause gen_cause;
@@ -199,16 +202,17 @@ public:
 
     GridRegion(RegionType type);
     bool overlaps(GridRegion& other);
-    bool contains_all(std::set<XYPos>& other);
     bool operator==(const GridRegion& other) const
     {
-        return (type == other.type) && (elements == other.elements);
+        return (type == other.type) && (elements == other.elements) && (elements_neg == other.elements_neg);
     }
     bool operator<(const GridRegion& other) const
     {
         if (type < other.type) return true;
         if (other.type < type) return false;
         if (elements < other.elements) return true;
+        if (other.elements < elements) return false;
+        if (elements_neg < other.elements_neg) return true;
         return false;
     }
     void next_colour();
@@ -226,10 +230,12 @@ public:
     int8_t priority = 0;
     bool paused = false;
     uint8_t region_count = 0;
+    uint8_t neg_reg_count = 0;
     RegionType region_type[4] = {};
     RegionType square_counts[16] = {};
     RegionType apply_region_type;
     uint16_t apply_region_bitmap = 0;
+    uint16_t neg_apply_region_bitmap = 0;
     int8_t group = 0;
     bool stale = false;
     bool deleted = false;
@@ -255,7 +261,6 @@ public:
             VAR_SUB,
             VAR_TRIPLE,
             VAR_QUAD,
-            MIN_CELL_COUNT,
         };
         OpType op;
         bool set = true;
@@ -280,7 +285,7 @@ public:
     void jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool have[32]);
     void jit_preprocess(FastOpGroup& fast_ops);
     bool jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
-    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
+//    bool matches(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4, int var_counts[32]);
     void import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4);
     typedef enum {OK, ILLOGICAL, LOSES_DATA, IMPOSSIBLE, USELESS, UNBOUNDED, LIMIT} IsLogicalRep;
     IsLogicalRep is_legal(GridRule& why, int vars[5]);
@@ -354,7 +359,7 @@ protected:
 
 public:
     virtual ~Grid(){};
-    void randomize(XYPos size_, WrapType wrapped, int merged_count, int row_percent);
+    void randomize(XYPos size_, WrapType wrapped, int merged_count, int row_percent, int negated_percent);
     void from_string(std::string s);
 
     static Grid* Load(std::string s);
@@ -393,7 +398,7 @@ public:
     bool is_solved(void);
 
     bool add_region(GridRegion& r, bool front = false);
-    bool add_region(XYSet& elements, RegionType clue, XYPos cause);
+    bool add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYPos cause);
     void add_base_regions(void);
 
     enum ApplyRuleResp

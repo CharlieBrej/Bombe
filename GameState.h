@@ -63,7 +63,7 @@ public:
     Mix_Music *music;
 
 
-    static const int GAME_MODES = 4;
+    static const int GAME_MODES = 5;
     int game_mode = 0;
 
     Grid *grid;
@@ -511,12 +511,13 @@ public:
     std::string translate(std::string s);
     void render_tooltip();
     void add_clickable_highlight(SDL_Rect& dst_rect);
+    unsigned rule_xy_to_rule_region_mask(XYPos p, GridRule& rule);
     bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     bool render_button(XYPos tpos, XYPos pos, const char* tooltip, int style = 0, int size = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
-    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false);
+    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false, bool negated = false);
     void render_region_type(RegionType reg, XYPos pos, unsigned siz);
     void render_star_burst(XYPos pos, XYPos size, int progress, bool lock);
     bool render_lock(int lock_type, XYPos pos, XYPos size);
