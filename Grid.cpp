@@ -3266,9 +3266,13 @@ bool Grid::add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYP
             clue.value = -clue.value - 2;
         else if (clue.type == RegionType::PARITY)
         {
-            {
-                elements_neg = elements;
-            }
+            if      (clue.value == -0) { clue.value = 0; clue.type = RegionType::EQUAL; }
+            else if (clue.value == -1) { clue.value = 1; clue.type = RegionType::EQUAL; }
+            else if (clue.value == -2) { clue.value = 0; clue.type = RegionType::XOR2; }
+            else if (clue.value == -3) { clue.value = 1; clue.type = RegionType::XOR2; }
+            else if (clue.value == -4) { clue.value = 0; clue.type = RegionType::XOR22; }
+            else if (clue.value == -5) { clue.value = 1; clue.type = RegionType::XOR22; }
+            else elements_neg = elements;
         }
         else
             clue.value = -clue.value;

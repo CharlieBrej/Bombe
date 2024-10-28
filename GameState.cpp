@@ -1665,7 +1665,6 @@ void GameState::update_constructed_rule()
     for(int i = 0; i < constructed_rule.region_count; i++)
         order.push_back(i);
     do{
-
         GridRule prule = constructed_rule.permute(order);
         for (GridRule& rule : rules[game_mode])
         {
@@ -9003,7 +9002,6 @@ void GameState::import_all_rules()
         for(int i = 0; i < new_rule.region_count; i++)
             order.push_back(i);
         do{
-
             GridRule prule = new_rule.permute(order);
             for (GridRule& rule : rules[game_mode])
             {
