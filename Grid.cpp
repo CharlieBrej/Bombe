@@ -1289,7 +1289,7 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
         region_count = 3;
         region_type[2] = r3->type;
     }
-    if (r4 && region_count < 1)
+    if (r4)
     {
         assert (!r4->elements_neg.any());
         assert(neg_reg_count < 1);
@@ -1349,7 +1349,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
     {
         bool ots = false;
         if (region_type[r] != apply_region_type)
-            ots = true;
+            continue;
 
         unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
         for (int i = 0; i < 16; i++)
@@ -1365,7 +1365,16 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                     }
                     else
                     {
-                        
+                        bool neg = false;
+                        if (neg_reg_count == 1 && r == 0)
+                            neg = i & 8;
+                        if (neg_reg_count == 2 && r == 0)
+                            neg = i & 4;
+                        if (neg_reg_count == 2 && r == 1)
+                            neg = i & 8;
+                        bool rneg = (neg_apply_region_bitmap >> i) & 1;
+                        if (neg != rneg)
+                            ots = true;
                     }
                 }
                 else
@@ -3178,14 +3187,7 @@ bool Grid::add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYP
             clue.value = -clue.value - 2;
         else if (clue.type == RegionType::PARITY)
         {
-            if (clue.value >= -5)
             {
-                clue.type = RegionType::XOR22;
-                clue.value &= 1;
-            }
-            else
-            {
-                assert(0);
                 elements_neg = elements;
             }
         }

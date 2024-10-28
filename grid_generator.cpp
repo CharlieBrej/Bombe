@@ -246,7 +246,7 @@ void* exec(void* dummy)
                 }
                 pthread_mutex_lock(&glob_mutex);
 
-                std::vector<std::string> &levels = global_level_sets[j][cnt]->levels;
+                std::vector<std::string> &levels = second_global_level_sets[j][cnt]->levels;
                 if(std::find(levels.begin(), levels.end(), s) == levels.end())
                     levels.push_back(s);
                 delete g;
