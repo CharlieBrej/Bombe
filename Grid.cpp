@@ -1508,7 +1508,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         return IMPOSSIBLE;
     }
 
-    if (apply_region_type.type == RegionType::VISIBILITY)                               // FIXME
+    if (apply_region_type.type == RegionType::VISIBILITY)
     {
         uint32_t vars_want = 0;
         z3::expr_vector vec2(c);
@@ -1537,52 +1537,126 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (region_type[0].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 1)
-                    t = t | !region_type[0].apply_z3_rule(vec2[1], var_vec);
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1], var_vec));
+                }
                 else
-                    s.add(region_type[0].apply_z3_rule(vec2[1], var_vec));
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] - vec2[9], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] - vec2[9], var_vec));
+                }
             }
         }
         if (region_count == 2)
         {
             if (region_type[0].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 1)
-                    t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec);
-                else
-                    s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec));
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec));
+                }
+                else if(neg_reg_count == 1)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] - vec2[9] + vec2[3] - vec2[11], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] - vec2[9] + vec2[3] - vec2[11], var_vec));
+                }
+                else if(neg_reg_count == 2)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] - vec2[5] + vec2[3] - vec2[7] + vec2[11] - vec2[15], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] - vec2[5] + vec2[3] - vec2[7] + vec2[11] - vec2[15], var_vec));
+                }
             }
             if (region_type[1].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 2)
-                    t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec);
-                else
-                    s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec));
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec));
+                }
+                else if(neg_reg_count == 1)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[11], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[11], var_vec));
+                }
+                else if(neg_reg_count == 2)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[7] - vec2[10] - vec2[11] - vec2[15], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[7] - vec2[10] - vec2[11] - vec2[15], var_vec));
+                }
             }
         }
         if (region_count == 3)
         {
             if (region_type[0].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 1)
-                    t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec);
-                else
-                    s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec));
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec));
+                }
+                else if(neg_reg_count == 1)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec));
+                }
             }
             if (region_type[1].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 2)
-                    t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec);
-                else
-                    s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec));
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec));
+                }
+                else if(neg_reg_count == 1)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[11] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[11] + vec2[15], var_vec));
+                }
             }
             
             if (region_type[2].type != RegionType::NONE)
             {
-                if (vis_apply_inv & 4)
-                    t = t | !region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7], var_vec);
-                else
-                    s.add(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7], var_vec));
+                if (neg_reg_count == 0)
+                {
+                    if (vis_apply_inv & 4)
+                        t = t | !region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7], var_vec);
+                    else
+                        s.add(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7], var_vec));
+                }
+                else if(neg_reg_count == 1)
+                {
+                    if (vis_apply_inv & 4)
+                        t = t | !region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[13] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[13] + vec2[15], var_vec));
+                }
             }
         }
         if (region_count == 4)
@@ -1756,11 +1830,16 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         uint64_t want = 0;
         for (int i = 0; i < region_count; i++)
             seen |= 1 << region_type[i].var;
-        for (int i = 1; i < (1 << region_count); i++)
+        unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+        for (int i = 1; i < 16; i++)
+        {
+            if (!((mask >> i) & 1))
+                continue;
             if (square_counts[i].type == RegionType::EQUAL)
                 seen |= 1 << square_counts[i].var;
             else
                 want |= 1 << square_counts[i].var;
+        }
         if (apply_region_type.type != RegionType::VISIBILITY)
             want |= 1 << apply_region_type.var;
         want &= ~1;
