@@ -410,6 +410,7 @@ public:
         PROG_LOCK_VISIBILITY4,
 
         PROG_LOCK_GAME_MODE,
+        PROG_LOCK_NEG_MINES_MODE,
 
         PROG_LOCK_VARS1,
         PROG_LOCK_VARS2,

@@ -343,6 +343,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_VISIBILITY3] = 2000;
     prog_stars[PROG_LOCK_VISIBILITY4] = 2000;
     prog_stars[PROG_LOCK_GAME_MODE] = 13000;
+    prog_stars[PROG_LOCK_NEG_MINES_MODE] = 19000;
     prog_stars[PROG_LOCK_VARS1] = 6000;
     prog_stars[PROG_LOCK_VARS2] = 10000;
     prog_stars[PROG_LOCK_VARS3] = 14000;
@@ -6022,13 +6023,18 @@ void GameState::render(bool saving)
             std::string tname = translate(name);
             {
                 if (i == 4)
-                    render_button(XYPos(128, 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
+                {
+                    if (render_lock(PROG_LOCK_NEG_MINES_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), XYPos(button_size, button_size)))
+                        render_button(XYPos(128, 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
+                }
                 else
                     render_button(XYPos(2240, 576 + (i * 192)), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
             }
 
             if (i == game_mode)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
+            if (!prog_seen[PROG_LOCK_NEG_MINES_MODE] && i == 4)
+                tname = "???";
             render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname, false, 10 * button_size);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
             render_box(left_panel_offset + XYPos(button_size * 13, int(button_size * (2 + i))), XYPos(button_size, button_size), button_size/4, 4);
@@ -8525,7 +8531,7 @@ bool GameState::events()
                     if (p.x >= 0 && p.y >= 0 && p.x < 5 && p.y < GAME_MODES)
                     {
                         int index = p.y;
-                        if (index != game_mode)
+                        if (index != game_mode && (prog_seen[PROG_LOCK_NEG_MINES_MODE] || index != 4))
                         {
                             pause_robots();
                             current_level_group_index = 0;
