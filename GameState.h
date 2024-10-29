@@ -30,6 +30,7 @@ class GameState
 {
 public:
     static const int game_version = 10;
+    static const int rule_check_version = 1;
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
@@ -491,7 +492,7 @@ public:
     void clear_overlay();
     SDL_Texture* loadTexture(const char* filename);
 
-    bool rule_is_permitted(GridRule& rule, int mode);
+    bool rule_is_permitted(GridRule& rule, int mode, bool legal_check = false);
     void load_grid(std::string s);
     void pause_robots(bool restart_all = true);
     void robot_thread(int index);

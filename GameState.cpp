@@ -112,6 +112,9 @@ GameState::GameState(std::string& load_data, bool json)
             SaveObjectMap* omap;
             omap = SaveObject::load(load_data)->get_map();
             int version = omap->get_num("version");
+            bool check_incoming_rules = true;
+            if (omap->has_key("rule_check_version"))
+                check_incoming_rules = (omap->get_num("rule_check_version") != rule_check_version);
             if (version < 2)
                 throw(std::runtime_error("Bad Version"));
             if (omap->has_key("language"))
@@ -201,7 +204,7 @@ GameState::GameState(std::string& load_data, bool json)
                 for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
-                    if (rule_is_permitted(r, mode))
+                    if (rule_is_permitted(r, mode, check_incoming_rules))
                         rules[mode].push_back(r);
                 }
 
@@ -393,6 +396,7 @@ SaveObject* GameState::save(bool lite)
 {
     SaveObjectMap* omap = new SaveObjectMap;
     omap->add_num("version", game_version);
+    omap->add_num("rule_check_version", rule_check_version);
 
     SaveObjectList* m_list = new SaveObjectList;
 
@@ -846,17 +850,18 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 	return new_texture;
 }
 
-bool GameState::rule_is_permitted(GridRule& rule, int mode)
+bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
 {   
-    // GridRule why;
-    // int vars[5];
-    // if (rule.is_legal(why, vars) != GridRule::OK)
-    //     return false;
-    // GridRule::IsLogicalRep rep = rule.is_legal(why, vars);
-    // if (rep == GridRule::OK || rep == GridRule::LOSES_DATA)
-    // {}
-    // else
-    //     assert(0);
+    if (legal_check)
+    {
+        GridRule why;
+        int vars[5];
+        GridRule::IsLogicalRep rep = rule.is_legal(why, vars);
+        if (rep == GridRule::OK || rep == GridRule::LOSES_DATA)
+        {}
+        else
+            return false;
+    }
 
     if (rule.apply_region_type.type == RegionType::VISIBILITY)
         rule.apply_region_type.var = 0;
@@ -9019,7 +9024,7 @@ void GameState::import_all_rules()
                 break;
         }
         while(std::next_permutation(order.begin(),order.end()));
-        if (!seen && rule_is_permitted(new_rule, game_mode))
+        if (!seen && rule_is_permitted(new_rule, game_mode, true))
         {
             rules[game_mode].push_back(new_rule);
         }
