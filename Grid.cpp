@@ -519,14 +519,30 @@ GridRule GridRule::permute(std::vector<int>& p)
     for (int i = 0; i < region_count; i++)
         r.region_type[i] = region_type[p[i]];
 
-    for (int i = 0; i < (1 << region_count); i++)
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+    for (int i = 0; i < 16; i++)
     {
+        if (!((mask >> i) & 1))
+            continue;
         int p_index = 0;
-        for (int a = 0; a < region_count; a++)                                              // FIXME
+        for (int a = 0; a < region_count; a++)
         {
             if ((i >> a) & 1)
                 p_index |= 1 << p[a];
         }
+        if (neg_reg_count == 1)
+            p_index |= i & 8;
+        if (neg_reg_count == 2)
+        {
+            if (p[0] == 1)
+            {
+                p_index |= (i & 8) >> 1;
+                p_index |= (i & 4) << 1;
+            }
+            else
+                p_index |= i & 0xC;
+        }
+
         r.square_counts[i] = square_counts[p_index];
         if (apply_region_type.type != RegionType::VISIBILITY)
         {
@@ -555,8 +571,11 @@ bool GridRule::covers(GridRule& other)
     for (int i = 0; i < region_count; i++)
         if (!region_type[i].mapper_based_equal(other.region_type[i], mapper))
             return false;
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
     for (int i = 0; i < 16; i++)
     {
+        if (!((mask >> i) & 1))
+            continue;
         if (!square_counts[i].mapper_based_equal(other.square_counts[i], mapper))
             return false;
         if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
@@ -1900,6 +1919,52 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
 void GridRule::remove_region(int index)
 {
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+    uint8_t cnt[16] = {};
+    uint8_t var[16] = {};
+    uint8_t apply[16] = {};
+
+    for (int i = 0; i < 16; i++)
+    {
+        if (!((mask >> i) & 1))
+            continue;
+
+        int to = (i & ((1 << index) - 1)) | ((i & ((1 << region_count) - 1)) >> (index + 1)) << (index);
+        if (neg_reg_count)
+        {
+            to |= i & (0x30 >> neg_reg_count);
+            if (index == 0 && neg_reg_count == 1)
+                to &= ~8;
+            if (index == 0 && neg_reg_count == 2)
+                to &= ~4;
+            if (index == 1 && neg_reg_count == 2)
+            {
+                to &= ~0xC;
+                if (i & 4)
+                    to |= 8;
+            }
+        }
+        if (square_counts[i].type == RegionType::NONE)
+            cnt[to] = 100;
+        if (cnt[to] < 100)
+            cnt[to] += square_counts[i].value;
+        var[to] |= square_counts[i].var;
+        int type = 0;
+        if (apply_region_bitmap >> i & 1)
+        {
+            type = 1;
+            if (neg_apply_region_bitmap >> i & 1)
+                type = 3;
+        }
+        if (apply[to] == 0)
+            apply[to] = type;
+        if (apply[to] != type)
+            apply[to] = 8;
+    }
+
+    uint16_t new_apply_region_bitmap = 0;
+    uint16_t new_neg_apply_region_bitmap = 0;
+
     region_count--;
     if (index < neg_reg_count)
         neg_reg_count--;
@@ -1907,21 +1972,24 @@ void GridRule::remove_region(int index)
         region_type[i] = region_type[i + 1];
     region_type[region_count] = RegionType();
 
-    uint16_t new_apply_region_bitmap = 0;
-    uint16_t new_neg_apply_region_bitmap = 0;
-    for (int i = 1; i < (1 << region_count); i++)
+
+    mask = get_valid_cells_mask(region_count, neg_reg_count);
+    for (int i = 0; i < 16; i++)
     {
-            int idx = i & ((1 << (index)) - 1);                 // FIXME
-            idx |= (i >> (index)) << (index + 1);
-            int idx2 = idx | (1 << index);
-            int c = square_counts[idx].value + square_counts[idx | (1 << index)].value;
-            int v = square_counts[idx].var | square_counts[idx | (1 << index)].var;
-            square_counts[i] = RegionType(RegionType::EQUAL, c);
-            square_counts[i].var = v;
-            if ((apply_region_bitmap >> idx) & (apply_region_bitmap >> idx2) & 1)
-                new_apply_region_bitmap |= 1 << i;
-            if ((neg_apply_region_bitmap >> idx) & (neg_apply_region_bitmap >> idx2) & 1)
-                new_neg_apply_region_bitmap |= 1 << i;
+        if (!((mask >> i) & 1))
+        {
+            square_counts[i] = RegionType(RegionType::NONE, 0);
+            continue;
+        }
+        if (cnt[i] < 100)
+        {
+            square_counts[i] = RegionType(RegionType::EQUAL, cnt[i]);
+            square_counts[i].var = var[i];
+        }
+        else
+            square_counts[i] = RegionType(RegionType::NONE, 0);
+        apply_region_bitmap |= (apply[i] & 1) << i;
+        new_neg_apply_region_bitmap |= ((apply[i] & 2) >> 1) << i;
     }
     apply_region_bitmap = new_apply_region_bitmap;
     neg_apply_region_bitmap = new_neg_apply_region_bitmap;
@@ -3055,7 +3123,7 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                             {
                                 assert(0);
                             }
-                            printf("tst->get_clue(p).value %d++ \n", tst->get_clue(p).value);
+                            //printf("tst->get_clue(p).value %d++ \n", tst->get_clue(p).value);
                             if (tst->get_clue(p).value)
                             {
                                 get_clue(p).type = RegionType::LESS;
