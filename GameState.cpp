@@ -210,11 +210,14 @@ GameState::GameState(std::string& load_data, bool json)
                         if (rule_is_permitted(r, mode))
                             rules[mode].push_back(r);
                 }
-                rlist = omap->get_item("load_rules")->get_list();
-                for (unsigned i = 0; i < rlist->get_count(); i++)
+                if (omap->has_key("load_rules"))
                 {
-                    GridRule r(rlist->get_item(i));
-                    load_rules[mode].push_back(r);
+                    rlist = omap->get_item("load_rules")->get_list();
+                    for (unsigned i = 0; i < rlist->get_count(); i++)
+                    {
+                        GridRule r(rlist->get_item(i));
+                        load_rules[mode].push_back(r);
+                    }
                 }
 
                 {
