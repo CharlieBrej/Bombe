@@ -204,8 +204,17 @@ GameState::GameState(std::string& load_data, bool json)
                 for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
                     GridRule r(rlist->get_item(i));
-                    if (rule_is_permitted(r, mode, check_incoming_rules))
-                        rules[mode].push_back(r);
+                    if (check_incoming_rules)
+                        load_rules[mode].push_back(r);
+                    else
+                        if (rule_is_permitted(r, mode))
+                            rules[mode].push_back(r);
+                }
+                rlist = omap->get_item("load_rules")->get_list();
+                for (unsigned i = 0; i < rlist->get_count(); i++)
+                {
+                    GridRule r(rlist->get_item(i));
+                    load_rules[mode].push_back(r);
                 }
 
                 {
@@ -411,6 +420,13 @@ SaveObject* GameState::save(bool lite)
                 rlist->add_item(rule.save());
         }
         omap->add_item("rules", rlist);
+        rlist = new SaveObjectList;
+        for (GridRule& rule : load_rules[mode])
+        {
+            if (!rule.deleted)
+                rlist->add_item(rule.save());
+        }
+       omap->add_item("load_rules", rlist);
 
         SaveObjectList* pplist = new SaveObjectList;
         for (int j = 0; j <= GLBAL_LEVEL_SETS; j++)
@@ -1089,6 +1105,20 @@ void GameState::robot_thread(int thread_index)
 
 void GameState::advance(int steps)
 {
+    int load_limit = 10;
+    for (int a = -1; a < GAME_MODES; a++)
+    {
+        int mode = a < 0 ? game_mode : a;
+        while (!load_rules[mode].empty())
+        {
+            GridRule& r = load_rules[mode].front();
+            if (rule_is_permitted(r, mode, true))
+                rules[mode].push_back(r);
+            load_rules[mode].pop_front();
+            if (load_limit-- < 0)
+                break;
+        }
+    }
     if (!run_robots && should_run_robots)
     {
         for (unsigned g = 0; g < GLBAL_LEVEL_SETS + 1; g++)

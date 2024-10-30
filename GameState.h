@@ -30,7 +30,7 @@ class GameState
 {
 public:
     static const int game_version = 10;
-    static const int rule_check_version = 1;
+    static const int rule_check_version = 2;
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
@@ -69,6 +69,7 @@ public:
 
     Grid *grid;
     std::list<GridRule> rules[GAME_MODES];
+    std::list<GridRule> load_rules[GAME_MODES];
     int rule_del_count[GAME_MODES] = {};
     std::set<GridRule*> last_deleted_rules[GAME_MODES];
 
