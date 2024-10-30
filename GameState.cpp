@@ -3234,12 +3234,23 @@ void GameState::render(bool saving)
 
     if (right_panel_mode == RIGHT_MENU_REGION)
     {
-        if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos(button_size, button_size)))
+        bool has_neg = inspected_region->elements_neg.any();
+        if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos((has_neg + 1) * button_size, button_size)))
             mouse_hover_region = inspected_region;
         if ((mouse - (right_panel_offset + XYPos(0, 2 * button_size))).inside(XYPos(button_size, button_size)))
         {
             hover_rulemaker = true;
-            hover_squares_highlight = inspected_region->elements;
+            if (has_neg)
+                hover_squares_highlight = inspected_region->elements & ~inspected_region->elements_neg;
+            else
+                hover_squares_highlight = inspected_region->elements;
+            hover_rulemaker_bits = 0;
+        }
+        if (has_neg && (mouse - (right_panel_offset + XYPos(button_size, 2 * button_size))).inside(XYPos(button_size, button_size)))
+        {
+            hover_rulemaker = true;
+            hover_squares_highlight = inspected_region->elements_neg;
+            hover_rulemaker_bits = 1;
         }
     }
 
@@ -5355,22 +5366,36 @@ void GameState::render(bool saving)
             render_text_box(right_panel_offset + XYPos(0 * button_size, 0 * button_size), t);
         }
 
+        bool has_neg = inspected_region->elements_neg.any();
         {
             set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, contrast);
-            render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos(1 * button_size, 2 * button_size), button_size / 2, 8);
+            render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos((has_neg ? 2 : 1) * button_size, 2 * button_size), button_size / 2, 8);
             render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0);
+            if (has_neg)
+                render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(1 * button_size + button_size / 3, 1 * button_size + button_size / 12), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, true);
+
         }
         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
         if (hover_rulemaker)
-            render_box(right_panel_offset + XYPos(0 * button_size, 2 * button_size), XYPos(button_size, button_size), button_size / 4);
+            render_box(right_panel_offset + XYPos(hover_rulemaker_bits * button_size, 2 * button_size), XYPos(button_size, button_size), button_size / 4);
         {
             // int count = inspected_region->elements.size();
             // SDL_Rect src_rect = {192 * count, 0, 192, 192};
             // SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size/8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
             // SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             //
-            RegionType r_type(RegionType::EQUAL, (uint8_t) inspected_region->elements.count());
-            render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
+            if (has_neg)
+            {
+                RegionType r_type(RegionType::EQUAL, (uint8_t) (inspected_region->elements.count() - inspected_region->elements_neg.count()));
+                render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
+                r_type = RegionType(RegionType::EQUAL, (uint8_t) inspected_region->elements_neg.count());
+                render_region_type(r_type, right_panel_offset + XYPos(button_size, 2 * button_size), button_size);
+            }
+            else
+            {
+                RegionType r_type(RegionType::EQUAL, (uint8_t) inspected_region->elements.count());
+                render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
+            }
         }
         render_button(XYPos( 192*3+128, 192*3), XYPos( right_panel_offset.x + button_size * 3, right_panel_offset.y + button_size), "Cancel");
 
