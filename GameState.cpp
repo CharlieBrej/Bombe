@@ -1199,7 +1199,7 @@ void GameState::advance(int steps)
         totcount += count;
         if (ccount >= 5500 && game_mode)
         {
-            const std::string gm_ach_set_names[] = {"THREE", "SIXTY", "NOVAR"};
+            const std::string gm_ach_set_names[] = {"THREE", "SIXTY", "NOVAR", "NEGATIVE"};
             achievements.insert(gm_ach_set_names[game_mode - 1]);
         }
     }
