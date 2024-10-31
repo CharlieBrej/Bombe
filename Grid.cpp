@@ -1995,15 +1995,42 @@ void GridRule::remove_region(int index)
     neg_apply_region_bitmap = new_neg_apply_region_bitmap;
 }
 
-void GridRule::add_region(RegionType type)
+void GridRule::add_region(RegionType type, bool neg)
 {
-    if (region_count >= 4)
-        return;
-    region_type[region_count] = type;
+    int index;
+    if (neg)
+    {
+        index = neg_reg_count;
+        neg_reg_count++;
+    }
+    else
+        index = region_count;
 
-    for (int i = 1 << region_count; i < (1 << (region_count + 1)); i++)
-        square_counts[i] = RegionType(RegionType::EQUAL, 0);
+    if (!index)
+    {
+        for (int i = region_count; i > 0; i--)
+        {
+            region_type[i] = region_type[i - 1];
+        }
+    }
+
     region_count++;
+    unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+    if (neg_reg_count == 2)
+        square_counts[5] = square_counts[9];
+    for (int i = 15; i >= 0; i--)
+    {
+        if (!((mask >> i) & 1))
+            continue;
+        if ((i >> index) & 1)
+            square_counts[i] = RegionType(RegionType::EQUAL, 0);
+        else if (!index)
+            square_counts[i] = square_counts[i >> 1];
+    }
+
+
+    region_type[index] = type;
+
 }
 
 void GridRule::resort_region()
@@ -2015,12 +2042,17 @@ void GridRule::resort_region()
     };
     Sorter sorter(*this);
     std::vector<int> idx;
-    for(int i=0;i<region_count;i++)
+    for(int i = neg_reg_count; i < region_count; i++)
         idx.push_back(i);
     std::sort (idx.begin(), idx.end(), sorter);
     sort_perm = 0;
-    for(int i = 0; i < region_count; i++)
-        sort_perm |= idx[i] << (i * 2);
+    for(int i = neg_reg_count; i < region_count; i++)
+        sort_perm |= idx[i-neg_reg_count] << (i * 2);
+    if (neg_reg_count == 2)
+    {
+        sort_perm = (region_type[0] < region_type[1]) ? 4 : 1;
+
+    }
 }
 
 RegionType GridRule::get_region_sorted(int index)
@@ -3638,6 +3670,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             typ.value += var_counts[typ.var - 1];
             typ.var = false;
             if (typ.value > 32)
+                return APPLY_RULE_RESP_NONE;
+            if (typ.value < -32)
                 return APPLY_RULE_RESP_NONE;
         }
         GridRegion reg(typ);
