@@ -192,6 +192,17 @@ void* exec(void* dummy)
                 continue;
             if ((int)second_global_level_sets[j].size() <= cnt)
                 second_global_level_sets[j].push_back(new LevelSet());
+
+            for (std::string& s : second_global_level_sets[j][cnt]->levels)
+            {
+                if (s == "")
+                    continue;
+                Grid* grid = Grid::Load(s);
+                if (!grid->uses_neg_bombs())
+                    s = "";
+                delete grid;
+            }
+
             while ((int)second_global_level_sets[j][cnt]->levels.size() < params[i].cnt)
             {
                 printf("%lu of %d\n", second_global_level_sets[j][cnt]->levels.size(), params[i].cnt);
@@ -247,8 +258,9 @@ void* exec(void* dummy)
                 pthread_mutex_lock(&glob_mutex);
 
                 std::vector<std::string> &levels = second_global_level_sets[j][cnt]->levels;
-                if(std::find(levels.begin(), levels.end(), s) == levels.end())
-                    levels.push_back(s);
+                if (g->uses_neg_bombs())
+                    if(std::find(levels.begin(), levels.end(), s) == levels.end())
+                        levels.push_back(s);
                 delete g;
                 LevelSet::save_global();
                 printf("got\n");
@@ -280,7 +292,7 @@ void global_mutex_unlock()
 int main( int argc, char* argv[] )
 {
     //grid_set_rnd(1);
-    const int TNUM = 16 ;
+    const int TNUM = 7 ;
     pthread_t thread[TNUM];
     void* dummy;
 

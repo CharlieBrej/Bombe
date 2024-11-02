@@ -4154,6 +4154,17 @@ void Grid::remove_from_regions_to_add_for_rule(GridRule* rule)
     }
 }
 
+bool Grid::uses_neg_bombs()
+{
+    XYSet grid_squares = get_squares();
+    FOR_XY_SET(p, grid_squares)
+    {
+        if (vals[p].negated && !vals[p].revealed)
+            return true;
+    }
+    return false;
+}
+
 std::string SquareGrid::text_desciption()
 {
     return "Square " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));

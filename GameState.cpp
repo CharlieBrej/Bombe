@@ -200,6 +200,8 @@ GameState::GameState(std::string& load_data, bool json)
             int mode = 0;
             for (SaveObjectMap* omap : modes)
             {
+                if (version < 11 && mode == 4)
+                    continue;
                 SaveObjectList* rlist = omap->get_item("rules")->get_list();
                 for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
@@ -4981,7 +4983,7 @@ void GameState::render(bool saving)
     if (render_lock(PROG_LOCK_GAME_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + 2 * button_size), XYPos(button_size, button_size)))
     {
         if (game_mode == 4)
-            render_button(XYPos(128, 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
+            render_button(XYPos(2688, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
         else
             render_button(XYPos(2240, 576 + game_mode * 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
     }
@@ -6083,7 +6085,7 @@ void GameState::render(bool saving)
                 if (i == 4)
                 {
                     if (render_lock(PROG_LOCK_NEG_MINES_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), XYPos(button_size, button_size)))
-                        render_button(XYPos(128, 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
+                        render_button(XYPos(2688, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
                 }
                 else
                     render_button(XYPos(2240, 576 + (i * 192)), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
@@ -8701,8 +8703,8 @@ bool GameState::events()
         inspected_region->vis_cause.rule = NULL;
         inspected_region->stale = false;
     }
-    if (select_region_type.value < 0)
-        select_region_type.value = 0;
+    // if (select_region_type.value < 0)
+    //     select_region_type.value = 0;
     // if (region_type.value < 0)
     //     region_type.value = 0;
 
