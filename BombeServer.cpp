@@ -866,6 +866,7 @@ int main(int argc, char *argv[])
             std::ofstream outfile ("db.save");
             outfile << out_data;
             delete savobj;
+            old_time = new_time;
         }
     }
     close(sockid);
