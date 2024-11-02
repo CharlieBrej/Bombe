@@ -200,8 +200,6 @@ GameState::GameState(std::string& load_data, bool json)
             int mode = 0;
             for (SaveObjectMap* omap : modes)
             {
-                if (version < 11 && mode == 4)
-                    continue;
                 SaveObjectList* rlist = omap->get_item("rules")->get_list();
                 for (unsigned i = 0; i < rlist->get_count(); i++)
                 {
@@ -222,6 +220,8 @@ GameState::GameState(std::string& load_data, bool json)
                     }
                 }
 
+                if (version < 11 && mode == 4)
+                    continue;
                 {
                     SaveObjectList* pplist = omap->get_item("level_progress")->get_list();
                     for (unsigned k = 0; k <= GLBAL_LEVEL_SETS && k < pplist->get_count(); k++)
