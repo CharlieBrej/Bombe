@@ -22,7 +22,7 @@ void grid_set_rnd(int a)
 static unsigned get_valid_cells_mask(int region_count, int neg_reg_count)
 {
     unsigned mask = 0;
-    for (int i = 0; i < (1 << region_count); i++)
+    for (int i = 1; i < (1 << region_count); i++)
     {
         mask |= 1 << i;
         if (neg_reg_count == 1)
