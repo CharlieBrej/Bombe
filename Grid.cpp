@@ -365,6 +365,7 @@ GridRule::GridRule(SaveObject* sobj)
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
     if (omap->has_key("neg_apply_region_bitmap"))
         neg_apply_region_bitmap = omap->get_num("neg_apply_region_bitmap");
+    neg_apply_region_bitmap &= apply_region_bitmap;
     if (apply_region_type.type < 100)
     {
         apply_region_bitmap &= ~1ull;
@@ -1993,6 +1994,7 @@ void GridRule::remove_region(int index)
     }
     apply_region_bitmap = new_apply_region_bitmap;
     neg_apply_region_bitmap = new_neg_apply_region_bitmap;
+    neg_apply_region_bitmap &= apply_region_bitmap;
 }
 
 void GridRule::add_region(RegionType type, bool neg)
