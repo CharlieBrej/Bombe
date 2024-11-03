@@ -235,8 +235,6 @@ GameState::GameState(std::string& load_data, bool json)
                             {
                                 char c = s[j];
                                 int stat = c - '0';
-                                if ((max_stars == 24000) && (version != game_version))
-                                    stat = 0;
                                 level_progress[mode][k][i].level_status[j].done = stat;
                                 if (stat)
                                     level_progress[mode][k][i].count_todo--;
