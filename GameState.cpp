@@ -292,6 +292,7 @@ GameState::GameState(std::string& load_data, bool json)
     tutorial_texture[5] = loadTexture("tutorial/tut5.png");
     tutorial_texture[6] = loadTexture("tutorial/tut6.png");
     tutorial_texture[7] = loadTexture("tutorial/tut7.png");
+    tutorial_texture[8] = loadTexture("tutorial/tut8.png");
 
     {
         SDL_Surface* icon_surface = IMG_Load("icon.png");
@@ -3032,6 +3033,8 @@ void GameState::render(bool saving)
         tut_page_count = 7;
     if (prog_stars[PROG_LOCK_VISIBILITY] <= max_stars)
         tut_page_count = 8;
+    if (prog_stars[PROG_LOCK_NEG_MINES_MODE] <= max_stars)
+        tut_page_count = 9;
 
     if (prog_seen[PROG_LOCK_DONT_CARE] == 0)
     {
@@ -3080,6 +3083,16 @@ void GameState::render(bool saving)
             display_help = true;
             tutorial_index = 7;
             prog_seen[PROG_LOCK_VISIBILITY]++;
+        }
+    }
+
+    if (prog_seen[PROG_LOCK_NEG_MINES_MODE] == 0)
+    {
+        if (prog_stars[PROG_LOCK_NEG_MINES_MODE] <= max_stars)
+        {
+            display_help = true;
+            tutorial_index = 8;
+            prog_seen[PROG_LOCK_NEG_MINES_MODE]++;
         }
     }
 

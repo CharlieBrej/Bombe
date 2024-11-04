@@ -166,6 +166,11 @@
                 {"x":400,  "y": 290,             "text":"Hidden, but still used by rules"},
                 {"x":400,  "y": 490,             "text":"Trash, ignored by rules"},
                 {"x":1050,  "y": 700,            "text":"Rules can be used to\nchange visibility of regions"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -334,6 +339,11 @@
                 {"x":400,  "y": 290,           "text":"Skjult, men stadig brugt af regler"},
                 {"x":400,  "y": 490,           "text":"Skrald, ignoreret af regler"},
                 {"x":1050,  "y": 700,           "text":"Regler kan blive brugt til at\nændre synlighedsniveauet af områder"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -501,6 +511,11 @@
                 {"x":400,  "y": 290,            "text":"Caché mais encore\nutilisable par les règles"},
                 {"x":400,  "y": 490,            "text":"Jeté, ignoré par les règles"},
                 {"x":1050,  "y": 700,           "text":"Les règles peuvent être utilisées\npour changer la visibilité des régions."}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -668,6 +683,11 @@
                 {"x":400,  "y": 275,            "text":"Versteckt, aber\nvon Regeln genutzt"},
                 {"x":400,  "y": 475,            "text":"Müll, von Regeln ignoriert"},
                 {"x":1050,  "y": 700,           "text":"Regeln können verwendet werden, um\ndie Sichtbarkeit von Regionen zu ändern"},
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -835,6 +855,11 @@
                 {"x":400,  "y": 250,           "text":"Verborgen, maar nogsteeds\ngebruikt door regels"},
                 {"x":400,  "y": 450,           "text":"Verwijderd, genegeerd\ndoor de regels"},
                 {"x":1050,  "y": 700,           "text":"Met regels kan je\nde zichtbaarheid van\nregio's veranderen."}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1002,6 +1027,11 @@
                 {"x":400,  "y": 290,            "text":"Ukryte, ale dalej\nużywane przez zasady"},
                 {"x":400,  "y": 490,            "text":"Usunięte, nie używane\nprzez zasady"},
                 {"x":1050,  "y": 700,           "text":"Zasady mogą zmieniać widzialność zasad"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1169,6 +1199,11 @@
                 {"x":400,  "y": 290,           "text":"Спрятанные, но все еще\nиспользующиеся правилами"},
                 {"x":400,  "y": 490,           "text":"Удаленные, \nигнорируются правилами"},
                 {"x":1050,  "y": 700,           "text":"Правила могут\nменять видимость области"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1336,6 +1371,11 @@
                 {"x":400,  "y": 290,           "text":"Dold, men används av reglerna"},
                 {"x":400,  "y": 490,           "text":"Skräp, ignoreras av regler"},
                 {"x":1050,  "y": 700,           "text":"Regler kan användas för att\nändra synlighet av regioner"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1503,6 +1543,11 @@
                 {"x":400,  "y": 290,             "text":"Nascosta, ma comunque\nusata dalle regole"},
                 {"x":400,  "y": 490,             "text":"Cestinata, ignorata dalle regole"},
                 {"x":1050,  "y": 700,            "text":"Le regole possono cambiare\nla visibilità delle regioni"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1807,6 +1852,11 @@
                     "y": 700,
                     "text": "Правила можуть змінювати\nвидимість області"
                 }
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -1974,6 +2024,11 @@
                 {"x":400,  "y": 290,            "text":"隱藏,但仍被規則使用"},
                 {"x":400,  "y": 490,            "text":"無效,被規則忽略"},
                 {"x":1050,  "y": 700,           "text":"規則可用於\n更改區域的可見性"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -2141,6 +2196,11 @@
                 {"x":400,  "y": 290,            "text":"隐藏,但仍被规则使用"},
                 {"x":400,  "y": 490,            "text":"无效,被规则忽略"},
                 {"x":1050,  "y": 700,           "text":"规则可用于\n更改区域的可见性"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -2310,6 +2370,11 @@
                 {"x":400,  "y": 290,            "text":"非表示のルール、\n通常通り適用される"},
                 {"x":400,  "y": 490,            "text":"適用されないルール"},
                 {"x":1050,  "y": 700,           "text":"ルールを設定して\n領域の可視性を変更できます"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -2477,6 +2542,11 @@
                 {"x":400,  "y": 290,             "text":"숨겨짐, 여전히 규칙에서 사용됨"},
                 {"x":400,  "y": 490,             "text":"버려짐, 규칙에서 무시됨"},
                 {"x":1050,  "y": 700,            "text":"규칙을 사용해 지역의 가시성을\n변경할 수 있습니다"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     },
@@ -2645,6 +2715,11 @@
                 {"x":400,  "y": 290,             "text":"Escondido, mas ainda\nusada por regras"},
                 {"x":400,  "y": 490,             "text":"Lixo, ignorado por regras"},
                 {"x":1050,  "y": 700,            "text":"Regras podem ser usadas para\nmudar visibilidade das regiões"}
+            ],
+            [
+                {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
+                {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
             ]
         ]
     }
