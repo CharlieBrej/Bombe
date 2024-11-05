@@ -8902,7 +8902,7 @@ void GameState::send_rule_to_img_clipboard(GridRule& rule)
         else if (rule.region_count == 2)
             siz = XYPos(400, 300);
         else
-            siz = XYPos(400, 300);
+            siz = XYPos(400, 500);
 
     }
     else
