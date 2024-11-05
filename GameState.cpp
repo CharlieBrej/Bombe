@@ -4493,9 +4493,11 @@ void GameState::render(bool saving)
                 }
                 if (grid->get(pos).negated && (!grid->get(pos).revealed || grid->get(pos).bomb))
                 {
-                    bg_col.r = std::min((unsigned)(bg_col.r + 100), (unsigned)contrast);
-                    bg_col.g = std::min((unsigned)(bg_col.g + 100), (unsigned)contrast);
-                    bg_col.b = std::min((unsigned)(bg_col.b + 100), (unsigned)contrast);
+                    int a = (bg_col.r + bg_col.g + bg_col.b) / 3;
+
+                    bg_col.r = std::min((unsigned)(bg_col.r + a + 100), (unsigned)contrast);
+                    bg_col.g = std::min((unsigned)(bg_col.g + a + 100), (unsigned)contrast);
+                    bg_col.b = std::min((unsigned)(bg_col.b + a + 100), (unsigned)contrast);
                 }
                 // if (grid->get(pos).bomb && grid->get(pos).revealed)
                 // {
