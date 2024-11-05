@@ -7584,7 +7584,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if ((pos - XYPos(button_size * 0, button_size * 6.2)).inside(XYPos(button_size,button_size)))
             {
                 region_type = RegionType(RegionType::NONE, 0);
-                if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count) < (game_mode == 1 ? 3 : 4))
+                if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count + (btn == 2)) < (game_mode == 1 ? 3 : 4))
                 {
                     update_constructed_rule_pre();
                     rule_gen_region[constructed_rule.region_count] = NULL;
@@ -7617,7 +7617,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     select_region_type.type = t;
                     region_type = select_region_type;
-                    if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count) < (game_mode == 1 ? 3 : 4))
+                    if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count + (btn == 2)) < (game_mode == 1 ? 3 : 4))
                     {
                         update_constructed_rule_pre();
                         rule_gen_region[constructed_rule.region_count] = NULL;
