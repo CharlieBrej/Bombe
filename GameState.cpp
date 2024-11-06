@@ -7102,7 +7102,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         }
         if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)))
         {
-            if (constructed_rule.region_count < (game_mode == 1 ? 3 : 4))
+            bool has_neg = inspected_region->elements_neg.any();
+            if ((constructed_rule.region_count + constructed_rule.neg_reg_count + has_neg) < (game_mode == 1 ? 3 : 4))
             {
                 right_panel_mode = RIGHT_MENU_RULE_GEN;
                 bool found = false;
@@ -7113,8 +7114,16 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 }
                 if (!found)
                 {
+
                     update_constructed_rule_pre();
-                    rule_gen_region[constructed_rule.region_count] = inspected_region;
+                    if (has_neg)
+                    {
+                        for (int i = constructed_rule.region_count; i > constructed_rule.neg_reg_count; i--)
+                            rule_gen_region[i] = rule_gen_region[i - 1];
+                        rule_gen_region[constructed_rule.neg_reg_count] = inspected_region;
+                    }
+                    else
+                        rule_gen_region[constructed_rule.region_count] = inspected_region;
                     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                     update_constructed_rule();
                 }
