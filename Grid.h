@@ -261,6 +261,7 @@ public:
             VAR_SUB,
             VAR_TRIPLE,
             VAR_QUAD,
+            VAR_BCD,
         };
         OpType op;
         bool set = true;

@@ -750,6 +750,32 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                                 break;
                             }
                         }
+                        int c = (i & j);                        // AB + AC + AD - BCD = 3A
+                        for (int k = 1; k < 32; k++)
+                        {
+                            if (!have[k-1])
+                                continue;
+                            if ((k & c) != c)
+                                continue;
+                            if ((k & i) != c)
+                                continue;
+                            if ((k & j) != c)
+                                continue;
+
+                            int bcd = (i | j | k) & ~c;
+                            if (!have[bcd-1])
+                                continue;
+
+                            int vi = c - 1;
+                            if (!have[vi])
+                            {
+                                have[vi] = true;
+                                add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_BCD, true, vi, i, j, k));
+                                i = 0;
+                                j = 32;
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -1108,6 +1134,13 @@ bool GridRule::jit_matches(std::vector<GridRule::FastOp>& fast_ops, bool final, 
             v /= 2;
         } else if (op.op == FastOp::VAR_QUAD) {
             v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] - var_counts[op.p3 - 1];
+//            assert(!(v & 1));
+        } else if (op.op == FastOp::VAR_BCD) {
+            v = var_counts[op.p1 - 1] + var_counts[op.p2 - 1] + var_counts[op.p3 - 1];
+            v -= var_counts[((op.p1 | op.p2 | op.p3) & ~(op.vi + 1)) - 1];
+            if (v % 3)
+                return false;
+            v /= 3;
 //            assert(!(v & 1));
         } else {
             assert(0);
