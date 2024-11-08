@@ -751,31 +751,32 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                             }
                         }
                         int c = (i & j);                        // AB + AC + AD - BCD = 3A
-                        for (int k = 1; k < 32; k++)
-                        {
-                            if (!have[k-1])
-                                continue;
-                            if ((k & c) != c)
-                                continue;
-                            if ((k & i) != c)
-                                continue;
-                            if ((k & j) != c)
-                                continue;
-
-                            int bcd = (i | j | k) & ~c;
-                            if (!have[bcd-1])
-                                continue;
-
-                            int vi = c - 1;
-                            if (!have[vi])
+                        if (c)
+                            for (int k = 1; k < 32; k++)
                             {
-                                have[vi] = true;
-                                add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_BCD, true, vi, i, j, k));
-                                i = 0;
-                                j = 32;
-                                break;
+                                if (!have[k-1])
+                                    continue;
+                                if ((k & c) != c)
+                                    continue;
+                                if ((k & i) != c)
+                                    continue;
+                                if ((k & j) != c)
+                                    continue;
+
+                                int bcd = (i | j | k) & ~c;
+                                if (!have[bcd-1])
+                                    continue;
+
+                                int vi = c - 1;
+                                if (!have[vi])
+                                {
+                                    have[vi] = true;
+                                    add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_BCD, true, vi, i, j, k));
+                                    i = 0;
+                                    j = 32;
+                                    break;
+                                }
                             }
-                        }
                     }
                 }
             }
@@ -1936,7 +1937,62 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                                     i = 0;
                                     break;
                                 }
+                            }
+                            else
+                            {
+                                for (int k = 1; k < 32; k++)    // ABX+CDX-ACX -> BDX
+                                {
+                                    if (!((seen >> k) & 1))
+                                        continue;
+                                    if (k == i)
+                                        continue;
+                                    if (k == j)
+                                        continue;
+                                    if ((j & i) == j)
+                                        continue;
+                                    if ((k & (i | j)) != k)
+                                        continue;
+                                    if (k == (i | j))
+                                        continue;
+                                    int both = i & j;
+                                    if (!both)
+                                        continue;
+                                    if ((k & both) != both)
+                                        continue;
+                                    int cov = i ^ j;
+                                    int x = (k ^ cov);
+                                    if (!((seen >> x) & 1))
+                                    {
+                                        seen |= 1 << x;
+                                        i = 0;
+                                        break;
+                                    }
+                                }
+                                int c = (i & j);                        // AB + AC + AD - BCD = 3A
+                                if (c)
+                                    for (int k = 1; k < 32; k++)
+                                    {
+                                        if (!((seen >> k) & 1))
+                                            continue;
+                                        if ((k & c) != c)
+                                            continue;
+                                        if ((k & i) != c)
+                                            continue;
+                                        if ((k & j) != c)
+                                            continue;
 
+                                        int bcd = (i | j | k) & ~c;
+                                        if (!((seen >> bcd) & 1))
+                                            continue;
+
+                                        if (!((seen >> c) & 1))
+                                        {
+                                            seen |= 1 << c;
+                                            i = 0;
+                                            j = 32;
+                                            break;
+                                        }
+                                    }
                             }
                         }
                     }
