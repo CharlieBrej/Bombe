@@ -7657,10 +7657,10 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1 + i])
                 {
                     select_region_type.var ^= (1 << i);
-                    if (select_region_type.type != RegionType::NONE &&
-                        select_region_type.type != RegionType::SET &&
-                        select_region_type.type != RegionType::VISIBILITY)
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
             }
         }
@@ -8031,7 +8031,10 @@ void GameState::button_down(uint64_t key)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS1])
                 {
                     select_region_type.var ^= (1 << 0);
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
                 return;
             }
@@ -8040,7 +8043,10 @@ void GameState::button_down(uint64_t key)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS2])
                 {
                     select_region_type.var ^= (1 << 1);
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
                 return;
             }
@@ -8049,7 +8055,10 @@ void GameState::button_down(uint64_t key)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS3])
                 {
                     select_region_type.var ^= (1 << 2);
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
                 return;
             }
@@ -8058,7 +8067,10 @@ void GameState::button_down(uint64_t key)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS4])
                 {
                     select_region_type.var ^= (1 << 3);
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
                 return;
             }
@@ -8067,7 +8079,10 @@ void GameState::button_down(uint64_t key)
                 if (game_mode != 3 && prog_seen[PROG_LOCK_VARS5])
                 {
                     select_region_type.var ^= (1 << 4);
-                    region_type.var = select_region_type.var;
+                    if (region_type.type != RegionType::NONE &&
+                        region_type.type != RegionType::SET &&
+                        region_type.type != RegionType::VISIBILITY)
+                        region_type.var = select_region_type.var;
                 }
                 return;
             }
