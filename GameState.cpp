@@ -4084,11 +4084,23 @@ void GameState::render(bool saving)
             GridRule* new_sel = (arrow_key_pressed == 1) ? post_sel : pre_sel;
             if (new_sel)
             {
-                right_panel_mode = RIGHT_MENU_RULE_INSPECT;
-                inspected_rule = GridRegionCause(new_sel, NULL, NULL, NULL, NULL);
-                selected_rules.clear();
-                selected_rules.insert(new_sel);
-                display_rules_center_current = true;
+                if (!display_clipboard_rules)
+                {
+                    right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+                    inspected_rule = GridRegionCause(new_sel, NULL, NULL, NULL, NULL);
+                    selected_rules.clear();
+                    selected_rules.insert(new_sel);
+                    display_rules_center_current = true;
+                }
+                else
+                {
+                    reset_rule_gen_region();
+                    constructed_rule = *new_sel;
+                    right_panel_mode = RIGHT_MENU_RULE_GEN;
+                    update_constructed_rule();
+                    replace_rule = new_sel;
+                    duplicate_rule = true;
+                }
             }
         }
 
