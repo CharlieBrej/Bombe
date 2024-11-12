@@ -6007,10 +6007,12 @@ void GameState::render(bool saving)
                 render_box(right_panel_offset + XYPos(button_size * 1, button_size * 9), XYPos(button_size * 3, button_size * 3), button_size/4, 4);
                 for (int i = 0; i < 9; i++)
                 {
+                    if (i == selected_colour[2])
+                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 0);
+                    if (i == selected_colour[1])
+                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 2);
                     if (i == selected_colour[0])
                         render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 10);
-                    if (i == selected_colour[1])
-                        render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 0);
                     if (i == 8)
                     {
                         SDL_Rect src_rect = {704, 1536, 192, 192};
@@ -7449,7 +7451,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         {
             XYPos p = pos - XYPos(button_size * 1, button_size * 9);
             p /= button_size;
-            int ci = btn ? 1 : 0;
+            int ci = btn;
 
             selected_colour[ci] = p.x + p.y * 3;
             selected_colour_alt[ci] = ctrl_held;
@@ -8361,7 +8363,7 @@ bool GameState::events()
                         }
                         int s = (paint_brush_size == 0) ? 5 :
                                 (paint_brush_size == 1) ? 10 : 20;
-                        int ci = grid_dragging_btn ? 1 : 0;
+                        int ci = grid_dragging_btn;
 
                         uint32_t cr = (selected_colour[ci] & 1) ? (selected_colour_alt[ci] ? 0 : 128) : 255;
                         uint32_t cg = (selected_colour[ci] & 2) ? (selected_colour_alt[ci] ? 0 : 128) : 255;
@@ -8399,8 +8401,7 @@ bool GameState::events()
                                     overlay_texture_pixels[p.y * overlay_texture_pitch + p.x] = nv;
                             }
                         }
-                        if (grid_dragging_btn == 0)
-                            overlay_texture_is_clean = false;
+                        overlay_texture_is_clean = false;
 //                        SDL_UnlockTexture(overlay_texture);
                     }
                     else
@@ -8672,6 +8673,10 @@ bool GameState::events()
                 if(e.button.button == SDL_BUTTON_RIGHT)
                 {
                     btn = 2;
+                }
+                if(e.button.button == SDL_BUTTON_MIDDLE)
+                {
+                    btn = 1;
                 }
                 if (walkthrough && !display_help)
                 {
