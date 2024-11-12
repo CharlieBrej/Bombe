@@ -327,7 +327,7 @@ public:
                         return;
                 }
                 next_server_levels[i].push_back(resp);
-                break;
+                return;
             }
         }
     }

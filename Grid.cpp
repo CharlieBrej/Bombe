@@ -1752,8 +1752,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                 hiding_dontcare |= 1 << i;
         if (hiding_dontcare)
         {
-            for (int i = 1; i < (1 << region_count); i++)
+            unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+            for (int i = 0; i < 16; i++)
             {
+                if (!((mask >> i) & 1))
+                    continue;
                 if (i & hiding_dontcare)
                 {
                     t = t | (vec[i] != vec2[i]);
@@ -1765,8 +1768,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         if (s.check() == z3::sat)
         {
             z3::model m = s.get_model();
-            for (int i = 1; i < (1 << region_count); i++)
+            unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
+            for (int i = 0; i < 16; i++)
             {
+                if (!((mask >> i) & 1))
+                    continue;
                 vars_want |= why.square_counts[i].var;
                 int v = m.eval(vec2[i]).get_numeral_int();
                 why.square_counts[i] = RegionType(RegionType::EQUAL, v);
@@ -1814,7 +1820,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                 int m = square_counts[i].max();
                 if ((m < 0) && (apply_region_type == RegionType(RegionType::SET, 1)))
                 {
-                    for (int i = 1; i < (1 << region_count); i++)
+                    for (int i = 1; i < 16; i++)
                         why.square_counts[i] = RegionType(RegionType::NONE, 0);
 
                     why.square_counts[i] = RegionType(RegionType::MORE, 0);
