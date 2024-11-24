@@ -92,6 +92,8 @@ public:
         PRIME,
         TRIANGLE,
         POW2,
+        FIBONACCI,
+        BOX,
         SET = 100,
         VISIBILITY = 101,
     } type = NONE;
@@ -123,7 +125,6 @@ public:
     bool apply_int_rule(unsigned in, int vars[32]);
 
     int max();
-    int min();
 };
 
 class GridPlace

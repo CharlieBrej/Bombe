@@ -170,6 +170,14 @@ RESP RegionType::apply_rule_imp(IN in, OTHER other)
     {
         return (((in - other) == 1) || ((in - other) == 2) || ((in - other) == 4) || ((in - other) == 8) || ((in - other) == 16) || ((in - other) == 32));
     }
+    if (type == FIBONACCI)
+    {
+        return (((in - other) == 1) || ((in - other) == 2) || ((in - other) == 3) || ((in - other) == 5) || ((in - other) == 8) || ((in - other) == 21) || ((in - other) == 34));
+    }
+    if (type == BOX)
+    {
+        return ((in - other) % 4) < 2;
+    }
     assert(0);
 }
 
@@ -239,43 +247,13 @@ int RegionType::max()
         return -1;
     if (type == POW2)
         return -1;
+    if (type == FIBONACCI)
+        return -1;
+    if (type == BOX)
+        return -1;
     assert(0);
 }
 
-int RegionType::min()
-{
-    if (type == NONE)
-        return 0;
-    if (type == EQUAL)
-        return value;
-    if (type == NOTEQUAL)
-        return 0;
-    if (type == LESS)
-        return 0;
-    if (type == MORE)
-        return value;
-    if (type == XOR2)
-        return value;
-    if (type == XOR3)
-        return value;
-    if (type == XOR22)
-        return value;
-    if (type == XOR222)
-        return value;
-    if (type == PARITY)
-        return value;
-    if (type == XOR1)
-        return value;
-    if (type == XOR11)
-        return value;
-    if (type == PRIME)
-        return value < -2 ? 0 : value + 2;
-    if (type == TRIANGLE)
-        return value;
-    if (type == POW2)
-        return value < -1 ? 0 : value + 1;
-    assert(0);
-}
 
 GridRegion::GridRegion(RegionType type_)
 {
@@ -2373,6 +2351,7 @@ static std::list<GridRule> global_rules;
 
 void Grid::solve_easy()
 {
+    return;
     if (global_rules.empty())
     {
         std::string sin = "[{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":492,\"priority\":0,\"region_count\":1,\"region_type\":[65792],\"square_counts\":[0,0],\"used_count\":1089},{\"apply_region_bitmap\":2,\"apply_region_type\":66048,\"clear_count\":1156,\"priority\":0,\"region_count\":1,\"region_type\":[65792],\"square_counts\":[0,0],\"used_count\":961},{\"apply_region_bitmap\":2,\"apply_region_type\":25857,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66304],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25857,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66048],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25601,\"clear_count\":902,\"priority\":0,\"region_count\":1,\"region_type\":[66304],\"square_counts\":[0,65792],\"used_count\":483},{\"apply_region_bitmap\":2,\"apply_region_type\":25600,\"clear_count\":1602,\"priority\":0,\"region_count\":1,\"region_type\":[512],\"square_counts\":[0,0],\"used_count\":842},{\"apply_region_bitmap\":4,\"apply_region_type\":131841,\"clear_count\":39,\"priority\":0,\"region_count\":2,\"region_type\":[66048,197377],\"square_counts\":[0,0,0,66305],\"used_count\":49},{\"apply_region_bitmap\":4,\"apply_region_type\":262656,\"clear_count\":33,\"priority\":0,\"region_count\":2,\"region_type\":[197376,328192],\"square_counts\":[0,131328,0,0],\"used_count\":359},{\"apply_region_bitmap\":1,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66048,66048],\"square_counts\":[0,256,0,0],\"used_count\":0},{\"apply_region_bitmap\":8,\"apply_region_type\":25600,\"clear_count\":5,\"priority\":0,\"region_count\":3,\"region_type\":[66049,131584,459520],\"square_counts\":[0,0,0,0,262656,0,0,0],\"used_count\":3},{\"apply_region_bitmap\":2,\"apply_region_type\":65792,\"clear_count\":200,\"priority\":0,\"region_count\":1,\"region_type\":[66816],\"square_counts\":[0,66050],\"used_count\":167},{\"apply_region_bitmap\":2,\"apply_region_type\":65792,\"clear_count\":241,\"priority\":0,\"region_count\":1,\"region_type\":[66560],\"square_counts\":[0,66049],\"used_count\":305},{\"apply_region_bitmap\":4,\"apply_region_type\":132096,\"clear_count\":1,\"priority\":0,\"region_count\":2,\"region_type\":[65792,197632],\"square_counts\":[0,256,0,0],\"used_count\":6},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66560],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,66816],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,68096],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[65792,68352],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":12,\"apply_region_type\":65794,\"clear_count\":2,\"priority\":0,\"region_count\":2,\"region_type\":[197377,66560],\"square_counts\":[0,131328,0,0],\"used_count\":1},{\"apply_region_bitmap\":2,\"apply_region_type\":66048,\"clear_count\":54,\"priority\":0,\"region_count\":1,\"region_type\":[67585],\"square_counts\":[0,65793],\"used_count\":78},{\"apply_region_bitmap\":2,\"apply_region_type\":66560,\"clear_count\":205,\"priority\":0,\"region_count\":1,\"region_type\":[67072],\"square_counts\":[0,66051],\"used_count\":425},{\"apply_region_bitmap\":12,\"apply_region_type\":65795,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[197377,66816],\"square_counts\":[0,131584,0,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25601,\"clear_count\":177,\"priority\":0,\"region_count\":1,\"region_type\":[68096],\"square_counts\":[0,65792],\"used_count\":80},{\"apply_region_bitmap\":2,\"apply_region_type\":67072,\"clear_count\":305,\"priority\":0,\"region_count\":1,\"region_type\":[67840],\"square_counts\":[0,66053],\"used_count\":432},{\"apply_region_bitmap\":2,\"apply_region_type\":769,\"clear_count\":44,\"priority\":0,\"region_count\":1,\"region_type\":[2048],\"square_counts\":[0,0],\"used_count\":55},{\"apply_region_bitmap\":4,\"apply_region_type\":132608,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66560,197634],\"square_counts\":[0,256,0,0],\"used_count\":0},{\"apply_region_bitmap\":4,\"apply_region_type\":1025,\"clear_count\":1,\"priority\":0,\"region_count\":2,\"region_type\":[66560,66561],\"square_counts\":[0,256,0,0],\"used_count\":1},{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":173,\"priority\":0,\"region_count\":1,\"region_type\":[67072],\"square_counts\":[0,0],\"used_count\":270},{\"apply_region_bitmap\":2,\"apply_region_type\":66304,\"clear_count\":50,\"priority\":0,\"region_count\":1,\"region_type\":[68352],\"square_counts\":[0,0],\"used_count\":62},{\"apply_region_bitmap\":2,\"apply_region_type\":66049,\"clear_count\":18,\"priority\":0,\"region_count\":1,\"region_type\":[68096],\"square_counts\":[0,0],\"used_count\":202},{\"apply_region_bitmap\":4,\"apply_region_type\":68096,\"clear_count\":3,\"priority\":0,\"region_count\":2,\"region_type\":[131328,199168],\"square_counts\":[0,256,0,0],\"used_count\":2},{\"apply_region_bitmap\":12,\"apply_region_type\":196864,\"clear_count\":10,\"priority\":0,\"region_count\":2,\"region_type\":[66048,199168],\"square_counts\":[0,0,131584,0],\"used_count\":7},{\"apply_region_bitmap\":4,\"apply_region_type\":132352,\"clear_count\":4,\"priority\":0,\"region_count\":2,\"region_type\":[65792,197888],\"square_counts\":[0,256,0,0],\"used_count\":2},{\"apply_region_bitmap\":2,\"apply_region_type\":1024,\"clear_count\":2,\"priority\":0,\"region_count\":1,\"region_type\":[2049],\"square_counts\":[0,258],\"used_count\":14},{\"apply_region_bitmap\":1,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[67072,66560],\"square_counts\":[0,256,256,0],\"used_count\":0},{\"apply_region_bitmap\":2,\"apply_region_type\":25858,\"clear_count\":0,\"priority\":0,\"region_count\":2,\"region_type\":[66560,67840],\"square_counts\":[0,256,256,0],\"used_count\":0}]";
@@ -2940,151 +2919,183 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
             }
             if (prime)
             {
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 10))
+                struct {RegionType::Type type; int value;} val_types[] = {
+                    {RegionType::BOX, 16},
+                    {RegionType::POW2, 16},
+                    {RegionType::TRIANGLE, 15},
+                    {RegionType::FIBONACCI, 13},
+                    {RegionType::BOX, 13},
+                    {RegionType::PRIME, 13},
+                    {RegionType::BOX, 12},
+                    {RegionType::PRIME, 11},
+                    {RegionType::TRIANGLE, 10},
+                    {RegionType::BOX, 9},
+                    {RegionType::BOX, 8},
+                    {RegionType::FIBONACCI, 8},
+                    {RegionType::POW2, 8},
+                    {RegionType::PRIME, 7},
+                    {RegionType::TRIANGLE, 6},
+                    {RegionType::FIBONACCI, 5},
+                    {RegionType::BOX, 5},
+                    {RegionType::PRIME, 5},
+                    {RegionType::BOX, 4},
+                    {RegionType::POW2, 4},
+                    {RegionType::FIBONACCI, 3},
+                    {RegionType::TRIANGLE, 3},
+                    {RegionType::PRIME, 3},
+                    {RegionType::FIBONACCI, 2},
+                    {RegionType::PRIME, 2},
+                    {RegionType::POW2, 2},
+                    {RegionType::BOX, 1},
+                    {RegionType::FIBONACCI, 1},
+                    {RegionType::POW2, 1},
+                    {RegionType::TRIANGLE, 1},
+                    {RegionType::BOX, 0},
+                    {RegionType::TRIANGLE, 0},
+                    {RegionType::NONE, 0},
+                    };
+                bool got = false;
+                for (int i = 0; ;i++)
                 {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::TRIANGLE;
-                    tst->get_clue(p).value -= 10;
-                    if (tst->is_solveable())
+                    if (val_types[i].type == RegionType::NONE)
+                        break;
+                    if (int(rnd % 10) < prime && (get_clue(p).value >= val_types[i].value))
                     {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
+                        tst = *this;
+                        tst->get_clue(p).type = val_types[i].type;
+                        tst->get_clue(p).value -= val_types[i].value;
+                        if (tst->is_solveable())
+                        {
+                            get_clue(p) = tst->get_clue(p);
+                            got = true;
+                            break;
+                        }
                     }
                 }
+                if (got)
+                    continue;
 
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 8))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::POW2;
-                    tst->get_clue(p).value -= 8;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 7))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::PRIME;
-                    tst->get_clue(p).value -= 7;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 6))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::TRIANGLE;
-                    tst->get_clue(p).value -= 6;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 5))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::PRIME;
-                    tst->get_clue(p).value -= 5;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 4))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::POW2;
-                    tst->get_clue(p).value -= 4;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::TRIANGLE;
-                    tst->get_clue(p).value -= 3;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::PRIME;
-                    tst->get_clue(p).value -= 3;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::POW2;
-                    tst->get_clue(p).value -= 2;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::PRIME;
-                    tst->get_clue(p).value -= 2;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::TRIANGLE;
-                    tst->get_clue(p).value -= 1;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::POW2;
-                    tst->get_clue(p).value -= 1;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
-                if (int(rnd % 10) < prime && (get_clue(p).value >= 0))
-                {
-                    tst = *this;
-                    tst->get_clue(p).type = RegionType::TRIANGLE;
-                    tst->get_clue(p).value -= 0;
-                    if (tst->is_solveable())
-                    {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
-                    }
-                }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 7))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::PRIME;
+                //     tst->get_clue(p).value -= 7;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 6))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::TRIANGLE;
+                //     tst->get_clue(p).value -= 6;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 5))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::PRIME;
+                //     tst->get_clue(p).value -= 5;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 4))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::POW2;
+                //     tst->get_clue(p).value -= 4;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::TRIANGLE;
+                //     tst->get_clue(p).value -= 3;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 3))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::PRIME;
+                //     tst->get_clue(p).value -= 3;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::POW2;
+                //     tst->get_clue(p).value -= 2;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 2))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::PRIME;
+                //     tst->get_clue(p).value -= 2;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::TRIANGLE;
+                //     tst->get_clue(p).value -= 1;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 1))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::POW2;
+                //     tst->get_clue(p).value -= 1;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
+                // if (int(rnd % 10) < prime && (get_clue(p).value >= 0))
+                // {
+                //     tst = *this;
+                //     tst->get_clue(p).type = RegionType::TRIANGLE;
+                //     tst->get_clue(p).value -= 0;
+                //     if (tst->is_solveable())
+                //     {
+                //         get_clue(p) = tst->get_clue(p);
+                //         continue;
+                //     }
+                // }
             }
             if (xor11)
             {
@@ -3443,7 +3454,7 @@ bool Grid::add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYP
 {
     if (!elements.count())
         return false;
-    if (elements_neg == elements)
+    if (elements_neg == elements && clue.type < RegionType::PRIME)
     {
         elements_neg.clear();
         if (clue.type == RegionType::MORE)
@@ -3569,7 +3580,7 @@ bool Grid::add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYP
             clue.value = 0;
             clue.type = RegionType::EQUAL;
         }
-        if (clue.type != RegionType::PRIME && clue.type != RegionType::TRIANGLE && clue.type != RegionType::POW2)
+        if (clue.type != RegionType::PRIME && clue.type != RegionType::TRIANGLE && clue.type != RegionType::POW2 && clue.type != RegionType::FIBONACCI && clue.type != RegionType::BOX)
             assert (clue.value >= 0);
     }
     GridRegion reg(clue);

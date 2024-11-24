@@ -21,11 +21,11 @@ void* exec(void* dummy)
         // {-1, -1, ""},
 
 
-        {200, 0,  "A43000000000000"},
-        {200, 0,  "A43000800000000"},
-        {200, 0,  "A43000444000400"},
-        {200, 0,  "A43000444444440"},
-        {200, 0,  "A43002444444440"},
+        {200, 0,  "A43000000000007"},
+        {200, 0,  "A43000800000007"},
+        {200, 0,  "A43000444000407"},
+        {200, 0,  "A43000444444447"},
+        {200, 0,  "A43002444444447"},
 
         {200, 0,  "A54000000000000"},
         {200, 0,  "A54000800000000"},
@@ -246,7 +246,7 @@ void* exec(void* dummy)
                 int xor11 = req[13] - '0';
                 int prime = req[14] - '0';
 
-                g->randomize(siz, Grid::WrapType(wrap), merged, rows, 20);
+                g->randomize(siz, Grid::WrapType(wrap), merged, rows, 0);
                 g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime);
 
                 std::string s = g->to_string();
@@ -258,7 +258,7 @@ void* exec(void* dummy)
                 pthread_mutex_lock(&glob_mutex);
 
                 std::vector<std::string> &levels = second_global_level_sets[j][cnt]->levels;
-                if (g->uses_neg_bombs())
+                // if (g->uses_neg_bombs())
                     if(std::find(levels.begin(), levels.end(), s) == levels.end())
                         levels.push_back(s);
                 delete g;
