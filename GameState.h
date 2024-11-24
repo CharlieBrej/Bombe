@@ -29,7 +29,7 @@ struct ServerResp
 class GameState
 {
 public:
-    static const int game_version = 11;
+    static const int game_version = 12;
     static const int rule_check_version = 2;
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
@@ -360,6 +360,7 @@ public:
         std::vector<LevelStatus> level_status;
     };
     std::vector<std::vector<std::string>> server_levels;
+    std::vector<std::vector<std::string>> neg_server_levels;
     int server_levels_version = 0;
 
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];

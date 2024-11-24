@@ -135,17 +135,24 @@ public:
 
 };
 
-    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)
-    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13
+    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)(prime)(neg)
+    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13     14     15
 
-static const char* server_level_types[] = { "A650000070000000", "B550000070000000","C850000070000000","A871000070000000", "B771000070000000",
-                                            "A650000007000000", "B550000007000000","C850000007000000","A871000007000000", "B771000007000000",
-                                            "A650000000700000", "B550000000700000","C850000000700000","A871000000700000", "B771000000700000",
-                                            "A650000000070000", "B550000000070000","C850000000070000","A871000000070000", "B771000000070000",
-                                            "A650000000007000", "B550000000007000","C850000000007000","A871000000007000", "B771000000007000",
-                                            "A650000000000700", "B550000000000700","C850000000000700","A871000000000700", "B771000000000700",
+static const char* server_level_types[] = { "A6500000700000000", "B5500000700000000","C8500000700000000","A8710000700000000", "B7710000700000000",
+                                            "A6500000070000000", "B5500000070000000","C8500000070000000","A8710000070000000", "B7710000070000000",
+                                            "A6500000007000000", "B5500000007000000","C8500000007000000","A8710000007000000", "B7710000007000000",
+                                            "A6500000000700000", "B5500000000700000","C8500000000700000","A8710000000700000", "B7710000000700000",
+                                            "A6500000000070000", "B5500000000070000","C8500000000070000","A8710000000070000", "B7710000000070000",
+                                            "A6500000000007000", "B5500000000007000","C8500000000007000","A8710000000007000", "B7710000000007000",
                                             NULL};
-static const int game_version = 11;
+static const char* neg_server_level_types[] = { "A6500000700000030", "B5500000700000030","C8500000700000030","A8710000700000030", "B7710000700000030",
+                                                "A6500000070000030", "B5500000070000030","C8500000070000030","A8710000070000030", "B7710000070000030",
+                                                "A6500000007000030", "B5500000007000030","C8500000007000030","A8710000007000030", "B7710000007000030",
+                                                "A6500000000700030", "B5500000000700030","C8500000000700030","A8710000000700030", "B7710000000700030",
+                                                "A6500000000070030", "B5500000000070030","C8500000000070030","A8710000000070030", "B7710000000070030",
+                                                "A6500000000007030", "B5500000000007030","C8500000000007030","A8710000000007030", "B7710000000007030",
+                                            NULL};
+static const int game_version = 12;
 
 class Player
 {
@@ -168,6 +175,8 @@ public:
     std::map<std::string, uint64_t> steam_sessions;
     std::vector<std::vector<std::string>> server_levels;
     std::vector<std::vector<std::string>> next_server_levels;
+    std::vector<std::vector<std::string>> neg_server_levels;
+    std::vector<std::vector<std::string>> next_neg_server_levels;
     int server_levels_version = 0;
 
 
@@ -242,7 +251,37 @@ public:
                 next_server_levels[k].push_back(s);
             }
         }
+
         server_levels_version = omap->get_num("server_levels_version");
+
+        if (omap->has_key("neg_server_levels"))
+        {
+            lvl_sets = omap->get_item("neg_server_levels")->get_list();
+            neg_server_levels.resize(lvl_sets->get_count());
+            for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+            {
+                SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                neg_server_levels[k].clear();
+                for (unsigned i = 0; i < plist->get_count(); i++)
+                {
+                    std::string s = plist->get_string(i);
+                    neg_server_levels[k].push_back(s);
+                }
+            }
+            lvl_sets = omap->get_item("next_neg_server_levels")->get_list();
+            next_neg_server_levels.resize(lvl_sets->get_count());
+            for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+            {
+                SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                next_neg_server_levels[k].clear();
+                for (unsigned i = 0; i < plist->get_count(); i++)
+                {
+                    std::string s = plist->get_string(i);
+                    next_neg_server_levels[k].push_back(s);
+                }
+            }
+        }
+
 
 
     }
@@ -309,6 +348,30 @@ public:
             sl_list->add_item(ssl_list);
         }
         omap->add_item("next_server_levels", sl_list);
+
+        sl_list = new SaveObjectList;
+        for (std::vector<std::string>& lvl_set : neg_server_levels)
+        {
+            SaveObjectList* ssl_list = new SaveObjectList;
+            for (std::string& lvl : lvl_set)
+            {
+                ssl_list->add_string(lvl);
+            }
+            sl_list->add_item(ssl_list);
+        }
+        omap->add_item("neg_server_levels", sl_list);
+
+        sl_list = new SaveObjectList;
+        for (std::vector<std::string>& lvl_set : next_neg_server_levels)
+        {
+            SaveObjectList* ssl_list = new SaveObjectList;
+            for (std::string& lvl : lvl_set)
+            {
+                ssl_list->add_string(lvl);
+            }
+            sl_list->add_item(ssl_list);
+        }
+        omap->add_item("next_neg_server_levels", sl_list);
         omap->add_num("server_levels_version", server_levels_version);
         omap->add_num("game_version", game_version);
 
@@ -326,7 +389,22 @@ public:
                     if (s == resp)
                         return;
                 }
+                printf("got server level\n");
                 next_server_levels[i].push_back(resp);
+                return;
+            }
+        }
+        for (int i = 0;  neg_server_level_types[i]; i++)
+        {
+            if (req == neg_server_level_types[i] && next_neg_server_levels[i].size() < 200)
+            {
+                for (std::string& s : next_neg_server_levels[i])
+                {
+                    if (s == resp)
+                        return;
+                }
+                printf("got neg server level\n");
+                next_neg_server_levels[i].push_back(resp);
                 return;
             }
         }
@@ -392,6 +470,7 @@ public:
         }
         resp->add_item("stats", top_slist);
         
+        bool got_lev_req = false;
         for (unsigned i = 0;  server_level_types[i]; i++)
         {
             if (i >= next_server_levels.size())
@@ -399,9 +478,21 @@ public:
             if (next_server_levels[i].size() < 200)
             {
                 resp->add_string("level_gen_req", server_level_types[i]);
+                got_lev_req = true;
                 break;
             }
         }
+        if (!got_lev_req)
+            for (unsigned i = 0;  neg_server_level_types[i]; i++)
+            {
+                if (i >= next_neg_server_levels.size())
+                    next_neg_server_levels.resize(i + 1);
+                if (next_neg_server_levels[i].size() < 200)
+                {
+                    resp->add_string("level_gen_req", neg_server_level_types[i]);
+                    break;
+                }
+            }
         resp->add_num("game_mode", mode);
         return resp;
     }
@@ -656,6 +747,21 @@ public:
                                     sl_list->add_item(ssl_list);
                                 }
                                 scr->add_item("server_levels", sl_list);
+                                if (db.neg_server_levels.size())
+                                {
+                                    sl_list = new SaveObjectList;
+                                    for (std::vector<std::string>& lvl_set : db.neg_server_levels)
+                                    {
+                                        
+                                        SaveObjectList* ssl_list = new SaveObjectList;
+                                        for (std::string& lvl : lvl_set)
+                                        {
+                                            ssl_list->add_string(lvl);
+                                        }
+                                        sl_list->add_item(ssl_list);
+                                    }
+                                    scr->add_item("neg_server_levels", sl_list);
+                                }
                             }
                         }
 
@@ -776,6 +882,7 @@ int main(int argc, char *argv[])
             if (!loadfile.fail() && !loadfile.eof())
             {
                 db.next_server_levels.clear();
+                db.next_neg_server_levels.clear();
                 std::remove("CLEAR_NEXT_SERVER_LEVELS");
             }
         }
@@ -805,6 +912,8 @@ int main(int argc, char *argv[])
             {
                 db.server_levels = db.next_server_levels;
                 db.next_server_levels.clear();
+                db.neg_server_levels = db.next_neg_server_levels;
+                db.next_neg_server_levels.clear();
                 db.server_levels_version++;
                 week = new_week;
 
