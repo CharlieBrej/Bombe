@@ -8859,6 +8859,8 @@ void GameState::deal_with_scores()
             try 
             {
                 SaveObjectMap* omap = scores_from_server.resp->get_map();
+                if (omap->has_key("festivus"))
+                    festivus = true;
                 if (omap->has_key("pirate"))
                 {
                     if (pirate > 10)
@@ -8947,7 +8949,7 @@ void GameState::deal_with_scores()
                     SaveObjectList* lvl_sets = omap->get_item("neg_server_levels")->get_list();
                     neg_server_levels.clear();
                     neg_server_levels.resize(lvl_sets->get_count());
-                    for (unsigned m = 0; m < GAME_MODES; m++)
+                    int m = GAME_MODES - 1;
                     {
                         level_progress[m][GLBAL_LEVEL_SETS].clear();
                         level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());

@@ -1650,9 +1650,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                 else if(neg_reg_count == 1)
                 {
                     if (vis_apply_inv & 1)
-                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec);
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] - vec2[11] - vec2[13] - vec2[15], var_vec);
                     else
-                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec));
+                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] - vec2[9] - vec2[11] - vec2[13] - vec2[15], var_vec));
                 }
             }
             if (region_type[1].type != RegionType::NONE)

@@ -156,20 +156,6 @@ void mainloop()
         catch (const std::runtime_error& error)
         {
             std::cerr << error.what() << "\n";
-            try
-            {
-                while (str.find ("\r\n") != std::string::npos)
-                {
-                    str.erase(str.find ("\r\n"), 1);
-                }
-                str = decompress_string(str);
-                json = false;
-            }
-            catch (const std::runtime_error& error)
-            {
-                std::cerr << error.what() << "\n";
-            }
-
         }
 
         game_state = new GameState(str, json);
