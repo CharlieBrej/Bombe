@@ -29,7 +29,7 @@ struct ServerResp
 class GameState
 {
 public:
-    static const int game_version = 13;
+    static const int game_version = 14;
     static const int rule_check_version = 2;
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
