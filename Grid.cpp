@@ -172,7 +172,7 @@ RESP RegionType::apply_rule_imp(IN in, OTHER other)
     }
     if (type == FIBONACCI)
     {
-        return (((in - other) == 1) || ((in - other) == 2) || ((in - other) == 3) || ((in - other) == 5) || ((in - other) == 8) || ((in - other) == 21) || ((in - other) == 34));
+        return (((in - other) == 1) || ((in - other) == 2) || ((in - other) == 3) || ((in - other) == 5) || ((in - other) == 8) || ((in - other) == 13) || ((in - other) == 21) || ((in - other) == 34));
     }
     if (type == BOX)
     {
