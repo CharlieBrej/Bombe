@@ -78,6 +78,7 @@ public:
     bool display_language_chooser = false;
     bool display_reset_confirm = false;
     bool display_reset_confirm_levels_only = false;
+    bool display_reset_confirm_current_levelset_only = false;
     bool display_key_select = false;
     bool display_about = false;
     bool display_debug = false;

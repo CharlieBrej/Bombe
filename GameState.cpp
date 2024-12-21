@@ -3612,19 +3612,9 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Clear");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
             {
-                current_level_index = 0;
-                load_level = true;
-                force_load_level = false;
-                SDL_LockMutex(level_progress_lock);
-                for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
-                {
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[i].done = false;
-                    level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[i].robot_done = 0;
-                }
-                level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
-                level_progress[game_mode][current_level_group_index][current_level_set_index].star_anim_prog = 0;
-                level_progress[game_mode][current_level_group_index][current_level_set_index].unlock_anim_prog = 0;
-                SDL_UnlockMutex(level_progress_lock);
+                display_reset_confirm = true;
+                display_reset_confirm_levels_only = true;
+                display_reset_confirm_current_levelset_only = true;
             }
         }
 
@@ -8616,7 +8606,27 @@ bool GameState::events()
                         {
                             pause_robots();
                             if (display_reset_confirm_levels_only)
-                                reset_levels();
+                            {
+                                if (display_reset_confirm_current_levelset_only)
+                                {
+                                    current_level_index = 0;
+                                    load_level = true;
+                                    force_load_level = false;
+                                    SDL_LockMutex(level_progress_lock);
+                                    for (unsigned i = 0; i < level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size(); i++)
+                                    {
+                                        level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[i].done = false;
+                                        level_progress[game_mode][current_level_group_index][current_level_set_index].level_status[i].robot_done = 0;
+                                    }
+                                    level_progress[game_mode][current_level_group_index][current_level_set_index].count_todo = level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size();
+                                    level_progress[game_mode][current_level_group_index][current_level_set_index].star_anim_prog = 0;
+                                    level_progress[game_mode][current_level_group_index][current_level_set_index].unlock_anim_prog = 0;
+                                    SDL_UnlockMutex(level_progress_lock);
+
+                                }
+                                else
+                                    reset_levels();
+                            }
                             else
                             {
                                 rules[game_mode].clear();
@@ -8665,11 +8675,13 @@ bool GameState::events()
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = true;
+                            display_reset_confirm_current_levelset_only = false;
                         }
                         if (p.y == 8)
                         {
                             display_reset_confirm = true;
                             display_reset_confirm_levels_only = false;
+                            display_reset_confirm_current_levelset_only = false;
                         }
                         if (p.y == 9)
                             quit = true;
