@@ -4333,7 +4333,7 @@ void GameState::render(bool saving)
                             display_rules_sort_col_2nd = 1;
                             display_rules_sort_dir_2nd = true;
                         }
-                        else
+                        else if (!selected_rules.count(&rule))
                         {
                             std::list<GridRule*> rules_to_move;
                             for (GridRule& rule : rules[game_mode])
@@ -4342,21 +4342,23 @@ void GameState::render(bool saving)
                                     rules_to_move.push_back(&rule);
                             }
 
+                            std::list<GridRule>::iterator from, to = rules[game_mode].end();
+                            for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
+                            {
+                                if (&(*it) == &rule)
+                                {
+                                    to = it;
+                                }
+                            }
                             for (GridRule* s_rule : rules_to_move)
                             {
-                                std::list<GridRule>::iterator from, to = rules[game_mode].end();
 
                                 for (std::list<GridRule>::iterator it = rules[game_mode].begin(); it != rules[game_mode].end(); ++it)
                                 {
-                                    if (&(*it) == &rule)
-                                    {
-                                        to = it;
-                                        to++;
-                                    }
                                     if (&(*it) == s_rule)
                                     {
                                         from = it;
-                                        to--;
+//                                        to--;
                                     }
                                 }
                                 rules[game_mode].splice(to, rules[game_mode], from);
