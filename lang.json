@@ -171,7 +171,7 @@
             [
                 {"x":700,  "y": 100,             "text":"In negative bomb mode\nregions may have negated\ncells."},
                 {"x":700,  "y": 450,             "text":"Bombs in negated cells\ncount as -1 to the total"},
-                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells"},
+                {"x":1400, "y": 650,             "text":"Use right mouse button\n to make negated cells\nPress Ctrl to get negative\nnumbers"},
             ]
         ]
     },

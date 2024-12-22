@@ -949,7 +949,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
     if (rule.apply_region_type.type == RegionType::VISIBILITY)
         rule.apply_region_type.var = 0;
 
-    if (mode == 1 && rule.region_count == 4)
+    if (mode == 1 && rule.region_count >= 4)
         return false;
     if (mode == 3)
     {
@@ -965,6 +965,11 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
     if (mode != 4)
     {
         if (rule.neg_reg_count || rule.neg_apply_region_bitmap)
+            return false;
+    }
+    else
+    {
+        if ((rule.region_count + rule.neg_reg_count * 2) > 4)
             return false;
     }
     if (rule.apply_region_type.type != RegionType::VISIBILITY && (mode == 2 || mode == 3))
