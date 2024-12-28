@@ -3748,6 +3748,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             {
                 printf("wrong\n");
                 assert(0);
+                exit(1);
             }
         }
         int c = 0;
