@@ -764,7 +764,7 @@ public:
                                 }
                             }
                         }
-                        scr->add_num("festivus", 1);
+//                        scr->add_num("festivus", 1);
 
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
