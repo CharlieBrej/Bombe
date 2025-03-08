@@ -1506,7 +1506,7 @@ void GameState::advance(int steps)
             return;
         steps_had -= steps_needed;
 
-        int rep = advance_grid(grid, rules[game_mode], inspected_region, filter_pos_and, filter_pos_not);
+        int rep = advance_grid(grid, rules[game_mode], (right_panel_mode == RIGHT_MENU_REGION) ? inspected_region : NULL, filter_pos_and, filter_pos_not);
 
         if (rep == 0)
         {
