@@ -153,6 +153,18 @@ GameState::GameState(std::string& load_data, bool json)
             if (omap->has_key("max_stars"))
                 max_stars = omap->get_num("max_stars");
             bool has_neg_server_levels = omap->has_key("neg_server_levels");
+
+            {
+                std::time_t t = std::time(0);   // get time now
+                std::tm* now = std::localtime(&t);
+                if (now->tm_mon == 3 && now->tm_mday == 1 && max_stars > 10000)
+                {
+                    april_1st = true;
+                    if (omap->has_key("april_1st_hint_count"))
+                        april_1st_hint_count = omap->get_num("april_1st_hint_count");
+
+                }
+            }
             if (omap->has_key("server_levels"))
             {
                 int mode_count = GAME_MODES-1;
@@ -542,6 +554,8 @@ SaveObject* GameState::save(bool lite)
     }
     omap->add_item("neg_server_levels", sl_list);
     omap->add_num("server_levels_version", server_levels_version);
+    if (april_1st)
+        omap->add_num("april_1st_hint_count", april_1st_hint_count);
 
     return omap;
 }
@@ -4954,6 +4968,10 @@ void GameState::render(bool saving)
     render_button(XYPos(1280, 1536), XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 0), "Main Menu");
     render_button(XYPos(704, 960), XYPos(left_panel_offset.x + 1 * button_size, left_panel_offset.y + button_size * 0), "Help");
     render_button(XYPos(1472, 960), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0), "Hint");
+    if (april_1st)
+    {
+        render_number(april_1st_hint_count, left_panel_offset + XYPos(button_size * 2.35, button_size * 0.35), XYPos(button_size * 0.3, button_size * 0.3));
+    }
     render_button(XYPos(704 + 192 * 3, 960), XYPos(left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 0), "Next Level");
     render_button(XYPos(704 + 192 * 2, 960), XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0), "Refresh Regions");
     if (render_lock(PROG_LOCK_SPEED, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1), XYPos(button_size * 3, button_size)))
@@ -6350,6 +6368,97 @@ void GameState::render(bool saving)
             prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] += frame_step;
         }
     }
+    if (display_april_1st_splash)
+    {
+        {
+            SDL_SetTextureAlphaMod(sdl_texture, 200);
+            SDL_Rect src_rect = {15, 426, 1, 1};
+            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            SDL_SetTextureAlphaMod(sdl_texture, 255);
+        }
+        tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 6 * button_size), button_size/4, 1);
+        if (april_1st_animation)
+        {
+            if (april_1st_animation < 360)
+            {
+                SDL_Rect src_rect = {2880, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size * 4, button_size * 4};
+                SDL_Point rot_center = {button_size * 2, button_size * 2};
+                SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, april_1st_animation / 2, &rot_center, SDL_FLIP_NONE);
+                april_1st_animation+=4;
+            }
+            else
+            {
+                for (int i = 0; i < april_1st_add_hint_count; i++)
+                {
+                    SDL_Rect src_rect = {1472, 960, 192, 192};
+                    double prog = ((float)april_1st_animation - 360) / 360;
+                    XYPos sp = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4};
+                    XYPosFloat ep = {left_panel_offset.x + 2.5 * button_size, left_panel_offset.y + button_size * 0.5};
+                    int r = i * 17 + i * i;
+                    XYPosFloat off(Angle(r), (prog - prog * prog) * button_size * 4 * ((float)(r % 100) / 100));
+                    XYPos p = sp * (1 - prog) + ep * prog + off;
+                    
+
+                    SDL_Rect dst_rect = {p.x - button_size/4, p.y - button_size/4, button_size/2, button_size/2};
+                    SDL_Point rot_center = {button_size / 4, button_size / 4};
+                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, r + april_1st_animation, &rot_center, SDL_FLIP_NONE);
+                }
+                april_1st_animation+=4;
+            }
+
+            if (april_1st_animation >= 720)
+            {
+                display_april_1st_splash = false;
+                april_1st_animation = 0;
+                april_1st_hint_count += april_1st_add_hint_count;
+            }
+        }
+        else
+        {  
+            {
+                std::string t = translate("No more hints.\nBuy more?");
+                render_text_box(left_panel_offset + XYPos(1 * button_size, 1 * button_size), t, false);
+            }
+            {
+                SDL_Rect src_rect = {1888, 128, 512, 256};
+                SDL_Rect dst_rect = {left_panel_offset.x + 5 * button_size, (int)(left_panel_offset.y + button_size * 1.2), 4 * button_size, 2 * button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                SDL_Rect src_rect = {2880, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 8.84 * button_size;
+                add_clickable_highlight(dst_rect);
+                std::string t = translate("$5 = 5 hints");
+                render_text_box(left_panel_offset + XYPos(3.2 * button_size, 3.14 * button_size), t, false, 7.5 * button_size);
+            }
+            {
+                SDL_Rect src_rect = {2880, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 4, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 8.84 * button_size;
+                add_clickable_highlight(dst_rect);
+                std::string t = translate("$10 = 12 hints");
+                render_text_box(left_panel_offset + XYPos(3.2 * button_size, 4.14 * button_size), t, false, 7.5 * button_size);
+            }
+            {
+                SDL_Rect src_rect = {2880, 384, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 5, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 8.84 * button_size;
+                add_clickable_highlight(dst_rect);
+                std::string t = translate("$50 = 70 hints (Best Value!)");
+                render_text_box(left_panel_offset + XYPos(3.2 * button_size, 5.14 * button_size), t, false, 7.5 * button_size);
+            }
+        }
+    }
+
+
     if (display_menu)
     {
         {
@@ -7031,6 +7140,15 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         {
             get_hint = false;
             return;
+        }
+        if (april_1st)
+        {
+            if (!april_1st_hint_count)
+            {
+                display_april_1st_splash = true;
+                return;
+            }
+            april_1st_hint_count--;
         }
         for (GridRegion& r : grid->regions)
             if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
@@ -7993,7 +8111,7 @@ void GameState::button_down(uint64_t key)
             scores_list_offset += 16;
         return;
     }
-    if (display_help || display_language_chooser || display_menu || display_key_select || display_about)
+    if (display_help || display_language_chooser || display_menu || display_key_select || display_about || display_april_1st_splash)
     {
         if ((key == key_codes[KEY_CODE_HELP]) ||
             (key == SDLK_ESCAPE))
@@ -8003,6 +8121,7 @@ void GameState::button_down(uint64_t key)
             display_key_select = false;
             display_menu = false;
             display_about = false;
+            display_april_1st_splash = false;
         }
         if (key == key_codes[KEY_CODE_FULL_SCREEN])
         {
@@ -8046,6 +8165,15 @@ void GameState::button_down(uint64_t key)
             {
                 get_hint = false;
                 return;
+            }
+            if (april_1st)
+            {
+                if (!april_1st_hint_count)
+                {
+                    display_april_1st_splash = true;
+                    return;
+                }
+                april_1st_hint_count--;
             }
             for (GridRegion& r : grid->regions)
                 if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
@@ -8652,6 +8780,31 @@ bool GameState::events()
                     }
                     break;
                 }
+                if (display_april_1st_splash && !april_1st_animation)
+                {
+                    XYPos p = (mouse - left_panel_offset) / button_size;
+                    p -= XYPos(2,2);
+                    if (p.x >= 0 && p.x <= 8 && p.y >= 0)
+                    {
+                        if (p.y == 1)
+                        {
+                            april_1st_add_hint_count = 5;
+                            april_1st_animation = 1;
+                        }
+                        if (p.y == 2)
+                        {
+                            april_1st_add_hint_count = 12;
+                            april_1st_animation = 1;
+                        }
+                        if (p.y == 3)
+                        {
+                            april_1st_add_hint_count = 70;
+                            april_1st_animation = 1;
+                        }
+                    }
+                    break;
+                }
+
                 if (display_menu)
                 {
                     XYPos p = (mouse - left_panel_offset) / button_size;

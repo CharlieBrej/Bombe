@@ -484,6 +484,11 @@ public:
     std::string level_gen_req;
     std::string level_gen_resp;
 
+    bool april_1st = false;
+    bool display_april_1st_splash = false;
+    int april_1st_hint_count = 10;
+    int april_1st_add_hint_count = 10;
+    int april_1st_animation = 0;
 
     GameState(std::string& lost_data, bool json);
     SaveObject* save(bool lite = false);
