@@ -983,7 +983,7 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
     }
     else
     {
-        if ((rule.region_count + rule.neg_reg_count * 2) > 4)
+        if ((rule.region_count + rule.neg_reg_count) > 4)
             return false;
     }
     if (rule.apply_region_type.type != RegionType::VISIBILITY && (mode == 2 || mode == 3))
