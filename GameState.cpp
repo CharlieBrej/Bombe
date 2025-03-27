@@ -6368,7 +6368,7 @@ void GameState::render(bool saving)
             prog_seen[PROG_LOCK_DOUBLE_CLICK_HINT] += frame_step;
         }
     }
-    if (display_april_1st_splash)
+    if (display_april_1st_splash && !display_april_1st_game)
     {
         {
             SDL_SetTextureAlphaMod(sdl_texture, 200);
@@ -6379,14 +6379,14 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 6 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 7 * button_size), button_size/4, 1);
         if (april_1st_animation)
         {
             if (april_1st_animation < 360)
             {
                 SDL_Rect src_rect = {2880, 384, 192, 192};
-                SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size * 4, button_size * 4};
-                SDL_Point rot_center = {button_size * 2, button_size * 2};
+                SDL_Rect dst_rect = {left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 2, button_size * 5, button_size * 5};
+                SDL_Point rot_center = {(int)(button_size * 2.5), (int)(button_size * 2.5)};
                 SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, april_1st_animation / 2, &rot_center, SDL_FLIP_NONE);
                 april_1st_animation+=4;
             }
@@ -6396,7 +6396,7 @@ void GameState::render(bool saving)
                 {
                     SDL_Rect src_rect = {1472, 960, 192, 192};
                     double prog = ((float)april_1st_animation - 360) / 360;
-                    XYPos sp = {left_panel_offset.x + 6 * button_size, left_panel_offset.y + button_size * 4};
+                    XYPosFloat sp = {left_panel_offset.x + 6.5 * button_size, left_panel_offset.y + button_size * 4.5};
                     XYPosFloat ep = {left_panel_offset.x + 2.5 * button_size, left_panel_offset.y + button_size * 0.5};
                     int r = i * 17 + i * i;
                     XYPosFloat off(Angle(r), (prog - prog * prog) * button_size * 4 * ((float)(r % 100) / 100));
@@ -6455,8 +6455,249 @@ void GameState::render(bool saving)
                 std::string t = translate("$50 = 70 hints (Best Value!)");
                 render_text_box(left_panel_offset + XYPos(3.2 * button_size, 5.14 * button_size), t, false, 7.5 * button_size);
             }
+            {
+                SDL_Rect src_rect = {1600, 2144, 192, 192};
+                SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 6, button_size, button_size};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                dst_rect.w = 8.84 * button_size;
+                add_clickable_highlight(dst_rect);
+                std::string t = translate("MacroHint Refinement");
+                render_text_box(left_panel_offset + XYPos(3.2 * button_size, 6.14 * button_size), t, false, 7.5 * button_size);
+            }
         }
     }
+    if (display_april_1st_splash && display_april_1st_game)
+    {
+        tooltip_string = "";
+        tooltip_rect = XYRect(-1,-1,-1,-1);
+        mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
+        {
+            SDL_SetTextureAlphaMod(sdl_texture, 200);
+            SDL_Rect src_rect = {15, 426, 1, 1};
+            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            SDL_SetTextureAlphaMod(sdl_texture, 255);
+        }
+
+        render_box(grid_offset, XYPos(grid_size, grid_size), button_size/4, 1);
+        render_box(grid_offset + XYPos(grid_size, 0), XYPos(grid_size / 10, grid_size), button_size/4, 1);
+
+
+        int game_size = 32;
+        float col_tot[4] = {};
+        float biggify_tot = 0;
+        if ((!april_1st_scoop_animation || april_1st_scoop_animation > 100) && !display_rules_click)
+            april_1st_frame++;
+        if (april_1st_scooped_totals[0] == 1 && april_1st_scooped_totals[1] == 1 && april_1st_scooped_totals[2] == 1)
+        {
+            SDL_Rect src_rect = {1472, 960, 192, 192};
+            SDL_Rect dst_rect = {grid_offset.x, grid_offset.y, grid_size, grid_size};
+            SDL_Point rot_center = {grid_size / 2, grid_size / 2};
+            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cos((float)april_1st_frame/50) * 10, &rot_center, SDL_FLIP_NONE);
+            if(display_rules_click)
+            {
+                april_1st_scooped_totals[0] = 0;
+                april_1st_scooped_totals[1] = 0;
+                april_1st_scooped_totals[2] = 0;
+                display_april_1st_splash = false;
+                display_april_1st_game = false;
+                april_1st_hint_count++;
+            }
+        }
+        else
+        {
+            FOR_XY(pos, XYPos(0,0), XYPos(game_size, game_size))
+            {
+                int color = 0;
+                float saturat = 0;
+                {
+                    XYPosFloat npos = XYPosFloat(pos.x * 2 - game_size, pos.y);
+    //                float dist = npos.distance();
+    //                npos = XYPosFloat(npos / (const double)log(dist/3)) * 4;
+                    XYPosFloat fpos = npos + XYPosFloat(20 * cos ((float)april_1st_frame / 1000), 20 * sin ((float)april_1st_frame / 1000));
+
+                    float prog = (float)april_1st_frame / 1000;
+
+                    float a1 = sin(fpos.x/23 + cos(prog*2)  + cos(fpos.y/33 + 1) * 5) * sin(cos(fpos.y/17)*5);
+                    float a2 = cos(sin(fpos.x/16 + cos(fpos.y/17) * 2 + prog/3)*7) * cos(fpos.y/19 + prog*11);
+                    float a3 = sin(fpos.x/17 + cos((fpos.y + 4)/31 + prog*7) * 3) * sin(cos(fpos.y/13)*7);
+                    
+                    std::vector<std::pair<float, int>> fact;
+                    fact.push_back(std::make_pair(a1, 1));
+                    fact.push_back(std::make_pair(a2, 2));
+                    fact.push_back(std::make_pair(a3, 3));
+                    sort(fact.begin(), fact.end(), std::greater<std::pair<float,int>>());
+                    
+                    if (fact[0].first - fact[1].first > 0.5)
+                    {
+                        color = fact[0].second;
+                        saturat = (fact[0].first - fact[1].first) - 0.5;
+                    }
+
+                }
+                int num = (((pos.x + 255) * (pos.y + 255)) % 1023) % 7;
+                RegionType::Type type = (RegionType::Type)((((pos.x + 255) * (pos.y + 255)) % 1023) % 9);
+                if (type == RegionType::XOR222)
+                {
+                    type = RegionType::PARITY;
+                }
+                XYPos numpos = grid_offset + (pos + XYPos(1,1)) * grid_size / (game_size + 1);
+
+
+                {
+                    float cen = ((float)pos.y * 2) / game_size - 1;
+                    cen *= cen;
+                    cen *= cen;
+                    cen *= cen;
+                    cen *= ((float)pos.x * 2) / game_size - 1;
+                    numpos.x -= cen * grid_size / 30;
+                    
+                }
+
+                float siz = 0.4;
+                float dist = XYPosFloat((((april_1st_scoop_animation && april_1st_scoop_animation < 200) || display_rules_click) ? display_rules_click_pos : mouse) - numpos).distance() / grid_size;
+                float biggify = 0;
+                if (dist < 0.05)
+                {
+                    biggify = (0.05 - dist) * 20;
+                    if (april_1st_scoop_animation)
+                    {
+                        int anim = april_1st_scoop_animation;
+                        anim -= num * 3;
+                        if (anim < 0)
+                        {
+                            siz += biggify;
+                        }
+                        else if (anim < 100)
+                        {
+                            numpos = ((numpos * (100 - anim)) + (grid_offset + XYPos(grid_size + grid_size / 20, grid_size / 3 * april_1st_scoop_tgt + grid_size / 6)) * anim) / 100;
+                            siz = (siz + biggify) * (100 - anim) / 100;
+                        }
+                        else if (anim < 100)
+                        {
+                            siz = (anim - 100) * siz / 100;
+                            biggify = 0; 
+                        }
+                        else
+                        {
+                            biggify = biggify * (anim - 200) / 50;
+                            siz += biggify;
+                        }
+                    }
+                    else
+                        siz += biggify;
+                }
+                siz += saturat/3;
+
+                numpos.x += cos(double(frame / 2 + num * 100) / 300) * ((biggify + saturat/3) * grid_size / game_size / 2);
+                numpos.y += sin(double(frame / 2 + num * 100) / 473) * ((biggify + saturat/3) * grid_size / game_size / 2);
+
+                int numsize = grid_size / game_size * siz;
+
+                int uncontrast = contrast * (1 - (saturat * (1 + biggify)));
+                if (uncontrast < 0)
+                    uncontrast = 0;
+
+                if (numsize > 0)
+                {
+                    if (color == 1)
+                        SDL_SetTextureColorMod(sdl_texture, contrast, uncontrast, uncontrast);
+                    if (color == 2)
+                        SDL_SetTextureColorMod(sdl_texture, uncontrast, contrast, uncontrast);
+                    if (color == 3)
+                        SDL_SetTextureColorMod(sdl_texture, uncontrast, uncontrast, contrast);
+                    render_region_type(RegionType((RegionType::Type) type, num), numpos - XYPos(numsize / 2, numsize / 2), numsize);
+                    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                }
+
+                if (biggify)
+                {
+                    col_tot[color] += saturat * biggify;
+                    biggify_tot += biggify;
+                }
+            }
+            if (display_rules_click)
+            {
+                display_rules_click = false;
+                if ((display_rules_click_pos - grid_offset).inside(XYPos(grid_size, grid_size)))
+                {
+                    if (col_tot[1] > col_tot[2] && col_tot[1] > col_tot[3])
+                        april_1st_scoop_tgt = 0;
+                    else if (col_tot[2] > col_tot[3])
+                        april_1st_scoop_tgt = 1;
+                    else
+                        april_1st_scoop_tgt = 2;
+                    april_1st_scoop_value = (col_tot[april_1st_scoop_tgt + 1] / biggify_tot - 0.5) / 20;
+                    april_1st_scoop_animation = 1;
+                }
+                else
+                    display_april_1st_game = false;
+            }
+        }
+
+        if (april_1st_scoop_animation && (april_1st_scoop_animation < 200))
+        {
+            uint8_t cols[3] = {(uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[0])), (uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[1])), (uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[2]))};
+            cols[april_1st_scoop_tgt] = contrast / 2 * (1+april_1st_scooped_totals[april_1st_scoop_tgt]);
+            SDL_SetTextureColorMod(sdl_texture, cols[0], cols[1], cols[2]);
+            float angle = 140;
+            if (april_1st_scoop_animation < 50)
+                angle = april_1st_scoop_animation * 140 / 50;
+            if (april_1st_scoop_animation > 150)
+                angle = (200 - april_1st_scoop_animation) * 140 / 50;
+            SDL_Rect src_rect = {416, 416, 64, 64};
+            SDL_Rect dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3, grid_size / 20, grid_size / 6};
+            SDL_Point rot_center = {0, 0};
+            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+            dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3 + grid_size / 6, grid_size / 20, grid_size / 6};
+            rot_center = {0, grid_size / 6};
+            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, -angle, &rot_center, SDL_FLIP_NONE);
+        }
+
+
+
+
+        SDL_SetTextureColorMod(sdl_texture, contrast / 2 * (1+april_1st_scooped_totals[0]), contrast / 2 * (1-april_1st_scooped_totals[0]), contrast / 2 * (1-april_1st_scooped_totals[0]));
+        render_box(grid_offset + XYPos(grid_size, 0), XYPos(grid_size / 10, grid_size / 3), button_size/4, 11);
+        SDL_SetTextureColorMod(sdl_texture, contrast / 2 * (1-april_1st_scooped_totals[1]), contrast / 2 * (1+april_1st_scooped_totals[1]), contrast / 2 * (1-april_1st_scooped_totals[1]));
+        render_box(grid_offset + XYPos(grid_size, grid_size / 3), XYPos(grid_size / 10, grid_size / 3), button_size/4, 11);
+        SDL_SetTextureColorMod(sdl_texture, contrast / 2 * (1-april_1st_scooped_totals[2]), contrast / 2 * (1-april_1st_scooped_totals[2]), contrast / 2 * (1+april_1st_scooped_totals[2]));
+        render_box(grid_offset + XYPos(grid_size, grid_size / 3 * 2), XYPos(grid_size / 10, grid_size / 3), button_size/4, 11);
+
+        {
+            std::string digits;
+            int val;
+            SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+            for (int i = 0; i < 3; i++)
+            {
+                val = april_1st_scooped_totals[i] * 10000;
+                if (val == 10000)
+                    digits = "100%";
+                else
+                    digits = std::to_string((val / 1000) % 10) + std::to_string((val / 100) % 10) + "." + std::to_string((val / 10) % 10) + std::to_string((val / 1) % 10) + "%";
+                render_number_string(digits, grid_offset + XYPos(grid_size + grid_size / 100, grid_size * i / 3), XYPos(grid_size / 10 - (grid_size / 100 * 2), grid_size / 3));
+            }
+            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+        }
+
+        if (april_1st_scoop_animation)
+        {
+            april_1st_scoop_animation++;
+            if (april_1st_scoop_animation > 100)
+            {
+                float d = april_1st_scoop_value / 10;
+                april_1st_scooped_totals[april_1st_scoop_tgt] += d;
+                april_1st_scoop_value -= d;
+                if (april_1st_scooped_totals[april_1st_scoop_tgt] > 1)
+                    april_1st_scooped_totals[april_1st_scoop_tgt] = 1;
+                    if (april_1st_scooped_totals[april_1st_scoop_tgt] < 0)
+                    april_1st_scooped_totals[april_1st_scoop_tgt] = 0;
+            }
+            if (april_1st_scoop_animation > 250)
+                april_1st_scoop_animation = 0;
+        }
+
+}
 
 
     if (display_menu)
@@ -8122,6 +8363,7 @@ void GameState::button_down(uint64_t key)
             display_menu = false;
             display_about = false;
             display_april_1st_splash = false;
+            display_april_1st_game = false;
         }
         if (key == key_codes[KEY_CODE_FULL_SCREEN])
         {
@@ -8506,6 +8748,11 @@ bool GameState::events()
                     arrow_key_pressed = 1;
                     break;
                 }
+                if (key == SDLK_F11 && ctrl_held)
+                {
+                    april_1st = !april_1st;
+                    break;
+                }
                 if (key == SDLK_F12 && ctrl_held)
                 {
                     display_debug = !display_debug;
@@ -8780,11 +9027,20 @@ bool GameState::events()
                     }
                     break;
                 }
-                if (display_april_1st_splash && !april_1st_animation)
+                if (display_april_1st_splash)
                 {
+                    if (display_april_1st_game)
+                    {
+                        if(!april_1st_scoop_animation)
+                        {
+                            display_rules_click = true;
+                            display_rules_click_pos = mouse;
+                        }
+                        break;
+                    }
                     XYPos p = (mouse - left_panel_offset) / button_size;
                     p -= XYPos(2,2);
-                    if (p.x >= 0 && p.x <= 8 && p.y >= 0)
+                    if (p.x >= 0 && p.x <= 8 && p.y >= 0 && !april_1st_animation)
                     {
                         if (p.y == 1)
                         {
@@ -8800,6 +9056,11 @@ bool GameState::events()
                         {
                             april_1st_add_hint_count = 70;
                             april_1st_animation = 1;
+                        }
+                        if (p.y == 4)
+                        {
+                            display_april_1st_game = true;
+                            display_rules_click = false;
                         }
                     }
                     break;

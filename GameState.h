@@ -487,8 +487,14 @@ public:
     bool april_1st = false;
     bool display_april_1st_splash = false;
     int april_1st_hint_count = 10;
-    int april_1st_add_hint_count = 10;
+    int april_1st_add_hint_count = 0;
     int april_1st_animation = 0;
+    bool display_april_1st_game = false;
+    int april_1st_frame = 0;
+    int april_1st_scoop_tgt = 0;
+    float april_1st_scoop_value = 0;
+    int  april_1st_scoop_animation = 0;
+    float april_1st_scooped_totals[3] = {};
 
     GameState(std::string& lost_data, bool json);
     SaveObject* save(bool lite = false);
