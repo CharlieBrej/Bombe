@@ -6637,19 +6637,16 @@ void GameState::render(bool saving)
 
         if (april_1st_scoop_animation && (april_1st_scoop_animation < 200))
         {
-            uint8_t cols[3] = {(uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[0])), (uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[1])), (uint8_t)(contrast / 2 * (1-april_1st_scooped_totals[2]))};
-            cols[april_1st_scoop_tgt] = contrast / 2 * (1+april_1st_scooped_totals[april_1st_scoop_tgt]);
-            SDL_SetTextureColorMod(sdl_texture, cols[0], cols[1], cols[2]);
             float angle = 140;
             if (april_1st_scoop_animation < 50)
-                angle = april_1st_scoop_animation * 140 / 50;
+                angle = april_1st_scoop_animation * angle / 50;
             if (april_1st_scoop_animation > 150)
-                angle = (200 - april_1st_scoop_animation) * 140 / 50;
-            SDL_Rect src_rect = {416, 416, 64, 64};
-            SDL_Rect dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3, grid_size / 20, grid_size / 6};
+                angle = (200 - april_1st_scoop_animation) * angle / 50;
+            SDL_Rect src_rect = {320, 704, 32, 96};
+            SDL_Rect dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3, grid_size / 40, grid_size / 6};
             SDL_Point rot_center = {0, 0};
             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
-            dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3 + grid_size / 6, grid_size / 20, grid_size / 6};
+            dst_rect = {grid_offset.x + grid_size, grid_offset.y + april_1st_scoop_tgt * grid_size / 3 + grid_size / 6, grid_size / 40, grid_size / 6};
             rot_center = {0, grid_size / 6};
             SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, -angle, &rot_center, SDL_FLIP_NONE);
         }
