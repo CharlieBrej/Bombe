@@ -4652,7 +4652,7 @@ void GameState::render(bool saving)
             if (mouse_square != XYPos(-1,-1))
             {
                 mouse_square = grid->get_base_square(mouse_square);
-                if (mouse_mode == MOUSE_MODE_FILTER)
+                if ((mouse_mode == MOUSE_MODE_FILTER) != ctrl_held)
                 {
                     mouse_filter_pos = mouse_square;
                 }
@@ -4993,7 +4993,7 @@ void GameState::render(bool saving)
             render_button(XYPos(1472, 192), XYPos(left_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 1), "Clear Filter");
 
         {
-            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter", (mouse_mode == MOUSE_MODE_FILTER) ? (filter_mode ? 4 : 3) : 0);
+            render_button(XYPos(1280, 192), XYPos(left_panel_offset.x + 4 * button_size, right_panel_offset.y + button_size * 1), "Filter", ((mouse_mode == MOUSE_MODE_FILTER) != ctrl_held) ? (filter_mode ? 4 : 3) : 0);
             int s = filter_pos_and.count();
             int r = filter_pos_not.count();
             if (s || r)
@@ -7221,7 +7221,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
         display_rules_click_drag = true;
         display_rules_click_pos = mouse;
     }
-    else if (mouse_mode == MOUSE_MODE_FILTER)
+    else if ((mouse_mode == MOUSE_MODE_FILTER) != ctrl_held)
     {
         XYPos gpos = grid->get_square_from_mouse_pos(pos - grid_offset - scaled_grid_offset, grid_pitch);
         if (gpos.x >= 0)
