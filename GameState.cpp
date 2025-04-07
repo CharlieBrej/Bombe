@@ -9227,7 +9227,36 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
-                if ((display_rules || display_levels || display_scores) && ctrl_held)
+                if ((mouse - right_panel_offset).inside(panel_size))
+                {
+                    if (right_panel_mode == RIGHT_MENU_RULE_GEN)
+                    {
+                        if (ctrl_held)
+                        {
+                            if (e.wheel.y > 0)
+                                rule_gen_undo();
+                            else
+                                rule_gen_redo();
+                        }
+                        else
+                        {
+                            if (e.wheel.y > 0)
+                            {
+                                select_region_type.value++;
+                                if (select_region_type.value > 9)
+                                    select_region_type.value = 9;
+                            }
+                            else
+                            {
+                                select_region_type.value--;
+                                if (select_region_type.value < -9)
+                                    select_region_type.value = -9;
+                            }
+                            region_type = select_region_type;
+                        }
+                    }
+                }
+                else if ((display_rules || display_levels || display_scores) && ctrl_held)
                 {
                     display_table_row_count *= pow(1.1, -e.wheel.preciseY);
                     if (display_table_row_count < 15)
