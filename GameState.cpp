@@ -5073,7 +5073,24 @@ void GameState::render(bool saving)
                 render_box(left_panel_offset + XYPos(button_size * 0, button_size * 3), XYPos(button_size * 2, button_size), button_size/4, 10);
             }
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1,0));
+            {
+                const char* group_names = "HSTIW";
+                std::string level_id = "";
+                level_id += group_names[current_level_group_index];
+                level_id += std::to_string(current_level_set_index / 5 + 1);
+                level_id += std::to_string(current_level_set_index % 5 + 1);
+                level_id += "#" + std::to_string(current_level_index + 1);
+                SDL_Color color = {contrast, contrast, contrast};
+                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, level_id.c_str(), color);
+                SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
+                SDL_Rect src_rect;
+                SDL_GetClipRect(text_surface, &src_rect);
+                SDL_Rect dst_rect = {left_panel_offset.x + button_size * 1.5 - src_rect.w * button_size / 640, left_panel_offset.y + button_size * 3 + button_size / 5, src_rect.w * button_size / 320, src_rect.h * button_size / 320};
+                SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
+                SDL_DestroyTexture(new_texture);
+                SDL_FreeSurface(text_surface);
+            }
+            render_number_string(digits, left_panel_offset + XYPos(button_size * 1 + button_size / 8, button_size * 3 + button_size / 2 + button_size / 20), XYPos(button_size * 3 / 4, button_size * 8 / 20), XYPos(1,0));
             dst_rect.w *= 2;
             add_tooltip(dst_rect, "Levels", !display_levels);
 
