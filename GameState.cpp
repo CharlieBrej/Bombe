@@ -359,7 +359,7 @@ GameState::GameState(std::string& load_data, bool json)
             fonts[filename] = TTF_OpenFont(filename.c_str(), 32);
     }
     set_language(language);
-    score_font = TTF_OpenFont("font-fixed.ttf", 19*4);
+    fixed_font = TTF_OpenFont("font-fixed.ttf", 19 * 4);
 
     if (Mix_OpenAudio(48000, MIX_DEFAULT_FORMAT, 2, 2048) != 0)
         has_sound = false;
@@ -418,6 +418,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PRIORITY2] = 16000;
     prog_stars[PROG_LOCK_PAUSE] = 9000;
     prog_stars[PROG_LOCK_COLORS] = 15000;
+    prog_stars[PROG_LOCK_RULE_COMMENT] = 6000;
     prog_stars[PROG_LOCK_TABLE_RULES] = 10;
     prog_stars[PROG_LOCK_TABLE_LEVELS] = 200;
     prog_stars[PROG_LOCK_TABLE_SCORES] = 400;
@@ -582,7 +583,7 @@ GameState::~GameState()
     for (const auto& [key, value] : fonts)
         TTF_CloseFont(value);
     fonts.clear();
-    TTF_CloseFont(score_font);
+    TTF_CloseFont(fixed_font);
     ImgClipBoard::shutdown();
 
     if (has_sound)
@@ -2091,6 +2092,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_
     std::vector<SDL_Texture*> textures;
 
     std::string text = s;
+    if (text == "")
+        text = " ";
     std::string::size_type start = 0;
     XYPos text_box_size;
 
@@ -2123,6 +2126,8 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_
         box_pos.x = 0;
     if (force_width > 0)
         box_size.x = force_width;
+    if (box_pos.y + box_size.y > window_size.y)
+        box_pos.y = window_size.y - box_size.y;
 
     render_box(box_pos, box_size, button_size / 4, 1);
     XYPos txt_pos = box_pos + XYPos(border * 2, border);
@@ -2136,6 +2141,11 @@ void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_
         dst_rect.h = txt_rect.h * button_size / 64;
         dst_rect.x = txt_pos.x;
         dst_rect.y = txt_pos.y;
+        if ((force_width > 0) && (dst_rect.w > (force_width - border * 4)))
+        {
+            txt_rect.w = txt_rect.w * (force_width - border * 4) / dst_rect.w;
+            dst_rect.w = force_width - border * 4;
+        }
         SDL_RenderCopy(sdl_renderer, textures[i], &txt_rect, &dst_rect);
         txt_pos.y += dst_rect.h;
 
@@ -3511,14 +3521,13 @@ void GameState::render(bool saving)
                 continue;
 
             render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + y_offset + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10), XYPos(1,0));
-
             {
                 SDL_Color color = {contrast, contrast, contrast};
                 if (s.is_friend == 1)
                     color = {uint8_t(contrast / 2), contrast, uint8_t(contrast / 2)};
                 if (s.is_friend == 2)
                     color = {contrast, uint8_t(contrast / 2), uint8_t(contrast / 2)};
-                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, s.name.c_str(), color);
+                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(fixed_font, s.name.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
                 SDL_GetClipRect(text_surface, &src_rect);
@@ -5079,13 +5088,13 @@ void GameState::render(bool saving)
                 level_id += group_names[current_level_group_index];
                 level_id += std::to_string(current_level_set_index / 5 + 1);
                 level_id += std::to_string(current_level_set_index % 5 + 1);
-                level_id += "#" + std::to_string(current_level_index + 1);
+                level_id += "." + std::to_string(current_level_index + 1);
                 SDL_Color color = {contrast, contrast, contrast};
-                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(score_font, level_id.c_str(), color);
+                SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, level_id.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
                 SDL_GetClipRect(text_surface, &src_rect);
-                SDL_Rect dst_rect = {left_panel_offset.x + button_size * 1.5 - src_rect.w * button_size / 640, left_panel_offset.y + button_size * 3 + button_size / 5, src_rect.w * button_size / 320, src_rect.h * button_size / 320};
+                SDL_Rect dst_rect = {left_panel_offset.x + button_size * 2 - button_size / 8 - src_rect.w * button_size / 120, left_panel_offset.y + button_size * 3 + button_size / 8, src_rect.w * button_size / 120, src_rect.h * button_size / 120};
                 SDL_RenderCopy(sdl_renderer, new_texture, &src_rect, &dst_rect);
                 SDL_DestroyTexture(new_texture);
                 SDL_FreeSurface(text_surface);
@@ -5995,6 +6004,14 @@ void GameState::render(bool saving)
                 render_number(inspected_rule.rule->used_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 10 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
                 render_number(grid->level_clear_count[inspected_rule.rule], right_panel_offset + XYPos(button_size * 3 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
                 render_number(inspected_rule.rule->clear_count, right_panel_offset + XYPos(button_size * 4 + button_size / 8, button_size * 11 + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2), XYPos(1, 0));
+            }
+            if (render_lock(PROG_LOCK_RULE_COMMENT, right_panel_offset + XYPos(0, 12 * button_size), XYPos(button_size * 5, button_size)))
+            {
+                std::string s = inspected_rule.rule->comment;
+                std::string line = s.substr(0, s.find("\n", 0));
+                render_text_box(right_panel_offset + XYPos(0, 12 * button_size), line, false, button_size * 5);
+                SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y + button_size * 12, button_size*5, button_size};
+                add_tooltip(dst_rect, inspected_rule.rule->comment.c_str());
             }
         }
     }
@@ -7196,6 +7213,20 @@ void GameState::render(bool saving)
         }
 
     }
+    if (display_text_entry)
+    {
+        {
+            SDL_SetTextureAlphaMod(sdl_texture, 220);
+            SDL_Rect src_rect = {15, 426, 1, 1};
+            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
+            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            SDL_SetTextureAlphaMod(sdl_texture, 255);
+        }
+        std::string s = *text_entry_string;
+        s.insert(text_entry_offset, ((frame / 500) % 2) ? "  " : "|");
+        render_text_box(grid_offset, s, false, grid_size);
+        render_button(XYPos(704, 384), XYPos(right_panel_offset.x + button_size * 0, right_panel_offset.y + button_size * 11), "OK");
+    }
 
     if (display_debug)
     {
@@ -7822,6 +7853,18 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     int sel = p.x + p.y * 4;
                     for (GridRule* rule : selected_rules)
                         rule->group = sel;
+                }
+            }
+        }
+        {
+            if (max_stars >= prog_stars[PROG_LOCK_RULE_COMMENT])
+            {
+                if ((pos - XYPos(button_size * 0, button_size * 12)).inside(XYPos(button_size * 5, button_size * 1)))
+                {
+                    display_text_entry = true;
+                    text_entry_string = &inspected_rule.rule->comment;
+                    text_entry_offset = text_entry_string->size();
+                    SDL_StartTextInput();
                 }
             }
         }
@@ -8752,6 +8795,156 @@ bool GameState::events()
                     shift_held |= 2;
                     break;
                 }
+                if (display_text_entry)
+                {
+                    if (key == SDLK_DELETE)
+                    {
+                        if (text_entry_offset < text_entry_string->size())
+                        {
+                            text_entry_string->erase(text_entry_offset, 1);
+                            while (true)
+                            {
+                                if (text_entry_offset >= text_entry_string->size())
+                                    break;
+                                if (is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                    break;
+                                text_entry_string->erase(text_entry_offset, 1);
+                            }
+                        }
+                    }
+                    if (key == SDLK_BACKSPACE)
+                    {
+                        if (text_entry_offset)
+                        {
+                            while (true)
+                            {
+                                text_entry_offset--;
+                                if (!text_entry_offset)
+                                    break;
+                                if (is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                    break;
+                                text_entry_string->erase(text_entry_offset, 1);
+                            }
+                            text_entry_string->erase(text_entry_offset, 1);
+                        }
+                    }
+                    if (key == SDLK_RETURN)
+                    {
+                        std::string new_text("\n");
+                        text_entry_string->insert(text_entry_offset, new_text);
+                        text_entry_offset += new_text.size();
+                    }
+                    if (key == SDLK_ESCAPE)
+                    {
+                        display_text_entry = false;
+                    }
+                    if (key == SDLK_LEFT)
+                    {
+                        if (text_entry_offset)
+                        {
+                            while (true)
+                            {
+                                text_entry_offset--;
+                                if (!text_entry_offset)
+                                    break;
+                                if (is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                    break;
+                            }
+                        }
+                    }
+                    if (key == SDLK_RIGHT)
+                    {
+                        if (text_entry_offset < text_entry_string->size())
+                        {
+                            while (true)
+                            {
+                                text_entry_offset++;
+                                if (text_entry_offset >= text_entry_string->size())
+                                    break;
+                                if (is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                    break;
+                            }
+                        }
+                    }
+                    if (key == SDLK_UP)
+                    {
+                        int char_count = 0;
+                        while (text_entry_offset)
+                        {
+                            char_count++;
+                            text_entry_offset--;
+                            while (text_entry_offset && !is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                text_entry_offset--;
+                            if ((*text_entry_string)[text_entry_offset] == '\n')
+                                break;
+                        }
+                        if (!text_entry_offset)
+                            break;
+                        text_entry_offset--;
+                        while (text_entry_offset && (*text_entry_string)[text_entry_offset] != '\n')
+                            text_entry_offset--;
+                        if ((*text_entry_string)[text_entry_offset] == '\n')
+                            text_entry_offset++;
+                        while (--char_count > 0)
+                        {
+                            if ((*text_entry_string)[text_entry_offset] == '\n')
+                                break;
+                            text_entry_offset++;
+                            while (!is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                text_entry_offset++;
+                        }
+                    }
+                    if (key == SDLK_DOWN)
+                    {
+                        int char_count = 0;
+                        while (text_entry_offset)
+                        {
+                            char_count++;
+                            text_entry_offset--;
+                            if ((*text_entry_string)[text_entry_offset] == '\n')
+                                break;
+                            while (text_entry_offset && !is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                text_entry_offset--;
+                        }
+                        if (text_entry_offset)
+                            text_entry_offset++;
+                        else
+                            char_count++;
+
+                        while ((*text_entry_string)[text_entry_offset] != '\n' && text_entry_offset < text_entry_string->size())
+                            text_entry_offset++;
+                        if (text_entry_offset < text_entry_string->size())
+                            text_entry_offset++;
+                        while (--char_count > 0)
+                        {
+                            if (text_entry_offset >= text_entry_string->size())
+                                break;
+                            if ((*text_entry_string)[text_entry_offset] == '\n')
+                                break;
+                            text_entry_offset++;
+                            while (!is_leading_utf8_byte((*text_entry_string)[text_entry_offset]))
+                                text_entry_offset++;
+                        }
+                    }
+                    if (key == SDLK_HOME)
+                    {
+                        while (text_entry_offset)
+                        {
+                            text_entry_offset--;
+                            if ((*text_entry_string)[text_entry_offset] == '\n')
+                            {
+                                text_entry_offset++;
+                                break;
+                            }
+                        }
+                    }
+                    if (key == SDLK_END)
+                    {
+                        while (text_entry_offset < text_entry_string->size() && (*text_entry_string)[text_entry_offset] != '\n')
+                            text_entry_offset++;
+                    }
+                    break;
+                }
                 if (key == SDLK_UP)
                 {
                     arrow_key_pressed = -1;
@@ -8815,6 +9008,8 @@ bool GameState::events()
             }
             case SDL_MOUSEMOTION:
             {
+                if (display_text_entry)
+                    break;
                 mouse.x = e.motion.x * mouse_scale.x;
                 mouse.y = e.motion.y * mouse_scale.y;
                 if (grid_dragging)
@@ -8925,6 +9120,8 @@ bool GameState::events()
             }
             case SDL_MOUSEBUTTONUP:
             {
+                if (display_text_entry)
+                    break;
                 display_rules_click_drag = false;
                 grid_dragging = false;
                 dragging_speed = false;
@@ -8936,6 +9133,15 @@ bool GameState::events()
             }
             case SDL_MOUSEBUTTONDOWN:
             {
+                if (display_text_entry)
+                {
+                    XYPos pos;
+                    pos.x = e.button.x * mouse_scale.x;
+                    pos.y = e.button.y * mouse_scale.y;
+                    if ((pos - right_panel_offset - XYPos(button_size * 0, button_size * 11)).inside(XYPos(button_size,button_size)))
+                        display_text_entry = false;
+                    break;
+                }
                 mouse_button_pressed = true;
                 mouse.x = e.button.x * mouse_scale.x;
                 mouse.y = e.button.y * mouse_scale.y;
@@ -9244,6 +9450,8 @@ bool GameState::events()
 
             case SDL_MOUSEWHEEL:
             {
+                if (display_text_entry)
+                    break;
                 if ((mouse - right_panel_offset).inside(panel_size))
                 {
                     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
@@ -9289,6 +9497,16 @@ bool GameState::events()
                     scores_list_offset -= e.wheel.y;
                 else
                     target_grid_zoom *= pow(1.1, e.wheel.preciseY);
+                break;
+            }
+            case SDL_TEXTINPUT:
+            {
+                if (!ctrl_held)
+                {
+                    std::string new_text(e.text.text);
+                    text_entry_string->insert(text_entry_offset, new_text);
+                    text_entry_offset += new_text.size();
+                }
                 break;
             }
 

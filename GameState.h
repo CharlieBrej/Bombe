@@ -36,7 +36,7 @@ public:
     SDL_Texture* sdl_texture;
     std::map<std::string, TTF_Font*> fonts;
     TTF_Font *font = NULL;
-    TTF_Font *score_font = NULL;
+    TTF_Font *fixed_font = NULL;
     SaveObjectMap* lang_data;
     unsigned frame = 0;
     int frame_step = 0;
@@ -226,6 +226,7 @@ public:
     bool display_levels_sort_dir_2nd = true;
     bool display_levels_level = false;
     bool display_scores_global = false;
+    bool display_text_entry = false;
 
     struct ConstructedRuleState
     {
@@ -427,6 +428,7 @@ public:
         PROG_LOCK_PRIORITY2,
         PROG_LOCK_PAUSE,
         PROG_LOCK_COLORS,
+        PROG_LOCK_RULE_COMMENT,
 
         PROG_LOCK_TABLE_RULES,
         PROG_LOCK_TABLE_LEVELS,
@@ -496,6 +498,9 @@ public:
     int  april_1st_scoop_animation = 0;
     float april_1st_scooped_totals[3] = {};
 
+    unsigned text_entry_offset = 0;
+    std::string* text_entry_string = NULL;
+
     GameState(std::string& lost_data, bool json);
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
@@ -524,7 +529,7 @@ public:
     void update_constructed_rule();
     void render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
     void render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type = 0);
-    void render_text_box(XYPos pos, std::string& s, bool left = false, int force_width = -1);
+    void render_text_box(XYPos pos, std::string& s, bool left = false, int force_width = 0);
     std::string translate(std::string s);
     void render_tooltip();
     void add_clickable_highlight(SDL_Rect& dst_rect);

@@ -364,6 +364,9 @@ GridRule::GridRule(SaveObject* sobj)
         clear_count = omap->get_num("clear_count");
     if (omap->has_key("cpu_time"))
         cpu_time = omap->get_num("cpu_time");
+    if (omap->has_key("comment"))
+        comment = omap->get_string("comment");
+
     // GridRule why;
     // int vars[5];
     // IsLogicalRep rep = is_legal(why, vars);
@@ -399,6 +402,8 @@ SaveObject* GridRule::save(bool lite)
         omap->add_num("clear_count", clear_count);
         omap->add_num("cpu_time", cpu_time);
     }
+    if (comment != "")
+        omap->add_string("comment", comment);
     return omap;
 }
 
