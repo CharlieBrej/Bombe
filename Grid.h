@@ -223,6 +223,9 @@ public:
         return (_and.none() || elements.contains(_and)) &&
             (_not.none() || !(elements & _not).any());
     }
+    bool isHintable() const {
+        return visibility_force == GridRegion::VIS_FORCE_NONE && vis_level == GRID_VIS_LEVEL_SHOW;
+    }
 };
 
 class GridRule

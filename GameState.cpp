@@ -1433,44 +1433,71 @@ void GameState::advance(int steps)
         if (steps_had < steps_want)
             return;
         steps_had -= steps_want;
-        get_hint = false;
         std::vector<GridRegion*> my_regions;
+
+        // Regions that don't match the filter at the front
         for (GridRegion& r : grid->regions)
-            my_regions.push_back(&r);
+            if (r.isHintable() && !r.matches_filters(filter_pos_and, filter_pos_not))
+                my_regions.push_back(&r);
+        auto mid = my_regions.size();
+        for (GridRegion& r : grid->regions)
+            if (r.isHintable() && r.matches_filters(filter_pos_and, filter_pos_not))
+                my_regions.push_back(&r);
 
         std::random_device rd;
         std::mt19937 rnd_gen(rd());
-        std::shuffle(my_regions.begin(), my_regions.end(), rnd_gen);
+        std::shuffle(my_regions.begin(), my_regions.begin()+mid, rnd_gen);
+        std::shuffle(my_regions.begin()+mid, my_regions.end(), rnd_gen);
 
-        for (int matches = 0; matches <= 1; matches++)
+        get_hint = !my_regions.empty();
+
+        int hintMin = 0;
+        while (hintMin < my_regions.size())
         {
-            for (GridRegion* r_ptr : my_regions)
+            // Attempt to hide half the regions or just 1 depending on FAST_HINT2
+            int hintMax = (max_stars >= prog_stars[PROG_LOCK_FAST_HINT2]) ?
+                (hintMin + my_regions.size() - 1) / 2 :
+                hintMin;
+            for (int i = hintMin; i <= hintMax; ++i)
             {
-                GridRegion& r = *r_ptr;
-                if (r.matches_filters(filter_pos_and, filter_pos_not) == matches &&   
-                    r.visibility_force == GridRegion::VIS_FORCE_NONE && r.vis_level == GRID_VIS_LEVEL_SHOW)
+                GridRegion& r = *my_regions[i];
+                r.vis_cause.rule = NULL;
+                r.visibility_force = GridRegion::VIS_FORCE_HINT;
+                r.vis_level = GRID_VIS_LEVEL_HIDE;
+            }
+
+            while (true)
+            {
+                // Test if there's still determinable spots
+                std::set<XYPos> new_clue_solves;
+                for (const XYPos& pos : clue_solves) {
+                    if (grid->is_determinable_using_regions(pos, true))
+                        new_clue_solves.insert(pos);
+                }
+                if (new_clue_solves.empty())
                 {
-                    get_hint = true;
-                    r.visibility_force = GridRegion::VIS_FORCE_HINT;
-                    r.vis_cause.rule = NULL;
-                    r.vis_level = GRID_VIS_LEVEL_HIDE;
-
-                    std::set<XYPos> new_clue_solves;
-
-                    for (const XYPos& pos : clue_solves)
+                    // No solution, so at least one region was necessary
+                    if (hintMin == hintMax)
                     {
-                        if (grid->is_determinable_using_regions(pos, true))
-                            new_clue_solves.insert(pos);
+                        // If there was only one, then it must be necessary
+                        my_regions[hintMin]->vis_level = GRID_VIS_LEVEL_SHOW;
+                        ++hintMin;
+                        break;
                     }
-                    if (new_clue_solves.empty())
+                    // Unhide half
+                    int newHintMax = (hintMin + hintMax) / 2;
+                    for (int i = newHintMax + 1; i <= hintMax; ++i)
                     {
+                        GridRegion& r = *my_regions[i];
+                        r.visibility_force = GridRegion::VIS_FORCE_NONE;
                         r.vis_level = GRID_VIS_LEVEL_SHOW;
                     }
-                    else
-                    {
-                        clue_solves = new_clue_solves;
-                        return;
-                    }
+                    hintMax = newHintMax;
+                }
+                else
+                {
+                    clue_solves = new_clue_solves;
+                    return;
                 }
             }
         }
