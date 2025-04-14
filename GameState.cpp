@@ -5008,6 +5008,16 @@ void GameState::render(bool saving)
     {
         render_number(april_1st_hint_count, left_panel_offset + XYPos(button_size * 2.35, button_size * 0.35), XYPos(button_size * 0.3, button_size * 0.3));
     }
+    if (get_hint)
+    {
+        SDL_Rect src_rect = {1088, 960, 192, 192};
+        SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 0, button_size, button_size};
+        SDL_Point rot_center = {button_size / 2, button_size / 2};
+        double angle = frame * 0.05;
+        SDL_SetTextureAlphaMod(sdl_texture, 128);
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, angle, &rot_center, SDL_FLIP_NONE);
+        SDL_SetTextureAlphaMod(sdl_texture, 255);
+    }
     render_button(XYPos(704 + 192 * 3, 960), XYPos(left_panel_offset.x + 3 * button_size, left_panel_offset.y + button_size * 0), "Next Level");
     render_button(XYPos(704 + 192 * 2, 960), XYPos(left_panel_offset.x + 4 * button_size, left_panel_offset.y + button_size * 0), "Refresh Regions");
     if (render_lock(PROG_LOCK_SPEED, XYPos(left_panel_offset.x + 0 * button_size, left_panel_offset.y + button_size * 1), XYPos(button_size * 3, button_size)))
