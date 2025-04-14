@@ -6256,6 +6256,8 @@ void GameState::render(bool saving)
             k_pos.y =  window_size.y - siz.y * button_size;
         render_box(k_pos, siz * button_size, button_size/4, 1);
         render_rule(*tooltip_hover_rule, k_pos + XYPos(button_size / 2 - x_offset, button_size / 2), button_size, -1);
+        if (tooltip_hover_rule->comment != "")
+            render_text_box(mouse + XYPos(-(button_size / 4), button_size / 4), tooltip_hover_rule->comment);
     }
 
     if (display_modes)
@@ -9528,7 +9530,7 @@ bool GameState::events()
             }
             case SDL_TEXTINPUT:
             {
-                if (!ctrl_held)
+                if (!ctrl_held && display_text_entry)
                 {
                     std::string new_text(e.text.text);
                     text_entry_string->insert(text_entry_offset, new_text);
