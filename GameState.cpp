@@ -5125,7 +5125,7 @@ void GameState::render(bool saving)
                 level_id += group_names[current_level_group_index];
                 level_id += std::to_string(current_level_set_index / 5 + 1);
                 level_id += std::to_string(current_level_set_index % 5 + 1);
-                level_id += "." + std::to_string(current_level_index + 1);
+                level_id += "." + std::to_string(current_level_index);
                 SDL_Color color = {contrast, contrast, contrast};
                 SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, level_id.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
