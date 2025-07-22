@@ -139,6 +139,12 @@ GameState::GameState(std::string& load_data, bool json)
                 music_volume = double(omap->get_num("music_volume")) / 1000;
             if (omap->has_key("colors"))
                 colors = double(omap->get_num("colors")) / 1000;
+            gui_colors[0] = 0.6;
+            gui_colors[1] = 0.9;
+            if (omap->has_key("gui_colors_1"))
+                gui_colors[0] = double(omap->get_num("gui_colors_1")) / 1000;
+            if (omap->has_key("gui_colors_2"))
+                gui_colors[1] = double(omap->get_num("gui_colors_2")) / 1000;
             if (omap->has_key("rule_limit"))
                 rule_limit_slider = double(omap->get_num("rule_limit")) / 1000000000;
             if (omap->has_key("game_mode"))
@@ -418,6 +424,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_PRIORITY2] = 16000;
     prog_stars[PROG_LOCK_PAUSE] = 9000;
     prog_stars[PROG_LOCK_COLORS] = 15000;
+    prog_stars[PROG_LOCK_GUI_COLORS] = 18000;
     prog_stars[PROG_LOCK_RULE_COMMENT] = 6000;
     prog_stars[PROG_LOCK_TABLE_RULES] = 10;
     prog_stars[PROG_LOCK_TABLE_LEVELS] = 200;
@@ -512,6 +519,8 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("volume", volume * 1000);
     omap->add_num("music_volume", music_volume * 1000);
     omap->add_num("colors", colors * 1000);
+    omap->add_num("gui_colors_1", gui_colors[0] * 1000);
+    omap->add_num("gui_colors_2", gui_colors[1] * 1000);
     omap->add_num("rule_limit", rule_limit_slider * 1000000000);
     {
         if (window_size.x * 9 > window_size.y * 16)
@@ -2293,44 +2302,82 @@ bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
     return false;
 }
 
+
+uint8_t gui_channel_from_float(double col, int chan)
+{
+    uint8_t a = (int)(col * 6 + chan * 2 + 2) % 6;
+    uint8_t b = ((unsigned) (col * 6 * 256)) % 256 ;
+
+    if (a == 0)
+        return b;
+    if (a <= 2)
+        return 255;
+    if (a == 3)
+        return 255 - b;
+    return 0;
+
+}
+
+
+GuiColour gui_colour_from_float(double col)
+{
+    uint8_t a = ((unsigned) (col * 6 * 256)) % 256 ;
+    uint8_t b = ((unsigned) (col * 6 * 256)) % 256 ;
+    GuiColour r = {0,0,0};
+
+    r.r = gui_channel_from_float(col, 0) * 0.8;
+    r.g = gui_channel_from_float(col, 1) * 0.8;
+    r.b = gui_channel_from_float(col, 2);
+
+    return r;
+}
+
 void GameState::render_box(XYPos pos, XYPos size, int corner_size, int style)
 {
-        XYPos p = XYPos(320 + (style % 4) * 96, 416 + (style / 4) * 96);
-        SDL_Rect src_rect = {p.x, p.y, 32, 32};
-        SDL_Rect dst_rect = {pos.x, pos.y, corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
-        src_rect = {p.x + 32, p.y, 1, 32};
-        dst_rect = {pos.x + corner_size, pos.y, (size.x - corner_size * 2 ), corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top
+    if (style == 3 || style == 10)
+    {
+        GuiColour c = gui_colour_from_float(gui_colors[0]);
+        SDL_SetTextureColorMod(sdl_texture, contrast * c.r / 255, contrast * c.g / 255, contrast * c.b  / 255);
+    }
 
-        src_rect = {p.x + 32, p.y, 32, 32};
-        dst_rect = {pos.x + (size.x - corner_size), pos.y , corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top Right
+    XYPos p = XYPos(320 + (style % 4) * 96, 416 + (style / 4) * 96);
+    SDL_Rect src_rect = {p.x, p.y, 32, 32};
+    SDL_Rect dst_rect = {pos.x, pos.y, corner_size, corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
-        src_rect = {p.x, p.y + 32, 32, 1};
-        dst_rect = {pos.x, pos.y + corner_size, corner_size, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Left
+    src_rect = {p.x + 32, p.y, 1, 32};
+    dst_rect = {pos.x + corner_size, pos.y, (size.x - corner_size * 2 ), corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top
 
-        src_rect = {p.x + 32, p.y + 32, 1, 1};
-        dst_rect = {pos.x + corner_size, pos.y + corner_size, size.x - corner_size * 2, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Middle
+    src_rect = {p.x + 32, p.y, 32, 32};
+    dst_rect = {pos.x + (size.x - corner_size), pos.y , corner_size, corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top Right
 
-        src_rect = {p.x + 32, p.y + 32, 32, 1};
-        dst_rect = {pos.x + (size.x - corner_size), pos.y + corner_size, corner_size, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Right
+    src_rect = {p.x, p.y + 32, 32, 1};
+    dst_rect = {pos.x, pos.y + corner_size, corner_size, size.y - corner_size * 2};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Left
 
-        src_rect = {p.x, p.y + 32, 32, 32};
-        dst_rect = {pos.x, pos.y + (size.y - corner_size), corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);    // Bottom left
+    src_rect = {p.x + 32, p.y + 32, 1, 1};
+    dst_rect = {pos.x + corner_size, pos.y + corner_size, size.x - corner_size * 2, size.y - corner_size * 2};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Middle
 
-        src_rect = {p.x + 32, p.y + 32, 1, 32};
-        dst_rect = {pos.x + corner_size, pos.y + (size.y - corner_size), size.x - corner_size * 2, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom
+    src_rect = {p.x + 32, p.y + 32, 32, 1};
+    dst_rect = {pos.x + (size.x - corner_size), pos.y + corner_size, corner_size, size.y - corner_size * 2};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Right
 
-        src_rect = {p.x + 32, p.y + 32, 32, 32};
-        dst_rect = {pos.x + (size.x - corner_size), pos.y + (size.y - corner_size), corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom right
+    src_rect = {p.x, p.y + 32, 32, 32};
+    dst_rect = {pos.x, pos.y + (size.y - corner_size), corner_size, corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);    // Bottom left
+
+    src_rect = {p.x + 32, p.y + 32, 1, 32};
+    dst_rect = {pos.x + corner_size, pos.y + (size.y - corner_size), size.x - corner_size * 2, corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom
+
+    src_rect = {p.x + 32, p.y + 32, 32, 32};
+    dst_rect = {pos.x + (size.x - corner_size), pos.y + (size.y - corner_size), corner_size, corner_size};
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom right
+    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
 }
 
 void GameState::render_number(unsigned num, XYPos pos, XYPos siz, XYPos style)
@@ -2346,6 +2393,7 @@ void GameState::render_number(unsigned num, XYPos pos, XYPos siz, XYPos style)
     render_number_string(s, pos, siz, style);
 }
 
+
 // style 0 - normal, 1 - unclickable, 2 - warning, 3 - red
 bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int style, int size) 
 {
@@ -2353,37 +2401,49 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
     if (size == 0)
         size = button_size;
     int ds = 0;
+    bool no_tip = tooltip[0] == '\0';
+
 
     SDL_Rect src_rect = {192, 0, 192, 192};
     SDL_Rect dst_rect = {pos.x + ds, pos.y + ds, size - ds * 2, size - ds * 2};
 
     if (style == 0)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0x2e / 255, contrast * 0xc7 / 255, contrast * 0x72 / 255);
+    {
+        GuiColour c = gui_colour_from_float(gui_colors[0]);
+        SDL_SetTextureColorMod(sdl_texture, contrast * c.r / 255, contrast * c.g / 255, contrast * c.b  / 255);
+    }
     else if (style == 1)
         SDL_SetTextureColorMod(sdl_texture, contrast * 0x50 / 255, contrast * 0x50 / 255, contrast * 0x50 / 255);
     else if (style == 2)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0xC0 / 255, contrast * 0x10 / 255);
+    {
+        GuiColour c = gui_colour_from_float(gui_colors[1]);
+        SDL_SetTextureColorMod(sdl_texture, contrast * c.r / 255, contrast * c.g / 255, contrast * c.b  / 255);
+    }
     else if (style == 3)
         SDL_SetTextureColorMod(sdl_texture, contrast * 0xff / 255, contrast * 0x00 / 255, contrast * 0x00 / 255);
     else if (style == 4)
         SDL_SetTextureColorMod(sdl_texture, contrast * 0x00 / 255, contrast * 0x00 / 255, contrast * 0xff / 255);
+    else
+        assert(0);
 
     bool hover =   ((mouse.x >= dst_rect.x) &&
                     (mouse.x < (dst_rect.x + dst_rect.w)) &&
                     (mouse.y >= dst_rect.y) &&
-                    (mouse.y < (dst_rect.y + dst_rect.h)));
+                    (mouse.y < (dst_rect.y + dst_rect.h))) &&
+                    !no_tip;
 
     if (hover)
     {
         mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
         if (mouse_button_pressed)
         {
-            if (tooltip == last_button_hovered)
+            if (!no_tip && tooltip == last_button_hovered)
                 pressed = true;
         }
         else
             last_button_hovered = tooltip;
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0x90 / 255, contrast * 0x20 / 255);
+        GuiColour c = gui_colour_from_float(gui_colors[1]);
+        SDL_SetTextureColorMod(sdl_texture, contrast * c.r / 255, contrast * c.g / 255, contrast * c.b  / 255);
     }
 
     if (pressed)
@@ -6781,7 +6841,7 @@ void GameState::render(bool saving)
         }
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
-        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(16 * button_size, 11.8 * button_size), button_size/4, 1);
+        render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(18 * button_size, 11.8 * button_size), button_size/4, 1);
         {
             SDL_Rect src_rect = {full_screen ? 1472 : 1664, 1152, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
@@ -6862,38 +6922,69 @@ void GameState::render(bool saving)
         }
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
-            SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+            SDL_Rect dst_rect = {left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             bool hover = add_tooltip(dst_rect, "Music Volume", false);
 
             src_rect = {2048, hover ? 1216 : 1152, 192, 64};
-            dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3 + int((1 - music_volume) * 2.6666 * button_size), button_size, button_size / 3};
+            dst_rect = {left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 3 + int((1 - music_volume) * 2.6666 * button_size), button_size, button_size / 3};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
         {
             SDL_Rect src_rect = {2624, 1152, 192, 192};
-            SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+            SDL_Rect dst_rect = {left_panel_offset.x + 12 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
         }
 
-        if (render_lock(PROG_LOCK_COLORS, XYPos(left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3), XYPos(button_size, button_size * 3)))
+        if (render_lock(PROG_LOCK_COLORS, XYPos(left_panel_offset.x + 14 * button_size, left_panel_offset.y + button_size * 3), XYPos(button_size, button_size * 3)))
         {
             {
                 SDL_Rect src_rect = {2816, 576, 192, 576};
-                SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_Rect dst_rect = {left_panel_offset.x + 14 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 bool hover = add_tooltip(dst_rect, "Colors", false);
 
                 src_rect = {2048, hover ? 1216 : 1152, 192, 64};
-                dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3 + int((1 - colors) * 2.6666 * button_size), button_size, button_size / 3};
+                dst_rect = {left_panel_offset.x + 14 * button_size, left_panel_offset.y + button_size * 3 + int((1 - colors) * 2.6666 * button_size), button_size, button_size / 3};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
             {
                 SDL_Rect src_rect = {2624, 1344, 192, 192};
-                SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
+                SDL_Rect dst_rect = {left_panel_offset.x + 14 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
         }
+
+        if (render_lock(PROG_LOCK_GUI_COLORS, XYPos(left_panel_offset.x + 16 * button_size, left_panel_offset.y + button_size * 2), XYPos(button_size * 3, button_size * 3)))
+        {
+            {
+                SDL_Rect src_rect = {3200, 576, 192, 576};
+                SDL_Rect dst_rect = {left_panel_offset.x + 16 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                bool hover = add_tooltip(dst_rect, "OK Color", false);
+
+                src_rect = {2048, hover ? 1216 : 1152, 192, 64};
+                dst_rect = {left_panel_offset.x + 16 * button_size, left_panel_offset.y + button_size * 3 + int((1 - gui_colors[0]) * 2.6666 * button_size), button_size, button_size / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                render_button(XYPos(704, 384), XYPos(left_panel_offset.x + 16 * button_size, left_panel_offset.y + button_size * 2), "", 0);
+            }
+            {
+                SDL_Rect src_rect = {3200, 576, 192, 576};
+                SDL_Rect dst_rect = {left_panel_offset.x + 17 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                bool hover = add_tooltip(dst_rect, "Warning Color", false);
+
+                src_rect = {2048, hover ? 1216 : 1152, 192, 64};
+                dst_rect = {left_panel_offset.x + 17 * button_size, left_panel_offset.y + button_size * 3 + int((1 - gui_colors[1]) * 2.6666 * button_size), button_size, button_size / 3};
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            }
+            {
+                render_button(XYPos(1088, 767), XYPos(left_panel_offset.x + 17 * button_size, left_panel_offset.y + button_size * 2), "", 2);
+            }
+        }
+
         {
             render_box(left_panel_offset + XYPos(11 * button_size, 7 * button_size), XYPos(button_size * 4, button_size * 3), button_size/4, 4);
             std::string t = translate("Bonus");
@@ -9126,6 +9217,14 @@ bool GameState::events()
                     {
                         colors = std::clamp(p, 0.0, 1.0);
                     }
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_GUI_COLOUR_1)
+                    {
+                        gui_colors[0] = std::clamp(p, 0.0, 1.0);
+                    }
+                    else if (dragging_scroller_type == DRAGGING_SCROLLER_GUI_COLOUR_2)
+                    {
+                        gui_colors[1] = std::clamp(p, 0.0, 1.0);
+                    }
                     else if (dragging_scroller_type == DRAGGING_SCROLLER_MUSIC)
                     {
                         music_volume = std::clamp(p, 0.0, 1.0);
@@ -9375,7 +9474,7 @@ bool GameState::events()
                         if (has_sound)
                             Mix_Volume(-1, volume * volume * SDL_MIX_MAXVOLUME);
                     }
-                    if (p.x == 11 && p.y >= 0 && p.y <= 3)
+                    if (p.x == 10 && p.y >= 0 && p.y <= 3)
                     {
                         dragging_scroller = true;
                         dragging_scroller_type = DRAGGING_SCROLLER_MUSIC;
@@ -9384,12 +9483,23 @@ bool GameState::events()
                         if (has_sound)
                             Mix_VolumeMusic(music_volume * music_volume * SDL_MIX_MAXVOLUME);
                     }
-                    if (p.x == 13 && p.y >= 0 && p.y <= 3 && prog_seen[PROG_LOCK_COLORS])
+                    if (p.x == 12 && p.y >= 0 && p.y <= 3 && prog_seen[PROG_LOCK_COLORS])
                     {
                         dragging_scroller = true;
                         dragging_scroller_type = DRAGGING_SCROLLER_COLOUR;
                         double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
                         colors = std::clamp(p, 0.0, 1.0);
+                    }
+                    if (p.x >= 14 && p.x <= 15 && p.y >= 0 && p.y <= 3 && prog_seen[PROG_LOCK_GUI_COLORS])
+                    {
+                        dragging_scroller = true;
+                        if (p.x == 14)
+                            dragging_scroller_type = DRAGGING_SCROLLER_GUI_COLOUR_1;
+                        if (p.x == 15)
+                            dragging_scroller_type = DRAGGING_SCROLLER_GUI_COLOUR_2;
+
+                        double p = 1.0 - double(mouse.y - left_panel_offset.y - (button_size * 3) - (button_size / 6)) / (button_size * 2.6666);
+                        gui_colors[(dragging_scroller_type == DRAGGING_SCROLLER_GUI_COLOUR_1) ? 0 : 1] = std::clamp(p, 0.0, 1.0);
                     }
                     if (p == XYPos(13,9))
                         display_menu = false;
