@@ -26,14 +26,6 @@ struct ServerResp
     SDL_SpinLock working = 0;
 };
 
-struct GuiColour
-{
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-};
-
-
 class GameState
 {
 public:
@@ -175,8 +167,6 @@ public:
         DRAGGING_SCROLLER_COLOUR,
         DRAGGING_SCROLLER_RULES,
         DRAGGING_SCROLLER_ROBOTS,
-        DRAGGING_SCROLLER_GUI_COLOUR_1,
-        DRAGGING_SCROLLER_GUI_COLOUR_2,
         }
         dragging_scroller_type = DRAGGING_SCROLLER_VOLUME;
 
@@ -184,7 +174,6 @@ public:
     double volume = 0.50;
     double music_volume = 0.50;
     double colors = 0.00;
-    double gui_colors[2] = {};
     double rule_limit_slider = 1.00;
     int rule_limit_count = -1;
     double robot_limit_slider = 1.00;
@@ -439,7 +428,6 @@ public:
         PROG_LOCK_PRIORITY2,
         PROG_LOCK_PAUSE,
         PROG_LOCK_COLORS,
-        PROG_LOCK_GUI_COLORS,
         PROG_LOCK_RULE_COMMENT,
 
         PROG_LOCK_TABLE_RULES,
