@@ -21,3 +21,4 @@ public:
 
 extern std::vector<LevelSet*> global_level_sets[GLBAL_LEVEL_SETS];
 extern std::vector<LevelSet*> second_global_level_sets[GLBAL_LEVEL_SETS];
+extern std::vector<LevelSet*> third_global_level_sets[GLBAL_LEVEL_SETS];

@@ -24,7 +24,7 @@
 
 bool power_down = false;
 const int LEVEL_TYPES = 6;
-const int GAME_MODE_TYPES = 5;
+const int GAME_MODE_TYPES = 6;
 
 typedef int64_t Score;
 
@@ -135,8 +135,9 @@ public:
 
 };
 
-    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)(prime)(neg)
-    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13     14     15
+static bool festivus = false;
+    // (hex/sqr/tri)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)(prime)(neg)(if_then)
+    //  0            1  2  3     4       5    6    7       8    9     10    11    12     13     14     15    16
 
 static const char* server_level_types[] = { "A6500000700000000", "B5500000700000000","C8500000700000000","A8710000700000000", "B7710000700000000",
                                             "A6500000070000000", "B5500000070000000","C8500000070000000","A8710000070000000", "B7710000070000000",
@@ -152,6 +153,31 @@ static const char* neg_server_level_types[] = { "A6500000700000030", "B550000070
                                                 "A6500000000070030", "B5500000000070030","C8500000000070030","A8710000000070030", "B7710000000070030",
                                                 "A6500000000007030", "B5500000000007030","C8500000000007030","A8710000000007030", "B7710000000007030",
                                             NULL};
+static const char* if_then_server_level_types[] = { "A6500000700000007", "B5500000700000007","C8500000700000007","A8710000700000007", "B7710000700000007",
+                                                    "A6500000070000007", "B5500000070000007","C8500000070000007","A8710000070000007", "B7710000070000007",
+                                                    "A6500000007000007", "B5500000007000007","C8500000007000007","A8710000007000007", "B7710000007000007",
+                                                    "A6500000000700007", "B5500000000700007","C8500000000700007","A8710000000700007", "B7710000000700007",
+                                                    "A6500000000070007", "B5500000000070007","C8500000000070007","A8710000000070007", "B7710000000070007",
+                                                    "A6500000000007007", "B5500000000007007","C8500000000007007","A8710000000007007", "B7710000000007007",
+                                            NULL};
+
+
+std::string get_server_level_types(int type, int index)
+{
+    const char** table;
+    if (type == 0)
+        table = server_level_types;
+    else if (type == 1)
+        table = neg_server_level_types;
+    else
+        table = if_then_server_level_types;
+    
+    std::string rep = table[index];
+    if (festivus)
+        rep[14] = '7';
+    return rep;
+}
+
 static const int game_version = 14;
 
 class Player
@@ -177,6 +203,8 @@ public:
     std::vector<std::vector<std::string>> next_server_levels;
     std::vector<std::vector<std::string>> neg_server_levels;
     std::vector<std::vector<std::string>> next_neg_server_levels;
+    std::vector<std::vector<std::string>> if_then_server_levels;
+    std::vector<std::vector<std::string>> next_if_then_server_levels;
     int server_levels_version = 0;
 
 
@@ -282,6 +310,35 @@ public:
             }
         }
 
+        if (omap->has_key("if_then_server_levels"))
+        {
+            lvl_sets = omap->get_item("if_then_server_levels")->get_list();
+            if_then_server_levels.resize(lvl_sets->get_count());
+            for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+            {
+                SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                if_then_server_levels[k].clear();
+                for (unsigned i = 0; i < plist->get_count(); i++)
+                {
+                    std::string s = plist->get_string(i);
+                    if_then_server_levels[k].push_back(s);
+                }
+            }
+            lvl_sets = omap->get_item("next_if_then_server_levels")->get_list();
+            next_if_then_server_levels.resize(lvl_sets->get_count());
+            for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+            {
+                SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                next_if_then_server_levels[k].clear();
+                for (unsigned i = 0; i < plist->get_count(); i++)
+                {
+                    std::string s = plist->get_string(i);
+                    next_if_then_server_levels[k].push_back(s);
+                }
+            }
+        }
+
+
 
 
     }
@@ -372,6 +429,30 @@ public:
             sl_list->add_item(ssl_list);
         }
         omap->add_item("next_neg_server_levels", sl_list);
+
+        sl_list = new SaveObjectList;
+        for (std::vector<std::string>& lvl_set : if_then_server_levels)
+        {
+            SaveObjectList* ssl_list = new SaveObjectList;
+            for (std::string& lvl : lvl_set)
+            {
+                ssl_list->add_string(lvl);
+            }
+            sl_list->add_item(ssl_list);
+        }
+        omap->add_item("if_then_server_levels", sl_list);
+
+        sl_list = new SaveObjectList;
+        for (std::vector<std::string>& lvl_set : next_if_then_server_levels)
+        {
+            SaveObjectList* ssl_list = new SaveObjectList;
+            for (std::string& lvl : lvl_set)
+            {
+                ssl_list->add_string(lvl);
+            }
+            sl_list->add_item(ssl_list);
+        }
+        omap->add_item("next_if_then_server_levels", sl_list);
         omap->add_num("server_levels_version", server_levels_version);
         omap->add_num("game_version", game_version);
 
@@ -382,7 +463,7 @@ public:
     {
         for (int i = 0;  server_level_types[i]; i++)
         {
-            if (req == server_level_types[i] && next_server_levels[i].size() < 200)
+            if (req == get_server_level_types(0, i) && next_server_levels[i].size() < 200)
             {
                 for (std::string& s : next_server_levels[i])
                 {
@@ -396,7 +477,7 @@ public:
         }
         for (int i = 0;  neg_server_level_types[i]; i++)
         {
-            if (req == neg_server_level_types[i] && next_neg_server_levels[i].size() < 200)
+            if (req == get_server_level_types(1, i) && next_neg_server_levels[i].size() < 200)
             {
                 for (std::string& s : next_neg_server_levels[i])
                 {
@@ -405,6 +486,20 @@ public:
                 }
                 printf("got neg server level\n");
                 next_neg_server_levels[i].push_back(resp);
+                return;
+            }
+        }
+        for (int i = 0;  if_then_server_level_types[i]; i++)
+        {
+            if (req == get_server_level_types(2, i) && next_if_then_server_levels[i].size() < 200)
+            {
+                for (std::string& s : next_if_then_server_levels[i])
+                {
+                    if (s == resp)
+                        return;
+                }
+                printf("got if_then server level\n");
+                next_if_then_server_levels[i].push_back(resp);
                 return;
             }
         }
@@ -477,7 +572,7 @@ public:
                 next_server_levels.resize(i + 1);
             if (next_server_levels[i].size() < 200)
             {
-                resp->add_string("level_gen_req", server_level_types[i]);
+                resp->add_string("level_gen_req", get_server_level_types(0, i));
                 got_lev_req = true;
                 break;
             }
@@ -489,7 +584,20 @@ public:
                     next_neg_server_levels.resize(i + 1);
                 if (next_neg_server_levels[i].size() < 200)
                 {
-                    resp->add_string("level_gen_req", neg_server_level_types[i]);
+                    resp->add_string("level_gen_req", get_server_level_types(1, i));
+                    got_lev_req = true;
+                    break;
+                }
+            }
+        if (!got_lev_req)
+            for (unsigned i = 0;  if_then_server_level_types[i]; i++)
+            {
+                if (i >= next_if_then_server_levels.size())
+                    next_if_then_server_levels.resize(i + 1);
+                if (next_if_then_server_levels[i].size() < 200)
+                {
+                    resp->add_string("level_gen_req", get_server_level_types(2, i));
+                    got_lev_req = true;
                     break;
                 }
             }
@@ -762,9 +870,25 @@ public:
                                     }
                                     scr->add_item("neg_server_levels", sl_list);
                                 }
+                                if (db.if_then_server_levels.size())
+                                {
+                                    sl_list = new SaveObjectList;
+                                    for (std::vector<std::string>& lvl_set : db.if_then_server_levels)
+                                    {
+                                        
+                                        SaveObjectList* ssl_list = new SaveObjectList;
+                                        for (std::string& lvl : lvl_set)
+                                        {
+                                            ssl_list->add_string(lvl);
+                                        }
+                                        sl_list->add_item(ssl_list);
+                                    }
+                                    scr->add_item("if_then_server_levels", sl_list);
+                                }
                             }
                         }
-//                        scr->add_num("festivus", 1);
+                        if (festivus)
+                            scr->add_num("festivus", 1);
 
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
@@ -871,6 +995,11 @@ int main(int argc, char *argv[])
     while(true)
     {
         {
+            std::time_t t = std::time(0);   // get time now
+            std::tm* now = std::localtime(&t);
+            festivus = (now->tm_mon == 11);
+        }
+        {
             std::ifstream loadfile("NEW_SERVER_LEVELS");
             if (!loadfile.fail() && !loadfile.eof())
             {
@@ -884,6 +1013,7 @@ int main(int argc, char *argv[])
             {
                 db.next_server_levels.clear();
                 db.next_neg_server_levels.clear();
+                db.next_if_then_server_levels.clear();
                 std::remove("CLEAR_NEXT_SERVER_LEVELS");
             }
         }
@@ -915,6 +1045,8 @@ int main(int argc, char *argv[])
                 db.next_server_levels.clear();
                 db.neg_server_levels = db.next_neg_server_levels;
                 db.next_neg_server_levels.clear();
+                db.if_then_server_levels = db.next_if_then_server_levels;
+                db.next_if_then_server_levels.clear();
                 db.server_levels_version++;
                 week = new_week;
 

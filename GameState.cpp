@@ -84,11 +84,11 @@ GameState::GameState(std::string& load_data, bool json)
     for (int k = 0; k < GAME_MODES; k++)
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        level_progress[k][j].resize(((k == 4) ? second_global_level_sets : global_level_sets)[j].size());
+        level_progress[k][j].resize(((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j].size());
         for (unsigned i = 0; i < global_level_sets[j].size(); i++)
         {
-            level_progress[k][j][i].level_status.resize(((k == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size());
-            level_progress[k][j][i].count_todo = ((k == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size();
+            level_progress[k][j][i].level_status.resize(((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size());
+            level_progress[k][j][i].count_todo = ((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size();
         }
     }
     {
@@ -96,6 +96,8 @@ GameState::GameState(std::string& load_data, bool json)
         server_levels[0].push_back("ABBA!");
         neg_server_levels.resize(1);
         neg_server_levels[0].push_back("ABBA!");
+        if_then_server_levels.resize(1);
+        if_then_server_levels[0].push_back("ABBA!");
         for (int m = 0; m < GAME_MODES; m++)
             level_progress[m][GLBAL_LEVEL_SETS].resize(1);
 
@@ -167,7 +169,7 @@ GameState::GameState(std::string& load_data, bool json)
             }
             if (omap->has_key("server_levels"))
             {
-                int mode_count = GAME_MODES-1;
+                int mode_count = 4;
                 if (!has_neg_server_levels)
                     mode_count = GAME_MODES;
 
@@ -203,13 +205,13 @@ GameState::GameState(std::string& load_data, bool json)
             {
                 SaveObjectList* lvl_sets = omap->get_item("neg_server_levels")->get_list();
                 neg_server_levels.resize(lvl_sets->get_count());
-                level_progress[GAME_MODES - 1][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+                level_progress[4][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
 
                 for (unsigned k = 0; k < lvl_sets->get_count(); k++)
                 {
                     SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
                     neg_server_levels[k].clear();
-                    int m = GAME_MODES - 1;
+                    int m = 4;
                     {
                         level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
                         level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
@@ -221,6 +223,29 @@ GameState::GameState(std::string& load_data, bool json)
                     }
                 }
             }
+            if (omap->has_key("if_then_server_levels"))
+            {
+                SaveObjectList* lvl_sets = omap->get_item("if_then_server_levels")->get_list();
+                if_then_server_levels.resize(lvl_sets->get_count());
+                level_progress[5][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+
+                for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+                {
+                    SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                    if_then_server_levels[k].clear();
+                    int m = 5;
+                    {
+                        level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
+                        level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
+                    }
+                    for (unsigned i = 0; i < plist->get_count(); i++)
+                    {
+                        std::string s = plist->get_string(i);
+                        if_then_server_levels[k].push_back(s);
+                    }
+                }
+            }
+
 
             if (omap->has_key("rule_del_count"))
             {
@@ -312,7 +337,7 @@ GameState::GameState(std::string& load_data, bool json)
     }
     if (current_level_group_index >= GLBAL_LEVEL_SETS)
         current_level_group_index = 0;
-    if (current_level_set_index >= ((game_mode == 4) ? second_global_level_sets : global_level_sets)[current_level_group_index].size())
+    if (current_level_set_index >= ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[current_level_group_index].size())
         current_level_set_index = 0;
 
     rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
@@ -405,6 +430,7 @@ GameState::GameState(std::string& load_data, bool json)
     prog_stars[PROG_LOCK_VISIBILITY4] = 2000;
     prog_stars[PROG_LOCK_GAME_MODE] = 13000;
     prog_stars[PROG_LOCK_NEG_MINES_MODE] = 19000;
+    prog_stars[PROG_LOCK_IMPLIES_MODE] = 20000;
     prog_stars[PROG_LOCK_VARS1] = 6000;
     prog_stars[PROG_LOCK_VARS2] = 10000;
     prog_stars[PROG_LOCK_VARS3] = 14000;
@@ -554,6 +580,17 @@ SaveObject* GameState::save(bool lite)
         sl_list->add_item(ssl_list);
     }
     omap->add_item("neg_server_levels", sl_list);
+    sl_list = new SaveObjectList;
+    for (std::vector<std::string>& lvl_set : if_then_server_levels)
+    {
+        SaveObjectList* ssl_list = new SaveObjectList;
+        for (std::string& lvl : lvl_set)
+        {
+            ssl_list->add_string(lvl);
+        }
+        sl_list->add_item(ssl_list);
+    }
+    omap->add_item("if_then_server_levels", sl_list);
     omap->add_num("server_levels_version", server_levels_version);
     if (april_1st)
         omap->add_num("april_1st_hint_count", april_1st_hint_count);
@@ -627,12 +664,12 @@ void GameState::reset_levels()
     }
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        level_progress[game_mode][j].resize(((game_mode == 4) ? second_global_level_sets : global_level_sets)[j].size());
-        for (unsigned i = 0; i < ((game_mode == 4) ? second_global_level_sets : global_level_sets)[j].size(); i++)
+        level_progress[game_mode][j].resize(((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[j].size());
+        for (unsigned i = 0; i < ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[j].size(); i++)
         {
             level_progress[game_mode][j][i].level_status.clear();
-            level_progress[game_mode][j][i].level_status.resize(((game_mode == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size());
-            level_progress[game_mode][j][i].count_todo = ((game_mode == 4) ? second_global_level_sets : global_level_sets)[j][i]->levels.size();
+            level_progress[game_mode][j][i].level_status.resize(((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size());
+            level_progress[game_mode][j][i].count_todo = ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size();
             level_progress[game_mode][j][i].star_anim_prog = 0;
             level_progress[game_mode][j][i].unlock_anim_prog = 0;
         }
@@ -644,6 +681,17 @@ void GameState::reset_levels()
             level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
             level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(neg_server_levels[i].size());
             level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = neg_server_levels[i].size();
+            level_progress[game_mode][GLBAL_LEVEL_SETS][i].star_anim_prog = 0;
+            level_progress[game_mode][GLBAL_LEVEL_SETS][i].unlock_anim_prog = 0;
+        }
+    }
+    else if (game_mode == 5)
+    {
+        for (unsigned i = 0; i < if_then_server_levels.size(); i++)
+        {
+            level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.clear();
+            level_progress[game_mode][GLBAL_LEVEL_SETS][i].level_status.resize(if_then_server_levels[i].size());
+            level_progress[game_mode][GLBAL_LEVEL_SETS][i].count_todo = if_then_server_levels[i].size();
             level_progress[game_mode][GLBAL_LEVEL_SETS][i].star_anim_prog = 0;
             level_progress[game_mode][GLBAL_LEVEL_SETS][i].unlock_anim_prog = 0;
         }
@@ -737,9 +785,10 @@ static int level_gen_thread_func(void *ptr)
     int xor11 = req[13] - '0';
     int prime = req[14] - '0';
     int negative = req[15] - '0';
+    int if_then = req[16] - '0';
 
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10, negative * 10);
-    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime);
+    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime, if_then);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
     game_state->level_gen_resp = g->to_string();
@@ -977,12 +1026,12 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
         if (rule.apply_region_bitmap && rule.apply_region_type.var)
             return false;
     }
-    if (mode != 4)
-    {
-        if (rule.neg_reg_count || rule.neg_apply_region_bitmap)
-            return false;
-    }
-    else
+    if (mode != 4 && rule.neg_reg_count)
+        return false;
+
+    if (mode != 4 && mode != 5 && rule.neg_apply_region_bitmap)
+        return false;
+
     {
         if ((rule.region_count + rule.neg_reg_count) > 4)
             return false;
@@ -1148,8 +1197,8 @@ void GameState::robot_thread(int thread_index)
         }
 
         Grid* grid = Grid::Load((job.level_group_index == GLBAL_LEVEL_SETS) ?
-                        ((game_mode == 4) ? neg_server_levels : server_levels)[job.level_set_index][job.level_index] :
-                        ((game_mode == 4) ? second_global_level_sets : global_level_sets)[job.level_group_index][job.level_set_index]->levels[job.level_index]);
+                        ((game_mode == 4) ? neg_server_levels : (game_mode == 5) ? if_then_server_levels : server_levels)[job.level_set_index][job.level_index] :
+                        ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[job.level_group_index][job.level_set_index]->levels[job.level_index]);
 
         while (true)
         {
@@ -1376,8 +1425,8 @@ void GameState::advance(int steps)
             }
 
             std::string& s = (current_level_group_index == GLBAL_LEVEL_SETS) ?
-                        ((game_mode == 4) ? neg_server_levels : server_levels)[current_level_set_index][current_level_index] :
-                        ((game_mode == 4) ? second_global_level_sets : global_level_sets)[current_level_group_index][current_level_set_index]->levels[current_level_index];
+                        ((game_mode == 4) ? neg_server_levels : (game_mode == 5) ? if_then_server_levels : server_levels)[current_level_set_index][current_level_index] :
+                        ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[current_level_group_index][current_level_set_index]->levels[current_level_index];
             load_grid(s);
         }
         else
@@ -1795,11 +1844,11 @@ void GameState::update_constructed_rule()
         if (constructed_rule.apply_region_bitmap && constructed_rule.apply_region_type.var)
             reset_rule_gen_region();
     } 
-    if (game_mode != 4)
-    {
-        if (constructed_rule.neg_reg_count || constructed_rule.neg_apply_region_bitmap)
-            reset_rule_gen_region();
-    }
+    if (game_mode != 4 && constructed_rule.neg_reg_count)
+        reset_rule_gen_region();
+    if (game_mode != 4 && game_mode != 5 && constructed_rule.neg_apply_region_bitmap)
+        reset_rule_gen_region();
+
     if (!constructed_rule.apply_region_bitmap)
         constructed_rule_is_logical = GridRule::OK;
     else
@@ -1815,6 +1864,10 @@ void GameState::update_constructed_rule()
         order.push_back(i);
     do{
         if (constructed_rule.neg_reg_count == 1 && order[0])
+            continue;
+        if (constructed_rule.if_reg_count == 1 && (order[0] != 0 || order[1] != 1))
+            continue;
+        if (constructed_rule.if_reg_count == 2 && (order[0] != 0 || order[1] != 1 || order[2] != 2 || order[3] != 3))
             continue;
         GridRule prule = constructed_rule.permute(order);
         for (GridRule& rule : rules[game_mode])
@@ -1874,30 +1927,33 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
     double fade = 1.0 - (double(anim_prog) / double(max_anim_frame));
     int opac = std::min(int(contrast * (1.0 - pow(fade, 0.5))), int(contrast / 5 + ((grid_regions_fade[&region] * contrast * 4 / 5) / max_anim_frame)));
 
-    FOR_XY_SET(pos, region.elements)
+    for (int if_if = region.is_if_then() ? 1 : 0; if_if >= 0; if_if--)
     {
-        XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
-        XYPos n = d.pos + d.size / 2;
-        elements.push_back(n);
-        element_sizes.push_back(std::min(d.size.x, d.size.y));
-        taken[pos]++;
-        for(WrapPos r : wraps)
+        FOR_XY_SET(pos, if_if ? region.elements_neg : region.elements)
         {
-            if (XYPosFloat(mouse - grid_offset - r.pos - (d.pos + d.size / 2) * r.size).distance() <= (d.size.x / 2 * r.size))
+            XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+            XYPos n = d.pos + d.size / 2;
+            elements.push_back(n);
+            element_sizes.push_back(std::min(d.size.x, d.size.y));
+            taken[pos]++;
+            for(WrapPos r : wraps)
             {
-                if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
+                if (XYPosFloat(mouse - grid_offset - r.pos - (d.pos + d.size / 2) * r.size).distance() <= (d.size.x / 2 * r.size))
                 {
-                    if (!display_menu)
+                    if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
                     {
-                        mouse_hover_region = &region;
-                        if (!grid_dragging)
-                            mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                        if (!display_menu)
+                        {
+                            mouse_hover_region = &region;
+                            if (!grid_dragging)
+                                mouse_cursor = SDL_SYSTEM_CURSOR_HAND;
+                        }
                     }
                 }
             }
         }
     }
-    if (region.elements.count() <= 1)
+    if (elements.size() <= 1)
         return;
 
     bool selected = (&region == mouse_hover_region);
@@ -2042,68 +2098,84 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
     // sq_pos.pos -= XYPosFloat(sq_pos.size) * (wob / 2);
     // sq_pos.size += XYPosFloat(sq_pos.size) * (wob);
 
-    FOR_XY_SET(pos, region.elements)
+    for (int if_if = region.is_if_then() ? 1 : 0; if_if >= 0; if_if--)
     {
-        XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
-        d.pos -= XYPosFloat(d.size) * (wob / 2);
-        d.size += XYPosFloat(d.size) * (wob);
-
-        taken[pos]++;
-        if (!selected && disp_type)
-            continue;
-        if ((disp_type == 1) && selected)
+        FOR_XY_SET(pos, if_if ? region.elements_neg : region.elements)
         {
-            set_region_colour(sdl_texture, region.type.value, region.colour, opac);
-            XYPos margin = d.size / 8;
-            SDL_Rect src_rect = {512, 1728, 192, 192};
-            int fr = frame + pos.x * 1040 + pos.y * 100;
-            for(WrapPos r : wraps)
+            XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+            d.pos -= XYPosFloat(d.size) * (wob / 2);
+            d.size += XYPosFloat(d.size) * (wob);
+
+            taken[pos]++;
+            if (!selected && disp_type)
+                continue;
+            if ((disp_type == 1) && selected)
             {
-                for (int i = 0; i < 8; i++)
+                set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                XYPos margin = d.size / 8;
+                SDL_Rect src_rect = {512, 1728, 192, 192};
+                int fr = frame + pos.x * 1040 + pos.y * 100;
+                for(WrapPos r : wraps)
                 {
-                    XYPos blobs[8] = {{200,200},{-233,-310},{-190,-410},{210,-309},{230,210},{-273,340},{-390,-370},{313,-319}};
-                    XYPos p = r.pos + (d.pos - (margin / 2) + XYPosFloat(margin) * XYPosFloat(sin(float(fr) / blobs[i].x), cos(float(fr) / blobs[i].y))) * r.size;
-                    XYPos s = (d.size + margin)* r.size;
-                    p += grid_offset;
-                    SDL_Point rot_center = {s.x / 2, s.y / 2};
-                    SDL_Rect dst_rect = {p.x, p.y, s.x, s.y};
-                    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (double(frame) / (blobs[i].x * blobs[i].y)) * 3600, &rot_center, SDL_FLIP_NONE);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        XYPos blobs[8] = {{200,200},{-233,-310},{-190,-410},{210,-309},{230,210},{-273,340},{-390,-370},{313,-319}};
+                        XYPos p = r.pos + (d.pos - (margin / 2) + XYPosFloat(margin) * XYPosFloat(sin(float(fr) / blobs[i].x), cos(float(fr) / blobs[i].y))) * r.size;
+                        XYPos s = (d.size + margin)* r.size;
+                        p += grid_offset;
+                        SDL_Point rot_center = {s.x / 2, s.y / 2};
+                        SDL_Rect dst_rect = {p.x, p.y, s.x, s.y};
+                        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, (double(frame) / (blobs[i].x * blobs[i].y)) * 3600, &rot_center, SDL_FLIP_NONE);
+                    }
                 }
             }
-        }
-        if ((disp_type == 0) || ((disp_type == 2) && selected))
-        {
-            set_region_colour(sdl_texture, region.type.value, region.colour, opac);
-            SDL_Rect src_rect = {64, 512, 192, 192};
-            if (region.elements_neg.get(pos))
-                src_rect.y = 704;
-            for(WrapPos r : wraps)
+            if ((disp_type == 0) || ((disp_type == 2) && selected))
             {
-                XYPos p = r.pos + d.pos * r.size;
-                XYPos s = d.size * r.size;
-                if(p.x + s.x < 0) continue;
-                if(p.y + s.y < 0) continue;
-                if(p.x > grid_size) continue;
-                if(p.y > grid_size) continue;
-                p += grid_offset;
-                SDL_Rect dst_rect = {p.x, p.y, s.x, s.y};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            }
+                if (if_if)
+                    set_region_colour(sdl_texture, region.if_type.value, region.colour, opac);
+                else
+                    set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                SDL_Rect src_rect = {64, 512, 192, 192};
+                if (region.elements_neg.get(pos))
+                    src_rect.y = 704;
+                if (region.if_type.type != RegionType::NONE)
+                {
+                    src_rect.x = 3136;
+                    src_rect.y = 64;
+                    if (if_if)
+                        src_rect.x = 2944;
+                }
+                for(WrapPos r : wraps)
+                {
+                    XYPos p = r.pos + d.pos * r.size;
+                    XYPos s = d.size * r.size;
+                    if(p.x + s.x < 0) continue;
+                    if(p.y + s.y < 0) continue;
+                    if(p.x > grid_size) continue;
+                    if(p.y > grid_size) continue;
+                    p += grid_offset;
+                    SDL_Rect dst_rect = {p.x, p.y, s.x, s.y};
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                }
 
-            if (region.elements_neg.get(pos))
-                set_region_colour(sdl_texture, region.type.value, region.colour, opac);
-            else
-                SDL_SetTextureColorMod(sdl_texture, 0,0,0);
-            for(WrapPos r : wraps)
-            {
-                XYPos p = r.pos + d.pos * r.size;
-                XYPos s = d.size * r.size;
-                if(p.x + s.x < 0) continue;
-                if(p.y + s.y < 0) continue;
-                if(p.x > grid_size) continue;
-                if(p.y > grid_size) continue;
-                p+= grid_offset;
-                render_region_type(region.type, p, s.x);
+                if (region.is_if_then() ? if_if : region.elements_neg.get(pos))
+                    set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                else
+                    SDL_SetTextureColorMod(sdl_texture, 0,0,0);
+                for(WrapPos r : wraps)
+                {
+                    RegionType t = region.type;
+                    if (if_if)
+                        t = region.if_type;
+                    XYPos p = r.pos + d.pos * r.size;
+                    XYPos s = d.size * r.size;
+                    if(p.x + s.x < 0) continue;
+                    if(p.y + s.y < 0) continue;
+                    if(p.x > grid_size) continue;
+                    if(p.y > grid_size) continue;
+                    p+= grid_offset;
+                    render_region_type(t, p, s.x);
+                }
             }
         }
     }
@@ -2567,7 +2639,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
 
 }
 
-void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected, bool negated)
+void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected, bool negated, bool if_then)
 {
     set_region_colour(sdl_texture, type.value, colour, contrast);
     if (selected)
@@ -2593,6 +2665,15 @@ void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos
     SDL_Rect src_rect = {64, 512, 192, 192};
     if (negated)
         src_rect.y = 704;
+
+    if (if_then)
+    {
+        src_rect.x = 3136;
+        src_rect.y = 64;
+        if (negated)
+            src_rect.x = 2944;
+    }
+
     SDL_Rect dst_rect = {pos.x, pos.y, int(siz), int(siz)};
     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
@@ -2602,8 +2683,9 @@ void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos
     SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
 }
 
-void GameState::render_region_type(RegionType reg, XYPos pos, unsigned siz)
+void GameState::render_region_type(RegionIfType if_reg, XYPos pos, unsigned siz)
 {
+    RegionType& reg = if_reg.type;
     if (reg.type == RegionType::XOR11 || reg.type == RegionType::XOR22)
     {
         XYPos numsiz = XYPos(siz * 0.9 * 2 / 8, siz * 0.9 * 3 / 8);
@@ -2882,7 +2964,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             unsigned colour = (right_panel_mode == RIGHT_MENU_RULE_GEN && rule_gen_region[0]) ? rule_gen_region[0]->colour : 0;
             set_region_colour(sdl_texture, rule.region_type[0].value, colour, contrast);
             render_box(base_pos + XYPos(0 * size, 0 * size), XYPos(siz.x * size, siz.y * size), size / 2, 8);
-            render_region_bubble(rule.region_type[0], colour, base_pos + XYPos(0 * size, 0 * size), size * 2 / 3, hover_rulemaker_region_base_index == 0);
+            render_region_bubble(rule.region_type[0], colour, base_pos + XYPos(0 * size, 0 * size), size * 2 / 3, hover_rulemaker_region_base_index == 0, rule.if_reg_count, rule.if_reg_count);
 
         }
         if (rule.region_count >= 2 || rule.neg_reg_count)
@@ -2911,7 +2993,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(2 * size + size / 3, 0 * size +size / 12), size * 2 / 3, hover_rulemaker_region_base_index == reg_index, true);
             }
             else
-                render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(2 * size + size / 3, 0 * size +size / 12), size * 2 / 3, hover_rulemaker_region_base_index == reg_index);
+                render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(2 * size + size / 3, 0 * size +size / 12), size * 2 / 3, hover_rulemaker_region_base_index == reg_index, false, rule.if_reg_count);
 
         }
 
@@ -2930,7 +3012,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(4 * size + size / 3, 3 * size + size / 3), size * 2 / 3, hover_rulemaker_region_base_index == reg_index, true);
             }
             else
-                render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(4 * size + size / 3, 2 * size), size * 2 / 3, hover_rulemaker_region_base_index == reg_index);
+                render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(4 * size + size / 3, 2 * size), size * 2 / 3, hover_rulemaker_region_base_index == reg_index, rule.if_reg_count >= 2, rule.if_reg_count >= 2);
         }
 
         if (rule.region_count == 4 || (rule.neg_reg_count && rule.region_count == 3))
@@ -2942,7 +3024,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                 render_box(base_pos + XYPos(size / 12, 3 * size), XYPos(5 * size - size / 12, 2 * size), size / 2, 8);
             else
                 render_box(base_pos + XYPos(size + size / 12, 3 * size), XYPos(4 * size - size / 12, 2 * size), size / 2, 8);
-            render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(size / 12 + 4 * size + size / 3, 4 * size + size / 3), size * 2 / 3, hover_rulemaker_region_base_index == reg_index);
+            render_region_bubble(rule.region_type[reg_index], colour, base_pos + XYPos(size / 12 + 4 * size + size / 3, 4 * size + size / 3), size * 2 / 3, hover_rulemaker_region_base_index == reg_index, false, rule.if_reg_count >= 2);
         }
 
         if (rule.apply_region_type.type == RegionType::VISIBILITY)
@@ -3130,13 +3212,23 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             int i = rule_xy_to_rule_region_mask(p2, rule);
             if (!i)
                 continue;
-            if (!((rule.apply_region_bitmap >> i) & 1))
+            if (!(((rule.apply_region_bitmap | rule.neg_apply_region_bitmap) >> i) & 1))
                 continue;
 
             if (rule.apply_region_type.type < 50)
             {
                 bool neg = (rule.neg_apply_region_bitmap >> i) & 1;
-                render_region_bubble(rule.apply_region_type, 0, base_pos + XYPos(size / 2, size / 2) + p * size, size / 2, false, neg);
+                bool if_then = rule.apply_if_region_type.type != RegionType::NONE;
+                if (if_then)
+                {
+                    bool pos = (rule.apply_region_bitmap >> i) & 1;
+                    if (pos)
+                        render_region_bubble(rule.apply_region_type, 0, base_pos + XYPos(size / 2, size / 2) + p * size, size / 2, false, false, true);
+                    if (neg)
+                        render_region_bubble(rule.apply_if_region_type, 0, base_pos + XYPos(0, size / 2) + p * size, size / 2, false, true, true);
+                }
+                else
+                    render_region_bubble(rule.apply_region_type, 0, base_pos + XYPos(size / 2, size / 2) + p * size, size / 2, false, neg);
             }
             else if (rule.apply_region_type.type == RegionType::SET)
             {
@@ -3396,19 +3488,45 @@ void GameState::render(bool saving)
         if ((mouse - (right_panel_offset + XYPos(0, 2 * button_size))).inside(XYPos(button_size, button_size)))
         {
             hover_rulemaker = true;
-            if (has_neg)
+            if (has_neg && !inspected_region->is_if_then())
                 hover_squares_highlight = inspected_region->elements & ~inspected_region->elements_neg;
             else
                 hover_squares_highlight = inspected_region->elements;
             hover_rulemaker_bits = 0;
         }
-        if (has_neg && (mouse - (right_panel_offset + XYPos(button_size, 2 * button_size))).inside(XYPos(button_size, button_size)))
+        if (inspected_region->is_if_then())
         {
-            hover_rulemaker = true;
-            hover_squares_highlight = inspected_region->elements_neg;
-            hover_rulemaker_bits = 1;
+            if ((mouse - (right_panel_offset + XYPos(0, 2 * button_size))).inside(XYPos(button_size, button_size)))
+            {
+                hover_rulemaker = true;
+                hover_squares_highlight = inspected_region->elements_neg & ~inspected_region->elements;
+                hover_rulemaker_bits = 0;
+            }
+            if ((mouse - (right_panel_offset + XYPos(button_size, 2 * button_size))).inside(XYPos(button_size, button_size)))
+            {
+                hover_rulemaker = true;
+                hover_squares_highlight = inspected_region->elements_neg & inspected_region->elements;
+                hover_rulemaker_bits = 1;
+            }
+            if ((mouse - (right_panel_offset + XYPos(2 * button_size, 2 * button_size))).inside(XYPos(button_size, button_size)))
+            {
+                hover_rulemaker = true;
+                hover_squares_highlight = ~inspected_region->elements_neg & inspected_region->elements;
+                hover_rulemaker_bits = 2;
+            }
+            if ((mouse - (right_panel_offset + XYPos(0, button_size))).inside(XYPos((3) * button_size, button_size)))
+                mouse_hover_region = inspected_region;
         }
-    }
+        else
+        {
+            if (has_neg && (mouse - (right_panel_offset + XYPos(button_size, 2 * button_size))).inside(XYPos(button_size, button_size)))
+            {
+                hover_rulemaker = true;
+                hover_squares_highlight = inspected_region->elements_neg;
+                hover_rulemaker_bits = 1;
+            }
+        }
+   }
 
     if (right_panel_mode == RIGHT_MENU_RULE_GEN || right_panel_mode == RIGHT_MENU_RULE_INSPECT)
     {
@@ -3450,7 +3568,14 @@ void GameState::render(bool saving)
         if (hover_rulemaker_region_base_index >= 0)
         {
             hover_rulemaker_region_base = true;
-            mouse_hover_region = rule_cause.regions[hover_rulemaker_region_base_index];
+            int i = hover_rulemaker_region_base_index;
+            if (i < 2 && rule_cause.rule->if_reg_count > 0)
+                i = 0;
+            else if (i < 4 && rule_cause.rule->if_reg_count > 1)
+                i = 1;
+            else
+                i -= rule_cause.rule->if_reg_count;
+            mouse_hover_region = rule_cause.regions[i];
         }
 
         if ((mouse - (right_panel_offset + XYPos(0, button_size * 2))).inside(XYPos(button_size*4, button_size * 6)))
@@ -3467,19 +3592,34 @@ void GameState::render(bool saving)
                 hover_squares_highlight = ~hover_squares_highlight;
                 for (int i = 0; i < rule_cause.rule->region_count; i++)
                 {
-                    if (!rule_cause.regions[i])
+                    int cause_index = i - rule_cause.rule->if_reg_count;
+                    bool use_neg = false;
+                    if (i < 2 && rule_cause.rule->if_reg_count > 0)
+                    {
+                        cause_index = 0;
+                        use_neg = (i == 0);
+                    }
+                    else if (i < 4 && rule_cause.rule->if_reg_count > 1)
+                    {
+                        cause_index = 1;
+                        use_neg = (i == 2);
+                    }
+
+                    if (!rule_cause.regions[cause_index])
                     {
                         hover_squares_highlight.clear();
                         break;
                     }
-
-                    hover_squares_highlight = hover_squares_highlight & (((hover_rulemaker_bits >> i) & 1) ? rule_cause.regions[i]->elements : ~rule_cause.regions[i]->elements);
+                    if (use_neg)
+                        hover_squares_highlight = hover_squares_highlight & (((hover_rulemaker_bits >> i) & 1) ? rule_cause.regions[cause_index]->elements_neg : ~rule_cause.regions[cause_index]->elements_neg);
+                    else
+                        hover_squares_highlight = hover_squares_highlight & (((hover_rulemaker_bits >> i) & 1) ? rule_cause.regions[cause_index]->elements : ~rule_cause.regions[cause_index]->elements);
                     if (i < rule_cause.rule->neg_reg_count)
                     {
                         unsigned t = 8;
                         if (rule_cause.rule->neg_reg_count == 2 && i == 0)
                             t = 4;
-                        hover_squares_highlight = hover_squares_highlight & ((hover_rulemaker_bits & t) ? rule_cause.regions[i]->elements_neg : ~rule_cause.regions[i]->elements_neg);
+                        hover_squares_highlight = hover_squares_highlight & ((hover_rulemaker_bits & t) ? rule_cause.regions[cause_index]->elements_neg : ~rule_cause.regions[cause_index]->elements_neg);
                     }
                 }
             }
@@ -4733,8 +4873,12 @@ void GameState::render(bool saving)
         for (GridRegion* region : display_regions)
         {
             FOR_XY_SET(pos, region->elements)
-            {
                 total_taken[pos]++;
+
+            if (region->is_if_then())
+            {
+                FOR_XY_SET(pos, region->elements_neg)
+                    total_taken[pos]++;
             }
         }
 
@@ -5171,6 +5315,8 @@ void GameState::render(bool saving)
     {
         if (game_mode == 4)
             render_button(XYPos(2688, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
+        else if (game_mode == 5)
+            render_button(XYPos(3040, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
         else
             render_button(XYPos(2240, 576 + game_mode * 192), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 2), "Game Mode");
     }
@@ -5329,8 +5475,8 @@ void GameState::render(bool saving)
                 }
             }
             int cnt = (current_level_group_index == GLBAL_LEVEL_SETS) ?
-                            ((game_mode == 4) ? neg_server_levels : server_levels)[i].size() :
-                            ((game_mode == 4) ? second_global_level_sets : global_level_sets)[current_level_group_index][i]->levels.size();
+                            ((game_mode == 4) ? neg_server_levels : (game_mode == 5) ? if_then_server_levels : server_levels)[i].size() :
+                            ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[current_level_group_index][i]->levels.size();
 
             if (!cnt || (IS_DEMO && (i % 5 + i / 5) > 3))
             {
@@ -5507,21 +5653,47 @@ void GameState::render(bool saving)
             add_tooltip(dst_rect, "Don't Care");
         }
 
+        if (ctrl_held || if_then_selected)
         {
-            SDL_Rect src_rect = {512, 192, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
-            if (region_type == RegionType(RegionType::SET, 0))
-                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, "Clear", region_type != RegionType(RegionType::SET, 0));
+            {
+                SDL_Rect src_rect = {2560, 64, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
+                if (if_then_selected == 1)
+                    render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_region_type(if_then_region_type[0], XYPos(dst_rect.x + button_size / 8, dst_rect.y + button_size / 8), button_size * 6 / 8);
+                add_tooltip(dst_rect, "If", if_then_selected != 1);
+            }
+            {
+                SDL_Rect src_rect = {2752, 64, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
+                if (if_then_selected == 2)
+                    render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+                render_region_type(if_then_region_type[1], XYPos(dst_rect.x + button_size / 8, dst_rect.y + button_size / 8), button_size * 6 / 8);
+                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                add_tooltip(dst_rect, "Then", if_then_selected != 2);
+            }
         }
+        else
         {
-            SDL_Rect src_rect = {320, 192, 192, 192};
-            SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
-            if (region_type == RegionType(RegionType::SET, 1))
-                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            add_tooltip(dst_rect, "Bomb", region_type != RegionType(RegionType::SET, 1));
+            {
+                SDL_Rect src_rect = {512, 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
+                if (region_type == RegionType(RegionType::SET, 0))
+                    render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Clear", region_type != RegionType(RegionType::SET, 0));
+            }
+            {
+                SDL_Rect src_rect = {320, 192, 192, 192};
+                SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
+                if (region_type == RegionType(RegionType::SET, 1))
+                    render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
+                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                add_tooltip(dst_rect, "Bomb", region_type != RegionType(RegionType::SET, 1));
+            }
         }
 
         if (render_lock(PROG_LOCK_VISIBILITY2, XYPos(right_panel_offset.x + 3 * button_size, left_panel_offset.y + 6.2 * button_size), XYPos(button_size, button_size)))
@@ -5559,12 +5731,18 @@ void GameState::render(bool saving)
         }
 
         bool has_neg = inspected_region->elements_neg.any();
+        bool is_if_then = inspected_region->is_if_then();
         {
             set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, contrast);
             render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos((has_neg ? 2 : 1) * button_size, 2 * button_size), button_size / 2, 8);
-            render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0);
-            if (has_neg)
-                render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(1 * button_size + button_size / 3, 1 * button_size + button_size / 12), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, true);
+            render_region_bubble(is_if_then ? inspected_region->if_type : inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, is_if_then, is_if_then);
+            if (is_if_then)
+            {
+                render_box(right_panel_offset + XYPos(1 * button_size, 1 * button_size + button_size / 12), XYPos(2 * button_size, 2 * button_size), button_size / 2, 8);
+                render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(2 * button_size + button_size / 3, 1 * button_size + button_size / 12), button_size * 2 / 3, hover_rulemaker_region_base_index == 1, !is_if_then, is_if_then);
+            }
+            else if (has_neg)
+                render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(1 * button_size + button_size / 3, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, !is_if_then, is_if_then);
 
         }
         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
@@ -5576,7 +5754,16 @@ void GameState::render(bool saving)
             // SDL_Rect dst_rect = {right_panel_offset.x + button_size / 2 + button_size/8, right_panel_offset.y + 2 * button_size + button_size/8, button_size*6/8, button_size*6/8};
             // SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             //
-            if (has_neg)
+            if (is_if_then)
+            {
+                RegionType r_type(RegionType::EQUAL, (uint8_t) (inspected_region->elements_neg & ~inspected_region->elements).count());
+                render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
+                r_type = RegionType(RegionType::EQUAL, (uint8_t) (inspected_region->elements_neg & inspected_region->elements).count());
+                render_region_type(r_type, right_panel_offset + XYPos(button_size, 2 * button_size), button_size);
+                r_type = RegionType(RegionType::EQUAL, (uint8_t) (~inspected_region->elements_neg & inspected_region->elements).count());
+                render_region_type(r_type, right_panel_offset + XYPos(2 * button_size, 2 * button_size), button_size);
+            }
+            else if (has_neg)
             {
                 RegionType r_type(RegionType::EQUAL, (uint8_t) (inspected_region->elements.count() - inspected_region->elements_neg.count()));
                 render_region_type(r_type, right_panel_offset + XYPos(0, 2 * button_size), button_size);
@@ -6277,7 +6464,7 @@ void GameState::render(bool saving)
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(14 * button_size, (GAME_MODES + 2) * button_size), button_size/4, 1);
         for (int i = 0; i < GAME_MODES; i++)
         {
-            static const char* mode_names[GAME_MODES] = {"Regular", "Three region rules", "Max 60 rules", "No variables, max 300 rules", "Negative bombs"};
+            static const char* mode_names[GAME_MODES] = {"Regular", "Three region rules", "Max 60 rules", "No variables, max 300 rules", "Negative bombs", "Implies"};
             std::string name = mode_names[i];
             std::string tname = translate(name);
             {
@@ -6286,6 +6473,11 @@ void GameState::render(bool saving)
                     if (render_lock(PROG_LOCK_NEG_MINES_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), XYPos(button_size, button_size)))
                         render_button(XYPos(2688, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
                 }
+                else if (i == 5)
+                {
+                    if (render_lock(PROG_LOCK_IMPLIES_MODE, XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), XYPos(button_size, button_size)))
+                        render_button(XYPos(3040, 384), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
+                }
                 else
                     render_button(XYPos(2240, 576 + (i * 192)), XYPos(left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * (2 + i)), name.c_str());
             }
@@ -6293,6 +6485,8 @@ void GameState::render(bool saving)
             if (i == game_mode)
                 SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
             if (!prog_seen[PROG_LOCK_NEG_MINES_MODE] && i == 4)
+                tname = "???";
+            if (!prog_seen[PROG_LOCK_IMPLIES_MODE] && i == 5)
                 tname = "???";
             render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname, false, 10 * button_size);
             SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
@@ -7349,21 +7543,34 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                 {
                     right_panel_mode = RIGHT_MENU_RULE_GEN;
                     bool has_neg = mouse_hover_region->elements_neg.any();
+                    bool has_if = mouse_hover_region->is_if_then();
                     if ((constructed_rule.region_count + constructed_rule.neg_reg_count + has_neg) < (game_mode == 1 ? 3 : 4))
                     {
                         bool found = false;
-                        for (int i = 0; i < constructed_rule.region_count; i++)
+                        for (int i = 0; i < (constructed_rule.region_count - constructed_rule.if_reg_count); i++)
                         {
                             if (rule_gen_region[i] == mouse_hover_region)
                                 found = true;
                         }
-                        for (int i = constructed_rule.region_count; i < 4; i++)
+                        for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i < 4; i++)
                         {
                             assert(!rule_gen_region[i]);
                         }
                         if (!found)
                         {
-                            if (has_neg)
+                            if (has_if)
+                            {
+                                if (constructed_rule.region_count < 3)
+                                {
+                                    update_constructed_rule_pre();
+                                    for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i > constructed_rule.if_reg_count; i--)
+                                        rule_gen_region[i] = rule_gen_region[i - 1];
+                                    rule_gen_region[constructed_rule.if_reg_count] = mouse_hover_region;
+                                    constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                                    update_constructed_rule();
+                                }
+                            }
+                            else if (has_neg)
                             {
                                 int eff_regions = constructed_rule.region_count + constructed_rule.neg_reg_count;
                                 if (eff_regions < 3)
@@ -7379,7 +7586,7 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                             else
                             {
                                 update_constructed_rule_pre();
-                                rule_gen_region[constructed_rule.region_count] = mouse_hover_region;
+                                rule_gen_region[constructed_rule.region_count - constructed_rule.if_reg_count] = mouse_hover_region;
                                 constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                                 update_constructed_rule();
                             }
@@ -7641,29 +7848,54 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
         if ((pos - XYPos(button_size * 4, button_size)).inside(XYPos(button_size, button_size)))
         {
             bool has_neg = inspected_region->elements_neg.any();
+            bool has_if = inspected_region->is_if_then();
             if ((constructed_rule.region_count + constructed_rule.neg_reg_count + has_neg) < (game_mode == 1 ? 3 : 4))
             {
                 right_panel_mode = RIGHT_MENU_RULE_GEN;
                 bool found = false;
-                for (int i = 0; i < constructed_rule.region_count; i++)
+                for (int i = 0; i < (constructed_rule.region_count - constructed_rule.if_reg_count); i++)
                 {
                     if (rule_gen_region[i] == inspected_region)
                         found = true;
                 }
+                for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i < 4; i++)
+                {
+                    assert(!rule_gen_region[i]);
+                }
                 if (!found)
                 {
-
-                    update_constructed_rule_pre();
-                    if (has_neg)
+                    if (has_if)
                     {
-                        for (int i = constructed_rule.region_count; i > constructed_rule.neg_reg_count; i--)
-                            rule_gen_region[i] = rule_gen_region[i - 1];
-                        rule_gen_region[constructed_rule.neg_reg_count] = inspected_region;
+                        if (constructed_rule.region_count < 3)
+                        {
+                            update_constructed_rule_pre();
+                            for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i > constructed_rule.if_reg_count; i--)
+                                rule_gen_region[i] = rule_gen_region[i - 1];
+                            rule_gen_region[constructed_rule.if_reg_count] = inspected_region;
+                            constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                            update_constructed_rule();
+                        }
+                    }
+                    else if (has_neg)
+                    {
+                        int eff_regions = constructed_rule.region_count + constructed_rule.neg_reg_count;
+                        if (eff_regions < 3)
+                        {
+                            update_constructed_rule_pre();
+                            for (int i = constructed_rule.region_count; i > constructed_rule.neg_reg_count; i--)
+                                rule_gen_region[i] = rule_gen_region[i - 1];
+                            rule_gen_region[constructed_rule.neg_reg_count] = inspected_region;
+                            constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                            update_constructed_rule();
+                        }
                     }
                     else
-                        rule_gen_region[constructed_rule.region_count] = inspected_region;
-                    constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
-                    update_constructed_rule();
+                    {
+                        update_constructed_rule_pre();
+                        rule_gen_region[constructed_rule.region_count - constructed_rule.if_reg_count] = inspected_region;
+                        constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
+                        update_constructed_rule();
+                    }
                 }
             }
             return;
@@ -8093,8 +8325,15 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (btn == 2)
                 {
                     update_constructed_rule_pre();
-                    int new_count = constructed_rule.region_count - 1;
-                    for (int i = region_index; i < new_count; i++)
+                    int p = region_index;
+                    if (p < constructed_rule.if_reg_count * 2)
+                        p /= 2;
+                    else
+                        p -= constructed_rule.if_reg_count;
+
+                    int new_count = (constructed_rule.region_count - constructed_rule.if_reg_count) - 1;
+                    
+                    for (int i = p; i < new_count; i++)
                         rule_gen_region[i] = rule_gen_region[i+1];
                     rule_gen_region[new_count] = NULL;
                     constructed_rule.remove_region(region_index);
@@ -8143,25 +8382,48 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             if ((pos - XYPos(button_size * 0, button_size * 6.2)).inside(XYPos(button_size,button_size)))
             {
                 region_type = RegionType(RegionType::NONE, 0);
+                if_then_selected = 0;
                 if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count + (btn == 2)) < (game_mode == 1 ? 3 : 4))
                 {
                     update_constructed_rule_pre();
-                    rule_gen_region[constructed_rule.region_count] = NULL;
+                    rule_gen_region[constructed_rule.region_count - constructed_rule.if_reg_count] = NULL;
                     constructed_rule.add_region(region_type, btn == 2);
                     update_constructed_rule();
                 }
             }
         }
-        if ((pos - XYPos(button_size * 1, button_size * 6.2)).inside(XYPos(button_size,button_size)))
-            region_type = RegionType(RegionType::SET, 0);
-        if ((pos - XYPos(button_size * 2, button_size * 6.2)).inside(XYPos(button_size,button_size)))
-            region_type = RegionType(RegionType::SET, 1);
+        if (ctrl_held || if_then_selected)
+        {
+            if ((pos - XYPos(button_size * 1, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+            {
+                if_then_selected = 1;
+                select_region_type = region_type = if_then_region_type[0];
+            }
+            if ((pos - XYPos(button_size * 2, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+            {
+                if_then_selected = 2;
+                select_region_type = region_type = if_then_region_type[1];
+            }
+        }
+        else
+        {
+            if ((pos - XYPos(button_size * 1, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+                region_type = RegionType(RegionType::SET, 0);
+            if ((pos - XYPos(button_size * 2, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+                region_type = RegionType(RegionType::SET, 1);
+        }
         if (prog_seen[PROG_LOCK_VISIBILITY])
         {
             if ((pos - XYPos(button_size * 3, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+            {
                 region_type = RegionType(RegionType::VISIBILITY, 1);
+                if_then_selected = 0;
+            }
             if ((pos - XYPos(button_size * 4, button_size * 6.2)).inside(XYPos(button_size,button_size)))
+            {
                 region_type = RegionType(RegionType::VISIBILITY, 2);
+                if_then_selected = 0;
+            }
         }
         if(prog_seen[PROG_LOCK_NUMBER_TYPES])
         {
@@ -8176,10 +8438,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 {
                     select_region_type.type = t;
                     region_type = select_region_type;
+                    if (if_then_selected)
+                        if_then_region_type[if_then_selected - 1] = select_region_type;
                     if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count + (btn == 2)) < (game_mode == 1 ? 3 : 4))
                     {
                         update_constructed_rule_pre();
-                        rule_gen_region[constructed_rule.region_count] = NULL;
+                        rule_gen_region[(constructed_rule.region_count - constructed_rule.if_reg_count)] = NULL;
                         constructed_rule.add_region(region_type, btn == 2);
                         update_constructed_rule();
                     }
@@ -8193,10 +8457,12 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (ctrl_held)
                     select_region_type.value = -select_region_type.value;
                 region_type = select_region_type;
+                if (if_then_selected)
+                    if_then_region_type[if_then_selected - 1] = select_region_type;
                 if (clicks >= 2 && (constructed_rule.region_count + constructed_rule.neg_reg_count + (btn == 2)) < (game_mode == 1 ? 3 : 4))
                 {
                     update_constructed_rule_pre();
-                    rule_gen_region[constructed_rule.region_count] = NULL;
+                    rule_gen_region[(constructed_rule.region_count - constructed_rule.if_reg_count)] = NULL;
                     constructed_rule.add_region(region_type, btn == 2);
                     update_constructed_rule();
                 }
@@ -8211,6 +8477,9 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         region_type.type != RegionType::SET &&
                         region_type.type != RegionType::VISIBILITY)
                         region_type.var = select_region_type.var;
+                    if (if_then_selected)
+                        if_then_region_type[if_then_selected - 1] = select_region_type;
+
                 }
             }
         }
@@ -8289,6 +8558,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         if (constructed_rule.apply_region_bitmap & 1 << hover_rulemaker_bits)
                         {
                             region_type = constructed_rule.apply_region_type;
+                            if_then_selected = 0;
                             if ((region_type.type != RegionType::VISIBILITY) && (region_type.type != RegionType::NONE) && (region_type.type != RegionType::SET))
                                 select_region_type = region_type;
                         }
@@ -8296,7 +8566,23 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                     {
                         update_constructed_rule_pre();
-                        if (constructed_rule.apply_region_type != region_type)
+                        if (if_then_selected == 1)
+                        {
+                            constructed_rule.apply_if_region_type = if_then_region_type[0];
+                            if (!(constructed_rule.neg_apply_region_bitmap & (1 << hover_rulemaker_bits)))
+                                constructed_rule.neg_apply_region_bitmap |= 1 << hover_rulemaker_bits;
+                            else
+                                constructed_rule.neg_apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                        }
+                        else if (if_then_selected == 2)
+                        {
+                            constructed_rule.apply_region_type = if_then_region_type[1];
+                            if (!(constructed_rule.apply_region_bitmap & (1 << hover_rulemaker_bits)))
+                                constructed_rule.apply_region_bitmap |= 1 << hover_rulemaker_bits;
+                            else
+                                constructed_rule.apply_region_bitmap ^= 1 << hover_rulemaker_bits;
+                        }
+                        else if (constructed_rule.apply_region_type != region_type || constructed_rule.apply_if_region_type.type != RegionType::NONE)
                         {
                             if ((constructed_rule.apply_region_type.type == RegionType::SET) ||
                                 (region_type.type == RegionType::SET) ||
@@ -8305,6 +8591,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                             constructed_rule.apply_region_type = region_type;
                             if (region_type.type == RegionType::SET)
                                 constructed_rule.neg_apply_region_bitmap = 0;
+                            constructed_rule.apply_if_region_type.type = RegionType::NONE;
                         }
                         else
                         {
@@ -8403,7 +8690,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             for (int i = 0; i < 4; i++)
                 rule_gen_region[i] = NULL;
             while (constructed_rule.region_count)
-                constructed_rule.remove_region(constructed_rule.region_count - 1);
+                constructed_rule.remove_region(0);
             update_constructed_rule();
             right_panel_mode = RIGHT_MENU_NONE;
             replace_rule  = NULL;
@@ -9417,7 +9704,7 @@ bool GameState::events()
                     if (p.x >= 0 && p.y >= 0 && p.x < 5 && p.y < GAME_MODES)
                     {
                         int index = p.y;
-                        if (index != game_mode && (prog_seen[PROG_LOCK_NEG_MINES_MODE] || index != 4))
+                        if (index != game_mode && (prog_seen[PROG_LOCK_NEG_MINES_MODE] || index != 4) && (prog_seen[PROG_LOCK_IMPLIES_MODE] || index != 5))
                         {
                             pause_robots();
                             current_level_group_index = 0;
@@ -9654,7 +9941,7 @@ void GameState::deal_with_scores()
                     SaveObjectList* lvl_sets = omap->get_item("server_levels")->get_list();
                     server_levels.clear();
                     server_levels.resize(lvl_sets->get_count());
-                    for (unsigned m = 0; m < GAME_MODES - 1; m++)
+                    for (unsigned m = 0; m < 4; m++)
                     {
                         level_progress[m][GLBAL_LEVEL_SETS].clear();
                         level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
@@ -9662,7 +9949,7 @@ void GameState::deal_with_scores()
                     for (unsigned k = 0; k < lvl_sets->get_count(); k++)
                     {
                         SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
-                        for (int m = 0; m < GAME_MODES - 1; m++)
+                        for (int m = 0; m < 4; m++)
                         {
                             level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
                             level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
@@ -9682,7 +9969,7 @@ void GameState::deal_with_scores()
                     SaveObjectList* lvl_sets = omap->get_item("neg_server_levels")->get_list();
                     neg_server_levels.clear();
                     neg_server_levels.resize(lvl_sets->get_count());
-                    int m = GAME_MODES - 1;
+                    int m = 4;
                     {
                         level_progress[m][GLBAL_LEVEL_SETS].clear();
                         level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
@@ -9690,7 +9977,7 @@ void GameState::deal_with_scores()
                     for (unsigned k = 0; k < lvl_sets->get_count(); k++)
                     {
                         SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
-                        int m = GAME_MODES - 1;
+                        int m = 4;
                         {
                             level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
                             level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
@@ -9700,6 +9987,34 @@ void GameState::deal_with_scores()
                         {
                             std::string s = plist->get_string(i);
                             neg_server_levels[k].push_back(s);
+                        }
+                    }
+                    if (current_level_group_index == GLBAL_LEVEL_SETS)
+                        current_level_is_temp = true;
+                }
+                if (omap->has_key("if_then_server_levels"))
+                {
+                    SaveObjectList* lvl_sets = omap->get_item("if_then_server_levels")->get_list();
+                    if_then_server_levels.clear();
+                    if_then_server_levels.resize(lvl_sets->get_count());
+                    int m = 5;
+                    {
+                        level_progress[m][GLBAL_LEVEL_SETS].clear();
+                        level_progress[m][GLBAL_LEVEL_SETS].resize(lvl_sets->get_count());
+                    }
+                    for (unsigned k = 0; k < lvl_sets->get_count(); k++)
+                    {
+                        SaveObjectList* plist = lvl_sets->get_item(k)->get_list();
+                        int m = 5;
+                        {
+                            level_progress[m][GLBAL_LEVEL_SETS][k].level_status.resize(plist->get_count());
+                            level_progress[m][GLBAL_LEVEL_SETS][k].count_todo = plist->get_count();
+                        }
+
+                        for (unsigned i = 0; i < plist->get_count(); i++)
+                        {
+                            std::string s = plist->get_string(i);
+                            if_then_server_levels[k].push_back(s);
                         }
                     }
                     if (current_level_group_index == GLBAL_LEVEL_SETS)
@@ -9734,6 +10049,35 @@ void GameState::export_all_rules_to_clipboard()
     delete omap;
 }
 
+// Encode a single UTF-32 code point into UTF-8
+static void append_utf8(std::string &out, char32_t cp) {
+    if (cp <= 0x7F) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp <= 0x7FF) {
+        out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else if (cp <= 0xFFFF) {
+        out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else {
+        out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    }
+}
+
+// Convert UTF-32 string to UTF-8
+static std::string utf32_to_utf8(const std::u32string &s32) {
+    std::string out;
+    out.reserve(s32.size() * 4); // worst case
+    for (char32_t cp : s32) {
+        append_utf8(out, cp);
+    }
+    return out;
+}
+
 void GameState::send_to_clipboard(std::string title, SaveObject* obj)
 {
     std::ostringstream stream;
@@ -9764,8 +10108,7 @@ void GameState::send_to_clipboard(std::string title, SaveObject* obj)
 
         } 
         s32 += 0x1F6D1;                 // stop sign
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        reply += conv.to_bytes(s32);
+        reply += utf32_to_utf8(s32);
     }
     reply += "\n";
     SDL_SetClipboardText(reply.c_str());
@@ -9865,6 +10208,48 @@ static uint32_t get_hidden_val(uint32_t** dat, unsigned roff, unsigned goff, uns
     return val;
 }
 
+// Decode a single UTF-8 sequence into a char32_t
+static char32_t decode_utf8_char(const std::string &s, size_t &i) {
+    unsigned char c = static_cast<unsigned char>(s[i]);
+
+    if (c <= 0x7F) {
+        return s[i++]; // ASCII fast path
+    } else if ((c >> 5) == 0x6) { // 110xxxxx
+        if (i + 1 >= s.size()) throw std::runtime_error("Invalid UTF-8");
+        char32_t cp = ((c & 0x1F) << 6) |
+                      (static_cast<unsigned char>(s[i+1]) & 0x3F);
+        i += 2;
+        return cp;
+    } else if ((c >> 4) == 0xE) { // 1110xxxx
+        if (i + 2 >= s.size()) throw std::runtime_error("Invalid UTF-8");
+        char32_t cp = ((c & 0x0F) << 12) |
+                      ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 6) |
+                      (static_cast<unsigned char>(s[i+2]) & 0x3F);
+        i += 3;
+        return cp;
+    } else if ((c >> 3) == 0x1E) { // 11110xxx
+        if (i + 3 >= s.size()) throw std::runtime_error("Invalid UTF-8");
+        char32_t cp = ((c & 0x07) << 18) |
+                      ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 12) |
+                      ((static_cast<unsigned char>(s[i+2]) & 0x3F) << 6) |
+                      (static_cast<unsigned char>(s[i+3]) & 0x3F);
+        i += 4;
+        return cp;
+    } else {
+        throw std::runtime_error("Invalid UTF-8 leading byte");
+    }
+}
+
+// Convert an entire UTF-8 string into UTF-32
+static std::u32string utf8_to_utf32(const std::string &utf8) {
+    std::u32string out;
+    size_t i = 0;
+    while (i < utf8.size()) {
+        out.push_back(decode_utf8_char(utf8, i));
+    }
+    return out;
+}
+
 void GameState::check_clipboard()
 {
     std::string comp;
@@ -9905,8 +10290,7 @@ void GameState::check_clipboard()
         if (new_value == clipboard_last)
             return;
         clipboard_last = new_value;
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        std::u32string s32 = conv.from_bytes(std::string(new_value));
+        std::u32string s32 = utf8_to_utf32(new_value);
         for(uint32_t c : s32)
         {
             if ((c & 0xFF00) == 0x2800)
@@ -9977,6 +10361,10 @@ void GameState::import_all_rules()
             order.push_back(i);
         do{
             if (new_rule.neg_reg_count == 1 && order[0])
+                continue;
+            if (constructed_rule.if_reg_count == 1 && (order[0] != 0 || order[1] != 1))
+                continue;
+            if (constructed_rule.if_reg_count == 2 && (order[0] != 0 || order[1] != 1 || order[2] != 2 || order[3] != 3))
                 continue;
             GridRule prule = new_rule.permute(order);
             for (GridRule& rule : rules[game_mode])

@@ -64,7 +64,7 @@ public:
     Mix_Music *music;
 
 
-    static const int GAME_MODES = 5;
+    static const int GAME_MODES = 6;
     int game_mode = 0;
 
     Grid *grid;
@@ -265,9 +265,11 @@ public:
     std::list<GridRule> clipboard_rule_set;
     std::string clipboard_level;
 
-    
     RegionType region_type = RegionType(RegionType::SET, 0);
     RegionType select_region_type = RegionType(RegionType::EQUAL, 0);
+    uint8_t if_then_selected = 0;
+    RegionType if_then_region_type[2] = {RegionType(RegionType::EQUAL, 0), RegionType(RegionType::EQUAL, 0)};
+
     const RegionType::Type menu_region_types[2][5] = {{RegionType::EQUAL, RegionType::LESS, RegionType::XOR1, RegionType::XOR2, RegionType::XOR3},
                                                       {RegionType::NOTEQUAL, RegionType::MORE, RegionType::XOR11, RegionType::XOR22, RegionType::PARITY}};
 
@@ -364,6 +366,7 @@ public:
     };
     std::vector<std::vector<std::string>> server_levels;
     std::vector<std::vector<std::string>> neg_server_levels;
+    std::vector<std::vector<std::string>> if_then_server_levels;
     int server_levels_version = 0;
 
     std::vector<LevelProgress> level_progress[GAME_MODES][GLBAL_LEVEL_SETS + 1];
@@ -416,6 +419,7 @@ public:
 
         PROG_LOCK_GAME_MODE,
         PROG_LOCK_NEG_MINES_MODE,
+        PROG_LOCK_IMPLIES_MODE,
 
         PROG_LOCK_VARS1,
         PROG_LOCK_VARS2,
@@ -539,8 +543,8 @@ public:
     bool render_button(XYPos tpos, XYPos pos, const char* tooltip, int style = 0, int size = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
     void render_number_string(std::string str, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));
-    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false, bool negated = false);
-    void render_region_type(RegionType reg, XYPos pos, unsigned siz);
+    void render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected = false, bool negated = false, bool if_then = false);
+    void render_region_type(RegionIfType reg, XYPos pos, unsigned siz);
     void render_star_burst(XYPos pos, XYPos size, int progress, bool lock);
     bool render_lock(int lock_type, XYPos pos, XYPos size);
     void render_rule(GridRule& rule, XYPos pos, int size, int hover_rulemaker_region_base_index, bool reason = false);

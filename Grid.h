@@ -96,7 +96,8 @@ public:
         BOX,
         SET = 100,
         VISIBILITY = 101,
-    } type = NONE;
+    };
+    Type type = NONE;
     int8_t value = 0;
     uint8_t var = 0;
 
@@ -122,10 +123,28 @@ public:
 
     z3::expr apply_z3_rule(z3::expr in, z3::expr_vector& var_vect);
 
+    bool apply_int_rule(unsigned in);
     bool apply_int_rule(unsigned in, int vars[32]);
 
     int max();
 };
+
+
+class RegionIfType
+{
+public:
+    RegionType if_type;
+    RegionType type;
+
+    RegionIfType() {}
+    RegionIfType(RegionType _type): type(_type){}
+    RegionIfType(RegionType::Type t, uint8_t v) : type(t, v) {}
+    bool operator==(const RegionIfType& other) const { return (type == other.type) && (if_type == other.if_type); }
+    bool is_if_then() const {
+        return if_type.type != RegionType::NONE;
+    }
+};
+
 
 class GridPlace
 {
@@ -134,7 +153,7 @@ public:
     bool revealed;
     bool negated = false;
 
-    RegionType clue = RegionType(RegionType::NONE, 0);
+    RegionIfType clue;;
 
     GridPlace(bool bomb_ = false, bool revealed_ = false) :
         bomb(bomb_),
@@ -183,6 +202,7 @@ class GridRegion
 {
 public:
     RegionType type;
+    RegionType if_type;
     unsigned colour;
     GridVisLevel vis_level = GRID_VIS_LEVEL_SHOW;
     enum
@@ -201,16 +221,18 @@ public:
     GridRegionCause vis_cause;
     float priority = 0;
 
-    GridRegion(RegionType type);
+    GridRegion(RegionIfType type);
     bool overlaps(GridRegion& other);
     bool operator==(const GridRegion& other) const
     {
-        return (type == other.type) && (elements == other.elements) && (elements_neg == other.elements_neg);
+        return (type == other.type) && (if_type == other.if_type) && (elements == other.elements) && (elements_neg == other.elements_neg);
     }
     bool operator<(const GridRegion& other) const
     {
         if (type < other.type) return true;
         if (other.type < type) return false;
+        if (if_type < other.if_type) return true;
+        if (other.if_type < if_type) return false;
         if (elements < other.elements) return true;
         if (other.elements < elements) return false;
         if (elements_neg < other.elements_neg) return true;
@@ -226,6 +248,9 @@ public:
     bool isHintable() const {
         return visibility_force == GridRegion::VIS_FORCE_NONE && vis_level == GRID_VIS_LEVEL_SHOW;
     }
+    bool is_if_then() const {
+        return if_type.type != RegionType::NONE;
+    }
 };
 
 class GridRule
@@ -235,8 +260,10 @@ public:
     bool paused = false;
     uint8_t region_count = 0;
     uint8_t neg_reg_count = 0;
+    uint8_t if_reg_count = 0;
     RegionType region_type[4] = {};
     RegionType square_counts[16] = {};
+    RegionType apply_if_region_type;
     RegionType apply_region_type;
     uint16_t apply_region_bitmap = 0;
     uint16_t neg_apply_region_bitmap = 0;
@@ -261,6 +288,7 @@ public:
         enum OpType
         {
             REG_TYPE,
+            REG_TYPE_IF,
             CELL_COUNT,
             VAR_ADD,
             VAR_SUB,
@@ -316,10 +344,10 @@ struct RenderCmd
 struct EdgePos
 {
     XYPos rule_pos;
-    RegionType type;
+    RegionIfType type;
     double angle;
     double pos;
-    EdgePos (XYPos _rule_pos, RegionType type_, double angle_, double pos_): rule_pos(_rule_pos),type(type_),angle(angle_),pos(pos_){}
+    EdgePos (XYPos _rule_pos, RegionIfType type_, double angle_, double pos_): rule_pos(_rule_pos),type(type_),angle(angle_),pos(pos_){}
     EdgePos (){}
     bool operator==(const EdgePos& other) const
     {
@@ -347,7 +375,7 @@ public:
     bool wants_base_regions = true;
 
     std::map<XYPos, GridPlace> vals;
-    std::map<XYPos, RegionType> edges;      //  X=0 - vertical, X=1 horizontal
+    std::map<XYPos, RegionIfType> edges;      //  X=0 - vertical, X=1 horizontal
     std::map<XYPos, XYPos> merged;
     std::map<XYPos, GridRegionCause> cell_causes;
     XYPos innie_pos = XYPos(1,1);
@@ -370,7 +398,7 @@ public:
 
     static Grid* Load(std::string s);
     GridPlace get(XYPos p);
-    RegionType& get_clue(XYPos p);
+    RegionIfType& get_clue(XYPos p);
 
     virtual std::string text_desciption() = 0;
     virtual std::string to_string();
@@ -399,12 +427,12 @@ public:
     bool is_determinable(XYPos q);
     bool is_determinable_using_regions(XYPos q, bool hidden = false);
 //    bool has_solution(void);
-    void make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11, int prime);
+    void make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11, int prime, int if_then);
     void reveal(XYPos p);
     bool is_solved(void);
 
     bool add_region(GridRegion& r, bool front = false);
-    bool add_region(XYSet& elements, XYSet& elements_neg, RegionType clue, XYPos cause);
+    bool add_region(XYSet& elements, XYSet& elements_neg, RegionIfType if_clue, XYPos cause);
     void add_base_regions(void);
 
     enum ApplyRuleResp

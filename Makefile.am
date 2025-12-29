@@ -13,7 +13,7 @@ EXTRA_LD_FLAGS =
 EXTRA_SRC = 
 
 if LINUX
-    EXTRA_FLAGS += -DTARGET_LINUX 
+    EXTRA_FLAGS += -DTARGET_LINUX  -DCLIP_X11_WITH_PNG
     EXTRA_SRC += clip/image.cpp
     EXTRA_LDADD += -lX11 -lpng
 endif
