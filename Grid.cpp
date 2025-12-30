@@ -4099,6 +4099,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
     else
     {
         RegionType typ = rule.apply_region_type;
+        RegionType if_typ = rule.apply_if_region_type;
         if (typ.var)
         {
             assert(var_counts[typ.var - 1] >= 0);
@@ -4110,7 +4111,17 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
                 return APPLY_RULE_RESP_NONE;
         }
         GridRegion reg(typ);
-        reg.if_type = rule.apply_if_region_type;
+        if (if_typ.var)
+        {
+            assert(var_counts[if_typ.var - 1] >= 0);
+            if_typ.value += var_counts[if_typ.var - 1];
+            if_typ.var = false;
+            if (if_typ.value > 32)
+                return APPLY_RULE_RESP_NONE;
+            if (if_typ.value < -32)
+                return APPLY_RULE_RESP_NONE;
+        }
+        reg.if_type = if_typ;
 
         reg.elements = to_reveal;
         reg.elements_neg =  neg_to_reveal;
