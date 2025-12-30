@@ -4555,7 +4555,7 @@ bool Grid::region_is_correct(GridRegion* r)
     bool valid = r->type.apply_int_rule(bombs);
     if (if_type)
     {
-        if (!r->if_type.apply_int_rule(if_bombs));
+        if (!r->if_type.apply_int_rule(if_bombs))
             valid = true;
     }
     assert(valid);
