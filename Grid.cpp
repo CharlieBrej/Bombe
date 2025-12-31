@@ -4037,6 +4037,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
             if ((rule.neg_apply_region_bitmap >> i) & 1)
                 neg_to_reveal |= s;
         }
+        if (to_reveal.empty() || neg_to_reveal.empty())
+            return APPLY_RULE_RESP_NONE;
     }
     else
     {
