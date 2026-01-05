@@ -1454,7 +1454,8 @@ void GameState::advance(int steps)
                     break;
                 }
             }
-            if (level_is_accessible(game_mode, current_level_group_index, current_level_set_index))
+            if (level_is_accessible(game_mode, current_level_group_index, current_level_set_index) &&
+                level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size())
             {
                 load_level = true;
                 current_level_index = 0;
@@ -3061,6 +3062,12 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                     app = (app & 6) << 1;
                 
             }
+
+            if (rule.if_reg_count && (app & 1))
+                app |= 2;
+            if (rule.if_reg_count >= 2 && (app & 4))
+                app |= 8;
+
             if (app & 1)
             {
                 SDL_Rect dst_rect = {base_pos.x + size / 3, base_pos.y + 0 * size + size / 3, size * 2 / 3, size * 2 / 3};
@@ -8343,6 +8350,8 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                 if (region_type.type == RegionType::VISIBILITY)
                 {
                     update_constructed_rule_pre();
+                    if (region_index < (constructed_rule.if_reg_count * 2))
+                        region_index &= ~1;
                     if (constructed_rule.apply_region_type != region_type)
                     {
                         if ((constructed_rule.apply_region_type.type != RegionType::VISIBILITY) ||

@@ -336,7 +336,13 @@ GridRule::GridRule(SaveObject* sobj)
         if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
     }
     if (apply_region_type.type == RegionType::VISIBILITY)
+    {
         apply_region_type.var = 0;
+        if (if_reg_count)
+            apply_region_bitmap &= ~2ull;
+        if (if_reg_count >= 2)
+            apply_region_bitmap &= ~8ull;
+    }
 
     if (omap->has_key("paused"))
         paused = omap->get_num("paused");
@@ -351,6 +357,7 @@ GridRule::GridRule(SaveObject* sobj)
         group = omap->get_num("group");
 
     apply_region_bitmap = omap->get_num("apply_region_bitmap");
+
     if (omap->has_key("neg_apply_region_bitmap"))
         neg_apply_region_bitmap = omap->get_num("neg_apply_region_bitmap");
     if (apply_if_region_type.type == RegionType::NONE)
@@ -1466,6 +1473,10 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
     if (region_count == 0)
         return IMPOSSIBLE;
+    if (if_reg_count && region_type[0].type == RegionType::NONE)
+        return IMPOSSIBLE;
+    if (if_reg_count > 1 && region_type[2].type == RegionType::NONE)
+        return IMPOSSIBLE;
 
     if(region_count > 1)
         for (int r = 0; r < region_count; r++)
@@ -1689,7 +1700,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
     }
 
-
     if (s.check() != z3::sat)
     {
         return IMPOSSIBLE;
@@ -1722,6 +1732,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         z3::expr t = c.bool_val(false);
         if (region_count == 1)
         {
+            assert(!if_reg_count);
             if (region_type[0].type != RegionType::NONE)
             {
                 if (neg_reg_count == 0)
@@ -1744,7 +1755,14 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (region_type[0].type != RegionType::NONE)
             {
-                if (neg_reg_count == 0)
+                if (if_reg_count)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec));
+                    else
+                        s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec)));
+                }
+                else if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 1)
                         t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec);
@@ -1768,7 +1786,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             }
             if (region_type[1].type != RegionType::NONE)
             {
-                if (neg_reg_count == 0)
+                if (if_reg_count)
+                {}
+                else if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 2)
                         t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec);
@@ -1795,7 +1815,14 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (region_type[0].type != RegionType::NONE)
             {
-                if (neg_reg_count == 0)
+                if (if_reg_count)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec));
+                    else
+                        s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec)));
+                }
+                else if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 1)
                         t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec);
@@ -1812,7 +1839,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             }
             if (region_type[1].type != RegionType::NONE)
             {
-                if (neg_reg_count == 0)
+                if (if_reg_count)
+                {}
+                else if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 2)
                         t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec);
@@ -1848,34 +1877,53 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
         if (region_count == 4)
         {
-            if (region_type[0].type != RegionType::NONE)
+            if (if_reg_count)
             {
                 if (vis_apply_inv & 1)
-                    t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec);
+                    t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec));
                 else
-                    s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec));
+                    s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec)));
             }
-            if (region_type[1].type != RegionType::NONE)
+            else
             {
-                if (vis_apply_inv & 2)
-                    t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec);
-                else
-                    s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec));
+                if (region_type[0].type != RegionType::NONE)
+                {
+                    if (vis_apply_inv & 1)
+                        t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec));
+                }
+                if (region_type[1].type != RegionType::NONE)
+                {
+                    if (vis_apply_inv & 2)
+                        t = t | !region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec));
+                }
             }
-
-            if (region_type[2].type != RegionType::NONE)
+            if (if_reg_count >= 2)
             {
                 if (vis_apply_inv & 4)
-                    t = t | !region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec);
+                    t = t | !z3::implies(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec), region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
                 else
-                    s.add(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
+                    s.add(z3::implies(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec), region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec)));
             }
-            if (region_type[3].type != RegionType::NONE)
+            else
             {
-                if (vis_apply_inv & 8)
-                    t = t | !region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec);
-                else
-                    s.add(region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
+                if (region_type[2].type != RegionType::NONE)
+                {
+                    if (vis_apply_inv & 4)
+                        t = t | !region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
+                }
+                if (region_type[3].type != RegionType::NONE)
+                {
+                    if (vis_apply_inv & 8)
+                        t = t | !region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec);
+                    else
+                        s.add(region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
+                }
             }
         }
 
