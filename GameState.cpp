@@ -7554,14 +7554,15 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                     if ((constructed_rule.region_count + constructed_rule.neg_reg_count + has_neg) < (game_mode == 1 ? 3 : 4))
                     {
                         bool found = false;
-                        for (int i = 0; i < (constructed_rule.region_count - constructed_rule.if_reg_count); i++)
+                        int j = 0;
+                        for (int i = 0; i < 4; i++)
                         {
                             if (rule_gen_region[i] == mouse_hover_region)
                                 found = true;
-                        }
-                        for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i < 4; i++)
-                        {
-                            assert(!rule_gen_region[i]);
+                            rule_gen_region[j] = rule_gen_region[i];
+                            if (rule_gen_region[i])
+                                j++;
+
                         }
                         if (!found)
                         {
@@ -7570,9 +7571,14 @@ void GameState::grid_click(XYPos pos, int clicks, int btn)
                                 if (constructed_rule.region_count < 3)
                                 {
                                     update_constructed_rule_pre();
-                                    for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i > constructed_rule.if_reg_count; i--)
-                                        rule_gen_region[i] = rule_gen_region[i - 1];
-                                    rule_gen_region[constructed_rule.if_reg_count] = mouse_hover_region;
+                                    if (constructed_rule.if_reg_count)
+                                        rule_gen_region[1] = mouse_hover_region;
+                                    else
+                                    {
+                                        rule_gen_region[2] = rule_gen_region[1];
+                                        rule_gen_region[1] = rule_gen_region[0];
+                                        rule_gen_region[0] = mouse_hover_region;
+                                    }
                                     constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                                     update_constructed_rule();
                                 }
@@ -7860,14 +7866,15 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             {
                 right_panel_mode = RIGHT_MENU_RULE_GEN;
                 bool found = false;
-                for (int i = 0; i < (constructed_rule.region_count - constructed_rule.if_reg_count); i++)
+                int j = 0;
+                for (int i = 0; i < 4; i++)
                 {
-                    if (rule_gen_region[i] == inspected_region)
+                    if (rule_gen_region[i] == mouse_hover_region)
                         found = true;
-                }
-                for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i < 4; i++)
-                {
-                    assert(!rule_gen_region[i]);
+                    rule_gen_region[j] = rule_gen_region[i];
+                    if (rule_gen_region[i])
+                        j++;
+
                 }
                 if (!found)
                 {
@@ -7876,9 +7883,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                         if (constructed_rule.region_count < 3)
                         {
                             update_constructed_rule_pre();
-                            for (int i = (constructed_rule.region_count - constructed_rule.if_reg_count); i > constructed_rule.if_reg_count; i--)
-                                rule_gen_region[i] = rule_gen_region[i - 1];
-                            rule_gen_region[constructed_rule.if_reg_count] = inspected_region;
+                            if (constructed_rule.if_reg_count)
+                                rule_gen_region[1] = inspected_region;
+                            else
+                            {
+                                rule_gen_region[2] = rule_gen_region[1];
+                                rule_gen_region[1] = rule_gen_region[0];
+                                rule_gen_region[0] = inspected_region;
+                            }
                             constructed_rule.import_rule_gen_regions(rule_gen_region[0], rule_gen_region[1], rule_gen_region[2], rule_gen_region[3]);
                             update_constructed_rule();
                         }
