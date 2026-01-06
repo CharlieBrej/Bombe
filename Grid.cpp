@@ -4199,36 +4199,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
     return APPLY_RULE_RESP_HIT;
 }
 
-static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
-{
-    if (r1 != start && !(connected & 1) && start->overlaps(*r1))
-    {
-        connected |= 1;
-        find_connected(r1, connected, r1, r2, r3, r4);
-    }
-    if (!r2)
-        return;
-    if (r2 != start && !(connected & 2) && start->overlaps(*r2))
-    {
-        connected |= 2;
-        find_connected(r2, connected, r1, r2, r3, r4);
-    }
-    if (!r3)
-        return;
-    if (r3 != start && !(connected & 4) && start->overlaps(*r3))
-    {
-        connected |= 4;
-        find_connected(r3, connected, r1, r2, r3, r4);
-    }
-    if (!r4)
-        return;
-    if (r4 != start && !(connected & 8) && start->overlaps(*r4))
-    {
-        connected |= 8;
-        find_connected(r4, connected, r1, r2, r3, r4);
-    }
-}
-
 // static bool are_connected_old(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 // {
 //     XYSet s = r0->elements;
@@ -4270,15 +4240,16 @@ static void find_connected(GridRegion* start, unsigned& connected, GridRegion* r
 
 static bool are_connected(GridRegion* r0, GridRegion* r1, GridRegion* r2, GridRegion* r3)
 {
-    if (!r1)
+    if (!r1 && !r2)
         return true;
 
     if (r2)
         if (r2->is_if_then())
-            return ((r0->elements | r0->elements_neg).overlaps(r1->elements | r1->elements_neg));
+            return ((r0->elements | r0->elements_neg).overlaps(r2->elements | r2->elements_neg));
 
     if (r0->is_if_then())
     {
+        assert(!r1);
         if (!r2)
             return true;
         XYSet s = r0->elements | r0->elements_neg;
@@ -4400,6 +4371,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
     {
         for (int i = 0; i < rule.region_count; i++)
         {
+            if ((rule.if_reg_count >= 1 && i == 1) || (rule.if_reg_count >= 2 && i == 3))
+                continue;
             bool has_if_then = unstale_region->is_if_then();
             bool want_if_then = (rule.if_reg_count >= 1 && i == 0) || (rule.if_reg_count >= 2 && i == 2);
             bool has_neg = unstale_region->elements_neg.any();
@@ -4416,7 +4389,6 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* unstale_region,
                 if (unstale_region->if_type == rule.region_type[i] || rule.region_type[i].type == RegionType::NONE || (rule.region_type[i].var && (unstale_region->if_type.type == rule.region_type[i].type)))
                     if (unstale_region->type == rule.region_type[i+1] || rule.region_type[i+1].type == RegionType::NONE || (rule.region_type[i+1].var && (unstale_region->type.type == rule.region_type[i+1].type)))
                         places_for_reg |= 1 << i;
-                i++;
             }
             else
             {
