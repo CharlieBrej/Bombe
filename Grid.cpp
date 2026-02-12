@@ -223,15 +223,15 @@ bool RegionType::apply_int_rule(unsigned in, int vars[32])
 int RegionType::max()
 {
     if (type == NONE)
-        return -1;
+        return 1000;
     if (type == EQUAL)
         return value;
     if (type == NOTEQUAL)
-        return -1;
+        return 1000;
     if (type == LESS)
         return value;
     if (type == MORE)
-        return -1;
+        return 1000;
     if (type == XOR2)
         return value + 2;
     if (type == XOR3)
@@ -241,21 +241,21 @@ int RegionType::max()
     if (type == XOR222)
         return value + 6;
     if (type == PARITY)
-        return -1;
+        return 1000;
     if (type == XOR1)
         return value + 1;
     if (type == XOR11)
         return value + 2;
     if (type == PRIME)
-        return -1;
+        return 1000;
     if (type == TRIANGLE)
-        return -1;
+        return 1000;
     if (type == POW2)
-        return -1;
+        return 1000;
     if (type == FIBONACCI)
-        return -1;
+        return 1000;
     if (type == BOX)
-        return -1;
+        return 1000;
     assert(0);
 }
 
@@ -1589,10 +1589,13 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         vec.push_back(c.int_const(x_name.str().c_str()));
         s.add(vec[i] >= 0);
         int m = square_counts[i].max();
-        if (m >= 0)
+        if (m < 1000)
         {
             if (square_counts[i].var)
+            {
                 s.add(vec[i] <= var_vec[square_counts[i].var - 1] + m);
+//                s.add((var_vec[square_counts[i].var - 1] + m) >= 0);
+            }
             else
                 s.add(vec[i] <= m);
 
@@ -1719,10 +1722,13 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             vec2.push_back(c.int_const(x_name.str().c_str()));
             s.add(vec2[i] >= 0);
             int m = square_counts[i].max();
-            if (m >= 0)
+            if (m < 1000)
             {
                 if (square_counts[i].var)
+                {
                     s.add(vec2[i] <= var_vec[square_counts[i].var - 1] + m);
+//                    s.add((var_vec[square_counts[i].var - 1] + m) >= 0);
+                }
                 else
                     s.add(vec2[i] <= m);
             }
