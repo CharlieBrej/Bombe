@@ -66,23 +66,130 @@ SaveObject* SaveObject::load(std::istream& f)
     throw(std::runtime_error("Parse Error"));
 }
 
+static void append_utf8(std::string& str, uint32_t codepoint)
+{
+    if (codepoint <= 0x7f)
+        str.push_back(codepoint);
+    else if (codepoint <= 0x7ff)
+    {
+        str.push_back(0xc0 | (codepoint >> 6));
+        str.push_back(0x80 | (codepoint & 0x3f));
+    }
+    else if (codepoint <= 0xffff)
+    {
+        str.push_back(0xe0 | (codepoint >> 12));
+        str.push_back(0x80 | ((codepoint >> 6) & 0x3f));
+        str.push_back(0x80 | (codepoint & 0x3f));
+    }
+    else if (codepoint <= 0x10ffff)
+    {
+        str.push_back(0xf0 | (codepoint >> 18));
+        str.push_back(0x80 | ((codepoint >> 12) & 0x3f));
+        str.push_back(0x80 | ((codepoint >> 6) & 0x3f));
+        str.push_back(0x80 | (codepoint & 0x3f));
+    }
+    else
+        throw(std::runtime_error("Invalid Unicode escape"));
+}
+
+static int hex_digit(int c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    throw(std::runtime_error("Invalid Unicode escape"));
+}
+
+static uint32_t parse_unicode_escape(std::istream& f)
+{
+    uint32_t value = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        int c = f.get();
+        if (c == EOF)
+            throw(std::runtime_error("Unexpected end of string"));
+        value = (value << 4) | hex_digit(c);
+    }
+    return value;
+}
+
 static std::string parse_string(std::istream& f)
 {
-    char c;
     std::string str;
     assert_exp('\"');
-    while ((c = f.get()) != '\"')
+    while (true)
     {
-        if (c == '\\')
+        int c = f.get();
+        if (c == EOF)
+            throw(std::runtime_error("Unexpected end of string"));
+        if (c == '\"')
+            return str;
+        if (c < 0x20)
+            throw(std::runtime_error("Unescaped control character"));
+        if (c != '\\')
         {
-            c = f.get();
-            if (c == 'n')
-                c = '\n';
+            str.push_back(c);
+            continue;
         }
 
-        str.push_back(c);
+        c = f.get();
+        if (c == EOF)
+            throw(std::runtime_error("Unexpected end of string"));
+        switch (c)
+        {
+        case '\"': str.push_back('\"'); break;
+        case '\'': str.push_back('\''); break;
+        case '\\': str.push_back('\\'); break;
+        case '/': str.push_back('/'); break;
+        case 'b': str.push_back('\b'); break;
+        case 'f': str.push_back('\f'); break;
+        case 'n': str.push_back('\n'); break;
+        case 'r': str.push_back('\r'); break;
+        case 't': str.push_back('\t'); break;
+        case 'u':
+        {
+            uint32_t codepoint = parse_unicode_escape(f);
+            if (codepoint >= 0xd800 && codepoint <= 0xdbff)
+            {
+                if (f.get() != '\\' || f.get() != 'u')
+                    throw(std::runtime_error("Invalid Unicode surrogate pair"));
+                uint32_t low = parse_unicode_escape(f);
+                if (low < 0xdc00 || low > 0xdfff)
+                    throw(std::runtime_error("Invalid Unicode surrogate pair"));
+                codepoint = 0x10000 + ((codepoint - 0xd800) << 10) + (low - 0xdc00);
+            }
+            else if (codepoint >= 0xdc00 && codepoint <= 0xdfff)
+                throw(std::runtime_error("Invalid Unicode surrogate pair"));
+            append_utf8(str, codepoint);
+            break;
+        }
+        default: throw(std::runtime_error("Invalid string escape"));
+        }
     }
-    return str;
+}
+
+static void save_string(std::ostream& f, const std::string& str)
+{
+    f << '\"';
+    for (unsigned char c : str)
+    {
+        switch (c)
+        {
+        case '\b': f << "\\b"; break;
+        case '\f': f << "\\f"; break;
+        case '\n': f << "\\n"; break;
+        case '\r': f << "\\r"; break;
+        case '\t': f << "\\t"; break;
+        case '\"': f << "\\\""; break;
+        case '\\': f << "\\\\"; break;
+        default:
+            if (c < 0x20)
+                f << "\\u00" << "0123456789abcdef"[c >> 4] << "0123456789abcdef"[c & 0xf];
+            else
+                f << c;
+        }
+    }
+    f << '\"';
 }
 SaveObjectString::SaveObjectString(std::istream& f)
 {
@@ -96,20 +203,7 @@ std::string SaveObjectString::get_string()
 
 void SaveObjectString::save(std::ostream& f)
 {
-    f << '"';
-    for(std::string::iterator it = str.begin(); it != str.end(); ++it)
-    {
-        char c = *it;
-        if (c == '\n')
-            f << "\\n";
-        else if (c == '"')
-            f << "\\\"";
-        else if (c == '\\')
-            f << "\\\\";
-        else
-            f << c;
-    }
-    f << '"';
+    save_string(f, str);
 }
 
 SaveObjectMap::SaveObjectMap(std::istream& f)
@@ -203,9 +297,7 @@ void SaveObjectMap::save(std::ostream& f)
         if (!first)
             f << ',';
         first = false;
-        f << '"';
-        f << it->first;
-        f << '"';
+        save_string(f, it->first);
 
         f << ':';
         it->second->save(f);
@@ -226,9 +318,7 @@ void SaveObjectMap::pretty_print(std::ostream& f, int indent)
         f.put('\n');
         f << std::string(indent + 2, ' ');
         first = false;
-        f << '"';
-        f << it->first;
-        f << '"';
+        save_string(f, it->first);
 
         f << ':';
         it->second->pretty_print(f, indent + 4);
