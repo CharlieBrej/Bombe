@@ -314,6 +314,9 @@ GridRule::GridRule(SaveObject* sobj)
         neg_reg_count = omap->get_num("neg_reg_count");
     if (omap->has_key("if_reg_count"))
         if_reg_count = omap->get_num("if_reg_count");
+    if (region_count > 4 || neg_reg_count > 4 || if_reg_count > 4 ||
+        region_count + neg_reg_count > 4)
+        throw(std::runtime_error("Invalid rule region count"));
     apply_region_type = RegionType('a',omap->get_num("apply_region_type"));
     if (omap->has_key("apply_if_region_type"))
         apply_if_region_type = RegionType('a',omap->get_num("apply_if_region_type"));
@@ -335,6 +338,8 @@ GridRule::GridRule(SaveObject* sobj)
         if (apply_type == HIDE) apply_region_type = RegionType(RegionType::VISIBILITY, 1);
         if (apply_type == BIN) apply_region_type = RegionType(RegionType::VISIBILITY, 2);
     }
+    apply_region_bitmap = omap->get_num("apply_region_bitmap");
+
     if (apply_region_type.type == RegionType::VISIBILITY)
     {
         apply_region_type.var = 0;
@@ -356,8 +361,6 @@ GridRule::GridRule(SaveObject* sobj)
     if (omap->has_key("group"))
         group = omap->get_num("group");
 
-    apply_region_bitmap = omap->get_num("apply_region_bitmap");
-
     if (omap->has_key("neg_apply_region_bitmap"))
         neg_apply_region_bitmap = omap->get_num("neg_apply_region_bitmap");
     if (apply_if_region_type.type == RegionType::NONE)
@@ -367,10 +370,14 @@ GridRule::GridRule(SaveObject* sobj)
         apply_region_bitmap &= ~1ull;
     }
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
+    if (rlist->get_count() > 4)
+        throw(std::runtime_error("Too many rule region types"));
     for (unsigned i = 0; i < rlist->get_count(); i++)
         region_type[i] = RegionType('a',rlist->get_num(i));
 
     rlist = omap->get_item("square_counts")->get_list();
+    if (rlist->get_count() > 16)
+        throw(std::runtime_error("Too many rule square counts"));
     for (unsigned i = 0; i < rlist->get_count(); i++)
     {
         int v = rlist->get_num(i);

@@ -145,6 +145,8 @@ GameState::GameState(std::string& load_data, bool json)
                 rule_limit_slider = double(omap->get_num("rule_limit")) / 1000000000;
             if (omap->has_key("game_mode"))
                 game_mode = omap->get_num("game_mode");
+            if (game_mode < 0 || game_mode >= GAME_MODES)
+                game_mode = 0;
             if (omap->has_key("full_screen"))
                 full_screen = omap->get_num("full_screen");
             if (!full_screen && omap->has_key("window_size"))
@@ -266,7 +268,11 @@ GameState::GameState(std::string& load_data, bool json)
             {
                 SaveObjectList* mode_lists = omap->get_item("modes")->get_list();
                 for (unsigned k = 0; k < mode_lists->get_count(); k++)
+                {
+                    if (k >= GAME_MODES)
+                        throw(std::runtime_error("Too many saved game modes"));
                     modes.push_back(mode_lists->get_item(k)->get_map());
+                }
             }
             else
                 modes.push_back(omap);

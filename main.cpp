@@ -65,12 +65,14 @@ public:
 void SteamGameManager::OnUserStatsReceived( UserStatsReceived_t *pCallback )
 {
     needs_send = false;
-    for (const std::string& name : achievements)
+    for (auto it = achievements.begin(); it != achievements.end(); )
     {
         bool rep;
-        m_pSteamUserStats->GetAchievement(name.c_str(), &rep);
+        m_pSteamUserStats->GetAchievement(it->c_str(), &rep);
         if (!rep)
-            achievements.erase(name);
+            it = achievements.erase(it);
+        else
+            ++it;
     }
     stats_ready = true;
 }
