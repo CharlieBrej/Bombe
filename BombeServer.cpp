@@ -11,6 +11,8 @@
 #include <codecvt>
 #include <locale>
 #include <time.h>
+#include <cstring>
+#include <cstdlib>
 #include <set>
 #include <curl/curl.h>
 
@@ -27,6 +29,15 @@ const int LEVEL_TYPES = 6;
 const int GAME_MODE_TYPES = 6;
 
 typedef int64_t Score;
+
+static void append_frame(std::string& output, const std::string& payload)
+{
+    uint32_t length = payload.size();
+    char header[sizeof(length)];
+    std::memcpy(header, &length, sizeof(length));
+    output.append(header, sizeof(header));
+    output.append(payload);
+}
 
 struct LevelStats
 {
@@ -673,9 +684,11 @@ public:
         {
             if (length < 0 && inbuf.length() >= 4)
             {
-                length = *(uint32_t*)inbuf.c_str(),
+                uint32_t frame_length;
+                std::memcpy(&frame_length, inbuf.data(), sizeof(frame_length));
+                length = frame_length;
                 inbuf.erase(0, 4);
-                if (length > 1024*1024)
+                if (length == 0 || length > 1024*1024)
                 {
                     close();
                     break;
@@ -686,12 +699,13 @@ public:
                 bool pirate = false;
                 try
                 {
-                    std::string decomp = decompress_string(inbuf);
+                    std::string frame(inbuf.data(), length);
+                    inbuf.erase(0, length);
+                    length = -1;
+                    std::string decomp = decompress_string(frame);
                     std::istringstream decomp_stream(decomp);
                     SaveObjectMap* omap = SaveObject::load(decomp_stream)->get_map();
                     uint64_t steam_id = omap->get_num("steam_id");
-                    inbuf.erase(0, length);
-                    length = -1;
                     if (steam_id != SECRET_ID && steam_id != 0)
                     {
                         std::string steam_session;
@@ -707,7 +721,10 @@ public:
                                 throw(std::runtime_error("curl_easy_init() failed"));
                             }
 
-                            std::string url = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?key=44D5549D3DC57BCF2492489740F0354A&appid=" + std::string(omap->get_num("demo") ? "2263470" : omap->get_num("playtest") ? "2263480" : "2262930") + "&ticket=" + steam_session;
+                            const char* api_key = std::getenv("BOMBE_STEAM_WEB_API_KEY");
+                            if (!api_key || !*api_key)
+                                throw(std::runtime_error("BOMBE_STEAM_WEB_API_KEY is not configured"));
+                            std::string url = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?key=" + std::string(api_key) + "&appid=" + std::string(omap->get_num("demo") ? "2263470" : omap->get_num("playtest") ? "2263480" : "2262930") + "&ticket=" + steam_session;
 
                             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     //                        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
@@ -772,9 +789,7 @@ public:
                         scr->add_num("pirate", 1);
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
-                        uint32_t length = comp.length();
-                        outbuf.append((char*)&length, 4);
-                        outbuf.append(comp);
+                        append_frame(outbuf, comp);
                         delete scr;
                     }
                     else if (command == "scores")
@@ -892,9 +907,7 @@ public:
 
                         std::string s = scr->to_string();
                         std::string comp = compress_string(s);
-                        uint32_t length = comp.length();
-                        outbuf.append((char*)&length, 4);
-                        outbuf.append(comp);
+                        append_frame(outbuf, comp);
                         delete scr;
                     }
                     else

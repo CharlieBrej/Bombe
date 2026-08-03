@@ -18,3 +18,7 @@ missing
 depcomp
 Android
 android
+*.orig
+*.rej
+vgcore.*
+db.save*
