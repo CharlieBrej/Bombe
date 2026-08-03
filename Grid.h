@@ -98,13 +98,13 @@ public:
         VISIBILITY = 101,
     };
     Type type = NONE;
-    int8_t value = 0;
+    int value = 0;
     uint8_t var = 0;
 
 
     RegionType() : type (NONE), value(0) {}
-    RegionType(char dummy, unsigned t) : type (Type((t >> 8) & 0xFF)), value(t & 0xFF), var((t >> 16) & 0xFF) {}
-    RegionType(Type t, uint8_t v) : type (Type(t)), value(v) {}
+    RegionType(char dummy, unsigned t) : type (Type((t >> 8) & 0xFF)), value(static_cast<int8_t>(t & 0xFF)), var((t >> 16) & 0xFF) {}
+    RegionType(Type t, int v) : type (Type(t)), value(v) {}
     static int type_priority(Type t)
     {
         static const int pri[] = {12, 0, 3, 4, 7, 8, 9, 10, 1, 11, 5, 6};
@@ -126,7 +126,7 @@ public:
     bool apply_int_rule(unsigned in);
     bool apply_int_rule(unsigned in, int vars[32]);
 
-    int max();
+    int max() const;
 };
 
 

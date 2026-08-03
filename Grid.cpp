@@ -37,6 +37,39 @@ static unsigned get_valid_cells_mask(int region_count, int neg_reg_count)
     return mask;
 }
 
+static void validate_region_type(const RegionType& region_type)
+{
+    const unsigned type = static_cast<unsigned>(region_type.type);
+    const bool known_type = type <= RegionType::BOX ||
+                            region_type.type == RegionType::SET ||
+                            region_type.type == RegionType::VISIBILITY;
+    if (!known_type || region_type.var > 0x1f)
+        throw(std::runtime_error("Invalid region type"));
+}
+
+static z3::expr_vector make_count_vector(
+    z3::context& c, z3::solver& s, z3::expr_vector& var_vec,
+    const RegionType square_counts[16], const char* prefix)
+{
+    z3::expr_vector counts(c);
+    counts.push_back(c.bool_const((std::string(prefix) + "DUMMY").c_str()));
+    for (int i = 1; i < 16; i++)
+    {
+        std::stringstream name;
+        name << prefix << i;
+        counts.push_back(c.int_const(name.str().c_str()));
+        s.add(counts[i] >= 0);
+        const int maximum = square_counts[i].max();
+        if (maximum >= 1000)
+            continue;
+        if (square_counts[i].var)
+            s.add(counts[i] <= var_vec[square_counts[i].var - 1] + maximum);
+        else
+            s.add(counts[i] <= maximum);
+    }
+    return counts;
+}
+
 
 std::string RegionType::val_as_str(int offset)
 {
@@ -220,7 +253,7 @@ bool RegionType::apply_int_rule(unsigned in, int vars[32])
     return apply_rule_imp<bool,int>(in, v + value);
 }
 
-int RegionType::max()
+int RegionType::max() const
 {
     if (type == NONE)
         return 1000;
@@ -369,11 +402,16 @@ GridRule::GridRule(SaveObject* sobj)
     {
         apply_region_bitmap &= ~1ull;
     }
+    validate_region_type(apply_region_type);
+    validate_region_type(apply_if_region_type);
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
     if (rlist->get_count() > 4)
         throw(std::runtime_error("Too many rule region types"));
     for (unsigned i = 0; i < rlist->get_count(); i++)
+    {
         region_type[i] = RegionType('a',rlist->get_num(i));
+        validate_region_type(region_type[i]);
+    }
 
     rlist = omap->get_item("square_counts")->get_list();
     if (rlist->get_count() > 16)
@@ -382,6 +420,7 @@ GridRule::GridRule(SaveObject* sobj)
     {
         int v = rlist->get_num(i);
         square_counts[i] = RegionType('a',v);
+        validate_region_type(square_counts[i]);
     }
     if (omap->has_key("used_count"))
         used_count = omap->get_num("used_count");
@@ -1480,6 +1519,8 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
     if (region_count == 0)
         return IMPOSSIBLE;
+    if (!apply_region_bitmap)
+        return USELESS;
     if (if_reg_count && region_type[0].type == RegionType::NONE)
         return IMPOSSIBLE;
     if (if_reg_count > 1 && region_type[2].type == RegionType::NONE)
@@ -1587,27 +1628,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
     }
 
-    vec.push_back(c.bool_const("DUMMY"));
-
-    for (int i = 1; i < 16; i++)
-    {
-        std::stringstream x_name;
-        x_name << "A" << i;
-        vec.push_back(c.int_const(x_name.str().c_str()));
-        s.add(vec[i] >= 0);
-        int m = square_counts[i].max();
-        if (m < 1000)
-        {
-            if (square_counts[i].var)
-            {
-                s.add(vec[i] <= var_vec[square_counts[i].var - 1] + m);
-//                s.add((var_vec[square_counts[i].var - 1] + m) >= 0);
-            }
-            else
-                s.add(vec[i] <= m);
-
-        }
-    }
+    vec = make_count_vector(c, s, var_vec, square_counts, "A");
 
     if (neg_reg_count == 0)
     {
@@ -1720,26 +1741,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         uint32_t vars_want = 0;
         z3::expr_vector vec2(c);
 
-        vec2.push_back(c.bool_const("DUMMY2"));
-
-        for (int i = 1; i < 16; i++)
-        {
-            std::stringstream x_name;
-            x_name << "B" << i;
-            vec2.push_back(c.int_const(x_name.str().c_str()));
-            s.add(vec2[i] >= 0);
-            int m = square_counts[i].max();
-            if (m < 1000)
-            {
-                if (square_counts[i].var)
-                {
-                    s.add(vec2[i] <= var_vec[square_counts[i].var - 1] + m);
-//                    s.add((var_vec[square_counts[i].var - 1] + m) >= 0);
-                }
-                else
-                    s.add(vec2[i] <= m);
-            }
-        }
+        vec2 = make_count_vector(c, s, var_vec, square_counts, "B");
 
         unsigned vis_apply_inv = apply_region_bitmap;
         z3::expr t = c.bool_val(false);
