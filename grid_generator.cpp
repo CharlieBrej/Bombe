@@ -251,6 +251,13 @@ void* exec(void* dummy)
                 g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10, negative * 10);
                 g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime, if_then);
 
+                if (if_then && !g->uses_if_then_clues())
+                {
+                    delete g;
+                    pthread_mutex_lock(&glob_mutex);
+                    continue;
+                }
+
                 std::string s = g->to_string();
                 {
                     Grid* gt = Grid::Load(s);

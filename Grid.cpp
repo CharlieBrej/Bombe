@@ -3089,6 +3089,245 @@ bool Grid::is_determinable_using_regions(XYPos q, bool hidden)
 //     }
 // }
 
+static RegionType& implication_side(Grid& grid, XYPos pos, bool antecedent)
+{
+    RegionIfType& clue = grid.get_clue(pos);
+    return antecedent ? clue.if_type : clue.type;
+}
+
+static void relax_implication_side(
+    Grid& grid, XYPos pos, bool antecedent,
+    int plus_minus, int x_y, int x_y3, int x_y_z, int exc,
+    int parity, int xor1, int xor11, int prime)
+{
+    auto try_type = [&](int chance, RegionType::Type type, int offset, int minimum = 0)
+    {
+        RegionType current = implication_side(grid, pos, antecedent);
+        if (!chance || current.value < minimum || int(rnd % 10) >= chance)
+            return false;
+
+        LocalGrid test = grid;
+        RegionType& candidate = implication_side(*test, pos, antecedent);
+        candidate.type = type;
+        candidate.value += offset;
+        if (!test->is_solveable())
+            return false;
+
+        implication_side(grid, pos, antecedent) = candidate;
+        return true;
+    };
+
+    if (try_type(exc, RegionType::NOTEQUAL, 2) ||
+        try_type(exc, RegionType::NOTEQUAL, -2, 3) ||
+        try_type(exc, RegionType::NOTEQUAL, -1, 2) ||
+        try_type(exc, RegionType::NOTEQUAL, 1))
+        return;
+
+    if (try_type(parity, RegionType::PARITY, -4, 4) ||
+        try_type(parity, RegionType::PARITY, -2, 2) ||
+        try_type(parity, RegionType::PARITY, 0))
+        return;
+
+    if (prime)
+    {
+        static const struct
+        {
+            RegionType::Type type;
+            int value;
+        } value_types[] = {
+            {RegionType::BOX, 16}, {RegionType::POW2, 16},
+            {RegionType::TRIANGLE, 15}, {RegionType::FIBONACCI, 13},
+            {RegionType::BOX, 13}, {RegionType::PRIME, 13},
+            {RegionType::BOX, 12}, {RegionType::PRIME, 11},
+            {RegionType::TRIANGLE, 10}, {RegionType::BOX, 9},
+            {RegionType::BOX, 8}, {RegionType::FIBONACCI, 8},
+            {RegionType::POW2, 8}, {RegionType::PRIME, 7},
+            {RegionType::TRIANGLE, 6}, {RegionType::FIBONACCI, 5},
+            {RegionType::BOX, 5}, {RegionType::PRIME, 5},
+            {RegionType::BOX, 4}, {RegionType::POW2, 4},
+            {RegionType::FIBONACCI, 3}, {RegionType::TRIANGLE, 3},
+            {RegionType::PRIME, 3}, {RegionType::FIBONACCI, 2},
+            {RegionType::PRIME, 2}, {RegionType::POW2, 2},
+            {RegionType::BOX, 1}, {RegionType::FIBONACCI, 1},
+            {RegionType::POW2, 1}, {RegionType::TRIANGLE, 1},
+            {RegionType::BOX, 0}, {RegionType::TRIANGLE, 0},
+        };
+        for (const auto& value_type : value_types)
+            if (try_type(prime, value_type.type, -value_type.value, value_type.value))
+                return;
+    }
+
+    if (try_type(xor11, RegionType::XOR11, -2, 2) ||
+        try_type(xor11, RegionType::XOR11, -1, 1) ||
+        try_type(xor11, RegionType::XOR11, 0) ||
+        try_type(xor1, RegionType::XOR1, -1, 1) ||
+        try_type(xor1, RegionType::XOR1, 0) ||
+        try_type(x_y_z, RegionType::XOR22, -2, 2) ||
+        try_type(x_y_z, RegionType::XOR22, 0) ||
+        try_type(x_y_z, RegionType::XOR22, -4, 4) ||
+        try_type(x_y3, RegionType::XOR3, 0) ||
+        try_type(x_y3, RegionType::XOR3, -3, 3) ||
+        try_type(x_y, RegionType::XOR2, 0) ||
+        try_type(x_y, RegionType::XOR2, -2, 2))
+        return;
+
+    if (!plus_minus || int(rnd % 10) >= plus_minus)
+        return;
+
+    LocalGrid test = grid;
+    implication_side(*test, pos, antecedent).type = RegionType::LESS;
+    if (test->is_solveable())
+    {
+        implication_side(grid, pos, antecedent) = implication_side(*test, pos, antecedent);
+        while (implication_side(*test, pos, antecedent).value < 19)
+        {
+            LocalGrid next = grid;
+            implication_side(*next, pos, antecedent).value++;
+            if (!next->is_solveable())
+                break;
+            implication_side(grid, pos, antecedent) = implication_side(*next, pos, antecedent);
+            test = grid;
+        }
+        return;
+    }
+
+    test = grid;
+    implication_side(*test, pos, antecedent).type = RegionType::MORE;
+    if (!test->is_solveable())
+        return;
+    implication_side(grid, pos, antecedent) = implication_side(*test, pos, antecedent);
+    while (implication_side(*test, pos, antecedent).value > -19)
+    {
+        LocalGrid next = grid;
+        implication_side(*next, pos, antecedent).value--;
+        if (!next->is_solveable())
+            break;
+        implication_side(grid, pos, antecedent) = implication_side(*next, pos, antecedent);
+        test = grid;
+    }
+}
+
+static bool try_relaxed_implication_antecedent(
+    Grid& grid, XYPos pos, RegionIfType clue, unsigned cell_count,
+    unsigned hidden_cell_count, unsigned revealed_bomb_count,
+    int plus_minus, int x_y, int x_y3, int x_y_z, int exc,
+    int parity, int xor1, int xor11, int prime)
+{
+    const RegionType exact = clue.if_type;
+    std::vector<RegionType> candidates;
+
+    auto add_candidate = [&](int chance, RegionType::Type type, int offset, int minimum = 0)
+    {
+        if (!chance || exact.value < minimum || int(rnd % 10) >= chance)
+            return;
+        RegionType candidate = exact;
+        candidate.type = type;
+        candidate.value += offset;
+        if (!candidate.apply_int_rule(exact.value))
+            return;
+        if (std::find(candidates.begin(), candidates.end(), candidate) == candidates.end())
+            candidates.push_back(candidate);
+    };
+
+    add_candidate(exc, RegionType::NOTEQUAL, 2);
+    add_candidate(exc, RegionType::NOTEQUAL, -2, 3);
+    add_candidate(exc, RegionType::NOTEQUAL, -1, 2);
+    add_candidate(exc, RegionType::NOTEQUAL, 1);
+
+    add_candidate(parity, RegionType::PARITY, -4, 4);
+    add_candidate(parity, RegionType::PARITY, -2, 2);
+    add_candidate(parity, RegionType::PARITY, 0);
+
+    if (prime)
+    {
+        static const struct
+        {
+            RegionType::Type type;
+            int value;
+        } value_types[] = {
+            {RegionType::BOX, 16}, {RegionType::POW2, 16},
+            {RegionType::TRIANGLE, 15}, {RegionType::FIBONACCI, 13},
+            {RegionType::BOX, 13}, {RegionType::PRIME, 13},
+            {RegionType::BOX, 12}, {RegionType::PRIME, 11},
+            {RegionType::TRIANGLE, 10}, {RegionType::BOX, 9},
+            {RegionType::BOX, 8}, {RegionType::FIBONACCI, 8},
+            {RegionType::POW2, 8}, {RegionType::PRIME, 7},
+            {RegionType::TRIANGLE, 6}, {RegionType::FIBONACCI, 5},
+            {RegionType::BOX, 5}, {RegionType::PRIME, 5},
+            {RegionType::BOX, 4}, {RegionType::POW2, 4},
+            {RegionType::FIBONACCI, 3}, {RegionType::TRIANGLE, 3},
+            {RegionType::PRIME, 3}, {RegionType::FIBONACCI, 2},
+            {RegionType::PRIME, 2}, {RegionType::POW2, 2},
+            {RegionType::BOX, 1}, {RegionType::FIBONACCI, 1},
+            {RegionType::POW2, 1}, {RegionType::TRIANGLE, 1},
+            {RegionType::BOX, 0}, {RegionType::TRIANGLE, 0},
+        };
+        for (const auto& value_type : value_types)
+            add_candidate(prime, value_type.type, -value_type.value, value_type.value);
+    }
+
+    add_candidate(xor11, RegionType::XOR11, -2, 2);
+    add_candidate(xor11, RegionType::XOR11, -1, 1);
+    add_candidate(xor11, RegionType::XOR11, 0);
+    add_candidate(xor1, RegionType::XOR1, -1, 1);
+    add_candidate(xor1, RegionType::XOR1, 0);
+    add_candidate(x_y_z, RegionType::XOR22, -2, 2);
+    add_candidate(x_y_z, RegionType::XOR22, 0);
+    add_candidate(x_y_z, RegionType::XOR22, -4, 4);
+    add_candidate(x_y3, RegionType::XOR3, 0);
+    add_candidate(x_y3, RegionType::XOR3, -3, 3);
+    add_candidate(x_y, RegionType::XOR2, 0);
+    add_candidate(x_y, RegionType::XOR2, -2, 2);
+
+    if (plus_minus && int(rnd % 10) < plus_minus)
+    {
+        for (int limit = 0; limit <= exact.value; limit++)
+            candidates.push_back(RegionType(RegionType::MORE, limit));
+        for (int limit = exact.value; limit <= int(cell_count); limit++)
+            candidates.push_back(RegionType(RegionType::LESS, limit));
+    }
+
+    auto breadth = [hidden_cell_count, revealed_bomb_count](const RegionType& type)
+    {
+        RegionType test_type = type;
+        test_type.value -= revealed_bomb_count;
+        unsigned count = 0;
+        for (unsigned value = 0; value <= hidden_cell_count; value++)
+            if (test_type.apply_int_rule(value))
+                count++;
+        return count;
+    };
+    candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const RegionType& candidate)
+    {
+        return breadth(candidate) == hidden_cell_count + 1;
+    }), candidates.end());
+    std::stable_sort(candidates.begin(), candidates.end(), [&](const RegionType& a, const RegionType& b)
+    {
+        return breadth(a) > breadth(b);
+    });
+
+    bool found = false;
+    RegionType strictest;
+    for (const RegionType& candidate : candidates)
+    {
+        LocalGrid test = grid;
+        RegionIfType test_clue = clue;
+        test_clue.if_type = candidate;
+        test->get_clue(pos) = test_clue;
+        if (test->is_solveable())
+        {
+            strictest = candidate;
+            found = true;
+        }
+    }
+    if (!found)
+        return false;
+
+    clue.if_type = strictest;
+    grid.get_clue(pos) = clue;
+    return true;
+}
+
 void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, int parity, int xor1, int xor11, int prime, int if_then)
 {
 
@@ -3188,20 +3427,32 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         int v = 0;
                         bool if_has_hidden_cell = false;
                         bool then_has_hidden_cell = false;
+                        unsigned if_cell_count = 0;
+                        unsigned hidden_if_cell_count = 0;
+                        unsigned revealed_if_bomb_count = 0;
                         for (unsigned i = 0; i < cells.size(); i++)
                         {
                             bool in_if = is_if_partition_cell(candidate, i);
+                            if (in_if)
+                                if_cell_count++;
                             if (!get(cells[i]).revealed)
                             {
                                 if (in_if)
+                                {
                                     if_has_hidden_cell = true;
+                                    hidden_if_cell_count++;
+                                }
                                 else
                                     then_has_hidden_cell = true;
                             }
                             if (get(cells[i]).bomb)
                             {
                                 if (in_if)
+                                {
                                     if_v++;
+                                    if (get(cells[i]).revealed)
+                                        revealed_if_bomb_count++;
+                                }
                                 else
                                     v++;
                             }
@@ -3220,9 +3471,21 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                             got = true;
                             break;
                         }
+                        if (try_relaxed_implication_antecedent(
+                                *this, p, candidate, if_cell_count,
+                                hidden_if_cell_count, revealed_if_bomb_count,
+                                plus_minus, x_y, x_y3, x_y_z, exc,
+                                parity, xor1, xor11, prime))
+                        {
+                            got = true;
+                            break;
+                        }
                     }
                     if (got)
+                    {
+                        relax_implication_side(*this, p, false, plus_minus, x_y, x_y3, x_y_z, exc, parity, xor1, xor11, prime);
                         continue;
+                    }
                 }
             }
             if (exc)
@@ -4808,6 +5071,19 @@ bool Grid::uses_neg_bombs()
         if (vals[p].negated && !vals[p].revealed)
             return true;
     }
+    return false;
+}
+
+bool Grid::uses_if_then_clues()
+{
+    for (const auto& [pos, clue] : edges)
+        if (clue.is_if_then())
+            return true;
+
+    for (const auto& [pos, place] : vals)
+        if (place.revealed && !place.bomb && place.clue.is_if_then())
+            return true;
+
     return false;
 }
 

@@ -465,6 +465,7 @@ public:
     void commit_level_counts();
     void remove_from_regions_to_add_for_rule(GridRule* rule);
     bool uses_neg_bombs();
+    bool uses_if_then_clues();
 };
 
 class LocalGrid
