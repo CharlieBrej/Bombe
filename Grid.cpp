@@ -3120,7 +3120,11 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                 {
                     tst = *this;
 
-                    XYSet neigh = get_neighbors(p);
+                    XYSet neigh;
+                    if (p.x < 0)
+                        neigh = get_row(-1 - p.x, p.y);
+                    else
+                        neigh = get_neighbors(p);
                     bool parity = false;
                     int if_v = 0;
                     int v = 0;
