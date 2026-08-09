@@ -133,13 +133,26 @@ public:
 class RegionIfType
 {
 public:
+    enum IfPartition
+    {
+        ALTERNATING,
+        SINGLE_CELL,
+        ADJACENT_PAIR,
+    } if_partition = ALTERNATING;
+    uint8_t if_partition_index = 0;
+    uint8_t if_partition_index2 = 0;
     RegionType if_type;
     RegionType type;
 
     RegionIfType() {}
     RegionIfType(RegionType _type): type(_type){}
     RegionIfType(RegionType::Type t, uint8_t v) : type(t, v) {}
-    bool operator==(const RegionIfType& other) const { return (type == other.type) && (if_type == other.if_type); }
+    bool operator==(const RegionIfType& other) const {
+        return type == other.type && if_type == other.if_type &&
+               if_partition == other.if_partition &&
+               if_partition_index == other.if_partition_index &&
+               if_partition_index2 == other.if_partition_index2;
+    }
     bool is_if_then() const {
         return if_type.type != RegionType::NONE;
     }

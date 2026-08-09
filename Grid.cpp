@@ -37,6 +37,20 @@ static unsigned get_valid_cells_mask(int region_count, int neg_reg_count)
     return mask;
 }
 
+static bool is_if_partition_cell(const RegionIfType& clue, unsigned index)
+{
+    switch (clue.if_partition)
+    {
+    case RegionIfType::ALTERNATING:
+        return !(index & 1);
+    case RegionIfType::SINGLE_CELL:
+        return index == clue.if_partition_index;
+    case RegionIfType::ADJACENT_PAIR:
+        return index == clue.if_partition_index || index == clue.if_partition_index2;
+    }
+    return false;
+}
+
 static void validate_region_type(const RegionType& region_type)
 {
     const unsigned type = static_cast<unsigned>(region_type.type);
@@ -2479,6 +2493,14 @@ void Grid::from_string(std::string s)
         if (s[i] == '?')
         {
             i++;
+            if (s[i] == '@')
+            {
+                i++;
+                t.if_partition = RegionIfType::IfPartition(s[i++] - '0');
+                t.if_partition_index = s[i++] - 'A';
+                if (t.if_partition == RegionIfType::ADJACENT_PAIR)
+                    t.if_partition_index2 = s[i++] - 'A';
+            }
             t.if_type.type = RegionType::Type(s[i++] - 'A');
             t.if_type.value = s[i++] - '0';
 
@@ -2522,6 +2544,14 @@ void Grid::from_string(std::string s)
         else if (c == '?')
         {
             vals[p].bomb = false;
+            if (s[i] == '@')
+            {
+                i++;
+                vals[p].clue.if_partition = RegionIfType::IfPartition(s[i++] - '0');
+                vals[p].clue.if_partition_index = s[i++] - 'A';
+                if (vals[p].clue.if_partition == RegionIfType::ADJACENT_PAIR)
+                    vals[p].clue.if_partition_index2 = s[i++] - 'A';
+            }
             vals[p].clue.if_type.type = RegionType::Type(s[i++] - 'A');
             vals[p].clue.if_type.value = s[i++] - '0';
             vals[p].clue.type.type = RegionType::Type(s[i++] - 'A');
@@ -3125,31 +3155,74 @@ void Grid::make_harder(int plus_minus, int x_y, int x_y3, int x_y_z, int exc, in
                         neigh = get_row(-1 - p.x, p.y);
                     else
                         neigh = get_neighbors(p);
-                    bool parity = false;
-                    int if_v = 0;
-                    int v = 0;
 
+                    std::vector<XYPos> cells;
                     FOR_XY_SET(n, neigh)
+                        cells.push_back(n);
+
+                    std::vector<RegionIfType> partitions(1);
+                    for (unsigned i = 0; i < cells.size(); i++)
                     {
-                        parity = !parity;
-                        if(get(n).bomb)
+                        RegionIfType single;
+                        single.if_partition = RegionIfType::SINGLE_CELL;
+                        single.if_partition_index = i;
+                        partitions.push_back(single);
+
+                        XYSet adjacent = get_neighbors(cells[i]);
+                        for (unsigned j = i + 1; j < cells.size(); j++)
                         {
-                            if (parity)
-                                if_v++;
-                            else
-                                v++;
+                            if (!adjacent.get(cells[j]))
+                                continue;
+                            RegionIfType pair;
+                            pair.if_partition = RegionIfType::ADJACENT_PAIR;
+                            pair.if_partition_index = i;
+                            pair.if_partition_index2 = j;
+                            partitions.push_back(pair);
                         }
                     }
 
-                    tst->get_clue(p).type.type = RegionType::EQUAL;
-                    tst->get_clue(p).type.value = v;
-                    tst->get_clue(p).if_type.type = RegionType::EQUAL;
-                    tst->get_clue(p).if_type.value = if_v;
-                    if (tst->is_solveable())
+                    bool got = false;
+                    for (RegionIfType& candidate : partitions)
                     {
-                        get_clue(p) = tst->get_clue(p);
-                        continue;
+                        int if_v = 0;
+                        int v = 0;
+                        bool if_has_hidden_cell = false;
+                        bool then_has_hidden_cell = false;
+                        for (unsigned i = 0; i < cells.size(); i++)
+                        {
+                            bool in_if = is_if_partition_cell(candidate, i);
+                            if (!get(cells[i]).revealed)
+                            {
+                                if (in_if)
+                                    if_has_hidden_cell = true;
+                                else
+                                    then_has_hidden_cell = true;
+                            }
+                            if (get(cells[i]).bomb)
+                            {
+                                if (in_if)
+                                    if_v++;
+                                else
+                                    v++;
+                            }
+                        }
+
+                        if (!if_has_hidden_cell || !then_has_hidden_cell)
+                            continue;
+
+                        candidate.if_type = RegionType(RegionType::EQUAL, if_v);
+                        candidate.type = RegionType(RegionType::EQUAL, v);
+                        tst = *this;
+                        tst->get_clue(p) = candidate;
+                        if (tst->is_solveable())
+                        {
+                            get_clue(p) = candidate;
+                            got = true;
+                            break;
+                        }
                     }
+                    if (got)
+                        continue;
                 }
             }
             if (exc)
@@ -3679,6 +3752,14 @@ std::string Grid::to_string()
         if (m_reg.second.is_if_then())
         {
             s += '?';
+            if (m_reg.second.if_partition != RegionIfType::ALTERNATING)
+            {
+                s += '@';
+                s += '0' + m_reg.second.if_partition;
+                s += 'A' + m_reg.second.if_partition_index;
+                if (m_reg.second.if_partition == RegionIfType::ADJACENT_PAIR)
+                    s += 'A' + m_reg.second.if_partition_index2;
+            }
             s += 'A' + (char)(m_reg.second.if_type.type);
             s += '0' + m_reg.second.if_type.value;
         }
@@ -3708,6 +3789,14 @@ std::string Grid::to_string()
             if (g.clue.is_if_then())
             {
                 s += '?';
+                if (g.clue.if_partition != RegionIfType::ALTERNATING)
+                {
+                    s += '@';
+                    s += '0' + g.clue.if_partition;
+                    s += 'A' + g.clue.if_partition_index;
+                    if (g.clue.if_partition == RegionIfType::ADJACENT_PAIR)
+                        s += 'A' + g.clue.if_partition_index2;
+                }
                 s += 'A' + (char)(g.clue.if_type.type);
                 s += '0' + g.clue.if_type.value;
             }
@@ -3937,13 +4026,13 @@ void Grid::add_base_regions(void)
         XYSet line = get_row(e_pos.x, e_pos.y);
         XYSet elements;
         XYSet elements_neg;
-        bool parity = false;
+        unsigned partition_index = 0;
         FOR_XY_SET(n, line)
         {
-            parity = !parity;
+            bool in_if = is_if_partition_cell(clue, partition_index++);
             if (!get(n).revealed)
             {
-                if (clue.is_if_then() && parity)
+                if (clue.is_if_then() && in_if)
                     elements_neg.set(n);
                 else
                     elements.set(n);
@@ -3956,7 +4045,7 @@ void Grid::add_base_regions(void)
                     clue.type.value++;
                 else
                 {
-                    if (clue.is_if_then() && parity)
+                    if (clue.is_if_then() && in_if)
                         clue.if_type.value--;
                     else
                         clue.type.value--;
@@ -3987,13 +4076,13 @@ void Grid::add_base_regions(void)
             if (!vals[p].bomb)
             {
                 XYSet neigh = get_neighbors(p);
-                bool parity = false;
+                unsigned partition_index = 0;
                 FOR_XY_SET(n, neigh)
                 {
-                    parity = !parity;
+                    bool in_if = is_if_partition_cell(clue, partition_index++);
                     if (!get(n).revealed)
                     {
-                        if (clue.is_if_then() && parity)
+                        if (clue.is_if_then() && in_if)
                             elements_neg.set(n);
                         else
                             elements.set(n);
@@ -4002,7 +4091,7 @@ void Grid::add_base_regions(void)
                     }
                     else if (get(n).bomb)
                     {
-                        if (clue.is_if_then() && parity)
+                        if (clue.is_if_then() && in_if)
                         {
                             clue.if_type.value--;
                         }
