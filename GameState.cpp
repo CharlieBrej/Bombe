@@ -84,11 +84,12 @@ GameState::GameState(std::string& load_data, bool json)
     for (int k = 0; k < GAME_MODES; k++)
     for (int j = 0; j < GLBAL_LEVEL_SETS; j++)
     {
-        level_progress[k][j].resize(((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j].size());
-        for (unsigned i = 0; i < global_level_sets[j].size(); i++)
+        std::vector<LevelSet*>& mode_level_sets = ((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j];
+        level_progress[k][j].resize(mode_level_sets.size());
+        for (unsigned i = 0; i < mode_level_sets.size(); i++)
         {
-            level_progress[k][j][i].level_status.resize(((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size());
-            level_progress[k][j][i].count_todo = ((k == 4) ? second_global_level_sets : (k == 5) ? third_global_level_sets : global_level_sets)[j][i]->levels.size();
+            level_progress[k][j][i].level_status.resize(mode_level_sets[i]->levels.size());
+            level_progress[k][j][i].count_todo = mode_level_sets[i]->levels.size();
         }
     }
     {
@@ -345,6 +346,17 @@ GameState::GameState(std::string& load_data, bool json)
         current_level_group_index = 0;
     if (current_level_set_index >= ((game_mode == 4) ? second_global_level_sets : (game_mode == 5) ? third_global_level_sets : global_level_sets)[current_level_group_index].size())
         current_level_set_index = 0;
+    if (level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.empty())
+    {
+        std::cerr << "Saved level set is empty; falling back to level set 0\n";
+        current_level_group_index = 0;
+        current_level_set_index = 0;
+        current_level_index = 0;
+        load_level = true;
+        force_load_level = true;
+    }
+    else if (current_level_index >= level_progress[game_mode][current_level_group_index][current_level_set_index].level_status.size())
+        current_level_index = 0;
 
     rule_limit_count = pow(100, 1 + rule_limit_slider * 1.6) / 10;
     if (rule_limit_slider >= 1.0)
