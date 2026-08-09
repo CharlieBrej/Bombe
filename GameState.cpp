@@ -2166,7 +2166,10 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                 }
 
                 if (region.is_if_then() ? if_if : region.elements_neg.get(pos))
-                    set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                {
+                    RegionType& colour_type = if_if ? region.if_type : region.type;
+                    set_region_colour(sdl_texture, colour_type.value, region.colour, opac);
+                }
                 else
                     SDL_SetTextureColorMod(sdl_texture, 0,0,0);
                 for(WrapPos r : wraps)
@@ -2692,6 +2695,28 @@ void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos
 
 void GameState::render_region_type(RegionIfType if_reg, XYPos pos, unsigned siz)
 {
+    if (if_reg.is_if_then())
+    {
+        const unsigned badge_size = siz * 5 / 8;
+        const XYPos then_pos = pos + XYPos(siz - badge_size, siz - badge_size);
+        const SDL_Rect if_src = {2944, 64, 192, 192};
+        const SDL_Rect then_src = {3136, 64, 192, 192};
+        const SDL_Rect if_dst = {pos.x, pos.y, int(badge_size), int(badge_size)};
+        const SDL_Rect then_dst = {then_pos.x, then_pos.y, int(badge_size), int(badge_size)};
+
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &if_src, &if_dst);
+        render_region_type(if_reg.if_type, pos, badge_size);
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &then_src, &then_dst);
+        Uint8 red;
+        Uint8 green;
+        Uint8 blue;
+        SDL_GetTextureColorMod(sdl_texture, &red, &green, &blue);
+        SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
+        render_region_type(if_reg.type, then_pos, badge_size);
+        SDL_SetTextureColorMod(sdl_texture, red, green, blue);
+        return;
+    }
+
     RegionType& reg = if_reg.type;
     if (reg.type == RegionType::XOR11 || reg.type == RegionType::XOR22)
     {
@@ -4436,14 +4461,34 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {list_pos.x + 2 * cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + y_offset, cell_height, cell_height};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
-            if (rule.apply_region_type.type >= RegionType::Type::SET)
-                render_region_type(rule.apply_region_type, list_pos + XYPos(3 * cell_width + (cell_width - cell_height) / 2, cell_width + y_offset), cell_height);
-            else
-                render_region_bubble(rule.apply_region_type, 0, list_pos + XYPos(3 * cell_width + (cell_width - cell_height) / 2, cell_width + y_offset), cell_height, false, rule.neg_apply_region_bitmap);
-           
-            for (int i = 0; i <rule.region_count; i++)
+            XYPos result_pos = list_pos + XYPos(3 * cell_width + (cell_width - cell_height) / 2, cell_width + y_offset);
+            if (rule.apply_if_region_type.type != RegionType::NONE)
             {
-                render_region_bubble(rule.get_region_sorted(i), 0, list_pos + XYPos(4 * cell_width + i * cell_height, cell_width + y_offset), cell_height, false, rule.neg_reg_count > i);
+                RegionIfType result_type(rule.apply_region_type);
+                result_type.if_type = rule.apply_if_region_type;
+                render_region_type(result_type, result_pos, cell_height);
+            }
+            else if (rule.apply_region_type.type >= RegionType::Type::SET)
+                render_region_type(rule.apply_region_type, result_pos, cell_height);
+            else
+                render_region_bubble(rule.apply_region_type, 0, result_pos, cell_height, false, rule.neg_apply_region_bitmap);
+           
+            int display_region = 0;
+            for (int i = 0; i < rule.region_count; display_region++)
+            {
+                XYPos region_pos = list_pos + XYPos(4 * cell_width + display_region * cell_height, cell_width + y_offset);
+                if (i < rule.if_reg_count * 2)
+                {
+                    RegionIfType if_type;
+                    if_type.if_type = rule.get_region_sorted(i++);
+                    if_type.type = rule.get_region_sorted(i++);
+                    render_region_type(if_type, region_pos, cell_height);
+                }
+                else
+                {
+                    render_region_bubble(rule.get_region_sorted(i), 0, region_pos, cell_height, false, rule.neg_reg_count > i);
+                    i++;
+                }
             }
             if(!display_clipboard_rules)
             {
