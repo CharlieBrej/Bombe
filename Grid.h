@@ -255,8 +255,13 @@ public:
     bool has_ancestor(GridRegion* other, std::set<GridRegion*>& has, std::set<GridRegion*>& hasnt);
 
     bool matches_filters(const XYSet& _and, const XYSet& _not) const {
-        return (_and.none() || elements.contains(_and)) &&
-            (_not.none() || !(elements & _not).any());
+        if (!is_if_then())
+            return (_and.none() || elements.contains(_and)) &&
+                (_not.none() || !(elements & _not).any());
+        const XYSet filter_elements =
+            elements | elements_neg;
+        return (_and.none() || filter_elements.contains(_and)) &&
+            (_not.none() || !(filter_elements & _not).any());
     }
     bool isHintable() const {
         return visibility_force == GridRegion::VIS_FORCE_NONE && vis_level == GRID_VIS_LEVEL_SHOW;

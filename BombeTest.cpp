@@ -47,6 +47,76 @@ void expect_legality(
               << legality_name(actual) << '\n';
 }
 
+void expect_filter(
+    const char* name,
+    const GridRegion& region,
+    const XYSet& required,
+    const XYSet& forbidden,
+    bool expected)
+{
+    const bool actual = region.matches_filters(
+        required, forbidden);
+    if (actual == expected)
+    {
+        std::cout << "PASS: " << name << '\n';
+        return;
+    }
+
+    failures++;
+    std::cerr << "FAIL: " << name
+              << ": expected " << expected
+              << ", got " << actual << '\n';
+}
+
+void test_implication_region_filters()
+{
+    const XYPos if_cell(1, 1);
+    const XYPos then_cell(2, 1);
+    const XYPos outside_cell(3, 1);
+
+    RegionIfType implication_type;
+    implication_type.if_type = RegionType(
+        RegionType::EQUAL, 1);
+    implication_type.type = RegionType(
+        RegionType::EQUAL, 1);
+    GridRegion implication(implication_type);
+    implication.elements_neg.set(if_cell);
+    implication.elements.set(then_cell);
+
+    XYSet empty;
+    XYSet required_if;
+    required_if.set(if_cell);
+    expect_filter(
+        "required IF cell matches",
+        implication, required_if, empty, true);
+
+    XYSet required_both = required_if;
+    required_both.set(then_cell);
+    expect_filter(
+        "required IF and THEN cells match",
+        implication, required_both, empty, true);
+
+    XYSet forbidden_if;
+    forbidden_if.set(if_cell);
+    expect_filter(
+        "forbidden IF cell rejects",
+        implication, empty, forbidden_if, false);
+
+    XYSet required_outside;
+    required_outside.set(outside_cell);
+    expect_filter(
+        "outside required cell rejects",
+        implication, required_outside, empty, false);
+
+    GridRegion ordinary{RegionIfType(
+        RegionType::EQUAL, 1)};
+    ordinary.elements.set(then_cell);
+    ordinary.elements_neg.set(if_cell);
+    expect_filter(
+        "ordinary negative cells stay excluded",
+        ordinary, required_if, empty, false);
+}
+
 void test_pictured_wildcard_rule()
 {
     constexpr int variable_x = 1;
@@ -210,6 +280,7 @@ void test_ordinary_wildcard_still_loses_data()
 
 int main()
 {
+    test_implication_region_filters();
     test_pictured_wildcard_rule();
     test_trash_wildcard_consequent();
     test_wildcard_if_is_not_true();
