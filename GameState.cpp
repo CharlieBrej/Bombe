@@ -3680,7 +3680,7 @@ void GameState::render(bool saving)
     bool hover_rulemaker = false;
     XYSet hover_squares_highlight;
     int hover_rulemaker_bits = 0;
-    bool hover_rulemaker_lower_right = false;
+    bool hover_rulemaker_action_corner = false;
 
     int hover_rulemaker_region_base_index = -1;
     bool hover_rulemaker_region_base = false;
@@ -3784,7 +3784,11 @@ void GameState::render(bool saving)
             XYPos pos = mouse - XYPos(right_panel_offset.x, right_panel_offset.y + button_size * 2);
             XYPos gpos = pos / button_size;
             XYPos ipos = (pos - (gpos * button_size));
-            hover_rulemaker_lower_right = ((ipos.x > button_size/2) && (ipos.y > button_size/2));
+            hover_rulemaker_action_corner =
+                ipos.y > button_size / 2 &&
+                (if_then_selected == 1
+                    ? ipos.x < button_size / 2
+                    : ipos.x > button_size / 2);
 
             hover_rulemaker_bits = rule_xy_to_rule_region_mask(gpos, *rule_cause.rule);
             if (hover_rulemaker_bits >= 1)
@@ -6089,15 +6093,21 @@ void GameState::render(bool saving)
 
                 if (hover_rulemaker && hover_rulemaker_bits == i)
                 {
-                    if (hover_rulemaker_lower_right && right_panel_mode == RIGHT_MENU_RULE_GEN)
+                    if (hover_rulemaker_action_corner && right_panel_mode == RIGHT_MENU_RULE_GEN)
                         SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
                     render_box(right_panel_offset + XYPos(0, button_size * 2) + p * button_size, XYPos(button_size, button_size), button_size / 4, 9);
                     SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
                     {
-                        if (!hover_rulemaker_lower_right)
+                        if (!hover_rulemaker_action_corner)
                             SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
-                        render_box(right_panel_offset + XYPos(0, button_size * 2) + p * button_size + XYPos(button_size / 2, button_size / 2), XYPos(button_size / 2, button_size / 2), button_size / 4, 9);
+                        render_box(
+                            right_panel_offset + XYPos(0, button_size * 2) +
+                                p * button_size +
+                                XYPos(if_then_selected == 1 ? 0 : button_size / 2,
+                                      button_size / 2),
+                            XYPos(button_size / 2, button_size / 2),
+                            button_size / 4, 9);
                         SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
                     }
                 }
@@ -6105,7 +6115,7 @@ void GameState::render(bool saving)
 
             if (hover_rulemaker && right_panel_mode == RIGHT_MENU_RULE_GEN)
             {
-                if (!hover_rulemaker_lower_right)
+                if (!hover_rulemaker_action_corner)
                 {
                     XYPos p = mouse - XYPos(button_size + button_size / 4, button_size / 4);
                     RegionType new_region_type = region_type;
@@ -6153,7 +6163,9 @@ void GameState::render(bool saving)
                     }
                     if (region_type.type < 50)
                     {
-                        render_region_bubble(region_type, 0, p, button_size);
+                        render_region_bubble(
+                            region_type, 0, p, button_size, false,
+                            if_then_selected == 1, if_then_selected);
                     }
                     else
                     {
@@ -8709,7 +8721,11 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
             XYPos gpos = pos / button_size;
 
             XYPos ipos = (pos - (gpos * button_size));
-            bool hover_rulemaker_lower_right = ((ipos.x > button_size/2) && (ipos.y > button_size/2));
+            bool hover_rulemaker_action_corner =
+                ipos.y > button_size / 2 &&
+                (if_then_selected == 1
+                    ? ipos.x < button_size / 2
+                    : ipos.x > button_size / 2);
 
 
             bool hover_rulemaker = false;
@@ -8721,7 +8737,7 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
 
             if (hover_rulemaker)
             {
-                if (!hover_rulemaker_lower_right)
+                if (!hover_rulemaker_action_corner)
                 {
                     if (ctrl_held)
                     {
@@ -8771,6 +8787,14 @@ void GameState::right_panel_click(XYPos pos, int clicks, int btn)
                     else if (region_type.type != RegionType::VISIBILITY && region_type.type != RegionType::NONE)
                     {
                         update_constructed_rule_pre();
+                        if (if_then_selected &&
+                            constructed_rule.apply_region_type.type >= RegionType::SET)
+                        {
+                            constructed_rule.apply_if_region_type = RegionType();
+                            constructed_rule.apply_region_type = if_then_region_type[1];
+                            constructed_rule.apply_region_bitmap = 0;
+                            constructed_rule.neg_apply_region_bitmap = 0;
+                        }
                         if (if_then_selected == 1)
                         {
                             constructed_rule.apply_if_region_type = if_then_region_type[0];
@@ -10701,12 +10725,17 @@ std::string GameState::add_rule_from_json(const std::string& json)
             new_index++;
     pause_robots();
     rules[game_mode].push_back(rule);
+    GridRule* added_rule = &rules[game_mode].back();
+    right_panel_mode = RIGHT_MENU_RULE_INSPECT;
+    inspected_rule = GridRegionCause(added_rule, NULL, NULL, NULL, NULL);
+    selected_rules.clear();
+    selected_rules.insert(added_rule);
 
     std::ostringstream response;
     response << "Added Rule " << new_index;
     if (legality == GridRule::LOSES_DATA)
         response << " (warning: loses information)";
-    response << ":\n" << rules[game_mode].back().debug_description(2);
+    response << ":\n" << added_rule->debug_description(2);
     return response.str();
 }
 

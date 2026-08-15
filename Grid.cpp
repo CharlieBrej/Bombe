@@ -458,7 +458,14 @@ GridRule::GridRule(SaveObject* sobj)
     validate_region_type(apply_region_type);
     validate_region_type(apply_if_region_type);
 
-    if (apply_region_type.type == RegionType::VISIBILITY)
+    if (apply_region_type.type >= RegionType::SET)
+    {
+        apply_if_region_type = RegionType();
+        neg_apply_region_bitmap = 0;
+    }
+    else if (apply_if_region_type.type >= RegionType::SET ||
+             (apply_if_region_type.type != RegionType::NONE &&
+              apply_region_type.type == RegionType::NONE))
     {
         apply_if_region_type = RegionType();
         neg_apply_region_bitmap = 0;
@@ -1596,6 +1603,15 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
 GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 {
     if (!has_valid_structure())
+        return IMPOSSIBLE;
+    if (apply_if_region_type.type != RegionType::NONE &&
+        (apply_if_region_type.type >= RegionType::SET ||
+         apply_region_type.type == RegionType::NONE ||
+         apply_region_type.type >= RegionType::SET ||
+         !neg_apply_region_bitmap))
+        return IMPOSSIBLE;
+    if (apply_region_type.type >= RegionType::SET &&
+        neg_apply_region_bitmap)
         return IMPOSSIBLE;
 
     z3::context c;

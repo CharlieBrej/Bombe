@@ -378,6 +378,27 @@ void test_rule_structure_validation()
         !mixed_layouts.has_valid_structure());
 }
 
+void test_clear_action_cannot_be_implication()
+{
+    GridRule rule;
+    rule.region_count = 1;
+    rule.region_type[0] = RegionType(
+        RegionType::EQUAL, 0);
+    rule.apply_if_region_type = RegionType(
+        RegionType::EQUAL, 0);
+    rule.apply_region_type = RegionType(
+        RegionType::SET, 0);
+    rule.apply_region_bitmap = 1 << 1;
+    rule.neg_apply_region_bitmap = 1 << 1;
+
+    expect_condition(
+        "SET implication keeps valid inputs",
+        rule.has_valid_structure());
+    expect_legality(
+        "SET action cannot be implication",
+        rule, GridRule::IMPOSSIBLE);
+}
+
 void test_pictured_wildcard_rule()
 {
     constexpr int variable_x = 1;
@@ -549,6 +570,7 @@ int main()
     test_remove_region_if_only_action();
     test_then_only_loads_as_ordinary();
     test_rule_structure_validation();
+    test_clear_action_cannot_be_implication();
     test_pictured_wildcard_rule();
     test_trash_wildcard_consequent();
     test_wildcard_if_is_not_true();
