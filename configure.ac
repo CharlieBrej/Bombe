@@ -40,6 +40,28 @@ AC_ARG_ENABLE([steam],
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-steam]) ;;
 esac],[steam=true])
 
+AC_ARG_ENABLE([control-socket],
+    AS_HELP_STRING([--enable-control-socket],
+                   [build the local Unix control socket and BombeControl client (default=no)]),
+    [case "${enableval}" in
+      yes) control_socket=true ;;
+      no)  control_socket=false ;;
+      *) AC_MSG_ERROR([bad value ${enableval} for --enable-control-socket]) ;;
+    esac],
+    [control_socket=false])
+
+AS_IF([test x$control_socket = xtrue], [
+    AS_CASE([$host_os],
+        [linux*|darwin*], [],
+        [AC_MSG_ERROR([--enable-control-socket is only supported on Unix hosts])])
+    AC_CHECK_HEADERS([sys/socket.h sys/un.h unistd.h], [],
+                     [AC_MSG_ERROR([Unix-domain socket headers are required])])
+    AC_CHECK_FUNCS([socket bind listen accept close unlink], [],
+                   [AC_MSG_ERROR([Unix-domain socket APIs are required])])
+    AC_DEFINE([ENABLE_CONTROL_SOCKET], [1],
+              [Define to build the local Unix control socket])
+])
+
 AC_ARG_WITH(secret-id,
             AS_HELP_STRING([--with-secret-id=N],
                            [Secret server ID (default=0)]),
@@ -48,6 +70,7 @@ AC_ARG_WITH(secret-id,
 
 
 AM_CONDITIONAL([NO_STEAM], [test x$steam = xfalse])
+AM_CONDITIONAL([CONTROL_SOCKET], [test x$control_socket = xtrue])
 AM_CONDITIONAL([LINUX], [test "$build_linux" = "yes"])
 AM_CONDITIONAL([MACOS], [test "$build_mac" = "yes"])
 AC_DEFINE_UNQUOTED([SECRET_ID], [$with_secret_id])

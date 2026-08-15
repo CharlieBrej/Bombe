@@ -1,6 +1,7 @@
 # Prerequisites
 *.deps
 Bombe
+BombeControl
 GridGenerator
 *.o
 Makefile

@@ -37,8 +37,8 @@ public:
     unsigned count() const {return d.count();}
     bool any() const {return d.any();}
     bool none() const {return d.none();}
-    XYPos first() {if (get(0)) return XYPos(0,0); else return next(XYPos(0,0));}
-    XYPos next(XYPos p) {unsigned i = p2i(p); do {i++; if (i>= SIZE) return XYPos(-1,-1);} while(!get(i)); return i2p(i);}
+    XYPos first() const {if (get(0)) return XYPos(0,0); else return next(XYPos(0,0));}
+    XYPos next(XYPos p) const {unsigned i = p2i(p); do {i++; if (i>= SIZE) return XYPos(-1,-1);} while(!get(i)); return i2p(i);}
     void clear() { d.reset(); }
     void insert(XYPos p) { set(p); }
 
@@ -114,7 +114,7 @@ public:
     bool operator==(const RegionType& other) const { return (type == other.type) && (value == other.value) && (var == other.var); }
     bool operator!=(const RegionType& other) const { return !(*this == other); }
     bool operator<(const RegionType& other) const { return (type_priority(type) < type_priority(other.type)) || ((type == other.type) && ((value < other.value) || ((value == other.value) && (var < other.var)))); }
-    std::string val_as_str(int offset = 0);
+    std::string val_as_str(int offset = 0) const;
     unsigned as_int() const { return ((unsigned(var) & 0xFF) << 16 | (unsigned(type) & 0xFF) << 8 | (unsigned(value) & 0xFF)); }
     bool mapper_based_equal(const RegionType& other, uint8_t mapper[32]);
 
@@ -340,6 +340,8 @@ public:
     void add_region(RegionType type, bool neg = false);
     void resort_region();
     RegionType get_region_sorted(int index);
+    unsigned valid_area_mask() const;
+    std::string debug_description(unsigned indent = 0) const;
 
 };
 
@@ -415,6 +417,7 @@ public:
 
     virtual std::string text_desciption() = 0;
     virtual std::string to_string();
+    std::string debug_dump() const;
     virtual Grid* dup() = 0;
     virtual XYSet get_squares() = 0;
     virtual XYSet get_row(unsigned type, int index) = 0;

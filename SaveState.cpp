@@ -1,7 +1,25 @@
 #include "Misc.h"
 #include "SaveState.h"
 #include <assert.h>
+#include <memory>
 #define assert_exp(x) do { if (f.get() != x) throw (std::runtime_error("Unexpected character"));} while (false)
+
+static thread_local unsigned save_object_parse_depth = 0;
+
+class SaveObjectParseDepth
+{
+public:
+    SaveObjectParseDepth()
+    {
+        if (save_object_parse_depth >= 64)
+            throw std::runtime_error("Object nesting exceeds 64 levels");
+        save_object_parse_depth++;
+    }
+    ~SaveObjectParseDepth()
+    {
+        save_object_parse_depth--;
+    }
+};
 
 static void skip_whitespace(std::istream& f)
 {
@@ -33,6 +51,7 @@ SaveObject* SaveObject::load(std::string& input)
 
 SaveObject* SaveObject::load(std::istream& f)
 {
+    SaveObjectParseDepth depth;
     skip_whitespace(f);
     char c = f.peek();
     if (c == '{')
@@ -208,23 +227,33 @@ void SaveObjectString::save(std::ostream& f)
 
 SaveObjectMap::SaveObjectMap(std::istream& f)
 {
-    assert_exp('{');
-    while (true)
+    try
     {
-        skip_whitespace(f);
-        if (f.peek() == '}')
-            break;
-        std::string key = parse_string(f);
-        skip_whitespace(f);
-        assert_exp(':');
-        SaveObject* obj = SaveObject::load(f);
-        add_item(key, obj);
-        skip_whitespace(f);
-        if (f.peek() == '}')
-            break;
-        assert_exp(',');
+        assert_exp('{');
+        while (true)
+        {
+            skip_whitespace(f);
+            if (f.peek() == '}')
+                break;
+            std::string key = parse_string(f);
+            skip_whitespace(f);
+            assert_exp(':');
+            SaveObject* obj = SaveObject::load(f);
+            add_item(key, obj);
+            skip_whitespace(f);
+            if (f.peek() == '}')
+                break;
+            assert_exp(',');
+        }
+        assert_exp('}');
     }
-    assert_exp('}');
+    catch (...)
+    {
+        for (const auto& item : omap)
+            delete item.second;
+        omap.clear();
+        throw;
+    }
 }
 SaveObjectMap::~SaveObjectMap()
 {
@@ -234,8 +263,11 @@ SaveObjectMap::~SaveObjectMap()
 
 void SaveObjectMap::add_item(std::string key, SaveObject* value)
 {
-    assert(!omap[key]);
-    omap[key]=value;
+    std::unique_ptr<SaveObject> owned(value);
+    const auto inserted = omap.emplace(key, value);
+    if (!inserted.second)
+        throw std::runtime_error("Duplicate map key: " + key);
+    owned.release();
 }
 
 SaveObject* SaveObjectMap::get_item(std::string key)
@@ -340,20 +372,30 @@ SaveObject* SaveObjectMap::dup()
 
 SaveObjectList::SaveObjectList(std::istream& f)
 {
-    assert_exp('[');
-    while (true)
+    try
     {
-        skip_whitespace(f);
-        if (f.peek() == ']')
-            break;
-        SaveObject* obj = SaveObject::load(f);
-        add_item(obj);
-        skip_whitespace(f);
-        if (f.peek() == ']')
-            break;
-        assert_exp(',');
+        assert_exp('[');
+        while (true)
+        {
+            skip_whitespace(f);
+            if (f.peek() == ']')
+                break;
+            SaveObject* obj = SaveObject::load(f);
+            add_item(obj);
+            skip_whitespace(f);
+            if (f.peek() == ']')
+                break;
+            assert_exp(',');
+        }
+        assert_exp(']');
     }
-    assert_exp(']');
+    catch (...)
+    {
+        for (SaveObject* item : olist)
+            delete item;
+        olist.clear();
+        throw;
+    }
 }
 
 SaveObjectList::~SaveObjectList()
@@ -364,7 +406,9 @@ SaveObjectList::~SaveObjectList()
 
 void SaveObjectList::add_item(SaveObject* value)
 {
+    std::unique_ptr<SaveObject> owned(value);
     olist.push_back(value);
+    owned.release();
 }
 
 SaveObject* SaveObjectList::get_item(unsigned index)

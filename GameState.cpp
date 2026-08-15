@@ -19,6 +19,7 @@
 #include <fstream>
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1071,6 +1072,9 @@ bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
 
 void GameState::load_grid(std::string s)
 {
+    get_hint = false;
+    clue_solves.clear();
+    hint_phase = HintPhase::IDLE;
     filter_pos_and.clear();
     filter_pos_not.clear();
     grid->commit_level_counts();
@@ -1108,6 +1112,136 @@ void GameState::load_grid(std::string s)
 
 }
 static int advance_grid(Grid* grid, std::list<GridRule>& rules, GridRegion* inspected_region, const XYSet& filter_pos_and, const XYSet& filter_pos_not, bool skip_hide = false);
+
+GameState::HintStartResult GameState::start_hint()
+{
+    if (get_hint)
+        return HintStartResult::ALREADY_RUNNING;
+    if (load_level || skip_level || force_load_level || grid->wants_base_regions ||
+        !grid->regions_to_add.empty())
+        return HintStartResult::BOARD_BUSY;
+    for (const GridRegion& region : grid->regions)
+        if (!region.stale)
+            return HintStartResult::BOARD_BUSY;
+    for (const GridRule& rule : rules[game_mode])
+        if (!rule.deleted && !rule.paused && !rule.stale)
+            return HintStartResult::BOARD_BUSY;
+    if (april_1st && !april_1st_hint_count)
+        return HintStartResult::NO_HINTS_LEFT;
+    if (april_1st)
+        april_1st_hint_count--;
+
+    for (GridRegion& region : grid->regions)
+        if (region.visibility_force == GridRegion::VIS_FORCE_HINT &&
+            region.vis_level == GRID_VIS_LEVEL_SHOW)
+            region.visibility_force = GridRegion::VIS_FORCE_NONE;
+
+    clue_solves.clear();
+    XYSet grid_squares = grid->get_squares();
+    FOR_XY_SET(pos, grid_squares)
+        if (grid->is_determinable_using_regions(pos, true))
+            clue_solves.insert(pos);
+
+    if (clue_solves.empty())
+    {
+        get_hint = false;
+        hint_phase = HintPhase::IDLE;
+        return HintStartResult::NO_TARGETS;
+    }
+
+    get_hint = true;
+    hint_phase = HintPhase::RUNNING;
+    return HintStartResult::STARTED;
+}
+
+void GameState::pause_hint()
+{
+    if (!get_hint)
+        return;
+    get_hint = false;
+    hint_phase = clue_solves.empty() ? HintPhase::IDLE : HintPhase::PAUSED;
+}
+
+void GameState::clear_hint()
+{
+    for (GridRegion& region : grid->regions)
+        if (region.visibility_force == GridRegion::VIS_FORCE_HINT)
+        {
+            region.visibility_force = GridRegion::VIS_FORCE_NONE;
+            region.vis_level = GRID_VIS_LEVEL_SHOW;
+        }
+    get_hint = false;
+    clue_solves.clear();
+    hint_phase = HintPhase::IDLE;
+}
+
+std::string GameState::debug_hint_dump() const
+{
+    const char* phase = "idle";
+    switch (hint_phase)
+    {
+    case HintPhase::IDLE: phase = "idle"; break;
+    case HintPhase::RUNNING: phase = "running"; break;
+    case HintPhase::PAUSED: phase = "paused"; break;
+    case HintPhase::COMPLETE: phase = "complete"; break;
+    }
+
+    std::vector<unsigned> supporting_regions;
+    std::vector<unsigned> hidden_regions;
+    std::vector<unsigned> fixed_shown_regions;
+    std::vector<unsigned> unclassified_regions;
+    unsigned region_id = 0;
+    for (const GridRegion& region : grid->regions)
+    {
+        if (region.visibility_force == GridRegion::VIS_FORCE_HINT)
+        {
+            if (region.vis_level == GRID_VIS_LEVEL_SHOW)
+                supporting_regions.push_back(region_id);
+            else if (region.vis_level == GRID_VIS_LEVEL_HIDE)
+                hidden_regions.push_back(region_id);
+        }
+        else if (region.visibility_force == GridRegion::VIS_FORCE_USER &&
+                 region.vis_level == GRID_VIS_LEVEL_SHOW)
+            fixed_shown_regions.push_back(region_id);
+        else if ((hint_phase == HintPhase::RUNNING || hint_phase == HintPhase::PAUSED) &&
+                 region.isHintable())
+            unclassified_regions.push_back(region_id);
+        region_id++;
+    }
+
+    std::ostringstream out;
+    out << "Hint: " << phase << '\n';
+    out << "Targets (" << clue_solves.size() << ")";
+    if (clue_solves.empty())
+        out << ": -\n";
+    else
+    {
+        out << ":\n";
+        for (const XYPos& pos : clue_solves)
+        {
+            const GridPlace cell = grid->get(pos);
+            out << "  (" << pos.x << ',' << pos.y << ") "
+                << (cell.bomb ? "bomb" : "clear") << ", "
+                << (cell.revealed ? "revealed" : "hidden") << '\n';
+        }
+    }
+
+    const auto output_regions = [&out](const char* label, const std::vector<unsigned>& regions)
+    {
+        out << label << " (" << regions.size() << "):";
+        if (regions.empty())
+            out << " -";
+        else
+            for (unsigned id : regions)
+                out << " R" << id;
+        out << '\n';
+    };
+    output_regions("Supporting regions", supporting_regions);
+    output_regions("Fixed shown regions", fixed_shown_regions);
+    output_regions("Hidden by hint", hidden_regions);
+    output_regions("Unclassified regions", unclassified_regions);
+    return out.str();
+}
 
 void GameState::pause_robots(bool restart_all)
 {
@@ -1485,8 +1619,12 @@ void GameState::advance(int steps)
 
 
 
-    if(clue_solves.empty())
+    if (clue_solves.empty())
+    {
         get_hint = false;
+        if (hint_phase != HintPhase::IDLE)
+            hint_phase = HintPhase::IDLE;
+    }
     steps_had += steps;
 
     if (get_hint)
@@ -1518,6 +1656,8 @@ void GameState::advance(int steps)
         std::shuffle(my_regions.begin()+mid, my_regions.end(), rnd_gen);
 
         get_hint = !my_regions.empty();
+        if (!get_hint)
+            hint_phase = HintPhase::COMPLETE;
 
         int hintMin = 0;
         while (hintMin < my_regions.size())
@@ -1638,6 +1778,8 @@ void GameState::advance(int steps)
         if (rep == 2)
         {
             clue_solves.clear();
+            get_hint = false;
+            hint_phase = HintPhase::IDLE;
         }
     }
 }
@@ -7735,42 +7877,19 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     {
         if (btn == 2 || ctrl_held || shift_held)
         {
-            for (GridRegion& r : grid->regions)
-                if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
-                {
-                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
-                    r.vis_level = GRID_VIS_LEVEL_SHOW;
-                }
-            get_hint = false;
+            clear_hint();
             return;
         }
         if (get_hint)
         {
-            get_hint = false;
+            pause_hint();
             return;
         }
-        if (april_1st)
+        if (start_hint() == HintStartResult::NO_HINTS_LEFT)
         {
-            if (!april_1st_hint_count)
-            {
-                display_april_1st_splash = true;
-                return;
-            }
-            april_1st_hint_count--;
+            display_april_1st_splash = true;
+            return;
         }
-        for (GridRegion& r : grid->regions)
-            if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
-                r.visibility_force = GridRegion::VIS_FORCE_NONE;
-
-        clue_solves.clear();
-        XYSet grid_squares = grid->get_squares();
-        FOR_XY_SET(pos, grid_squares)
-        {
-            if (grid->is_determinable_using_regions(pos, true))
-                clue_solves.insert(pos);
-        }
-        get_hint = true;
-
     }
     if ((pos - XYPos(button_size * 3, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
@@ -7779,7 +7898,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
     }
     if ((pos - XYPos(button_size * 4, button_size * 0)).inside(XYPos(button_size,button_size)))
     {
-        clue_solves.clear();
+        clear_hint();
         grid_regions_animation.clear();
         grid_regions_fade.clear();
         grid->clear_regions();
@@ -7794,7 +7913,6 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
         if (right_panel_mode == RIGHT_MENU_REGION)
             right_panel_mode = RIGHT_MENU_NONE;
 
-        get_hint = false;
     }
 
     if (prog_seen[PROG_LOCK_SPEED] && (pos - XYPos(button_size * 0, button_size * 1)).inside(XYPos(button_size * 3, button_size)))
@@ -8861,41 +8979,19 @@ void GameState::button_down(uint64_t key)
         {
             if (shift_held)
             {
-                for (GridRegion& r : grid->regions)
-                    if (r.visibility_force == GridRegion::VIS_FORCE_HINT)
-                    {
-                        r.visibility_force = GridRegion::VIS_FORCE_NONE;
-                        r.vis_level = GRID_VIS_LEVEL_SHOW;
-                    }
-                get_hint = false;
+                clear_hint();
                 return;
             }
             if (get_hint)
             {
-                get_hint = false;
+                pause_hint();
                 return;
             }
-            if (april_1st)
+            if (start_hint() == HintStartResult::NO_HINTS_LEFT)
             {
-                if (!april_1st_hint_count)
-                {
-                    display_april_1st_splash = true;
-                    return;
-                }
-                april_1st_hint_count--;
+                display_april_1st_splash = true;
+                return;
             }
-            for (GridRegion& r : grid->regions)
-                if (r.visibility_force == GridRegion::VIS_FORCE_HINT && r.vis_level == GRID_VIS_LEVEL_SHOW)
-                    r.visibility_force = GridRegion::VIS_FORCE_NONE;
-
-            clue_solves.clear();
-            XYSet grid_squares = grid->get_squares();
-            FOR_XY_SET(pos, grid_squares)
-            {
-                if (grid->is_determinable_using_regions(pos, true))
-                    clue_solves.insert(pos);
-            }
-            get_hint = true;
         }
         else if (key == key_codes[KEY_CODE_SKIP])
         {
@@ -8905,7 +9001,7 @@ void GameState::button_down(uint64_t key)
         }
         else if (key == key_codes[KEY_CODE_REFRESH])
         {
-            clue_solves.clear();
+            clear_hint();
             grid_regions_animation.clear();
             grid_regions_fade.clear();
             grid->clear_regions();
@@ -8919,7 +9015,6 @@ void GameState::button_down(uint64_t key)
             rule_gen_region[3] = NULL;
             if (right_panel_mode == RIGHT_MENU_REGION)
                 right_panel_mode = RIGHT_MENU_NONE;
-            get_hint = false;
             return;
         }
         else if (key == key_codes[KEY_CODE_FULL_SCREEN])
@@ -9373,6 +9468,11 @@ bool GameState::events()
                 if (key == SDLK_F12 && ctrl_held)
                 {
                     display_debug = !display_debug;
+                    break;
+                }
+                if (key == SDLK_d && ctrl_held)
+                {
+                    printf("%s", grid->debug_dump().c_str());
                     break;
                 }
                 if (shift_held)
@@ -10131,6 +10231,477 @@ void GameState::export_all_rules_to_clipboard()
     std::string title = "Rules (" + std::to_string(rlist->get_count()) + ")";
     send_to_clipboard(title, omap);
     delete omap;
+}
+
+static std::string debug_rule_comment(const std::string& comment)
+{
+    std::string result;
+    for (char c : comment)
+    {
+        if (c == '\n')
+            result += "\\n";
+        else if (c == '\r')
+            result += "\\r";
+        else if (c == '\t')
+            result += "\\t";
+        else
+            result += c;
+    }
+    return result;
+}
+
+std::string GameState::debug_rules_dump() const
+{
+    unsigned active_count = 0;
+    unsigned deleted_count = 0;
+    for (const GridRule& rule : rules[game_mode])
+    {
+        if (rule.deleted)
+            deleted_count++;
+        else
+            active_count++;
+    }
+
+    std::ostringstream out;
+    out << "Rules for game mode " << game_mode << " (" << active_count << " active";
+    if (deleted_count)
+        out << ", " << deleted_count << " deleted and omitted";
+    out << "):\n";
+
+    unsigned index = 0;
+    for (const GridRule& rule : rules[game_mode])
+    {
+        if (rule.deleted)
+            continue;
+
+        out << "Rule " << index++ << ": "
+            << (rule.paused ? "paused" : "active")
+            << ", priority=" << int(rule.priority)
+            << ", group=" << int(rule.group)
+            << ", processing=" << (rule.stale ? "complete" : "pending") << '\n';
+        out << rule.debug_description(2);
+
+        unsigned level_used = 0;
+        unsigned level_cleared = 0;
+        const auto used = grid->level_used_count.find(const_cast<GridRule*>(&rule));
+        if (used != grid->level_used_count.end())
+            level_used = used->second;
+        const auto cleared = grid->level_clear_count.find(const_cast<GridRule*>(&rule));
+        if (cleared != grid->level_clear_count.end())
+            level_cleared = cleared->second;
+
+        out << "  Statistics: level uses=" << level_used
+            << ", level cells revealed=" << level_cleared
+            << "; lifetime uses=" << rule.used_count
+            << ", lifetime cells revealed=" << rule.clear_count
+            << ", CPU=" << rule.cpu_time << " ms";
+        if (rule.clear_count)
+            out << ", CPU/revealed=" << std::fixed << std::setprecision(3)
+                << double(rule.cpu_time) / rule.clear_count << " ms";
+        out << '\n';
+        if (!rule.comment.empty())
+            out << "  Comment: " << debug_rule_comment(rule.comment) << '\n';
+    }
+    return out.str();
+}
+
+static void debug_rule_check_keys(SaveObjectMap* map, const std::set<std::string>& allowed,
+                                  const std::string& context)
+{
+    for (const auto& item : map->omap)
+        if (!allowed.count(item.first))
+            throw std::runtime_error(context + " has unknown field '" + item.first + "'");
+}
+
+static SaveObject* debug_rule_required_item(SaveObjectMap* map, const std::string& key,
+                                            const std::string& context)
+{
+    if (!map->has_key(key))
+        throw std::runtime_error(context + " requires '" + key + "'");
+    return map->get_item(key);
+}
+
+static int debug_rule_number(SaveObjectMap* map, const std::string& key, const std::string& context)
+{
+    SaveObject* item = debug_rule_required_item(map, key, context);
+    if (!item->is_num())
+        throw std::runtime_error(context + "." + key + " must be a number");
+    const int64_t value = item->get_num();
+    if (value < INT_MIN || value > INT_MAX)
+        throw std::runtime_error(context + "." + key + " is out of range");
+    return int(value);
+}
+
+static std::string debug_rule_string(SaveObjectMap* map, const std::string& key,
+                                     const std::string& context)
+{
+    SaveObject* item = debug_rule_required_item(map, key, context);
+    if (!item->is_string())
+        throw std::runtime_error(context + "." + key + " must be a string");
+    return item->get_string();
+}
+
+static RegionType::Type debug_rule_type_name(const std::string& name)
+{
+    static const std::map<std::string, RegionType::Type> names = {
+        {"any", RegionType::NONE}, {"none", RegionType::NONE},
+        {"equal", RegionType::EQUAL}, {"less", RegionType::LESS},
+        {"more", RegionType::MORE}, {"xor2", RegionType::XOR2},
+        {"xor3", RegionType::XOR3}, {"xor22", RegionType::XOR22},
+        {"xor222", RegionType::XOR222}, {"not-equal", RegionType::NOTEQUAL},
+        {"notequal", RegionType::NOTEQUAL}, {"parity", RegionType::PARITY},
+        {"xor1", RegionType::XOR1}, {"xor11", RegionType::XOR11},
+        {"prime", RegionType::PRIME}, {"triangle", RegionType::TRIANGLE},
+        {"power-of-two", RegionType::POW2}, {"pow2", RegionType::POW2},
+        {"fibonacci", RegionType::FIBONACCI}, {"box", RegionType::BOX},
+    };
+    const auto found = names.find(name);
+    if (found == names.end())
+        throw std::runtime_error("unknown region type '" + name + "'");
+    return found->second;
+}
+
+static RegionType debug_rule_region_type(SaveObjectMap* map, const std::string& context)
+{
+    const std::string name = debug_rule_string(map, "type", context);
+    RegionType result(debug_rule_type_name(name), 0);
+    if (map->has_key("value"))
+    {
+        result.value = debug_rule_number(map, "value", context);
+        if (result.value < -128 || result.value > 127)
+            throw std::runtime_error(context + ".value must be between -128 and 127");
+    }
+    if (map->has_key("var") && map->has_key("variables"))
+        throw std::runtime_error(context + " cannot contain both 'var' and 'variables'");
+    if (map->has_key("var"))
+    {
+        const int var = debug_rule_number(map, "var", context);
+        if (var < 0 || var > 31)
+            throw std::runtime_error(context + ".var must be between 0 and 31");
+        result.var = var;
+    }
+    if (map->has_key("variables"))
+    {
+        const std::string variables = debug_rule_string(map, "variables", context);
+        for (char variable : variables)
+        {
+            if (variable < 'a' || variable > 'e')
+                throw std::runtime_error(context + ".variables may only contain a through e");
+            result.var |= 1u << (variable - 'a');
+        }
+    }
+    return result;
+}
+
+static SaveObjectMap* debug_rule_map(SaveObject* item, const std::string& context)
+{
+    if (!item->is_map())
+        throw std::runtime_error(context + " must be an object");
+    return item->get_map();
+}
+
+static SaveObjectList* debug_rule_list(SaveObject* item, const std::string& context)
+{
+    if (!item->is_list())
+        throw std::runtime_error(context + " must be an array");
+    return item->get_list();
+}
+
+static uint16_t debug_rule_area_bitmap(SaveObjectMap* map, const std::string& key,
+                                       const std::string& context, const GridRule& rule,
+                                       bool required)
+{
+    if (!map->has_key(key))
+    {
+        if (required)
+            throw std::runtime_error(context + " requires '" + key + "'");
+        return 0;
+    }
+    SaveObjectList* areas = debug_rule_list(map->get_item(key), context + "." + key);
+    if (required && !areas->get_count())
+        throw std::runtime_error(context + "." + key + " must not be empty");
+    uint16_t bitmap = 0;
+    for (unsigned i = 0; i < areas->get_count(); i++)
+    {
+        SaveObject* item = areas->get_item(i);
+        if (!item->is_num())
+            throw std::runtime_error(context + "." + key + " entries must be area numbers");
+        const int64_t area = item->get_num();
+        if (area < 1 || area > 15 || !(rule.valid_area_mask() & (1u << area)))
+            throw std::runtime_error(context + "." + key + " contains invalid area " +
+                                     std::to_string(area));
+        bitmap |= 1u << area;
+    }
+    return bitmap;
+}
+
+static uint16_t debug_rule_region_bitmap(SaveObjectMap* map, const std::string& context,
+                                         const GridRule& rule)
+{
+    SaveObjectList* regions = debug_rule_list(debug_rule_required_item(map, "regions", context),
+                                              context + ".regions");
+    if (!regions->get_count())
+        throw std::runtime_error(context + ".regions must not be empty");
+    const unsigned conceptual_count = rule.region_count - rule.if_reg_count;
+    uint16_t bitmap = 0;
+    for (unsigned i = 0; i < regions->get_count(); i++)
+    {
+        SaveObject* item = regions->get_item(i);
+        if (!item->is_num())
+            throw std::runtime_error(context + ".regions entries must be region numbers");
+        const int64_t region = item->get_num();
+        if (region < 1 || region > conceptual_count)
+            throw std::runtime_error(context + ".regions contains invalid region " +
+                                     std::to_string(region));
+        const unsigned slot = region <= rule.if_reg_count
+            ? (region - 1) * 2
+            : rule.if_reg_count * 2 + region - rule.if_reg_count - 1;
+        bitmap |= 1u << slot;
+    }
+    return bitmap;
+}
+
+static const char* debug_rule_legality_name(GridRule::IsLogicalRep result)
+{
+    switch (result)
+    {
+    case GridRule::OK: return "valid";
+    case GridRule::ILLOGICAL: return "illogical";
+    case GridRule::LOSES_DATA: return "valid but loses information";
+    case GridRule::IMPOSSIBLE: return "impossible";
+    case GridRule::USELESS: return "useless";
+    case GridRule::UNBOUNDED: return "unbounded";
+    case GridRule::LIMIT: return "over the complexity limit";
+    }
+    return "invalid";
+}
+
+std::string GameState::add_rule_from_json(const std::string& json)
+{
+    std::istringstream input(json);
+    std::unique_ptr<SaveObject> root(SaveObject::load(input));
+    input >> std::ws;
+    if (input.peek() != std::char_traits<char>::eof())
+        throw std::runtime_error("unexpected data after the JSON rule");
+    SaveObjectMap* object = debug_rule_map(root.get(), "rule");
+    debug_rule_check_keys(object,
+        {"inputs", "constraints", "action", "priority", "group", "paused", "comment"},
+        "rule");
+
+    GridRule rule;
+    SaveObjectList* inputs = debug_rule_list(debug_rule_required_item(object, "inputs", "rule"),
+                                             "rule.inputs");
+    if (!inputs->get_count())
+        throw std::runtime_error("rule.inputs must not be empty");
+
+    bool seen_regular = false;
+    bool seen_non_negated = false;
+    for (unsigned i = 0; i < inputs->get_count(); i++)
+    {
+        const std::string context = "rule.inputs[" + std::to_string(i) + "]";
+        SaveObjectMap* region = debug_rule_map(inputs->get_item(i), context);
+        const bool conditional = region->has_key("if") || region->has_key("then");
+        if (conditional)
+        {
+            debug_rule_check_keys(region, {"if", "then"}, context);
+            if (!region->has_key("if") || !region->has_key("then"))
+                throw std::runtime_error(context + " requires both 'if' and 'then'");
+            if (seen_regular)
+                throw std::runtime_error("conditional inputs must precede ordinary inputs");
+            if (rule.region_count + 2 > 4 || rule.if_reg_count >= 2)
+                throw std::runtime_error("a rule may have at most four input dimensions");
+            SaveObjectMap* if_type = debug_rule_map(region->get_item("if"), context + ".if");
+            SaveObjectMap* then_type = debug_rule_map(region->get_item("then"), context + ".then");
+            debug_rule_check_keys(if_type, {"type", "value", "var", "variables"}, context + ".if");
+            debug_rule_check_keys(then_type, {"type", "value", "var", "variables"}, context + ".then");
+            rule.region_type[rule.region_count++] = debug_rule_region_type(if_type, context + ".if");
+            rule.region_type[rule.region_count++] = debug_rule_region_type(then_type, context + ".then");
+            rule.if_reg_count++;
+        }
+        else
+        {
+            seen_regular = true;
+            debug_rule_check_keys(region, {"type", "value", "var", "variables", "negated"}, context);
+            if (rule.region_count >= 4)
+                throw std::runtime_error("a rule may have at most four input dimensions");
+            bool negated = false;
+            if (region->has_key("negated"))
+            {
+                const int value = debug_rule_number(region, "negated", context);
+                if (value != 0 && value != 1)
+                    throw std::runtime_error(context + ".negated must be a boolean");
+                negated = value;
+            }
+            if (negated && seen_non_negated)
+                throw std::runtime_error("negated inputs must precede non-negated inputs");
+            if (!negated)
+                seen_non_negated = true;
+            if (negated)
+            {
+                if (rule.if_reg_count)
+                    throw std::runtime_error("conditional and negated inputs cannot be combined");
+                if (rule.neg_reg_count >= 2)
+                    throw std::runtime_error("a rule may have at most two negated inputs");
+                rule.neg_reg_count++;
+            }
+            rule.region_type[rule.region_count++] = debug_rule_region_type(region, context);
+        }
+    }
+    if (rule.region_count + rule.neg_reg_count > 4)
+        throw std::runtime_error("a rule may have at most four effective input dimensions");
+
+    if (object->has_key("constraints"))
+    {
+        SaveObjectList* constraints = debug_rule_list(object->get_item("constraints"), "rule.constraints");
+        for (unsigned i = 0; i < constraints->get_count(); i++)
+        {
+            const std::string context = "rule.constraints[" + std::to_string(i) + "]";
+            SaveObjectMap* constraint = debug_rule_map(constraints->get_item(i), context);
+            debug_rule_check_keys(constraint, {"area", "type"}, context);
+            const int area = debug_rule_number(constraint, "area", context);
+            if (area < 1 || area > 15 || !(rule.valid_area_mask() & (1u << area)))
+                throw std::runtime_error(context + ".area is not valid for these inputs");
+            if (rule.square_counts[area].type != RegionType::NONE)
+                throw std::runtime_error("area " + std::to_string(area) + " has more than one constraint");
+            SaveObjectMap* type = debug_rule_map(debug_rule_required_item(constraint, "type", context),
+                                                 context + ".type");
+            debug_rule_check_keys(type, {"type", "value", "var", "variables"}, context + ".type");
+            const RegionType constraint_type = debug_rule_region_type(type, context + ".type");
+            if (constraint_type.type == RegionType::NONE)
+                throw std::runtime_error(context + ".type cannot be 'any' or 'none'");
+            rule.square_counts[area] = constraint_type;
+        }
+    }
+
+    SaveObjectMap* action = debug_rule_map(debug_rule_required_item(object, "action", "rule"),
+                                           "rule.action");
+    const std::string action_name = debug_rule_string(action, "type", "rule.action");
+    if (action_name == "clear" || action_name == "bomb")
+    {
+        debug_rule_check_keys(action, {"type", "areas"}, "rule.action");
+        rule.apply_region_type = RegionType(RegionType::SET, action_name == "bomb");
+        rule.apply_region_bitmap = debug_rule_area_bitmap(action, "areas", "rule.action", rule, true);
+    }
+    else if (action_name == "show" || action_name == "hide" || action_name == "trash")
+    {
+        debug_rule_check_keys(action, {"type", "regions"}, "rule.action");
+        const int visibility = action_name == "show" ? GRID_VIS_LEVEL_SHOW
+                             : action_name == "hide" ? GRID_VIS_LEVEL_HIDE
+                                                     : GRID_VIS_LEVEL_BIN;
+        rule.apply_region_type = RegionType(RegionType::VISIBILITY, visibility);
+        rule.apply_region_bitmap = debug_rule_region_bitmap(action, "rule.action", rule);
+    }
+    else
+    {
+        debug_rule_check_keys(action,
+            {"type", "value", "var", "variables", "areas", "negative_areas", "if_type"},
+            "rule.action");
+        rule.apply_region_type = debug_rule_region_type(action, "rule.action");
+        if (rule.apply_region_type.type == RegionType::NONE)
+            throw std::runtime_error("rule.action.type cannot be 'any' or 'none'");
+        rule.apply_region_bitmap = debug_rule_area_bitmap(action, "areas", "rule.action", rule, true);
+        rule.neg_apply_region_bitmap = debug_rule_area_bitmap(action, "negative_areas", "rule.action", rule, false);
+        if (action->has_key("if_type"))
+        {
+            SaveObjectMap* if_type = debug_rule_map(action->get_item("if_type"), "rule.action.if_type");
+            debug_rule_check_keys(if_type, {"type", "value", "var", "variables"},
+                                  "rule.action.if_type");
+            rule.apply_if_region_type = debug_rule_region_type(if_type, "rule.action.if_type");
+            if (rule.apply_if_region_type.type == RegionType::NONE)
+                throw std::runtime_error("rule.action.if_type.type cannot be 'any' or 'none'");
+            if (!rule.neg_apply_region_bitmap)
+                throw std::runtime_error("an implication action requires non-empty 'negative_areas'");
+        }
+        else if (rule.neg_apply_region_bitmap & ~rule.apply_region_bitmap)
+            throw std::runtime_error("rule.action.negative_areas must be a subset of rule.action.areas");
+    }
+
+    if (object->has_key("priority"))
+    {
+        const int priority = debug_rule_number(object, "priority", "rule");
+        if (priority < -2 || priority > 2)
+            throw std::runtime_error("rule.priority must be between -2 and 2");
+        rule.priority = priority;
+    }
+    if (object->has_key("group"))
+    {
+        const int group = debug_rule_number(object, "group", "rule");
+        if (group < 0 || group > 7)
+            throw std::runtime_error("rule.group must be between 0 and 7");
+        rule.group = group;
+    }
+    if (object->has_key("paused"))
+    {
+        const int paused = debug_rule_number(object, "paused", "rule");
+        if (paused != 0 && paused != 1)
+            throw std::runtime_error("rule.paused must be a boolean");
+        rule.paused = paused;
+    }
+    if (object->has_key("comment"))
+    {
+        rule.comment = debug_rule_string(object, "comment", "rule");
+        if (rule.comment.size() > 4096)
+            throw std::runtime_error("rule.comment is too long");
+    }
+
+    GridRule why;
+    int variables[5] = {};
+    const GridRule::IsLogicalRep legality = rule.is_legal(why, variables);
+    if (legality != GridRule::OK && legality != GridRule::LOSES_DATA)
+        throw std::runtime_error(std::string("rule is ") + debug_rule_legality_name(legality));
+    if (!rule_is_permitted(rule, game_mode, false))
+        throw std::runtime_error("rule is not permitted in game mode " + std::to_string(game_mode));
+
+    std::vector<int> order;
+    for (unsigned i = 0; i < rule.region_count; i++)
+        order.push_back(i);
+    GridRule* duplicate = NULL;
+    do
+    {
+        if (rule.neg_reg_count == 1 && order[0])
+            continue;
+        if (rule.if_reg_count == 1 && (order[0] != 0 || order[1] != 1))
+            continue;
+        if (rule.if_reg_count == 2 &&
+            (order[0] != 0 || order[1] != 1 || order[2] != 2 || order[3] != 3))
+            continue;
+        GridRule permuted = rule.permute(order);
+        for (GridRule& existing : rules[game_mode])
+            if (!existing.deleted && existing.covers(permuted))
+            {
+                duplicate = &existing;
+                break;
+            }
+    }
+    while (!duplicate && std::next_permutation(order.begin(), order.end()));
+
+    if (duplicate)
+    {
+        unsigned duplicate_index = 0;
+        for (GridRule& existing : rules[game_mode])
+        {
+            if (existing.deleted)
+                continue;
+            if (&existing == duplicate)
+                break;
+            duplicate_index++;
+        }
+        throw std::runtime_error("rule is already covered by Rule " + std::to_string(duplicate_index));
+    }
+
+    unsigned new_index = 0;
+    for (const GridRule& existing : rules[game_mode])
+        if (!existing.deleted)
+            new_index++;
+    pause_robots();
+    rules[game_mode].push_back(rule);
+
+    std::ostringstream response;
+    response << "Added Rule " << new_index;
+    if (legality == GridRule::LOSES_DATA)
+        response << " (warning: loses information)";
+    response << ":\n" << rules[game_mode].back().debug_description(2);
+    return response.str();
 }
 
 // Encode a single UTF-32 code point into UTF-8

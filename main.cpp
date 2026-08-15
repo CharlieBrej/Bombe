@@ -7,10 +7,15 @@
 #include <assert.h>
 #include <iostream>
 #include <fstream>
+#include <memory>
 
 #include "Grid.h"
 #include "GameState.h"
 #include "Compress.h"
+
+#ifdef ENABLE_CONTROL_SOCKET
+#include "ControlSocket.h"
+#endif
 
 #ifdef _WIN32
     #include <filesystem>
@@ -162,6 +167,18 @@ void mainloop()
 
         game_state = new GameState(str, json);
     }
+#ifdef ENABLE_CONTROL_SOCKET
+    std::unique_ptr<ControlSocket> control_socket;
+    try
+    {
+        control_socket = std::make_unique<ControlSocket>(*game_state);
+        std::cerr << "Bombe control socket: " << control_socket->path() << "\n";
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "Bombe control socket disabled: " << error.what() << "\n";
+    }
+#endif
 #ifdef STEAM
     SteamGameManager steam_manager;
     game_state->steam_username = SteamFriends()->GetPersonaName();
@@ -187,6 +204,10 @@ void mainloop()
     unsigned oldtime = SDL_GetTicks();
 	while(true)
 	{
+#ifdef ENABLE_CONTROL_SOCKET
+        if (control_socket)
+            control_socket->poll();
+#endif
 #ifdef STEAM
         if (game_state->pirate)
             steam_manager.get_new_ticket();
@@ -239,6 +260,9 @@ void mainloop()
         game_state->advance(diff);
         oldtime = newtime;
 	}
+#ifdef ENABLE_CONTROL_SOCKET
+    control_socket.reset();
+#endif
     SDL_HideWindow(game_state->sdl_window);
     {
         SaveObject* omap = game_state->save();

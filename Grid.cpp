@@ -85,7 +85,7 @@ static z3::expr_vector make_count_vector(
 }
 
 
-std::string RegionType::val_as_str(int offset)
+std::string RegionType::val_as_str(int offset) const
 {
     std::string s;
     int dig = 0;
@@ -642,7 +642,9 @@ GridRule GridRule::permute(std::vector<int>& p)
 {
     GridRule r;
     r.region_count = region_count;
+    r.if_reg_count = if_reg_count;
     r.apply_region_type = apply_region_type;
+    r.apply_if_region_type = apply_if_region_type;
     r.neg_reg_count = neg_reg_count;
     
     for (int i = 0; i < region_count; i++)
@@ -695,6 +697,8 @@ bool GridRule::covers(GridRule& other)
         return false;
     if (neg_reg_count != other.neg_reg_count)
         return false;
+    if (if_reg_count != other.if_reg_count)
+        return false;
     uint8_t mapper[32] = {};
 
     for (int i = 0; i < region_count; i++)
@@ -707,12 +711,23 @@ bool GridRule::covers(GridRule& other)
             continue;
         if (!square_counts[i].mapper_based_equal(other.square_counts[i], mapper))
             return false;
-        if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
-            return false;
-        if (((neg_apply_region_bitmap >> i) & 1) != ((other.neg_apply_region_bitmap >> i) & 1))
-            return false;
+        if (apply_region_type.type != RegionType::VISIBILITY)
+        {
+            if (((apply_region_bitmap >> i) & 1) != ((other.apply_region_bitmap >> i) & 1))
+                return false;
+            if (((neg_apply_region_bitmap >> i) & 1) != ((other.neg_apply_region_bitmap >> i) & 1))
+                return false;
+        }
     }
+    if (apply_region_type.type == RegionType::VISIBILITY &&
+        (apply_region_bitmap != other.apply_region_bitmap ||
+         neg_apply_region_bitmap != other.neg_apply_region_bitmap))
+        return false;
     if (!apply_region_type.mapper_based_equal(other.apply_region_type, mapper))
+        return false;
+    if ((apply_if_region_type.type != RegionType::NONE ||
+         other.apply_if_region_type.type != RegionType::NONE) &&
+        !apply_if_region_type.mapper_based_equal(other.apply_if_region_type, mapper))
         return false;
     for (int i = 1; i < 32; i++)
     {
@@ -1733,7 +1748,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             {
                 if(square_counts[i].max())
                     has = true;
-                vars |= 1 << square_counts[i].var;
+                vars |= uint32_t(1) << square_counts[i].var;
             }
         if (!has)
         {
@@ -2108,19 +2123,21 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         uint64_t seen = 0;
         uint64_t want = 0;
         for (int i = 0; i < region_count; i++)
-            seen |= 1 << region_type[i].var;
+            seen |= uint64_t(1) << region_type[i].var;
         unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
         for (int i = 1; i < 16; i++)
         {
             if (!((mask >> i) & 1))
                 continue;
             if (square_counts[i].type == RegionType::EQUAL)
-                seen |= 1 << square_counts[i].var;
+                seen |= uint64_t(1) << square_counts[i].var;
             else
-                want |= 1 << square_counts[i].var;
+                want |= uint64_t(1) << square_counts[i].var;
         }
         if (apply_region_type.type != RegionType::VISIBILITY)
-            want |= 1 << apply_region_type.var;
+            want |= uint64_t(1) << apply_region_type.var;
+        if (apply_if_region_type.type != RegionType::NONE)
+            want |= uint64_t(1) << apply_if_region_type.var;
         want &= ~1;
         seen &= ~1;
         if (want)
@@ -2138,7 +2155,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                                 int x = i | j;
                                 if (!((seen >> x) & 1))
                                 {
-                                    seen |= 1 << x;
+                                    seen |= uint64_t(1) << x;
                                     i = 0;
                                     break;
                                 }
@@ -2147,7 +2164,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                             {
                                 if (((seen >> (j & ~i)) & 1) == 0)
                                 {
-                                    seen |= 1 << (j & ~i);
+                                    seen |= uint64_t(1) << (j & ~i);
                                     if (i > (j & ~i) - 1)
                                         i = 0;
                                     break;
@@ -2158,7 +2175,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                                 int x = i | j;
                                 if (!((seen >> x) & 1))
                                 {
-                                    seen |= 1 << x;
+                                    seen |= uint64_t(1) << x;
                                     i = 0;
                                     break;
                                 }
@@ -2188,7 +2205,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
                                     int x = (k ^ cov);
                                     if (!((seen >> x) & 1))
                                     {
-                                        seen |= 1 << x;
+                                        seen |= uint64_t(1) << x;
                                         i = 0;
                                         break;
                                     }
@@ -2212,7 +2229,7 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
                                         if (!((seen >> c) & 1))
                                         {
-                                            seen |= 1 << c;
+                                            seen |= uint64_t(1) << c;
                                             i = 0;
                                             j = 32;
                                             break;
@@ -2449,6 +2466,355 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
 
 Grid::Grid()
 {
+}
+
+static const char* debug_region_type_name(RegionType::Type type)
+{
+    switch (type)
+    {
+    case RegionType::NONE:       return "any";
+    case RegionType::EQUAL:      return "equal";
+    case RegionType::LESS:       return "less";
+    case RegionType::MORE:       return "more";
+    case RegionType::XOR2:       return "xor2";
+    case RegionType::XOR3:       return "xor3";
+    case RegionType::XOR22:      return "xor22";
+    case RegionType::XOR222:     return "xor222";
+    case RegionType::NOTEQUAL:   return "not-equal";
+    case RegionType::PARITY:     return "parity";
+    case RegionType::XOR1:       return "xor1";
+    case RegionType::XOR11:      return "xor11";
+    case RegionType::PRIME:      return "prime";
+    case RegionType::TRIANGLE:   return "triangle";
+    case RegionType::POW2:       return "power-of-two";
+    case RegionType::FIBONACCI:  return "fibonacci";
+    case RegionType::BOX:        return "box";
+    case RegionType::SET:        return "set";
+    case RegionType::VISIBILITY: return "visibility";
+    }
+    return "unknown";
+}
+
+static std::string debug_region_type(const RegionType& type)
+{
+    std::ostringstream out;
+    out << debug_region_type_name(type.type);
+    if (type.type != RegionType::NONE || type.value || type.var)
+        out << '(' << type.val_as_str() << ')';
+    return out.str();
+}
+
+static std::string debug_positions(const XYSet& positions)
+{
+    std::ostringstream out;
+    bool first = true;
+    FOR_XY_SET(pos, positions)
+    {
+        if (!first)
+            out << ' ';
+        out << '(' << pos.x << ',' << pos.y << ')';
+        first = false;
+    }
+    return first ? "-" : out.str();
+}
+
+static std::array<std::string, 4> debug_rule_dimensions(const GridRule& rule)
+{
+    std::array<std::string, 4> names;
+    if (rule.if_reg_count)
+    {
+        unsigned dimension = 0;
+        unsigned region = 1;
+        for (unsigned i = 0; i < rule.if_reg_count; i++, region++)
+        {
+            names[dimension++] = "R" + std::to_string(region) + ".if";
+            names[dimension++] = "R" + std::to_string(region) + ".then";
+        }
+        while (dimension < rule.region_count)
+            names[dimension++] = "R" + std::to_string(region++);
+    }
+    else
+    {
+        for (unsigned i = 0; i < rule.region_count; i++)
+            names[i] = "R" + std::to_string(i + 1);
+        if (rule.neg_reg_count == 1)
+            names[3] = "R1.negated";
+        else if (rule.neg_reg_count == 2)
+        {
+            names[2] = "R1.negated";
+            names[3] = "R2.negated";
+        }
+    }
+    return names;
+}
+
+static unsigned debug_rule_dimension_mask(const GridRule& rule)
+{
+    unsigned mask = (1u << rule.region_count) - 1;
+    if (!rule.if_reg_count && rule.neg_reg_count == 1)
+        mask |= 1u << 3;
+    if (!rule.if_reg_count && rule.neg_reg_count == 2)
+        mask |= (1u << 2) | (1u << 3);
+    return mask;
+}
+
+static std::string debug_rule_area(const GridRule& rule, unsigned area)
+{
+    const std::array<std::string, 4> names = debug_rule_dimensions(rule);
+    const unsigned dimension_mask = debug_rule_dimension_mask(rule);
+    std::ostringstream out;
+    bool first = true;
+    for (unsigned bit = 0; bit < names.size(); bit++)
+    {
+        if (!(dimension_mask & (1u << bit)) || names[bit].empty())
+            continue;
+        if (!first)
+            out << " & ";
+        if (!(area & (1u << bit)))
+            out << "not ";
+        out << names[bit];
+        first = false;
+    }
+    return first ? "outside all inputs" : out.str();
+}
+
+static std::string debug_rule_areas(const GridRule& rule, uint16_t bitmap)
+{
+    std::ostringstream out;
+    bool first = true;
+    const unsigned valid = get_valid_cells_mask(rule.region_count, rule.neg_reg_count);
+    for (unsigned area = 1; area < 16; area++)
+    {
+        if (!(valid & (1u << area)) || !(bitmap & (1u << area)))
+            continue;
+        if (!first)
+            out << "; ";
+        out << "area " << area << " [" << debug_rule_area(rule, area) << ']';
+        first = false;
+    }
+    return first ? "-" : out.str();
+}
+
+unsigned GridRule::valid_area_mask() const
+{
+    return get_valid_cells_mask(region_count, neg_reg_count);
+}
+
+static unsigned debug_rule_region_for_slot(const GridRule& rule, unsigned slot)
+{
+    if (slot < rule.if_reg_count * 2)
+        return slot / 2 + 1;
+    return rule.if_reg_count + slot - rule.if_reg_count * 2 + 1;
+}
+
+std::string GridRule::debug_description(unsigned indent) const
+{
+    const std::string pad(indent, ' ');
+    const std::string detail_pad(indent + 2, ' ');
+    std::ostringstream out;
+
+    out << pad << "Inputs:\n";
+    unsigned type_index = 0;
+    unsigned region_index = 1;
+    for (unsigned i = 0; i < if_reg_count; i++, region_index++)
+    {
+        out << detail_pad << 'R' << region_index << ": if "
+            << debug_region_type(region_type[type_index]) << " then "
+            << debug_region_type(region_type[type_index + 1]) << '\n';
+        type_index += 2;
+    }
+    while (type_index < region_count)
+    {
+        out << detail_pad << 'R' << region_index << ": "
+            << debug_region_type(region_type[type_index]);
+        const unsigned regular_index = type_index - if_reg_count * 2;
+        if (regular_index < neg_reg_count)
+            out << " (has a negated subset)";
+        out << '\n';
+        type_index++;
+        region_index++;
+    }
+
+    bool have_constraints = false;
+    const unsigned valid = get_valid_cells_mask(region_count, neg_reg_count);
+    for (unsigned area = 1; area < 16; area++)
+        have_constraints |= (valid & (1u << area)) && square_counts[area].type != RegionType::NONE;
+    out << pad << "Area constraints:";
+    if (!have_constraints)
+        out << " none\n";
+    else
+    {
+        out << '\n';
+        for (unsigned area = 1; area < 16; area++)
+        {
+            if (!(valid & (1u << area)) || square_counts[area].type == RegionType::NONE)
+                continue;
+            out << detail_pad << "area " << area << " [" << debug_rule_area(*this, area) << "]: cell count "
+                << debug_region_type(square_counts[area]) << '\n';
+        }
+    }
+
+    out << pad << "Action: ";
+    if (apply_region_type.type == RegionType::VISIBILITY)
+    {
+        static const char* visibility_names[] = {"show", "hide", "trash"};
+        if (apply_region_type.value >= 0 && apply_region_type.value < 3)
+            out << visibility_names[apply_region_type.value];
+        else
+            out << debug_region_type(apply_region_type);
+        out << " input region";
+        std::set<unsigned> targets;
+        for (unsigned slot = 0; slot < region_count; slot++)
+            if (apply_region_bitmap & (1u << slot))
+                targets.insert(debug_rule_region_for_slot(*this, slot));
+        if (targets.size() != 1)
+            out << 's';
+        out << ' ';
+        bool first = true;
+        for (unsigned target : targets)
+        {
+            if (!first)
+                out << ", ";
+            out << 'R' << target;
+            first = false;
+        }
+        if (targets.empty())
+            out << '-';
+        out << '\n';
+    }
+    else if (apply_region_type.type == RegionType::SET)
+    {
+        out << (apply_region_type.value ? "reveal as bomb in " : "reveal as clear in ")
+            << debug_rule_areas(*this, apply_region_bitmap) << '\n';
+    }
+    else if (apply_if_region_type.type != RegionType::NONE)
+    {
+        out << "create implication region: if " << debug_region_type(apply_if_region_type)
+            << " over " << debug_rule_areas(*this, neg_apply_region_bitmap)
+            << ", then " << debug_region_type(apply_region_type)
+            << " over " << debug_rule_areas(*this, apply_region_bitmap) << '\n';
+    }
+    else
+    {
+        out << "create " << debug_region_type(apply_region_type) << " region over "
+            << debug_rule_areas(*this, apply_region_bitmap);
+        if (neg_apply_region_bitmap)
+            out << "; negated cells " << debug_rule_areas(*this, neg_apply_region_bitmap);
+        out << '\n';
+    }
+    return out.str();
+}
+
+std::string Grid::debug_dump() const
+{
+    std::ostringstream out;
+    out << "Board: " << const_cast<Grid*>(this)->text_desciption() << '\n';
+    out << "Cells (x,y):\n";
+    for (const auto& entry : vals)
+    {
+        const XYPos& pos = entry.first;
+        const GridPlace& cell = entry.second;
+        out << "  (" << pos.x << ',' << pos.y << ") "
+            << (cell.bomb ? "bomb" : "clear") << ", "
+            << (cell.revealed ? "revealed" : "hidden");
+        if (cell.negated)
+            out << ", negated";
+        if (cell.clue.if_type.type != RegionType::NONE)
+            out << ", if " << debug_region_type(cell.clue.if_type)
+                << " then " << debug_region_type(cell.clue.type);
+        else if (cell.clue.type.type != RegionType::NONE)
+            out << ", clue " << debug_region_type(cell.clue.type);
+        out << '\n';
+    }
+
+    if (!merged.empty())
+    {
+        out << "Merged cells:\n";
+        for (const auto& entry : merged)
+            out << "  (" << entry.first.x << ',' << entry.first.y << ") size "
+                << entry.second.x << 'x' << entry.second.y << '\n';
+    }
+    if (!edges.empty())
+    {
+        out << "Edge clues:\n";
+        for (const auto& entry : edges)
+            out << "  (" << entry.first.x << ',' << entry.first.y << ") "
+                << debug_region_type(entry.second.type) << '\n';
+    }
+
+    std::map<const GridRegion*, unsigned> region_ids;
+    unsigned next_id = 0;
+    for (const GridRegion& region : regions)
+        region_ids[&region] = next_id++;
+
+    unsigned unprocessed_regions = 0;
+    for (const GridRegion& region : regions)
+        if (!region.stale)
+            unprocessed_regions++;
+    const bool regions_pending = wants_base_regions || unprocessed_regions || !regions_to_add.empty();
+    out << "Regions still to be revealed: " << (regions_pending ? "yes" : "no");
+    if (regions_pending)
+    {
+        out << " (";
+        bool have_detail = false;
+        if (wants_base_regions)
+        {
+            out << "base regions not generated";
+            have_detail = true;
+        }
+        if (unprocessed_regions)
+        {
+            if (have_detail)
+                out << ", ";
+            out << unprocessed_regions << " awaiting processing";
+            have_detail = true;
+        }
+        if (!regions_to_add.empty())
+        {
+            if (have_detail)
+                out << ", ";
+            out << regions_to_add.size() << " queued";
+        }
+        out << ')';
+    }
+    out << '\n';
+
+    out << "Regions (" << regions.size() << "):\n";
+    for (const GridRegion& region : regions)
+    {
+        out << "  R" << region_ids[&region] << ": ";
+        if (region.if_type.type != RegionType::NONE)
+            out << "if " << debug_region_type(region.if_type) << " then ";
+        out << debug_region_type(region.type)
+            << ", visibility="
+            << (region.vis_level == GRID_VIS_LEVEL_SHOW ? "shown" :
+                region.vis_level == GRID_VIS_LEVEL_HIDE ? "hidden" : "trash");
+        if (region.stale)
+            out << ", stale";
+        if (region.deleted)
+            out << ", deleted";
+        out << "\n    cells: " << debug_positions(region.elements)
+            << "\n    negative cells: " << debug_positions(region.elements_neg);
+        bool has_parents = false;
+        for (const GridRegion* parent : region.gen_cause.regions)
+            has_parents |= parent != NULL;
+        if (has_parents)
+        {
+            out << "\n    derived from:";
+            for (const GridRegion* parent : region.gen_cause.regions)
+            {
+                if (!parent)
+                    continue;
+                const auto found = region_ids.find(parent);
+                if (found == region_ids.end())
+                    out << " [old region]";
+                else
+                    out << " R" << found->second;
+            }
+        }
+        out << '\n';
+    }
+    return out.str();
 }
 
 void Grid::from_string(std::string s)

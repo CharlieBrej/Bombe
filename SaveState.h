@@ -40,7 +40,10 @@ class SaveObjectNumber :
 public:
     int64_t number;
     SaveObjectNumber(int64_t number_):number(number_){};
-    SaveObjectNumber(std::istream& stream) {stream >> number;};
+    SaveObjectNumber(std::istream& stream) : number(0) {
+        if (!(stream >> number))
+            throw std::runtime_error("Invalid number");
+    };
     int64_t get_num(){return number;};
     void save(std::ostream& f){f << number;};
     void pretty_print(std::ostream& f, int indent = 0){save(f);};

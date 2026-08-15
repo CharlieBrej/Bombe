@@ -345,6 +345,23 @@ public:
     bool get_hint = false;
     std::set<XYPos> clue_solves;
 
+    enum class HintPhase
+    {
+        IDLE,
+        RUNNING,
+        PAUSED,
+        COMPLETE,
+    };
+    enum class HintStartResult
+    {
+        STARTED,
+        ALREADY_RUNNING,
+        BOARD_BUSY,
+        NO_TARGETS,
+        NO_HINTS_LEFT,
+    };
+    HintPhase hint_phase = HintPhase::IDLE;
+
     ServerResp scores_from_server;
 
     class LevelStatus
@@ -508,6 +525,12 @@ public:
     GameState(std::string& lost_data, bool json);
     SaveObject* save(bool lite = false);
     void save(std::ostream& outfile, bool lite = false);
+    std::string debug_rules_dump() const;
+    std::string add_rule_from_json(const std::string& json);
+    HintStartResult start_hint();
+    void pause_hint();
+    void clear_hint();
+    std::string debug_hint_dump() const;
     ~GameState();
     void reset_levels();
     bool level_is_accessible(int mode, int group_index, int  set);

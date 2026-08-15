@@ -26,6 +26,10 @@ endif
 
 bin_PROGRAMS = Bombe GridGenerator BombeServer
 
+if CONTROL_SOCKET
+bin_PROGRAMS += BombeControl
+endif
+
 Bombe_SOURCES =     main.cpp \
                     Grid.cpp Grid.h \
                     Misc.cpp Misc.h \
@@ -36,9 +40,18 @@ Bombe_SOURCES =     main.cpp \
                     ImgClipBoard.cpp ImgClipBoard.h \
                     $(EXTRA_SRC)
 
+if CONTROL_SOCKET
+Bombe_SOURCES += ControlSocket.cpp ControlSocket.h
+endif
+
 Bombe_CXXFLAGS = @CXXFLAGS@ @SDL2_CFLAGS@ @SDL2_image_CFLAGS@ @SDL2_mixer_CFLAGS@ @SDL2_net_CFLAGS@ @SDL2_ttf_CFLAGS@ @ZSTD_CFLAGS@ @Z3_CFLAGS@ -I. $(STEAM_FLAGS) $(EXTRA_FLAGS)
 Bombe_LDADD=@SDL2_LIBS@ @SDL2_image_LIBS@ @SDL2_mixer_LIBS@ @SDL2_net_LIBS@ @SDL2_ttf_LIBS@ @ZSTD_LIBS@ @Z3_LIBS@ $(STEAM_LDADD) $(EXTRA_LDADD) -lpthread
 Bombe_LDFLAGS=-L. $(EXTRA_LD_FLAGS)
+
+if CONTROL_SOCKET
+BombeControl_SOURCES = BombeControl.cpp
+BombeControl_CXXFLAGS = @CXXFLAGS@
+endif
 
 GridGenerator_SOURCES =     grid_generator.cpp \
                     Grid.cpp Grid.h \
