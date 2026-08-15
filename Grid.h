@@ -186,6 +186,8 @@ class GridRegionCause
 {
 public:
     GridRule* rule = NULL;
+    // Physical inputs are packed here. An
+    // IF/THEN pair refers to one region.
     GridRegion* regions[4] = {};
     GridRegionCause(){};
     GridRegionCause(GridRule* rule_, GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
@@ -345,6 +347,13 @@ public:
     void add_region(RegionType type, bool neg = false);
     void resort_region();
     RegionType get_region_sorted(int index);
+    // Rule slots include separate IF and
+    // THEN dimensions. Input regions do not.
+    int input_index_for_slot(int slot) const;
+    GridRegionCause make_cause(
+        GridRegion* r1, GridRegion* r2,
+        GridRegion* r3, GridRegion* r4);
+    bool has_valid_structure() const;
     unsigned valid_area_mask() const;
     std::string debug_description(unsigned indent = 0) const;
 

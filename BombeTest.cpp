@@ -24,6 +24,37 @@ const char* legality_name(
 
 int failures = 0;
 
+void expect_condition(
+    const char* name,
+    bool actual)
+{
+    if (actual)
+    {
+        std::cout << "PASS: " << name << '\n';
+        return;
+    }
+
+    failures++;
+    std::cerr << "FAIL: " << name << '\n';
+}
+
+void expect_integer(
+    const char* name,
+    int actual,
+    int expected)
+{
+    if (actual == expected)
+    {
+        std::cout << "PASS: " << name << '\n';
+        return;
+    }
+
+    failures++;
+    std::cerr << "FAIL: " << name
+              << ": expected " << expected
+              << ", got " << actual << '\n';
+}
+
 void expect_legality(
     const char* name,
     GridRule& rule,
@@ -115,6 +146,236 @@ void test_implication_region_filters()
     expect_filter(
         "ordinary negative cells stay excluded",
         ordinary, required_if, empty, false);
+}
+
+void test_implication_input_mapping()
+{
+    GridRule rule;
+    rule.region_count = 3;
+    rule.if_reg_count = 1;
+
+    expect_integer(
+        "IF slot maps to first input",
+        rule.input_index_for_slot(0), 0);
+    expect_integer(
+        "THEN slot maps to first input",
+        rule.input_index_for_slot(1), 0);
+    expect_integer(
+        "ordinary slot maps to second input",
+        rule.input_index_for_slot(2), 1);
+
+    RegionIfType implication_type;
+    implication_type.if_type = RegionType(
+        RegionType::EQUAL, 0);
+    implication_type.type = RegionType(
+        RegionType::MORE, 0);
+    GridRegion implication(implication_type);
+    GridRegion ordinary{RegionIfType(
+        RegionType::LESS, 0)};
+
+    // Matcher inputs use raw slots. The
+    // THEN slot has no separate region.
+    GridRegionCause cause = rule.make_cause(
+        &implication, NULL, &ordinary, NULL);
+    expect_condition(
+        "cause keeps its rule",
+        cause.rule == &rule);
+    expect_condition(
+        "cause packs implication input",
+        cause.regions[0] == &implication);
+    expect_condition(
+        "cause packs ordinary input",
+        cause.regions[1] == &ordinary);
+    expect_condition(
+        "cause clears unused inputs",
+        !cause.regions[2] && !cause.regions[3]);
+}
+
+void test_remove_implication_input()
+{
+    GridRule rule;
+    rule.region_count = 3;
+    rule.if_reg_count = 1;
+    rule.region_type[0] = RegionType(
+        RegionType::EQUAL, 0);
+    rule.region_type[1] = RegionType(
+        RegionType::MORE, 0);
+    rule.region_type[2] = RegionType(
+        RegionType::LESS, 0);
+
+    // The action covers the ordinary
+    // input for every IF/THEN state.
+    rule.apply_region_bitmap =
+        (1 << 4) | (1 << 5) |
+        (1 << 6) | (1 << 7);
+
+    rule.remove_region(0);
+
+    expect_integer(
+        "removing implication leaves one slot",
+        rule.region_count, 1);
+    expect_integer(
+        "removing implication clears pair count",
+        rule.if_reg_count, 0);
+    expect_condition(
+        "ordinary input remains after removal",
+        rule.region_type[0] == RegionType(
+            RegionType::LESS, 0));
+    expect_integer(
+        "ordinary action survives pair removal",
+        rule.apply_region_bitmap, 1 << 1);
+}
+
+void test_remove_ordinary_from_implication()
+{
+    GridRule rule;
+    rule.region_count = 3;
+    rule.if_reg_count = 1;
+    rule.region_type[0] = RegionType(
+        RegionType::EQUAL, 0);
+    rule.region_type[1] = RegionType(
+        RegionType::MORE, 0);
+    rule.region_type[2] = RegionType(
+        RegionType::LESS, 0);
+
+    rule.apply_if_region_type = RegionType(
+        RegionType::EQUAL, 1);
+    rule.apply_region_type = RegionType(
+        RegionType::EQUAL, 2);
+
+    // IF and THEN output areas are
+    // independent implication halves.
+    rule.neg_apply_region_bitmap =
+        (1 << 2) | (1 << 6);
+    rule.apply_region_bitmap =
+        (1 << 1) | (1 << 5);
+
+    rule.remove_region(2);
+
+    expect_integer(
+        "ordinary removal keeps implication",
+        rule.if_reg_count, 1);
+    expect_integer(
+        "ordinary removal keeps two slots",
+        rule.region_count, 2);
+    expect_integer(
+        "THEN action survives ordinary removal",
+        rule.apply_region_bitmap, 1 << 1);
+    expect_integer(
+        "IF action survives ordinary removal",
+        rule.neg_apply_region_bitmap, 1 << 2);
+}
+
+void test_remove_region_action_conflicts()
+{
+    GridRule action_first;
+    action_first.region_count = 2;
+    action_first.apply_region_bitmap = 1 << 2;
+    action_first.remove_region(0);
+    expect_integer(
+        "action then empty clears conflict",
+        action_first.apply_region_bitmap, 0);
+
+    GridRule empty_first;
+    empty_first.region_count = 2;
+    empty_first.apply_region_bitmap = 1 << 3;
+    empty_first.remove_region(0);
+    expect_integer(
+        "empty then action clears conflict",
+        empty_first.apply_region_bitmap, 0);
+}
+
+void test_remove_region_if_only_action()
+{
+    GridRule rule;
+    rule.region_count = 2;
+    rule.apply_if_region_type = RegionType(
+        RegionType::EQUAL, 1);
+    rule.apply_region_type = RegionType(
+        RegionType::EQUAL, 2);
+
+    // Both source areas carry only the
+    // IF half of the output implication.
+    rule.neg_apply_region_bitmap =
+        (1 << 2) | (1 << 3);
+
+    rule.remove_region(0);
+
+    expect_integer(
+        "IF-only action keeps no THEN half",
+        rule.apply_region_bitmap, 0);
+    expect_integer(
+        "IF-only action survives removal",
+        rule.neg_apply_region_bitmap, 1 << 1);
+}
+
+void test_then_only_loads_as_ordinary()
+{
+    SaveObjectMap saved;
+    saved.add_num("region_count", 1);
+    saved.add_num(
+        "apply_region_type",
+        RegionType(RegionType::EQUAL, 2).as_int());
+    saved.add_num(
+        "apply_if_region_type",
+        RegionType(RegionType::EQUAL, 1).as_int());
+    saved.add_num("apply_region_bitmap", 1 << 1);
+
+    SaveObjectList* region_types =
+        new SaveObjectList;
+    region_types->add_num(
+        RegionType(RegionType::EQUAL, 0).as_int());
+    saved.add_item("region_type", region_types);
+    saved.add_item(
+        "square_counts", new SaveObjectList);
+
+    GridRule rule(&saved);
+    expect_integer(
+        "THEN-only load keeps consequent",
+        rule.apply_region_bitmap, 1 << 1);
+    expect_condition(
+        "THEN-only load becomes ordinary",
+        rule.apply_if_region_type.type ==
+            RegionType::NONE);
+}
+
+void test_rule_structure_validation()
+{
+    GridRule valid;
+    valid.region_count = 3;
+    valid.if_reg_count = 1;
+    expect_condition(
+        "complete implication is valid",
+        valid.has_valid_structure());
+
+    GridRule truncated;
+    truncated.region_count = 1;
+    truncated.if_reg_count = 1;
+    expect_condition(
+        "truncated implication is rejected",
+        !truncated.has_valid_structure());
+
+    GridRule too_many_pairs;
+    too_many_pairs.region_count = 4;
+    too_many_pairs.if_reg_count = 3;
+    expect_condition(
+        "too many implication pairs rejected",
+        !too_many_pairs.has_valid_structure());
+
+    GridRule too_many_dimensions;
+    too_many_dimensions.region_count = 4;
+    too_many_dimensions.neg_reg_count = 1;
+    expect_condition(
+        "too many dimensions are rejected",
+        !too_many_dimensions.has_valid_structure());
+
+    GridRule mixed_layouts;
+    mixed_layouts.region_count = 3;
+    mixed_layouts.if_reg_count = 1;
+    mixed_layouts.neg_reg_count = 1;
+    expect_condition(
+        "mixed implication layout rejected",
+        !mixed_layouts.has_valid_structure());
 }
 
 void test_pictured_wildcard_rule()
@@ -281,6 +542,13 @@ void test_ordinary_wildcard_still_loses_data()
 int main()
 {
     test_implication_region_filters();
+    test_implication_input_mapping();
+    test_remove_implication_input();
+    test_remove_ordinary_from_implication();
+    test_remove_region_action_conflicts();
+    test_remove_region_if_only_action();
+    test_then_only_loads_as_ordinary();
+    test_rule_structure_validation();
     test_pictured_wildcard_rule();
     test_trash_wildcard_consequent();
     test_wildcard_if_is_not_true();

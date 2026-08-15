@@ -351,19 +351,63 @@ bool GridRegion::has_ancestor(GridRegion* other, std::set<GridRegion*>& has, std
     return false;
 }
 
+bool GridRule::has_valid_structure() const
+{
+    return region_count <= 4 &&
+        neg_reg_count <= 2 &&
+        if_reg_count <= 2 &&
+        neg_reg_count <= region_count &&
+        if_reg_count * 2 <= region_count &&
+        region_count + neg_reg_count <= 4 &&
+        !(neg_reg_count && if_reg_count);
+}
 
+int GridRule::input_index_for_slot(int slot) const
+{
+    assert(has_valid_structure());
+    assert(slot >= 0 && slot < region_count);
+    if (slot < if_reg_count * 2)
+        return slot / 2;
+    return slot - if_reg_count;
+}
+
+GridRegionCause GridRule::make_cause(
+    GridRegion* r1, GridRegion* r2, GridRegion* r3, GridRegion* r4)
+{
+    assert(has_valid_structure());
+    GridRegion* raw_regions[4] = {r1, r2, r3, r4};
+    GridRegion* input_regions[4] = {};
+    for (int slot = 0; slot < region_count; slot++)
+    {
+        if (slot < if_reg_count * 2 && (slot & 1))
+            continue;
+        input_regions[input_index_for_slot(slot)] = raw_regions[slot];
+    }
+    return GridRegionCause(
+        this, input_regions[0], input_regions[1],
+        input_regions[2], input_regions[3]);
+}
 
 GridRule::GridRule(SaveObject* sobj)
 {
     SaveObjectMap* omap = sobj->get_map();
-    region_count = omap->get_num("region_count");
+    const int64_t loaded_region_count =
+        omap->get_num("region_count");
+    int64_t loaded_neg_reg_count = 0;
+    int64_t loaded_if_reg_count = 0;
     if (omap->has_key("neg_reg_count"))
-        neg_reg_count = omap->get_num("neg_reg_count");
+        loaded_neg_reg_count = omap->get_num("neg_reg_count");
     if (omap->has_key("if_reg_count"))
-        if_reg_count = omap->get_num("if_reg_count");
-    if (region_count > 4 || neg_reg_count > 4 || if_reg_count > 4 ||
-        region_count + neg_reg_count > 4)
-        throw(std::runtime_error("Invalid rule region count"));
+        loaded_if_reg_count = omap->get_num("if_reg_count");
+    if (loaded_region_count < 0 || loaded_region_count > 4 ||
+        loaded_neg_reg_count < 0 || loaded_neg_reg_count > 2 ||
+        loaded_if_reg_count < 0 || loaded_if_reg_count > 2)
+        throw(std::runtime_error("Invalid rule region structure"));
+    region_count = loaded_region_count;
+    neg_reg_count = loaded_neg_reg_count;
+    if_reg_count = loaded_if_reg_count;
+    if (!has_valid_structure())
+        throw(std::runtime_error("Invalid rule region structure"));
     apply_region_type = RegionType('a',omap->get_num("apply_region_type"));
     if (omap->has_key("apply_if_region_type"))
         apply_if_region_type = RegionType('a',omap->get_num("apply_if_region_type"));
@@ -410,17 +454,32 @@ GridRule::GridRule(SaveObject* sobj)
 
     if (omap->has_key("neg_apply_region_bitmap"))
         neg_apply_region_bitmap = omap->get_num("neg_apply_region_bitmap");
-    if (apply_if_region_type.type == RegionType::NONE)
-        neg_apply_region_bitmap &= apply_region_bitmap;
-    if (apply_region_type.type < 100)
-    {
-        apply_region_bitmap &= ~1ull;
-    }
+
     validate_region_type(apply_region_type);
     validate_region_type(apply_if_region_type);
+
+    if (apply_region_type.type == RegionType::VISIBILITY)
+    {
+        apply_if_region_type = RegionType();
+        neg_apply_region_bitmap = 0;
+    }
+
+    // An implication with no antecedent
+    // cells is just its consequent. Older
+    // saves can contain this intermediate
+    // editor state, so load it as the
+    // equivalent ordinary output.
+    if (apply_if_region_type.type != RegionType::NONE &&
+        !neg_apply_region_bitmap)
+        apply_if_region_type = RegionType();
+    if (apply_region_type.type < 100)
+        apply_region_bitmap &= ~1ull;
+    if (apply_if_region_type.type == RegionType::NONE)
+        neg_apply_region_bitmap &= apply_region_bitmap;
     SaveObjectList* rlist = omap->get_item("region_type")->get_list();
-    if (rlist->get_count() > 4)
-        throw(std::runtime_error("Too many rule region types"));
+    if (rlist->get_count() != region_count)
+        throw(std::runtime_error(
+            "Rule region type count does not match region_count"));
     for (unsigned i = 0; i < rlist->get_count(); i++)
     {
         region_type[i] = RegionType('a',rlist->get_num(i));
@@ -1536,6 +1595,9 @@ void GridRule::import_rule_gen_regions(GridRegion* r1, GridRegion* r2, GridRegio
 
 GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 {
+    if (!has_valid_structure())
+        return IMPOSSIBLE;
+
     z3::context c;
     z3::solver s(c);
 
@@ -2325,21 +2387,28 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
 
 void GridRule::remove_region(int index)
 {
+    assert(has_valid_structure());
+    assert(index >= 0 && index < region_count);
     if (index < if_reg_count * 2)
     {
         int new_if_reg_count = if_reg_count - 1;
         if_reg_count = 0;
-        index &= 2;
+        index &= ~1;
         remove_region(index);
         remove_region(index);
         if_reg_count = new_if_reg_count;
+        assert(has_valid_structure());
         return;
     }
 
+    const int old_region_count = region_count;
+    const bool visibility_action =
+        apply_region_type.type == RegionType::VISIBILITY;
     unsigned mask = get_valid_cells_mask(region_count, neg_reg_count);
     uint8_t cnt[16] = {};
     uint8_t var[16] = {};
-    uint8_t apply[16] = {};
+    uint8_t action_state[16];
+    std::fill(action_state, action_state + 16, uint8_t(0xFF));
 
     for (int i = 0; i < 16; i++)
     {
@@ -2366,17 +2435,17 @@ void GridRule::remove_region(int index)
         if (cnt[to] < 100)
             cnt[to] += square_counts[i].value;
         var[to] |= square_counts[i].var;
-        int type = 0;
-        if (apply_region_bitmap >> i & 1)
+
+        if (!visibility_action)
         {
-            type = 1;
-            if (neg_apply_region_bitmap >> i & 1)
-                type = 3;
+            const uint8_t state =
+                ((apply_region_bitmap >> i) & 1) |
+                (((neg_apply_region_bitmap >> i) & 1) << 1);
+            if (action_state[to] == 0xFF)
+                action_state[to] = state;
+            else if (action_state[to] != state)
+                action_state[to] = 4;
         }
-        if (apply[to] == 0)
-            apply[to] = type;
-        if (apply[to] != type)
-            apply[to] = 8;
     }
 
     uint16_t new_apply_region_bitmap = 0;
@@ -2405,12 +2474,31 @@ void GridRule::remove_region(int index)
         }
         else
             square_counts[i] = RegionType(RegionType::NONE, 0);
-        apply_region_bitmap |= (apply[i] & 1) << i;
-        new_neg_apply_region_bitmap |= ((apply[i] & 2) >> 1) << i;
+
+        if (!visibility_action && action_state[i] < 4)
+        {
+            new_apply_region_bitmap |= (action_state[i] & 1) << i;
+            new_neg_apply_region_bitmap |=
+                ((action_state[i] & 2) >> 1) << i;
+        }
+    }
+    if (visibility_action)
+    {
+        const auto remove_slot = [index, old_region_count](uint16_t bitmap)
+        {
+            bitmap &= (1u << old_region_count) - 1;
+            const uint16_t lower = bitmap & ((1u << index) - 1);
+            const uint16_t upper = bitmap >> (index + 1);
+            return uint16_t(lower | (upper << index));
+        };
+        new_apply_region_bitmap = remove_slot(apply_region_bitmap);
+        new_neg_apply_region_bitmap = remove_slot(neg_apply_region_bitmap);
     }
     apply_region_bitmap = new_apply_region_bitmap;
     neg_apply_region_bitmap = new_neg_apply_region_bitmap;
-    neg_apply_region_bitmap &= apply_region_bitmap;
+    if (apply_if_region_type.type == RegionType::NONE)
+        neg_apply_region_bitmap &= apply_region_bitmap;
+    assert(has_valid_structure());
 }
 
 void GridRule::add_region(RegionType type, bool neg)
@@ -4856,6 +4944,8 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
     if (rule.deleted)
         return APPLY_RULE_RESP_NONE;
     assert(rule.apply_region_bitmap);
+    const GridRegionCause cause =
+        rule.make_cause(r[0], r[1], r[2], r[3]);
     if (rule.apply_region_type.type == RegionType::VISIBILITY)
     {
         GridVisLevel vis_level =  GridVisLevel(rule.apply_region_type.value);
@@ -4867,7 +4957,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
                 {
                     r[i]->vis_level = vis_level;
                     r[i]->visibility_force = GridRegion::VIS_FORCE_NONE;
-                    r[i]->vis_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+                    r[i]->vis_cause = cause;
                     if (update_stats)
                         level_used_count[&rule]++;
                 }
@@ -4948,7 +5038,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
         FOR_XY_SET(pos, to_reveal)
         {
             reveal(pos);
-            cell_causes[pos] = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+            cell_causes[pos] = cause;
             c++;
         }
         assert(c);
@@ -4992,7 +5082,7 @@ Grid::ApplyRuleResp Grid::apply_rule(GridRule& rule, GridRegion* r[4], int var_c
 
         reg.elements = to_reveal;
         reg.elements_neg =  neg_to_reveal;
-        reg.gen_cause = GridRegionCause(&rule, r[0], r[1], r[2], r[3]);
+        reg.gen_cause = cause;
         float f = 0;
         for (int i = 0; i < rule.region_count; i++)
         {
