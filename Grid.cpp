@@ -2385,14 +2385,20 @@ void GridRule::resort_region()
         bool operator() (int i,int j) { return (g.region_type[i] < g.region_type[j]);}
     };
     Sorter sorter(*this);
+    // Conditional inputs are ordered [if, then] pairs. Keep that structural
+    // prefix intact and sort only the ordinary inputs that follow it.
+    const int fixed_prefix_count = std::min<int>(
+        region_count, std::max<int>(neg_reg_count, if_reg_count * 2));
     std::vector<int> idx;
-    for(int i = neg_reg_count; i < region_count; i++)
+    for(int i = fixed_prefix_count; i < region_count; i++)
         idx.push_back(i);
     std::sort (idx.begin(), idx.end(), sorter);
     sort_perm = 0;
-    for(int i = neg_reg_count; i < region_count; i++)
-        sort_perm |= idx[i-neg_reg_count] << (i * 2);
-    if (neg_reg_count == 2)
+    for(int i = 0; i < fixed_prefix_count; i++)
+        sort_perm |= i << (i * 2);
+    for(int i = fixed_prefix_count; i < region_count; i++)
+        sort_perm |= idx[i-fixed_prefix_count] << (i * 2);
+    if (!if_reg_count && neg_reg_count == 2)
     {
         sort_perm = (region_type[0] < region_type[1]) ? 4 : 1;
 
