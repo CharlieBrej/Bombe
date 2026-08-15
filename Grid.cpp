@@ -1550,10 +1550,6 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         return IMPOSSIBLE;
     if (!apply_region_bitmap)
         return USELESS;
-    if (if_reg_count && region_type[0].type == RegionType::NONE)
-        return IMPOSSIBLE;
-    if (if_reg_count > 1 && region_type[2].type == RegionType::NONE)
-        return IMPOSSIBLE;
 
     if(region_count > 1)
         for (int r = 0; r < region_count; r++)
@@ -1657,6 +1653,43 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
     }
 
+    z3::func_decl_vector wildcard_region(c);
+    for (int i = 0; i < 4; i++)
+    {
+        const std::string suffix =
+            std::to_string(i);
+        wildcard_region.push_back(c.function(
+            ("W_REGION" + suffix).c_str(),
+            c.int_sort(), c.bool_sort()));
+    }
+
+    // A wildcard endpoint matches any
+    // concrete predicate. Reusing the same
+    // function keeps equal counts equal.
+    auto apply_z3_region_type = [&] (
+        int region,
+        const z3::expr& count)
+    {
+        if (region_type[region].type ==
+            RegionType::NONE)
+            return wildcard_region[region](count);
+        return region_type[region].apply_z3_rule(
+            count, var_vec);
+    };
+
+    auto apply_z3_if_then = [&] (
+        int if_region,
+        const z3::expr& if_count,
+        int then_region,
+        const z3::expr& then_count)
+    {
+        return z3::implies(
+            apply_z3_region_type(
+                if_region, if_count),
+            apply_z3_region_type(
+                then_region, then_count));
+    };
+
     vec = make_count_vector(c, s, var_vec, square_counts, "A");
 
     if (neg_reg_count == 0)
@@ -1669,7 +1702,9 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (if_reg_count)
             {
-                s.add(z3::implies(region_type[0].apply_z3_rule(vec[1] + vec[3], var_vec), region_type[1].apply_z3_rule(vec[2] + vec[3], var_vec)));
+                s.add(apply_z3_if_then(
+                    0, vec[1] + vec[3],
+                    1, vec[2] + vec[3]));
             }
             else
             {
@@ -1681,7 +1716,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (if_reg_count)
             {
-                s.add(z3::implies(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7], var_vec), region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7], var_vec)));
+                s.add(apply_z3_if_then(
+                    0,
+                    vec[1] + vec[3] + vec[5] + vec[7],
+                    1,
+                    vec[2] + vec[3] + vec[6] + vec[7]));
             }
             else
             {
@@ -1694,7 +1733,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (if_reg_count)
             {
-                s.add(z3::implies(region_type[0].apply_z3_rule(vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15], var_vec), region_type[1].apply_z3_rule(vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15], var_vec)));
+                s.add(apply_z3_if_then(
+                    0,
+                    vec[1] + vec[3] + vec[5] + vec[7] + vec[9] + vec[11] + vec[13] + vec[15],
+                    1,
+                    vec[2] + vec[3] + vec[6] + vec[7] + vec[10] + vec[11] + vec[14] + vec[15]));
             }
             else
             {
@@ -1703,7 +1746,11 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             }
             if (if_reg_count >= 2)
             {
-                s.add(z3::implies(region_type[2].apply_z3_rule(vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15], var_vec), region_type[3].apply_z3_rule(vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15], var_vec)));
+                s.add(apply_z3_if_then(
+                    2,
+                    vec[4] + vec[5] + vec[6] + vec[7] + vec[12] + vec[13] + vec[14] + vec[15],
+                    3,
+                    vec[8] + vec[9] + vec[10] + vec[11] + vec[12] + vec[13] + vec[14] + vec[15]));
             }
             else
             {
@@ -1797,16 +1844,21 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
         if (region_count == 2)
         {
-            if (region_type[0].type != RegionType::NONE)
+            if (if_reg_count)
             {
-                if (if_reg_count)
-                {
-                    if (vis_apply_inv & 1)
-                        t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec));
-                    else
-                        s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3], var_vec)));
-                }
-                else if (neg_reg_count == 0)
+                z3::expr implication = apply_z3_if_then(
+                    0,
+                    vec2[1] + vec2[3],
+                    1,
+                    vec2[2] + vec2[3]);
+                if (vis_apply_inv & 1)
+                    t = t | !implication;
+                else
+                    s.add(implication);
+            }
+            else if (region_type[0].type != RegionType::NONE)
+            {
+                if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 1)
                         t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3], var_vec);
@@ -1857,16 +1909,21 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
         if (region_count == 3)
         {
-            if (region_type[0].type != RegionType::NONE)
+            if (if_reg_count)
             {
-                if (if_reg_count)
-                {
-                    if (vis_apply_inv & 1)
-                        t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec));
-                    else
-                        s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7], var_vec)));
-                }
-                else if (neg_reg_count == 0)
+                z3::expr implication = apply_z3_if_then(
+                    0,
+                    vec2[1] + vec2[3] + vec2[5] + vec2[7],
+                    1,
+                    vec2[2] + vec2[3] + vec2[6] + vec2[7]);
+                if (vis_apply_inv & 1)
+                    t = t | !implication;
+                else
+                    s.add(implication);
+            }
+            else if (region_type[0].type != RegionType::NONE)
+            {
+                if (neg_reg_count == 0)
                 {
                     if (vis_apply_inv & 1)
                         t = t | !region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7], var_vec);
@@ -1923,10 +1980,15 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         {
             if (if_reg_count)
             {
+                z3::expr implication = apply_z3_if_then(
+                    0,
+                    vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15],
+                    1,
+                    vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15]);
                 if (vis_apply_inv & 1)
-                    t = t | !z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec));
+                    t = t | !implication;
                 else
-                    s.add(z3::implies(region_type[0].apply_z3_rule(vec2[1] + vec2[3] + vec2[5] + vec2[7] + vec2[9] + vec2[11] + vec2[13] + vec2[15], var_vec), region_type[1].apply_z3_rule(vec2[2] + vec2[3] + vec2[6] + vec2[7] + vec2[10] + vec2[11] + vec2[14] + vec2[15], var_vec)));
+                    s.add(implication);
             }
             else
             {
@@ -1947,10 +2009,15 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
             }
             if (if_reg_count >= 2)
             {
+                z3::expr implication = apply_z3_if_then(
+                    2,
+                    vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15],
+                    3,
+                    vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15]);
                 if (vis_apply_inv & 4)
-                    t = t | !z3::implies(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec), region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec));
+                    t = t | !implication;
                 else
-                    s.add(z3::implies(region_type[2].apply_z3_rule(vec2[4] + vec2[5] + vec2[6] + vec2[7] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec), region_type[3].apply_z3_rule(vec2[8] + vec2[9] + vec2[10] + vec2[11] + vec2[12] + vec2[13] + vec2[14] + vec2[15], var_vec)));
+                    s.add(implication);
             }
             else
             {
@@ -1972,8 +2039,15 @@ GridRule::IsLogicalRep GridRule::is_legal(GridRule& why, int vars[5])
         }
 
         uint8_t hiding_dontcare = 0;
-        for (int i = 0; i < region_count; i++)
-            if ((region_type[i].type == RegionType::NONE) && ((vis_apply_inv >> i) & 1))
+        // Conditional wildcards are already
+        // represented by their implication.
+        // This fallback is only for ordinary
+        // wildcard regions.
+        for (int i = if_reg_count * 2;
+             i < region_count; i++)
+            if ((region_type[i].type ==
+                 RegionType::NONE) &&
+                ((vis_apply_inv >> i) & 1))
                 hiding_dontcare |= 1 << i;
         if (hiding_dontcare)
         {

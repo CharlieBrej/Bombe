@@ -26,17 +26,22 @@ endif
 
 bin_PROGRAMS = Bombe GridGenerator BombeServer
 
+check_PROGRAMS = BombeTest
+TESTS = $(check_PROGRAMS)
+
 if CONTROL_SOCKET
 bin_PROGRAMS += BombeControl
 endif
 
+BOMBE_CORE_SOURCES = Grid.cpp Grid.h \
+                     Misc.cpp Misc.h \
+                     SaveState.cpp SaveState.h \
+                     LevelSet.cpp LevelSet.h \
+                     Compress.cpp Compress.h
+
 Bombe_SOURCES =     main.cpp \
-                    Grid.cpp Grid.h \
-                    Misc.cpp Misc.h \
+                    $(BOMBE_CORE_SOURCES) \
                     GameState.cpp GameState.h \
-                    SaveState.cpp SaveState.h \
-                    LevelSet.cpp LevelSet.h \
-                    Compress.cpp Compress.h \
                     ImgClipBoard.cpp ImgClipBoard.h \
                     $(EXTRA_SRC)
 
@@ -53,16 +58,19 @@ BombeControl_SOURCES = BombeControl.cpp
 BombeControl_CXXFLAGS = @CXXFLAGS@
 endif
 
-GridGenerator_SOURCES =     grid_generator.cpp \
-                    Grid.cpp Grid.h \
-                    Misc.cpp Misc.h \
-                    SaveState.cpp SaveState.h \
-                    LevelSet.cpp LevelSet.h \
-                    Compress.cpp Compress.h
+GridGenerator_SOURCES = grid_generator.cpp \
+                        $(BOMBE_CORE_SOURCES)
 
 GridGenerator_CXXFLAGS = @CXXFLAGS@ @ZSTD_CFLAGS@ @Z3_CFLAGS@ $(EXTRA_FLAGS)
 GridGenerator_LDADD=@ZSTD_LIBS@ @Z3_LIBS@ $(EXTRA_LDADD) -lpthread
 GridGenerator_LDFLAGS=-L. $(EXTRA_LD_FLAGS)
+
+BombeTest_SOURCES = BombeTest.cpp \
+                    $(BOMBE_CORE_SOURCES)
+
+BombeTest_CXXFLAGS = @CXXFLAGS@ @ZSTD_CFLAGS@ @Z3_CFLAGS@ $(EXTRA_FLAGS)
+BombeTest_LDADD = @ZSTD_LIBS@ @Z3_LIBS@ $(EXTRA_LDADD) -lpthread
+BombeTest_LDFLAGS = -L. $(EXTRA_LD_FLAGS)
 
 BombeServer_SOURCES =   BombeServer.cpp BombeServer.h \
                         SaveState.cpp SaveState.h \

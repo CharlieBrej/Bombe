@@ -2,6 +2,9 @@
 *.deps
 Bombe
 BombeControl
+BombeTest
+BombeTest.log
+BombeTest.trs
 GridGenerator
 *.o
 Makefile
@@ -17,6 +20,8 @@ depmod
 install-sh
 missing
 depcomp
+test-driver
+test-suite.log
 Android
 android
 *.orig
