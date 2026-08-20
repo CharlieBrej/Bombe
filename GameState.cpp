@@ -2791,7 +2791,7 @@ void GameState::render_tooltip()
     }
     if (tooltip_string != "")
     {
-        std::string t = translate(tooltip_string);
+        std::string t = tooltip_should_translate ? translate(tooltip_string) : tooltip_string;
         render_text_box(mouse + XYPos(-button_size / 4, button_size / 4), t, true);
     }
     if (mouse_cursor != prev_mouse_cursor)
@@ -2862,7 +2862,7 @@ unsigned GameState::rule_xy_to_rule_region_mask(XYPos p, GridRule& rule)
     return rep;
 }
 
-bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable)
+bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable, bool should_translate)
 {
     if ((mouse.x >= dst_rect.x) &&
         (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -2870,6 +2870,7 @@ bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
         (mouse.y < (dst_rect.y + dst_rect.h)))
     {
         tooltip_string = text;
+        tooltip_should_translate = should_translate;
         if (clickable)
             tooltip_rect = XYRect(dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h);
         return true;
@@ -6863,7 +6864,7 @@ void GameState::render(bool saving)
                 std::string line = s.substr(0, s.find("\n", 0));
                 render_text_box(right_panel_offset + XYPos(0, 12 * button_size), line, false, button_size * 5);
                 SDL_Rect dst_rect = {right_panel_offset.x, right_panel_offset.y + button_size * 12, button_size*5, button_size};
-                add_tooltip(dst_rect, inspected_rule.rule->comment.c_str());
+                add_tooltip(dst_rect, inspected_rule.rule->comment.c_str(), true, false);
             }
         }
     }

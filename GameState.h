@@ -340,6 +340,7 @@ public:
 
     bool full_screen = false;
     std::string tooltip_string = "";
+    bool tooltip_should_translate = true;
     XYRect tooltip_rect;
     std::string rule_already_present_str;
 
@@ -588,7 +589,7 @@ public:
     void render_tooltip();
     void add_clickable_highlight(SDL_Rect& dst_rect);
     unsigned rule_xy_to_rule_region_mask(XYPos p, GridRule& rule);
-    bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
+    bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true, bool should_translate = true);
     const char* theme_name(int id) const;
     Colour theme_colour(int id, int role, bool apply_contrast = false) const;
     Colour theme_colour(int role, bool apply_contrast = true) const;
