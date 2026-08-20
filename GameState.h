@@ -34,6 +34,8 @@ public:
     SDL_Window* sdl_window;
     SDL_Renderer* sdl_renderer;
     SDL_Texture* sdl_texture;
+    SDL_Texture* box_texture = NULL;
+    SDL_Texture* meter_texture = NULL;
     std::map<std::string, TTF_Font*> fonts;
     TTF_Font *font = NULL;
     TTF_Font *fixed_font = NULL;
@@ -96,6 +98,31 @@ public:
 
     bool low_contrast = false;
     uint8_t contrast = 255;
+
+    enum ThemeId {
+        THEME_CLASSIC,
+        THEME_LOGIC_MACHINE,
+        THEME_PUZZLE_PAPER,
+        THEME_HIGH_CONTRAST,
+        THEME_COUNT,
+    };
+    enum ThemeRole {
+        THEME_BACKGROUND,
+        THEME_SURFACE,
+        THEME_RAISED,
+        THEME_CONTROL,
+        THEME_FOREGROUND,
+        THEME_MUTED,
+        THEME_GRID,
+        THEME_PRIMARY,
+        THEME_SECONDARY,
+        THEME_HOVER,
+        THEME_WARNING,
+        THEME_DANGER,
+        THEME_OVERLAY,
+        THEME_ROLE_COUNT,
+    };
+    int theme_id = THEME_CLASSIC;
 
     char key_held = 0;
 
@@ -562,6 +589,20 @@ public:
     void add_clickable_highlight(SDL_Rect& dst_rect);
     unsigned rule_xy_to_rule_region_mask(XYPos p, GridRule& rule);
     bool add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable = true);
+    const char* theme_name(int id) const;
+    Colour theme_colour(int id, int role, bool apply_contrast = false) const;
+    Colour theme_colour(int role, bool apply_contrast = true) const;
+    void set_texture_theme_colour(int role);
+    void reset_texture_colour();
+    void render_texture_unmodulated(const SDL_Rect& source, const SDL_Rect& destination);
+    void render_texture_unmodulated_ex(const SDL_Rect& source, const SDL_Rect& destination, double angle, const SDL_Point* center);
+    void set_theme(int id);
+    void rebuild_box_texture();
+    void render_meter(const SDL_Rect& source, const SDL_Rect& destination);
+    void fill_rect(const SDL_Rect& rect, Colour colour, uint8_t alpha = 255);
+    void render_modal_backdrop(uint8_t alpha = 200);
+    void render_theme_swatch(int id, XYPos pos, int size);
+    void set_region_colour(unsigned type, unsigned col, unsigned fade);
     void render_box(XYPos pos, XYPos size, int corner_size, int style = 0);
     bool render_button(XYPos tpos, XYPos pos, const char* tooltip, int style = 0, int size = 0);
     void render_number(unsigned num, XYPos pos, XYPos siz, XYPos style = XYPos(0,0));

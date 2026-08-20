@@ -61,6 +61,97 @@ void global_mutex_unlock()
 
 static Rand rnd(1);
 
+struct ThemePalette
+{
+    const char* name;
+    Colour roles[GameState::THEME_ROLE_COUNT];
+    Colour regions[8];
+};
+
+static const ThemePalette theme_palettes[GameState::THEME_COUNT] = {
+    {
+        "Classic",
+        {
+            Colour(0x00, 0x00, 0x00), Colour(0x00, 0x00, 0x00),
+            Colour(0x26, 0x26, 0x26), Colour(0x5e, 0x5e, 0x5e),
+            Colour(0xff, 0xff, 0xff), Colour(0x7f, 0x7f, 0x7f),
+            Colour(0x99, 0x99, 0x99), Colour(0x2e, 0xc7, 0x72),
+            Colour(0x00, 0x00, 0xff), Colour(0xf0, 0x90, 0x20),
+            Colour(0xf0, 0xc0, 0x10), Colour(0xff, 0x00, 0x00),
+            Colour(0x00, 0x00, 0x00),
+        },
+        {
+            Colour(0xff, 0xff, 0xff), Colour(0x80, 0xff, 0xff),
+            Colour(0xff, 0x80, 0xff), Colour(0x80, 0x80, 0xff),
+            Colour(0xff, 0xff, 0x80), Colour(0x80, 0xff, 0x80),
+            Colour(0xff, 0x80, 0x80), Colour(0x80, 0x80, 0x80),
+        },
+    },
+    {
+        "Logic Machine",
+        {
+            Colour(0x11, 0x18, 0x20), Colour(0x1c, 0x27, 0x30),
+            Colour(0x26, 0x36, 0x40), Colour(0x34, 0x47, 0x51),
+            Colour(0xf1, 0xeb, 0xdd), Colour(0x94, 0xa2, 0xaa),
+            Colour(0x59, 0x6a, 0x73), Colour(0x3a, 0x80, 0x75),
+            Colour(0x76, 0xa9, 0xe0), Colour(0xe2, 0xad, 0x4f),
+            Colour(0xe2, 0xad, 0x4f), Colour(0xd6, 0x63, 0x5c),
+            Colour(0x00, 0x00, 0x00),
+        },
+        {
+            Colour(0x76, 0xa9, 0xe0), Colour(0x67, 0xc3, 0xb3),
+            Colour(0xb1, 0x8a, 0xd8), Colour(0xa8, 0xc9, 0x6a),
+            Colour(0xe0, 0xa1, 0x5a), Colour(0xd8, 0x78, 0x8f),
+            Colour(0x73, 0xbc, 0xe0), Colour(0x9b, 0x9f, 0xa8),
+        },
+    },
+    {
+        "Puzzle Paper",
+        {
+            Colour(0xf2, 0xe7, 0xcf), Colour(0xff, 0xf8, 0xe8),
+            Colour(0xe7, 0xd8, 0xbd), Colour(0xd0, 0xbf, 0xa2),
+            Colour(0x33, 0x2b, 0x24), Colour(0x75, 0x68, 0x58),
+            Colour(0x9a, 0x8b, 0x77), Colour(0x4c, 0x80, 0x6b),
+            Colour(0x78, 0x98, 0xc4), Colour(0xb9, 0x7a, 0x37),
+            Colour(0xb9, 0x7a, 0x37), Colour(0xb9, 0x4d, 0x46),
+            Colour(0x33, 0x2b, 0x24),
+        },
+        {
+            Colour(0x78, 0x98, 0xc4), Colour(0x6a, 0xa5, 0x8f),
+            Colour(0x9a, 0x7d, 0xae), Colour(0x93, 0xa7, 0x5b),
+            Colour(0xc0, 0x8c, 0x5b), Colour(0xb9, 0x75, 0x84),
+            Colour(0x62, 0xa0, 0xad), Colour(0x9a, 0x8a, 0x72),
+        },
+    },
+    {
+        "High Contrast",
+        {
+            Colour(0x00, 0x00, 0x00), Colour(0x08, 0x08, 0x08),
+            Colour(0x14, 0x14, 0x14), Colour(0x28, 0x28, 0x28),
+            Colour(0xff, 0xff, 0xff), Colour(0xc8, 0xc8, 0xc8),
+            Colour(0xff, 0xff, 0xff), Colour(0x00, 0xff, 0x85),
+            Colour(0x00, 0xe5, 0xff), Colour(0xff, 0xff, 0x00),
+            Colour(0xff, 0xd6, 0x00), Colour(0xff, 0x36, 0x51),
+            Colour(0x00, 0x00, 0x00),
+        },
+        {
+            Colour(0xff, 0xff, 0x00), Colour(0x00, 0xe5, 0xff),
+            Colour(0xff, 0x4d, 0xff), Colour(0x7c, 0xff, 0x00),
+            Colour(0xff, 0x8a, 0x00), Colour(0x4d, 0x8d, 0xff),
+            Colour(0xff, 0x52, 0x77), Colour(0xff, 0xff, 0xff),
+        },
+    },
+};
+
+static Colour blend_colour(Colour from, Colour to, double amount)
+{
+    amount = std::clamp(amount, 0.0, 1.0);
+    return Colour(
+        from.r + (to.r - from.r) * amount,
+        from.g + (to.g - from.g) * amount,
+        from.b + (to.b - from.b) * amount);
+}
+
 struct RobotThread
 {
     GameState* state;
@@ -135,6 +226,8 @@ GameState::GameState(std::string& load_data, bool json)
                 low_contrast = omap->get_num("low_contrast");
             if(low_contrast)
                 contrast = 128;
+            if (omap->has_key("theme"))
+                theme_id = std::clamp<int>(omap->get_num("theme"), THEME_CLASSIC, THEME_COUNT - 1);
             if (omap->has_key("speed_dial"))
                 speed_dial = double(omap->get_num("speed_dial")) / 1000;
             if (omap->has_key("volume"))
@@ -375,6 +468,8 @@ GameState::GameState(std::string& load_data, bool json)
     SDL_DisableScreenSaver();
     SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	sdl_texture = loadTexture("texture.png");
+    rebuild_box_texture();
+    reset_texture_colour();
 
     tutorial_texture[0] = loadTexture("tutorial/tut0.png");
     tutorial_texture[1] = loadTexture("tutorial/tut1.png");
@@ -553,6 +648,7 @@ SaveObject* GameState::save(bool lite)
     omap->add_num("level_set_index", current_level_set_index);
     omap->add_num("show_row_clues", show_row_clues);
     omap->add_num("low_contrast", low_contrast);
+    omap->add_num("theme", theme_id);
     omap->add_num("speed_dial", speed_dial * 1000);
     omap->add_num("volume", volume * 1000);
     omap->add_num("music_volume", music_volume * 1000);
@@ -651,6 +747,8 @@ GameState::~GameState()
     }
 
     SDL_DestroyTexture(sdl_texture);
+    SDL_DestroyTexture(box_texture);
+    SDL_DestroyTexture(meter_texture);
     for (int i = 0; i < tut_texture_count; i++)
         SDL_DestroyTexture(tutorial_texture[i]);
     SDL_DestroyRenderer(sdl_renderer);
@@ -1014,6 +1112,237 @@ SDL_Texture* GameState::loadTexture(const char* filename)
 	assert(new_texture);
 	SDL_FreeSurface(loadedSurface);
 	return new_texture;
+}
+
+const char* GameState::theme_name(int id) const
+{
+    if (id < THEME_CLASSIC || id >= THEME_COUNT)
+        id = THEME_CLASSIC;
+    return theme_palettes[id].name;
+}
+
+Colour GameState::theme_colour(int id, int role, bool apply_contrast) const
+{
+    if (id < THEME_CLASSIC || id >= THEME_COUNT)
+        id = THEME_CLASSIC;
+    if (role < THEME_BACKGROUND || role >= THEME_ROLE_COUNT)
+        role = THEME_FOREGROUND;
+    Colour colour = theme_palettes[id].roles[role];
+    if (!apply_contrast || role == THEME_BACKGROUND || role == THEME_SURFACE || role == THEME_OVERLAY)
+        return colour;
+    return blend_colour(theme_palettes[id].roles[THEME_BACKGROUND], colour, double(contrast) / 255.0);
+}
+
+Colour GameState::theme_colour(int role, bool apply_contrast) const
+{
+    return theme_colour(theme_id, role, apply_contrast);
+}
+
+void GameState::set_texture_theme_colour(int role)
+{
+    Colour colour = theme_colour(role, true);
+    SDL_SetTextureColorMod(sdl_texture, colour.r, colour.g, colour.b);
+}
+
+void GameState::reset_texture_colour()
+{
+    set_texture_theme_colour(THEME_FOREGROUND);
+}
+
+void GameState::render_texture_unmodulated(const SDL_Rect& source, const SDL_Rect& destination)
+{
+    if (theme_id == THEME_CLASSIC)
+    {
+        SDL_RenderCopy(sdl_renderer, sdl_texture, &source, &destination);
+        return;
+    }
+    uint8_t red, green, blue;
+    SDL_GetTextureColorMod(sdl_texture, &red, &green, &blue);
+    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+    SDL_RenderCopy(sdl_renderer, sdl_texture, &source, &destination);
+    SDL_SetTextureColorMod(sdl_texture, red, green, blue);
+}
+
+void GameState::render_texture_unmodulated_ex(const SDL_Rect& source, const SDL_Rect& destination, double angle, const SDL_Point* center)
+{
+    if (theme_id == THEME_CLASSIC)
+    {
+        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &source, &destination, angle, center, SDL_FLIP_NONE);
+        return;
+    }
+    uint8_t red, green, blue;
+    SDL_GetTextureColorMod(sdl_texture, &red, &green, &blue);
+    SDL_SetTextureColorMod(sdl_texture, 255, 255, 255);
+    SDL_RenderCopyEx(sdl_renderer, sdl_texture, &source, &destination, angle, center, SDL_FLIP_NONE);
+    SDL_SetTextureColorMod(sdl_texture, red, green, blue);
+}
+
+void GameState::fill_rect(const SDL_Rect& rect, Colour colour, uint8_t alpha)
+{
+    uint8_t old_r, old_g, old_b, old_a;
+    SDL_BlendMode old_blend;
+    SDL_GetRenderDrawColor(sdl_renderer, &old_r, &old_g, &old_b, &old_a);
+    SDL_GetRenderDrawBlendMode(sdl_renderer, &old_blend);
+    SDL_SetRenderDrawBlendMode(sdl_renderer, alpha == 255 ? SDL_BLENDMODE_NONE : SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(sdl_renderer, colour.r, colour.g, colour.b, alpha);
+    SDL_RenderFillRect(sdl_renderer, &rect);
+    SDL_SetRenderDrawColor(sdl_renderer, old_r, old_g, old_b, old_a);
+    SDL_SetRenderDrawBlendMode(sdl_renderer, old_blend);
+}
+
+void GameState::render_modal_backdrop(uint8_t alpha)
+{
+    SDL_Rect rect = {0, 0, window_size.x, window_size.y};
+    fill_rect(rect, theme_colour(THEME_OVERLAY, false), alpha);
+}
+
+void GameState::set_theme(int id)
+{
+    if (id < THEME_CLASSIC || id >= THEME_COUNT || id == theme_id)
+        return;
+    theme_id = id;
+    rebuild_box_texture();
+    reset_texture_colour();
+}
+
+void GameState::rebuild_box_texture()
+{
+    SDL_Surface* loaded = IMG_Load("texture.png");
+    assert(loaded);
+    SDL_Surface* source = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(loaded);
+    assert(source);
+
+    SDL_Surface* boxes = SDL_CreateRGBSurfaceWithFormat(0, 384, 288, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(boxes);
+    SDL_Rect source_rect = {320, 416, 384, 288};
+    int result = SDL_BlitSurface(source, &source_rect, boxes, NULL);
+    assert(result == 0);
+
+    SDL_Surface* meters = SDL_CreateRGBSurfaceWithFormat(0, 1152, 704, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(meters);
+    SDL_Rect meter_source_rect = {2048, 576, 1152, 704};
+    result = SDL_BlitSurface(source, &meter_source_rect, meters, NULL);
+    assert(result == 0);
+    SDL_FreeSurface(source);
+
+    if (SDL_MUSTLOCK(boxes))
+    {
+        result = SDL_LockSurface(boxes);
+        assert(result == 0);
+    }
+    for (int y = 0; y < boxes->h; y++)
+    for (int x = 0; x < boxes->w; x++)
+    {
+        uint32_t* pixel = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(boxes->pixels) + y * boxes->pitch) + x;
+        uint8_t r, g, b, a;
+        SDL_GetRGBA(*pixel, boxes->format, &r, &g, &b, &a);
+        if (!a || theme_id == THEME_CLASSIC)
+            continue;
+
+        int style = (x / 96) + (y / 96) * 4;
+        bool tintable = style == 0 || style == 8 || style == 9 || style == 11;
+        Colour colour(0xff, 0xff, 0xff);
+        int luminance = (int(r) + int(g) + int(b)) / 3;
+        switch (style)
+        {
+            case 0:
+            case 8:
+            case 9:
+            case 11:
+                break;
+            case 1:
+                colour = theme_colour(luminance < 64 ? THEME_SURFACE : THEME_FOREGROUND, false);
+                break;
+            case 2:
+                colour = theme_colour(THEME_HOVER, false);
+                break;
+            case 3:
+            case 10:
+                colour = theme_colour(THEME_PRIMARY, false);
+                break;
+            case 4:
+                colour = blend_colour(
+                    theme_colour(THEME_SURFACE, false),
+                    theme_colour(THEME_CONTROL, false),
+                    double(std::clamp(luminance - 9, 0, 85)) / 85.0);
+                break;
+            case 5:
+            case 6:
+                colour = theme_colour(luminance < 32 ? THEME_SURFACE : THEME_MUTED, false);
+                break;
+            case 7:
+                colour = theme_colour(THEME_RAISED, false);
+                break;
+        }
+        if (low_contrast && !tintable)
+            colour = blend_colour(theme_colour(THEME_BACKGROUND, false), colour, 128.0 / 255.0);
+        *pixel = SDL_MapRGBA(boxes->format, colour.r, colour.g, colour.b, a);
+    }
+    if (SDL_MUSTLOCK(boxes))
+        SDL_UnlockSurface(boxes);
+
+    SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, boxes);
+    SDL_FreeSurface(boxes);
+    assert(new_texture);
+    SDL_SetTextureBlendMode(new_texture, SDL_BLENDMODE_BLEND);
+    SDL_DestroyTexture(box_texture);
+    box_texture = new_texture;
+
+    if (SDL_MUSTLOCK(meters))
+    {
+        result = SDL_LockSurface(meters);
+        assert(result == 0);
+    }
+    for (int y = 0; y < meters->h; y++)
+    for (int x = 0; x < meters->w; x++)
+    {
+        uint32_t* pixel = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(meters->pixels) + y * meters->pitch) + x;
+        uint8_t r, g, b, a;
+        SDL_GetRGBA(*pixel, meters->format, &r, &g, &b, &a);
+        int low = std::min({int(r), int(g), int(b)});
+        int high = std::max({int(r), int(g), int(b)});
+        if (!a || theme_id == THEME_CLASSIC)
+            continue;
+        Colour colour(r, g, b);
+        if (high - low <= 16)
+        {
+            int luminance = (int(r) + int(g) + int(b)) / 3;
+            colour = blend_colour(
+                theme_colour(THEME_SURFACE, false),
+                theme_colour(THEME_FOREGROUND, false),
+                double(luminance) / 255.0);
+        }
+        if (low_contrast)
+            colour = blend_colour(theme_colour(THEME_BACKGROUND, false), colour, 128.0 / 255.0);
+        *pixel = SDL_MapRGBA(meters->format, colour.r, colour.g, colour.b, a);
+    }
+    if (SDL_MUSTLOCK(meters))
+        SDL_UnlockSurface(meters);
+
+    SDL_Texture* new_meter_texture = SDL_CreateTextureFromSurface(sdl_renderer, meters);
+    SDL_FreeSurface(meters);
+    assert(new_meter_texture);
+    SDL_SetTextureBlendMode(new_meter_texture, SDL_BLENDMODE_BLEND);
+    SDL_DestroyTexture(meter_texture);
+    meter_texture = new_meter_texture;
+}
+
+void GameState::render_meter(const SDL_Rect& source, const SDL_Rect& destination)
+{
+    SDL_Rect local_source = source;
+    local_source.x -= 2048;
+    local_source.y -= 576;
+    assert(local_source.x >= 0 && local_source.y >= 0);
+    assert(local_source.x + local_source.w <= 1152 && local_source.y + local_source.h <= 704);
+    if (theme_id == THEME_CLASSIC)
+    {
+        uint8_t red, green, blue;
+        SDL_GetTextureColorMod(sdl_texture, &red, &green, &blue);
+        SDL_SetTextureColorMod(meter_texture, red, green, blue);
+    }
+    SDL_RenderCopy(sdl_renderer, meter_texture, &local_source, &destination);
+    SDL_SetTextureColorMod(meter_texture, 255, 255, 255);
 }
 
 bool GameState::rule_is_permitted(GridRule& rule, int mode, bool legal_check)
@@ -2066,24 +2395,34 @@ void GameState::update_constructed_rule()
     }
 }
 
-static void set_region_colour(SDL_Texture* sdl_texture, unsigned type, unsigned col, unsigned fade)
+void GameState::set_region_colour(unsigned type, unsigned col, unsigned fade)
 {
-    uint8_t r = (type & 1) ? 128 : 255;
-    uint8_t g = (type & 2) ? 128 : 255;
-    uint8_t b = (type & 4) ? 128 : 255;
+    if (theme_id == THEME_CLASSIC)
+    {
+        uint8_t r = (type & 1) ? 128 : 255;
+        uint8_t g = (type & 2) ? 128 : 255;
+        uint8_t b = (type & 4) ? 128 : 255;
 
-    r -= (col & 0x1) ? 60 : 0;
-    g -= (col & 0x2) ? 60 : 0;
-    b -= (col & 0x4) ? 60 : 0;
-    r -= (col & 0x8) ? 30 : 0;
-    g -= (col & 0x10) ? 30 : 0;
-    b -= (col & 0x20) ? 30 : 0;
+        r -= (col & 0x1) ? 60 : 0;
+        g -= (col & 0x2) ? 60 : 0;
+        b -= (col & 0x4) ? 60 : 0;
+        r -= (col & 0x8) ? 30 : 0;
+        g -= (col & 0x10) ? 30 : 0;
+        b -= (col & 0x20) ? 30 : 0;
 
-    r = (int(r) * (fade)) / 255;
-    g = (int(g) * (fade)) / 255;
-    b = (int(b) * (fade)) / 255;
+        r = (int(r) * fade) / 255;
+        g = (int(g) * fade) / 255;
+        b = (int(b) * fade) / 255;
+        SDL_SetTextureColorMod(sdl_texture, r, g, b);
+        return;
+    }
 
-    SDL_SetTextureColorMod(sdl_texture, r, g, b);
+    Colour colour = theme_palettes[theme_id].regions[(type + col * 3) & 7];
+    if (col & 0x08) colour.r = colour.r * 85 / 100;
+    if (col & 0x10) colour.g = colour.g * 85 / 100;
+    if (col & 0x20) colour.b = colour.b * 85 / 100;
+    colour = blend_colour(theme_colour(THEME_BACKGROUND, false), colour, double(fade) / 255.0);
+    SDL_SetTextureColorMod(sdl_texture, colour.r, colour.g, colour.b);
 }
 
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type)
@@ -2194,7 +2533,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             if ((disp_type == 1) && selected)
             {
                 line_thickness *= 2;
-                set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                set_region_colour(region.type.value, region.colour, opac);
                 double f = (frame / 5 + pos.x);
                 SDL_Rect src_rect1 = {int(f)% 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                 f = (frame / 8 + pos.x);
@@ -2217,7 +2556,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
 
             if ((disp_type == 0) || ((disp_type == 2) && selected))
             {
-                set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                set_region_colour(region.type.value, region.colour, opac);
                 SDL_Rect src_rect = {160, 608, 1, 1};
                 for(WrapPos r : wraps)
                 {
@@ -2251,7 +2590,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
             break;
     }
 
-    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+    reset_texture_colour();
 }
 
 void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type)
@@ -2280,7 +2619,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                 continue;
             if ((disp_type == 1) && selected)
             {
-                set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                set_region_colour(region.type.value, region.colour, opac);
                 XYPos margin = d.size / 8;
                 SDL_Rect src_rect = {512, 1728, 192, 192};
                 int fr = frame + pos.x * 1040 + pos.y * 100;
@@ -2301,9 +2640,9 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
             if ((disp_type == 0) || ((disp_type == 2) && selected))
             {
                 if (if_if)
-                    set_region_colour(sdl_texture, region.if_type.value, region.colour, opac);
+                    set_region_colour(region.if_type.value, region.colour, opac);
                 else
-                    set_region_colour(sdl_texture, region.type.value, region.colour, opac);
+                    set_region_colour(region.type.value, region.colour, opac);
                 SDL_Rect src_rect = {64, 512, 192, 192};
                 if (region.elements_neg.get(pos))
                     src_rect.y = 704;
@@ -2330,7 +2669,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                 if (region.is_if_then() ? if_if : region.elements_neg.get(pos))
                 {
                     RegionType& colour_type = if_if ? region.if_type : region.type;
-                    set_region_colour(sdl_texture, colour_type.value, region.colour, opac);
+                    set_region_colour(colour_type.value, region.colour, opac);
                 }
                 else
                     SDL_SetTextureColorMod(sdl_texture, 0,0,0);
@@ -2352,13 +2691,14 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
         }
     }
 
-    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+    reset_texture_colour();
 
 }
 
 void GameState::render_text_box(XYPos pos, std::string& s, bool left, int force_width)
 {
-    SDL_Color color = {contrast, contrast, contrast};
+    Colour foreground = theme_colour(THEME_FOREGROUND, true);
+    SDL_Color color = {foreground.r, foreground.g, foreground.b, 255};
     std::vector<SDL_Surface*> text_surfaces;
     std::vector<SDL_Texture*> textures;
 
@@ -2537,44 +2877,85 @@ bool GameState::add_tooltip(SDL_Rect& dst_rect, const char* text, bool clickable
     return false;
 }
 
+void GameState::render_theme_swatch(int id, XYPos pos, int size)
+{
+    SDL_Rect outer = {pos.x, pos.y, size, size};
+    bool hover = add_tooltip(outer, theme_name(id), false);
+    Colour border = theme_colour(id, id == theme_id || hover ? THEME_HOVER : THEME_MUTED, false);
+    Colour background = theme_colour(id, THEME_BACKGROUND, false);
+    Colour surface = theme_colour(id, THEME_SURFACE, false);
+    Colour grid = theme_colour(id, THEME_GRID, false);
+    Colour primary = theme_colour(id, THEME_PRIMARY, false);
+    Colour secondary = theme_colour(id, THEME_SECONDARY, false);
+
+    fill_rect(outer, border);
+    int edge = std::max(size / 14, 2);
+    SDL_Rect preview = {pos.x + edge, pos.y + edge, size - edge * 2, size - edge * 2};
+    fill_rect(preview, background);
+
+    int panel_width = std::max(preview.w / 4, 1);
+    SDL_Rect panel = {preview.x, preview.y, panel_width, preview.h};
+    fill_rect(panel, surface);
+    int line = std::max(size / 24, 1);
+    SDL_Rect grid_line = {preview.x + preview.w / 2, preview.y + preview.h / 7, line, preview.h * 4 / 7};
+    fill_rect(grid_line, grid);
+    grid_line = {preview.x + preview.w * 2 / 5, preview.y + preview.h / 2, preview.w / 2, line};
+    fill_rect(grid_line, grid);
+
+    int accent_size = std::max(preview.w / 6, 2);
+    SDL_Rect accent = {preview.x + preview.w - accent_size * 2 - edge, preview.y + preview.h - accent_size - edge, accent_size, accent_size};
+    fill_rect(accent, primary);
+    accent.x += accent_size;
+    fill_rect(accent, secondary);
+}
+
 void GameState::render_box(XYPos pos, XYPos size, int corner_size, int style)
 {
-        XYPos p = XYPos(320 + (style % 4) * 96, 416 + (style / 4) * 96);
+        XYPos p = XYPos((style % 4) * 96, (style / 4) * 96);
+        uint8_t r, g, b, a;
+        SDL_GetTextureColorMod(sdl_texture, &r, &g, &b);
+        SDL_GetTextureAlphaMod(sdl_texture, &a);
+        bool tintable = style == 0 || style == 8 || style == 9 || style == 11;
+        bool apply_tint = theme_id == THEME_CLASSIC || tintable;
+        SDL_SetTextureColorMod(box_texture, apply_tint ? r : 255, apply_tint ? g : 255, apply_tint ? b : 255);
+        SDL_SetTextureAlphaMod(box_texture, a);
         SDL_Rect src_rect = {p.x, p.y, 32, 32};
         SDL_Rect dst_rect = {pos.x, pos.y, corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect);
 
         src_rect = {p.x + 32, p.y, 1, 32};
         dst_rect = {pos.x + corner_size, pos.y, (size.x - corner_size * 2 ), corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect);     //  Top
 
         src_rect = {p.x + 32, p.y, 32, 32};
         dst_rect = {pos.x + (size.x - corner_size), pos.y , corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);     //  Top Right
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect);     //  Top Right
 
         src_rect = {p.x, p.y + 32, 32, 1};
         dst_rect = {pos.x, pos.y + corner_size, corner_size, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Left
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect); // Left
 
         src_rect = {p.x + 32, p.y + 32, 1, 1};
         dst_rect = {pos.x + corner_size, pos.y + corner_size, size.x - corner_size * 2, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Middle
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect); // Middle
 
         src_rect = {p.x + 32, p.y + 32, 32, 1};
         dst_rect = {pos.x + (size.x - corner_size), pos.y + corner_size, corner_size, size.y - corner_size * 2};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Right
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect); // Right
 
         src_rect = {p.x, p.y + 32, 32, 32};
         dst_rect = {pos.x, pos.y + (size.y - corner_size), corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);    // Bottom left
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect);    // Bottom left
 
         src_rect = {p.x + 32, p.y + 32, 1, 32};
         dst_rect = {pos.x + corner_size, pos.y + (size.y - corner_size), size.x - corner_size * 2, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect); // Bottom
 
         src_rect = {p.x + 32, p.y + 32, 32, 32};
         dst_rect = {pos.x + (size.x - corner_size), pos.y + (size.y - corner_size), corner_size, corner_size};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect); // Bottom right
+        SDL_RenderCopy(sdl_renderer, box_texture, &src_rect, &dst_rect); // Bottom right
+        SDL_SetTextureColorMod(box_texture, 255, 255, 255);
+        SDL_SetTextureAlphaMod(box_texture, 255);
 }
 
 void GameState::render_number(unsigned num, XYPos pos, XYPos siz, XYPos style)
@@ -2602,15 +2983,15 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
     SDL_Rect dst_rect = {pos.x + ds, pos.y + ds, size - ds * 2, size - ds * 2};
 
     if (style == 0)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0x2e / 255, contrast * 0xc7 / 255, contrast * 0x72 / 255);
+        set_texture_theme_colour(THEME_PRIMARY);
     else if (style == 1)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0x50 / 255, contrast * 0x50 / 255, contrast * 0x50 / 255);
+        set_texture_theme_colour(THEME_MUTED);
     else if (style == 2)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0xC0 / 255, contrast * 0x10 / 255);
+        set_texture_theme_colour(THEME_WARNING);
     else if (style == 3)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0xff / 255, contrast * 0x00 / 255, contrast * 0x00 / 255);
+        set_texture_theme_colour(THEME_DANGER);
     else if (style == 4)
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0x00 / 255, contrast * 0x00 / 255, contrast * 0xff / 255);
+        set_texture_theme_colour(THEME_SECONDARY);
 
     bool hover =   ((mouse.x >= dst_rect.x) &&
                     (mouse.x < (dst_rect.x + dst_rect.w)) &&
@@ -2627,13 +3008,13 @@ bool GameState::render_button(XYPos tpos, XYPos pos, const char* tooltip, int st
         }
         else
             last_button_hovered = tooltip;
-        SDL_SetTextureColorMod(sdl_texture, contrast * 0xf0 / 255, contrast * 0x90 / 255, contrast * 0x20 / 255);
+        set_texture_theme_colour(THEME_HOVER);
     }
 
     if (pressed)
         src_rect.x = 0;
     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+    reset_texture_colour();
     src_rect = {tpos.x, tpos.y, 192, 192};
     if (pressed)
         dst_rect.y += size / 16;
@@ -2813,7 +3194,7 @@ void GameState::render_number_string(std::string digits, XYPos pos, XYPos siz, X
 
 void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos, int siz, bool selected, bool negated, bool if_then)
 {
-    set_region_colour(sdl_texture, type.value, colour, contrast);
+    set_region_colour(type.value, colour, contrast);
     if (selected)
     {
         XYPos margin(siz / 8, siz / 8);
@@ -2852,7 +3233,7 @@ void GameState::render_region_bubble(RegionType type, unsigned colour, XYPos pos
     if (!negated)
         SDL_SetTextureColorMod(sdl_texture, 0,0,0);
     render_region_type(type, pos, siz);
-    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+    reset_texture_colour();
 }
 
 void GameState::render_region_type(RegionIfType if_reg, XYPos pos, unsigned siz)
@@ -3142,7 +3523,7 @@ bool GameState::render_lock(int lock_type, XYPos pos, XYPos size)
 
     SDL_SetTextureColorMod(sdl_texture, 0,0,0);
     render_number(togo, pos + offset + XYPos(min_siz * 45 / 192 , min_siz * 77 / 192), XYPos(min_siz * 102 / 192, min_siz * 98 / 192));
-    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+    reset_texture_colour();
     return false;
 }
 
@@ -3163,7 +3544,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             if (rule.region_count >= 4) siz.y = 5;
 
             unsigned colour = rule_gen_colour_for_slot(0);
-            set_region_colour(sdl_texture, rule.region_type[0].value, colour, contrast);
+            set_region_colour(rule.region_type[0].value, colour, contrast);
             render_box(base_pos + XYPos(0 * size, 0 * size), XYPos(siz.x * size, siz.y * size), size / 2, 8);
             render_region_bubble(rule.region_type[0], colour, base_pos + XYPos(0 * size, 0 * size), size * 2 / 3, hover_rulemaker_region_base_index == 0, rule.if_reg_count, rule.if_reg_count);
 
@@ -3186,7 +3567,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             int reg_index = rule.neg_reg_count ? 0 : 1;
 
             unsigned colour = rule_gen_colour_for_slot(reg_index);
-            set_region_colour(sdl_texture, rule.region_type[reg_index].value, colour, contrast);
+            set_region_colour(rule.region_type[reg_index].value, colour, contrast);
             render_box(base_pos + XYPos(1 * size, 0 * size + size / 12), XYPos(siz.x * size, siz.y * size), size / 2, 8);
             if (rule.neg_reg_count)
             {
@@ -3204,7 +3585,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
             XYPos siz = XYPos(rule.neg_reg_count ? 4 : 5 ,1);
             if (rule.region_count == 4 || (rule.neg_reg_count && rule.region_count == 3) || rule.neg_reg_count == 2) siz.y = 2;
             unsigned colour = rule_gen_colour_for_slot(reg_index);
-            set_region_colour(sdl_texture, rule.region_type[reg_index].value, colour, contrast);
+            set_region_colour(rule.region_type[reg_index].value, colour, contrast);
             render_box(base_pos + XYPos((rule.neg_reg_count ? 1 : 0) * size, 2 * size), XYPos(siz.x * size, siz.y * size), size / 2, 8);
 
             if (rule.neg_reg_count == 2)
@@ -3220,7 +3601,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
         {
             int reg_index = rule.neg_reg_count ? 2 : 3;
             unsigned colour = rule_gen_colour_for_slot(reg_index);
-            set_region_colour(sdl_texture, rule.region_type[reg_index].value, colour, contrast);
+            set_region_colour(rule.region_type[reg_index].value, colour, contrast);
             if (!rule.neg_reg_count)
                 render_box(base_pos + XYPos(size / 12, 3 * size), XYPos(5 * size - size / 12, 2 * size), size / 2, 8);
             else
@@ -3230,7 +3611,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
 
         if (rule.apply_region_type.type == RegionType::VISIBILITY)
         {
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
             SDL_Rect src_rect = {(rule.apply_region_type.value == 0) ? 1088 : 896, 384, 192, 192};
             if (rule.apply_region_type.value == 2)
             {
@@ -3316,20 +3697,20 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
                     {
                         SDL_Rect src_rect = {320, 192, 192, 192};
                         SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + size * 1 / 8, (int)(size * 6 / 8), (int)(size * 6 / 8)};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        render_texture_unmodulated(src_rect, dst_rect);
 
                     }
                     else if (r_type.value <= 3)
                     {
                         SDL_Rect src_rect = {320, 192, 192, 192};
                         SDL_Rect dst_rect = {sp.x + size * 1 / 8, sp.y + int(size * 1 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        render_texture_unmodulated(src_rect, dst_rect);
                         dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 1 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        render_texture_unmodulated(src_rect, dst_rect);
                         if (r_type.value == 3)
                         {
                             dst_rect = {sp.x + int(size * 2.5 / 8), sp.y + int(size * 4 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
-                            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                            render_texture_unmodulated(src_rect, dst_rect);
                         }
                     }
                     else
@@ -3338,7 +3719,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
 
                         SDL_Rect src_rect = {320, 192, 192, 192};
                         SDL_Rect dst_rect = {sp.x + size * 4 / 8, sp.y + int(size * 2 / 8), (int)(size * 3 / 8), (int)(size * 3 / 8)};
-                        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                        render_texture_unmodulated(src_rect, dst_rect);
 
                     }
                 }
@@ -3393,7 +3774,7 @@ void GameState::render_rule(GridRule& rule, XYPos base_pos, int size, int hover_
 
                 XYPos r_pos = base_pos + XYPos(size * 3 / 4, size * 3 / 4);
                 {
-                    set_region_colour(sdl_texture, rule.apply_region_type.value, 0, contrast);
+                    set_region_colour(rule.apply_region_type.value, 0, contrast);
                     double f = (frame / 5 + pos.x);
                     SDL_Rect src_rect1 = {int(f)% 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                     f = (frame / 8 + pos.x);
@@ -3546,13 +3927,10 @@ void GameState::render(bool saving)
     SDL_GetWindowSize(sdl_window, &wsize.x, &wsize.y);
     SDL_GetRendererOutputSize(sdl_renderer, &window_size.x, &window_size.y);
     mouse_scale = XYPosFloat(double(window_size.x) / double(wsize.x), double(window_size.y) / double(wsize.y));
+    Colour background = theme_colour(THEME_BACKGROUND, false);
+    SDL_SetRenderDrawColor(sdl_renderer, background.r, background.g, background.b, 255);
     SDL_RenderClear(sdl_renderer);
-
-    {
-        SDL_Rect src_rect = {15, 426, 1, 1};
-        SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-        SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-    }
+    reset_texture_colour();
 
     int edge_clue_border = 0;
     {
@@ -3888,11 +4266,16 @@ void GameState::render(bool saving)
 
             render_number(s.pos, list_pos + XYPos(0 * cell_width, cell_width + y_offset + cell_height/10), XYPos(cell_width*0.9, cell_height*8/10), XYPos(1,0));
             {
-                SDL_Color color = {contrast, contrast, contrast};
+                Colour name_colour = theme_colour(THEME_FOREGROUND, true);
                 if (s.is_friend == 1)
-                    color = {uint8_t(contrast / 2), contrast, uint8_t(contrast / 2)};
+                    name_colour = theme_id == THEME_CLASSIC
+                        ? Colour(contrast / 2, contrast, contrast / 2)
+                        : theme_colour(THEME_PRIMARY, true);
                 if (s.is_friend == 2)
-                    color = {contrast, uint8_t(contrast / 2), uint8_t(contrast / 2)};
+                    name_colour = theme_id == THEME_CLASSIC
+                        ? Colour(contrast, contrast / 2, contrast / 2)
+                        : theme_colour(THEME_DANGER, true);
+                SDL_Color color = {name_colour.r, name_colour.g, name_colour.b, 255};
                 SDL_Surface* text_surface = TTF_RenderUTF8_Blended(fixed_font, s.name.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
@@ -4002,7 +4385,7 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {512, 192, 192, 192};
             SDL_Rect dst_rect = {list_pos.x + 4 * cell_width, list_pos.y, cell_width, cell_width};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_texture_unmodulated(src_rect, dst_rect);
             add_tooltip(dst_rect, "Clear");
             if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
             {
@@ -4112,9 +4495,8 @@ void GameState::render(bool saving)
             int y_offset = ((rules_list_size - cell_width) * level_index) / display_table_row_count;
             if (!(level_index % 2))
             {
-                SDL_Rect src_rect = {640, 544 ,1, 1};
                 SDL_Rect dst_rect = {list_pos.x, list_pos.y + cell_width + y_offset, cell_width * 7, cell_height};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_RAISED, false));
             }
             if (level_index + levels_list_offset >= (int)levels_list.size())
                 break;
@@ -4348,7 +4730,10 @@ void GameState::render(bool saving)
                 }
                 SDL_Rect dst_rect = {list_pos.x + 6 * cell_width, list_pos.y, cell_width, cell_width};
 //                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                if (display_rules_cpu)
+                    render_texture_unmodulated(src_rect, dst_rect);
+                else
+                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 add_tooltip(dst_rect, display_rules_cpu ? "CPU Time" : "Times Applied");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                     col_click = 6;
@@ -4362,7 +4747,7 @@ void GameState::render(bool saving)
                 }
                 SDL_Rect dst_rect = {list_pos.x + 7 * cell_width, list_pos.y, cell_width, cell_width};
 //                render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(dst_rect.w, dst_rect.h), cell_width / 4, 2);
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
                 add_tooltip(dst_rect, display_rules_cpu ? "CPU Time per Cell Cleared" : "Cells Cleared");
                 if (display_rules_click && ((display_rules_click_pos - XYPos(dst_rect.x, dst_rect.y)).inside(XYPos(dst_rect.w, dst_rect.h))))
                     col_click = 7;
@@ -4590,9 +4975,8 @@ void GameState::render(bool saving)
             int y_offset = ((rules_list_size - cell_width) * rule_index) / display_table_row_count;
             if (!(rule_index % 2))
             {
-                SDL_Rect src_rect = {640, 544 ,1, 1};
                 SDL_Rect dst_rect = {list_pos.x, list_pos.y + cell_width + y_offset, cell_width * 8, cell_height};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_RAISED, false));
             }
             if (rule_index + rules_list_offset >= (int)rules_list.size())
                 break;
@@ -4609,7 +4993,7 @@ void GameState::render(bool saving)
                 XYPos sp = XYPos(rule.group / 4, rule.group % 4) * 192 + XYPos(2816, 1536);
                 SDL_Rect src_rect = {sp.x, sp.y, 192, 192};
                 SDL_Rect dst_rect = {list_pos.x + 1 * cell_width + cell_width / 2 - cell_height / 2, list_pos.y + cell_width + y_offset, cell_height, cell_height};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
             }
             {
                 int priority = std::clamp(int(rule.priority), -2, 2);
@@ -4966,40 +5350,58 @@ void GameState::render(bool saving)
 
         FOR_XY_SET(pos, grid_squares)
         {
-            Colour base(contrast * 0.6,contrast * 0.6,contrast * 0.6);
+            Colour base = theme_colour(THEME_GRID, true);
             if (colors > 0)
             {
                 double p = (double)pos.y / grid->size.y * radians(360) + (double)frame / 2000;
-                base.r += sin(p) * contrast * 0.4 * colors;
-                base.g += sin(p + radians(120)) * contrast * 0.4 * colors;
-                base.b += sin(p + radians(230)) * contrast * 0.4 * colors;
+                base.r = std::clamp<int>(base.r + sin(p) * contrast * 0.4 * colors, 0, 255);
+                base.g = std::clamp<int>(base.g + sin(p + radians(120)) * contrast * 0.4 * colors, 0, 255);
+                base.b = std::clamp<int>(base.b + sin(p + radians(230)) * contrast * 0.4 * colors, 0, 255);
             }
 
             Colour bg_col(0,0,0);
             {
                 if (clue_solves.count(pos))
                 {
-                    bg_col = Colour(0, contrast, 0);
+                    bg_col = theme_id == THEME_CLASSIC
+                        ? Colour(0, contrast, 0)
+                        : theme_colour(THEME_PRIMARY, true);
                 }
                 if (filter_pos_and.get(pos))
                 {
-                    bg_col = Colour(contrast, 0, 0);
+                    bg_col = theme_id == THEME_CLASSIC
+                        ? Colour(contrast, 0, 0)
+                        : theme_colour(THEME_DANGER, true);
                 }
                 if (filter_pos_not.get(pos))
                 {
-                    bg_col = Colour(0, 0, contrast);
+                    bg_col = theme_id == THEME_CLASSIC
+                        ? Colour(0, 0, contrast)
+                        : theme_colour(THEME_SECONDARY, true);
                 }
                 if (hover_rulemaker && hover_squares_highlight.get(pos))
                 {
-                    bg_col = Colour(contrast, contrast, 0);
+                    bg_col = theme_id == THEME_CLASSIC
+                        ? Colour(contrast, contrast, 0)
+                        : theme_colour(THEME_WARNING, true);
                 }
                 if (grid->get(pos).negated && (!grid->get(pos).revealed || grid->get(pos).bomb))
                 {
-                    int a = (bg_col.r + bg_col.g + bg_col.b) / 3;
-
-                    bg_col.r = std::min((unsigned)(bg_col.r + a + 100), (unsigned)contrast);
-                    bg_col.g = std::min((unsigned)(bg_col.g + a + 100), (unsigned)contrast);
-                    bg_col.b = std::min((unsigned)(bg_col.b + a + 100), (unsigned)contrast);
+                    if (theme_id == THEME_CLASSIC)
+                    {
+                        int average = (bg_col.r + bg_col.g + bg_col.b) / 3;
+                        bg_col.r = std::min<unsigned>(bg_col.r + average + 100, contrast);
+                        bg_col.g = std::min<unsigned>(bg_col.g + average + 100, contrast);
+                        bg_col.b = std::min<unsigned>(bg_col.b + average + 100, contrast);
+                    }
+                    else
+                    {
+                        Colour foreground = theme_colour(THEME_FOREGROUND, true);
+                        if (bg_col == Colour(0, 0, 0))
+                            bg_col = blend_colour(theme_colour(THEME_BACKGROUND, false), foreground, 0.4);
+                        else
+                            bg_col = blend_colour(bg_col, foreground, 0.35);
+                    }
                 }
                 // if (grid->get(pos).bomb && grid->get(pos).revealed)
                 // {
@@ -5035,7 +5437,7 @@ void GameState::render(bool saving)
                 }
             }
         }
-        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+        reset_texture_colour();
 
         std::map<XYPos, int> total_taken;
         std::list<GridRegion*> display_regions;
@@ -5197,15 +5599,14 @@ void GameState::render(bool saving)
             std::vector<EdgePos> edges;
             grid->get_edges(edges, grid_pitch);
             {
-                SDL_Rect src_rect = {10, 421, 1, 1};
                 SDL_Rect dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, edge_clue_border, panel_size.y};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
                 dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
                 dst_rect = {right_panel_offset.x - edge_clue_border, right_panel_offset.y, edge_clue_border, panel_size.y};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
                 dst_rect = {left_panel_offset.x + panel_size.x, left_panel_offset.y + panel_size.y - edge_clue_border, right_panel_offset.x - left_panel_offset.x + panel_size.x, edge_clue_border};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
 
             }
             double best_distance = 1000000000;
@@ -5346,15 +5747,14 @@ void GameState::render(bool saving)
 
 
         {
-            SDL_Rect src_rect = {1, 417, 1, 1};
             SDL_Rect dst_rect = {0, 0, left_panel_offset.x + panel_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
             dst_rect = {right_panel_offset.x, 0, window_size.x - right_panel_offset.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
             dst_rect = {left_panel_offset.x + panel_size.x, 0, right_panel_offset.x - (left_panel_offset.x + panel_size.x), right_panel_offset.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
             dst_rect = {left_panel_offset.x + panel_size.x, right_panel_offset.y + panel_size.y, right_panel_offset.x - (left_panel_offset.x + panel_size.x), window_size.y - (right_panel_offset.y + panel_size.y)};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            fill_rect(dst_rect, theme_colour(THEME_BACKGROUND, false));
         }
     }
     {
@@ -5489,7 +5889,8 @@ void GameState::render(bool saving)
                 level_id += std::to_string(current_level_set_index / 5 + 1);
                 level_id += std::to_string(current_level_set_index % 5 + 1);
                 level_id += "." + std::to_string(current_level_index);
-                SDL_Color color = {contrast, contrast, contrast};
+                Colour foreground = theme_colour(THEME_FOREGROUND, true);
+                SDL_Color color = {foreground.r, foreground.g, foreground.b, 255};
                 SDL_Surface* text_surface = TTF_RenderUTF8_Blended(font, level_id.c_str(), color);
                 SDL_Texture* new_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
                 SDL_Rect src_rect;
@@ -5717,7 +6118,7 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
                 render_number(need, pos + XYPos(button_size * 45 / 192 , button_size * 77 / 192), XYPos(button_size * 102 / 192, button_size * 98 / 192));
-                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                reset_texture_colour();
                 continue;
             }
             else
@@ -5770,7 +6171,7 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {pos.x + button_size / 12, pos.y + button_size / 12, button_size * 5 / 6, button_size * 5 / 6};
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
             }
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
         }
         {
             {
@@ -5891,7 +6292,7 @@ void GameState::render(bool saving)
                 SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
                 SDL_SetTextureColorMod(sdl_texture, 0, 0, 0);
                 render_region_type(if_then_region_type[1], XYPos(dst_rect.x + button_size / 8, dst_rect.y + button_size / 8), button_size * 6 / 8);
-                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                reset_texture_colour();
                 add_tooltip(dst_rect, "Then", if_then_selected != 2);
             }
         }
@@ -5902,7 +6303,7 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {right_panel_offset.x + button_size * 1, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
                 if (region_type == RegionType(RegionType::SET, 0))
                     render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
                 add_tooltip(dst_rect, "Clear", region_type != RegionType(RegionType::SET, 0));
             }
             {
@@ -5910,7 +6311,7 @@ void GameState::render(bool saving)
                 SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + int(button_size * 6.2), button_size, button_size};
                 if (region_type == RegionType(RegionType::SET, 1))
                     render_box(XYPos(dst_rect.x, dst_rect.y), XYPos(button_size, button_size), button_size/4, 10);
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
                 add_tooltip(dst_rect, "Bomb", region_type != RegionType(RegionType::SET, 1));
             }
         }
@@ -5952,7 +6353,7 @@ void GameState::render(bool saving)
         bool has_neg = inspected_region->elements_neg.any();
         bool is_if_then = inspected_region->is_if_then();
         {
-            set_region_colour(sdl_texture, inspected_region->type.value, inspected_region->colour, contrast);
+            set_region_colour(inspected_region->type.value, inspected_region->colour, contrast);
             render_box(right_panel_offset + XYPos(0 * button_size, 1 * button_size), XYPos((has_neg ? 2 : 1) * button_size, 2 * button_size), button_size / 2, 8);
             render_region_bubble(is_if_then ? inspected_region->if_type : inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(0 * button_size, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, is_if_then, is_if_then);
             if (is_if_then)
@@ -5964,7 +6365,7 @@ void GameState::render(bool saving)
                 render_region_bubble(inspected_region->type, inspected_region->colour, right_panel_offset + XYPos(1 * button_size + button_size / 3, 1 * button_size), button_size * 2 / 3, hover_rulemaker_region_base_index == 0, !is_if_then, is_if_then);
 
         }
-        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+        reset_texture_colour();
         if (hover_rulemaker)
             render_box(right_panel_offset + XYPos(hover_rulemaker_bits * button_size, 2 * button_size), XYPos(button_size, button_size), button_size / 4);
         {
@@ -6094,13 +6495,13 @@ void GameState::render(bool saving)
                 if (hover_rulemaker && hover_rulemaker_bits == i)
                 {
                     if (hover_rulemaker_action_corner && right_panel_mode == RIGHT_MENU_RULE_GEN)
-                        SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
+                        set_texture_theme_colour(THEME_MUTED);
                     render_box(right_panel_offset + XYPos(0, button_size * 2) + p * button_size, XYPos(button_size, button_size), button_size / 4, 9);
-                    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                    reset_texture_colour();
                     if (right_panel_mode == RIGHT_MENU_RULE_GEN)
                     {
                         if (!hover_rulemaker_action_corner)
-                            SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
+                            set_texture_theme_colour(THEME_MUTED);
                         render_box(
                             right_panel_offset + XYPos(0, button_size * 2) +
                                 p * button_size +
@@ -6108,7 +6509,7 @@ void GameState::render(bool saving)
                                       button_size / 2),
                             XYPos(button_size / 2, button_size / 2),
                             button_size / 4, 9);
-                        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                        reset_texture_colour();
                     }
                 }
             }
@@ -6330,7 +6731,7 @@ void GameState::render(bool saving)
                         render_box(XYPos(right_panel_offset.x + button_size * (1 + i % 4), right_panel_offset.y + button_size * (7 + i / 4)), XYPos(button_size, button_size), button_size/4, 10);
                     SDL_Rect src_rect = {2816 + ((i / 4) * 192), 1536 + ((i % 4) * 192), 192, 192};
                     SDL_Rect dst_rect = {right_panel_offset.x + button_size * (1 + i % 4), right_panel_offset.y + button_size * (7 + i / 4), button_size, button_size};
-                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    render_texture_unmodulated(src_rect, dst_rect);
                     add_tooltip(dst_rect, "Tag");
                 }
             }
@@ -6447,7 +6848,7 @@ void GameState::render(bool saving)
                 {
                     SDL_Rect src_rect = {512, 192, 192, 192};
                     SDL_Rect dst_rect = {right_panel_offset.x + button_size * 2, right_panel_offset.y + button_size * 11, button_size, button_size};
-                    SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                    render_texture_unmodulated(src_rect, dst_rect);
                     add_tooltip(dst_rect, "Cells Cleared", false);
                 }
 
@@ -6486,17 +6887,17 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {3008, 576, 192, 576};
                 SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size * 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
                 bool hover = add_tooltip(dst_rect, "Auto-Solve Maximum Regions", false);
 
                 src_rect = {2048, hover ? 1216 : 1152, 192, 64};
                 dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 3 + int((1 - rule_limit_slider) * 2.6666 * button_size), button_size, button_size / 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
             }
             {
                 SDL_Rect src_rect = {2624, 1536, 192, 192};
                 SDL_Rect dst_rect = {right_panel_offset.x + 0 * button_size, right_panel_offset.y + button_size * 2, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
                 add_tooltip(dst_rect, "Auto-Solve Maximum Regions", false);
 
                 SDL_SetTextureColorMod(sdl_texture, 0,0,0);
@@ -6511,7 +6912,7 @@ void GameState::render(bool saving)
                     SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
 
                 }
-                SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                reset_texture_colour();
             }
         }
         if (render_lock(PROG_LOCK_ROBOTS, XYPos(right_panel_offset.x + 1 * button_size, right_panel_offset.y + button_size * 3), XYPos(button_size * 3, button_size * 3)))
@@ -6572,12 +6973,12 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {2432, 576, 192, 576};
                 SDL_Rect dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 3, button_size, button_size * 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
                 bool hover = add_tooltip(dst_rect, "Robots", false);
 
                 src_rect = {2048, hover ? 1216 : 1152, 192, 64};
                 dst_rect = {right_panel_offset.x + 3 * button_size, right_panel_offset.y + button_size * 3 + int((1 - robot_limit_slider) * 2.6666 * button_size), button_size, button_size / 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
             }
 
         }
@@ -6611,7 +7012,7 @@ void GameState::render(bool saving)
                         uint32_t cb = (i & 4) ? (alt ? 0 : 128) : 255;
                         SDL_SetTextureColorMod(sdl_texture, cr, cg, cb);
                         render_box(right_panel_offset + XYPos((i % 3 + 1) * button_size, button_size * 9 + (i / 3) * button_size), XYPos(button_size, button_size), button_size/4, 11);
-                        SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                        reset_texture_colour();
                     }
                     SDL_Rect dst_rect = {right_panel_offset.x + (i % 3 + 1) * button_size, right_panel_offset.y + button_size * 9 + (i / 3) * button_size, button_size, button_size };
                     add_clickable_highlight(dst_rect);
@@ -6710,13 +7111,13 @@ void GameState::render(bool saving)
             }
 
             if (i == game_mode)
-                SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
+                set_texture_theme_colour(THEME_PRIMARY);
             if (!prog_seen[PROG_LOCK_NEG_MINES_MODE] && i == 4)
                 tname = "???";
             if (!prog_seen[PROG_LOCK_IMPLIES_MODE] && i == 5)
                 tname = "???";
             render_text_box(left_panel_offset + XYPos(button_size * 3, int(button_size * (2.14 + i))), tname, false, 10 * button_size);
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
             render_box(left_panel_offset + XYPos(button_size * 13, int(button_size * (2 + i))), XYPos(button_size, button_size), button_size/4, 4);
 
             int count = 0;
@@ -6730,7 +7131,7 @@ void GameState::render(bool saving)
                             count++;
                 }
             }
-            SDL_SetTextureColorMod(sdl_texture, contrast / 2, contrast / 2, contrast / 2);
+            set_texture_theme_colour(THEME_MUTED);
 
             {
                 SDL_Rect src_rect = {1728, 384, 192, 192};
@@ -6739,7 +7140,7 @@ void GameState::render(bool saving)
                 add_tooltip(dst_rect, "Scores",  !display_scores);
             }
 
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
             render_number(count, left_panel_offset + XYPos(button_size * 13 + button_size / 8, button_size * (2 + i) + button_size / 4), XYPos(button_size * 3 / 4, button_size / 2));
         }
     }
@@ -6864,13 +7265,7 @@ void GameState::render(bool saving)
     }
     if (display_april_1st_splash && !display_april_1st_game)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 7 * button_size), button_size/4, 1);
@@ -6920,7 +7315,7 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {1888, 128, 512, 256};
                 SDL_Rect dst_rect = {left_panel_offset.x + 5 * button_size, (int)(left_panel_offset.y + button_size * 1.2), 4 * button_size, 2 * button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
             }
             {
                 SDL_Rect src_rect = {2880, 384, 192, 192};
@@ -6965,13 +7360,7 @@ void GameState::render(bool saving)
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         mouse_cursor = SDL_SYSTEM_CURSOR_ARROW;
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
 
         render_box(grid_offset, XYPos(grid_size, grid_size), button_size/4, 1);
         render_box(grid_offset + XYPos(grid_size, 0), XYPos(grid_size / 10, grid_size), button_size/4, 1);
@@ -7101,7 +7490,7 @@ void GameState::render(bool saving)
                     if (color == 3)
                         SDL_SetTextureColorMod(sdl_texture, uncontrast, uncontrast, contrast);
                     render_region_type(RegionType((RegionType::Type) type, num), numpos - XYPos(numsize / 2, numsize / 2), numsize);
-                    SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+                    reset_texture_colour();
                 }
 
                 if (biggify)
@@ -7168,7 +7557,7 @@ void GameState::render(bool saving)
                     digits = std::to_string((val / 1000) % 10) + std::to_string((val / 100) % 10) + "." + std::to_string((val / 10) % 10) + std::to_string((val / 1) % 10) + "%";
                 render_number_string(digits, grid_offset + XYPos(grid_size + grid_size / 100, grid_size * i / 3), XYPos(grid_size / 10 - (grid_size / 100 * 2), grid_size / 3));
             }
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
         }
 
         if (april_1st_scoop_animation)
@@ -7193,13 +7582,7 @@ void GameState::render(bool saving)
 
     if (display_menu)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(16 * button_size, 11.8 * button_size), button_size/4, 1);
@@ -7269,12 +7652,12 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
             SDL_Rect dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_meter(src_rect, dst_rect);
             bool hover = add_tooltip(dst_rect, "Volume", false);
 
             src_rect = {2048, hover ? 1216 : 1152, 192, 64};
             dst_rect = {left_panel_offset.x + 11 * button_size, left_panel_offset.y + button_size * 3 + int((1 - volume) * 2.6666 * button_size), button_size, button_size / 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_meter(src_rect, dst_rect);
         }
         {
             SDL_Rect src_rect = {2624, 960, 192, 192};
@@ -7284,12 +7667,12 @@ void GameState::render(bool saving)
         {
             SDL_Rect src_rect = {2048, 576, 192, 576};
             SDL_Rect dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_meter(src_rect, dst_rect);
             bool hover = add_tooltip(dst_rect, "Music Volume", false);
 
             src_rect = {2048, hover ? 1216 : 1152, 192, 64};
             dst_rect = {left_panel_offset.x + 13 * button_size, left_panel_offset.y + button_size * 3 + int((1 - music_volume) * 2.6666 * button_size), button_size, button_size / 3};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+            render_meter(src_rect, dst_rect);
         }
         {
             SDL_Rect src_rect = {2624, 1152, 192, 192};
@@ -7302,17 +7685,17 @@ void GameState::render(bool saving)
             {
                 SDL_Rect src_rect = {2816, 576, 192, 576};
                 SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3, button_size, button_size * 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
                 bool hover = add_tooltip(dst_rect, "Colors", false);
 
                 src_rect = {2048, hover ? 1216 : 1152, 192, 64};
                 dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 3 + int((1 - colors) * 2.6666 * button_size), button_size, button_size / 3};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_meter(src_rect, dst_rect);
             }
             {
                 SDL_Rect src_rect = {2624, 1344, 192, 192};
                 SDL_Rect dst_rect = {left_panel_offset.x + 15 * button_size, left_panel_offset.y + button_size * 2, button_size, button_size};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
             }
         }
         {
@@ -7338,7 +7721,18 @@ void GameState::render(bool saving)
         }
 
         {
-            SDL_SetTextureColorMod(sdl_texture, contrast, 0, 0);
+            std::string t = translate("Theme");
+            render_text_box(left_panel_offset + XYPos(11 * button_size, 10 * button_size), t, false, 4 * button_size);
+            for (int id = THEME_CLASSIC; id < THEME_COUNT; id++)
+            {
+                int swatch_size = button_size * 4 / 5;
+                XYPos swatch_pos = left_panel_offset + XYPos((11 + id) * button_size + button_size / 10, 11 * button_size + button_size / 10);
+                render_theme_swatch(id, swatch_pos, swatch_size);
+            }
+        }
+
+        {
+            set_texture_theme_colour(THEME_DANGER);
             SDL_Rect src_rect = {1664, 960, 192, 192};
             SDL_Rect dst_rect = {left_panel_offset.x + 2 * button_size, left_panel_offset.y + button_size * 9, button_size, button_size};
             SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
@@ -7355,7 +7749,7 @@ void GameState::render(bool saving)
             add_clickable_highlight(dst_rect);
             std::string t = translate("Reset Rules");
             render_text_box(left_panel_offset + XYPos(3.2 * button_size, 10.14 * button_size), t, false, 7.5 * button_size);
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
         }
         {
             SDL_Rect src_rect = {1280, 1728, 192, 192};
@@ -7370,13 +7764,7 @@ void GameState::render(bool saving)
     }
     if (display_reset_confirm)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(10 * button_size, 10 * button_size), button_size/4, 1);
@@ -7391,13 +7779,7 @@ void GameState::render(bool saving)
 
     if (display_key_select)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(12 * button_size, 10.5 * button_size), button_size/4, 1);
@@ -7582,13 +7964,7 @@ void GameState::render(bool saving)
 
     if (display_language_chooser)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 200);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop();
         tooltip_string = "";
         tooltip_rect = XYRect(-1,-1,-1,-1);
         render_box(left_panel_offset + XYPos(button_size, button_size), XYPos(13 * button_size, 10 * button_size), button_size/4, 1);
@@ -7599,10 +7975,10 @@ void GameState::render(bool saving)
             std::string s = it->first;
             set_language(s);
             if (s == orig_lang)
-                SDL_SetTextureColorMod(sdl_texture, 0, contrast, 0);
+                set_texture_theme_colour(THEME_PRIMARY);
             XYPos p(index / 8, index % 8);
             render_text_box(left_panel_offset + XYPos(button_size * (2 + p.x * 6), button_size * (2 + p.y)), s);
-            SDL_SetTextureColorMod(sdl_texture, contrast, contrast, contrast);
+            reset_texture_colour();
             index++;
         }
         set_language(orig_lang);
@@ -7661,27 +8037,21 @@ void GameState::render(bool saving)
             SDL_Rect src_rect = {2624, 1920, 192, 192};
             SDL_Rect dst_rect = {walkthrough_region.pos.x - walkthrough_region.size.x * 3, walkthrough_region.pos.y - walkthrough_region.size.y * 3, walkthrough_region.size.x * 7, walkthrough_region.size.y * 7};
             SDL_Point rot_center = {dst_rect.w / 2, dst_rect.h / 2};
-            SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, double(frame) / 10, &rot_center, SDL_FLIP_NONE);
+            render_texture_unmodulated_ex(src_rect, dst_rect, double(frame) / 10, &rot_center);
 
             XYPos p = mouse - walkthrough_region.pos - walkthrough_region.size / 2;
             if (XYPosFloat(p).distance()  < XYPosFloat(walkthrough_region.size).distance() / 2)
             {
                 src_rect = {2624, walkthrough_double_click ? 2112 + 192 : 2112, 192, 192};
                 dst_rect = {walkthrough_region.pos.x, walkthrough_region.pos.y + walkthrough_region.size.y, walkthrough_region.size.x, walkthrough_region.size.y};
-                SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
+                render_texture_unmodulated(src_rect, dst_rect);
             }
         }
 
     }
     if (display_text_entry)
     {
-        {
-            SDL_SetTextureAlphaMod(sdl_texture, 220);
-            SDL_Rect src_rect = {15, 426, 1, 1};
-            SDL_Rect dst_rect = {0, 0, window_size.x, window_size.y};
-            SDL_RenderCopy(sdl_renderer, sdl_texture, &src_rect, &dst_rect);
-            SDL_SetTextureAlphaMod(sdl_texture, 255);
-        }
+        render_modal_backdrop(220);
         std::string s = *text_entry_string;
         s.insert(text_entry_offset, ((frame / 500) % 2) ? "  " : "|");
         render_text_box(grid_offset, s, false, grid_size);
@@ -9845,7 +10215,10 @@ bool GameState::events()
                         if (p.y == 2)
                             show_row_clues = !show_row_clues;
                         if (p.y == 3)
+                        {
                             low_contrast = !low_contrast;
+                            rebuild_box_texture();
+                        }
                         if (p.y == 4)
                             display_key_select = true;
                         if (p.y == 5)
@@ -9867,6 +10240,8 @@ bool GameState::events()
                         if (p.y == 9)
                             quit = true;
                     }
+                    if (p.y == 9 && p.x >= 9 && p.x < 9 + THEME_COUNT)
+                        set_theme(p.x - 9);
                     if (p.x == 9 && p.y >= 0 && p.y <= 3)
                     {
                         dragging_scroller = true;
