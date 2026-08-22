@@ -1442,19 +1442,22 @@ void GameState::load_grid(std::string s)
 }
 static int advance_grid(Grid* grid, std::list<GridRule>& rules, GridRegion* inspected_region, const XYSet& filter_pos_and, const XYSet& filter_pos_not, bool skip_hide = false);
 
-GameState::HintStartResult GameState::start_hint()
+GameState::HintStartResult GameState::start_hint(bool require_settled_board)
 {
     if (get_hint)
         return HintStartResult::ALREADY_RUNNING;
-    if (load_level || skip_level || force_load_level || grid->wants_base_regions ||
-        !grid->regions_to_add.empty())
-        return HintStartResult::BOARD_BUSY;
-    for (const GridRegion& region : grid->regions)
-        if (!region.stale)
+    if (require_settled_board)
+    {
+        if (load_level || skip_level || force_load_level || grid->wants_base_regions ||
+            !grid->regions_to_add.empty())
             return HintStartResult::BOARD_BUSY;
-    for (const GridRule& rule : rules[game_mode])
-        if (!rule.deleted && !rule.paused && !rule.stale)
-            return HintStartResult::BOARD_BUSY;
+        for (const GridRegion& region : grid->regions)
+            if (!region.stale)
+                return HintStartResult::BOARD_BUSY;
+        for (const GridRule& rule : rules[game_mode])
+            if (!rule.deleted && !rule.paused && !rule.stale)
+                return HintStartResult::BOARD_BUSY;
+    }
     if (april_1st && !april_1st_hint_count)
         return HintStartResult::NO_HINTS_LEFT;
     if (april_1st)
@@ -8271,7 +8274,7 @@ void GameState::left_panel_click(XYPos pos, int clicks, int btn)
             pause_hint();
             return;
         }
-        if (start_hint() == HintStartResult::NO_HINTS_LEFT)
+        if (start_hint(false) == HintStartResult::NO_HINTS_LEFT)
         {
             display_april_1st_splash = true;
             return;
@@ -9388,7 +9391,7 @@ void GameState::button_down(uint64_t key)
                 pause_hint();
                 return;
             }
-            if (start_hint() == HintStartResult::NO_HINTS_LEFT)
+            if (start_hint(false) == HintStartResult::NO_HINTS_LEFT)
             {
                 display_april_1st_splash = true;
                 return;

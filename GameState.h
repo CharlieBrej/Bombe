@@ -555,7 +555,7 @@ public:
     void save(std::ostream& outfile, bool lite = false);
     std::string debug_rules_dump() const;
     std::string add_rule_from_json(const std::string& json);
-    HintStartResult start_hint();
+    HintStartResult start_hint(bool require_settled_board);
     void pause_hint();
     void clear_hint();
     std::string debug_hint_dump() const;

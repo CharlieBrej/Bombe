@@ -131,7 +131,7 @@ std::string ControlSocket::execute(const std::string& request)
     if (request == "hint")
     {
         std::string response;
-        switch (game_state.start_hint())
+        switch (game_state.start_hint(true))
         {
         case GameState::HintStartResult::STARTED:
             response = "Hint started.\n";
