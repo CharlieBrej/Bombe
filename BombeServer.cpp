@@ -225,6 +225,20 @@ public:
         players[steam_id].name = steam_username;
     }
 
+    void remove_player(uint64_t steam_id)
+    {
+        if (!steam_id)
+            return;
+
+        for (int mode = 0; mode < GAME_MODE_TYPES; mode++)
+        for (int level = 0; level < LEVEL_TYPES; level++)
+            scores[mode][level].add_score(steam_id, 0, true);
+
+        auto player = players.find(steam_id);
+        if (player != players.end())
+            player->second = Player(player->second.name);
+    }
+
     void load(SaveObject* sobj)
     {
         SaveObjectMap* omap = sobj->get_map();
@@ -1028,6 +1042,30 @@ int main(int argc, char *argv[])
                 db.next_neg_server_levels.clear();
                 db.next_if_then_server_levels.clear();
                 std::remove("CLEAR_NEXT_SERVER_LEVELS");
+            }
+        }
+        {
+            std::ifstream remove_player_file("REMOVE_PLAYER");
+            if (!remove_player_file.fail())
+            {
+                std::string steam_id_string;
+                std::getline(remove_player_file, steam_id_string);
+                try
+                {
+                    uint64_t steam_id = std::stoull(steam_id_string);
+                    db.remove_player(steam_id);
+                    std::cout << "removed scores for player " << steam_id << "\n";
+
+                    SaveObject* savobj = db.save(false);
+                    std::ofstream outfile("db.save");
+                    outfile << savobj->to_string();
+                    delete savobj;
+                }
+                catch (const std::exception& error)
+                {
+                    std::cout << "invalid REMOVE_PLAYER file: " << error.what() << "\n";
+                }
+                std::remove("REMOVE_PLAYER");
             }
         }
         {
