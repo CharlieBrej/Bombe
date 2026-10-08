@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <set>
 
 #include "Grid.h"
 #include "GameState.h"
@@ -132,7 +133,7 @@ void SteamGameManager::get_new_ticket()
 #endif
 
 
-void mainloop()
+static void mainloop()
 {
     int save_index = 0;
     char* save_path = SDL_GetPrefPath("CharlieBrej", "Bombe");
@@ -147,7 +148,7 @@ void mainloop()
     GameState* game_state;
     {
 #ifdef _WIN32
-        std::ifstream loadfile(std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
+        std::ifstream loadfile(std::filesystem::path((const char8_t*)save_filename.c_str()), std::ios::binary);
 #else
         std::ifstream loadfile(save_filename.c_str());
 #endif
@@ -230,8 +231,8 @@ void mainloop()
             std::string out_data = compress_string(omap->to_string());
 
 #ifdef _WIN32
-            std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
-            std::ofstream outfile2 (std::filesystem::path((char8_t*)my_save_filename.c_str()), std::ios::binary);
+            std::ofstream outfile1 (std::filesystem::path((const char8_t*)save_filename.c_str()), std::ios::binary);
+            std::ofstream outfile2 (std::filesystem::path((const char8_t*)my_save_filename.c_str()), std::ios::binary);
 #else
             std::ofstream outfile1 (save_filename.c_str());
             std::ofstream outfile2 (my_save_filename.c_str());
@@ -252,7 +253,7 @@ void mainloop()
             diff = 1000;
         if (diff < 10)
         {
-            SDL_Delay(10 - diff);;
+            SDL_Delay(10 - diff);
             newtime = SDL_GetTicks();
             diff = newtime - oldtime;
         }
@@ -268,7 +269,7 @@ void mainloop()
         SaveObject* omap = game_state->save();
         std::string out_data = compress_string(omap->to_string());
 #ifdef _WIN32
-        std::ofstream outfile1 (std::filesystem::path((char8_t*)save_filename.c_str()), std::ios::binary);
+        std::ofstream outfile1 (std::filesystem::path((const char8_t*)save_filename.c_str()), std::ios::binary);
 #else
         std::ofstream outfile1 (save_filename.c_str());
 #endif

@@ -1,22 +1,57 @@
 # Bombe
 
-Bombe is a deduction puzzle game built with C++20, SDL 2, and Z3. The repository also contains a grid generator and the score/level server.
+Bombe is a Minesweeper-derived deduction and automation game. Number clues
+constrain neighbouring bombs, and those constraints become coloured regions
+showing how many undiscovered bombs remain. Instead of solving every board by
+hand, the player constructs reusable graphical rules which run automatically.
+
+A rule can match one or more overlapping regions, mark cells as clear or as
+bombs, create a derived region, or change a region's visibility. The same rules
+are then tested against progressively harder boards. The larger puzzle is to
+build a small, efficient, general-purpose ruleset which can solve as many levels
+as possible.
+
+The game and its tools are written in C++20 using SDL 2, Z3, and Zstandard.
+
+## Features
+
+- Square, triangular, and hexagonal boards, including wrapped and merged layouts.
+- Six game modes, ranging from the regular ruleset to negative-bomb and
+  implication-region puzzles.
+- Exact, inequality, parity, XOR, variable, negative, and IF/THEN constraints.
+- Rule usage, clearing, and CPU statistics, plus background robots which test a
+  ruleset across the level catalogue.
+- Hints, region filtering, rule priorities and groups, clipboard sharing,
+  selectable themes, and multiple interface languages.
+- Bundled level sets and an optional service for scores and weekly levels.
 
 ## Repository contents
 
-- `Bombe` — the game client
-- `GridGenerator` — puzzle grid generation utility
-- `BombeServer` — score and level server
-- `Grid.cpp` / `Grid.h` — grid, region, rule, and solver logic
-- `GameState.cpp` / `GameState.h` — game state, input, and rendering
-- `levels.data`, `texture.png`, `snd/`, and `tutorial/` — runtime assets
+- `Bombe` — the SDL game client, built from `main.cpp`, `GameState.*`, and the
+  shared core.
+- `GridGenerator` — the offline puzzle generator and verifier.
+- `BombeServer` — the score and weekly-level service.
+- `BombeTest` — the core rule and region regression test program.
+- `BombeControl` — an optional Unix-domain-socket development client.
+- `Grid.*` — board geometries, cells, regions, rules, Z3 validation, and rule
+  application.
+- `SaveState.*`, `Compress.*`, and `LevelSet.*` — structured data, compression,
+  saves, and bundled levels.
+- `lang.json`, `texture.png`, `font-*`, `snd/`, and `tutorial/` — runtime data
+  and assets.
 
-## Building on Linux
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the subsystem map, important data
+flows, and guidance on where different changes belong.
+
+## Building
+
+The Autotools configuration currently supports Linux and macOS. The dependency
+installation examples below are for Linux.
 
 Clone the repository with its clipboard helper submodule:
 
 ```sh
-git clone --recurse-submodules <repository-url>
+git clone --recurse-submodules https://github.com/CharlieBrej/Bombe.git
 cd Bombe
 ```
 
@@ -58,7 +93,11 @@ autoreconf --install --force
 make -j"$(nproc)"
 ```
 
-This builds all three executables in the repository root. To build only the game:
+The examples use Linux's `nproc`. On macOS, omit `-j` or use
+`make -j"$(sysctl -n hw.logicalcpu)"`.
+
+This builds the game, grid generator, and server in the repository root. To
+build only the game:
 
 ```sh
 make -j"$(nproc)" Bombe
@@ -81,6 +120,20 @@ autoreconf --install --force
 ./configure --disable-steam
 ```
 
+## Testing
+
+Build and run the core regression suite with:
+
+```sh
+make check
+```
+
+After it has been built, the test executable can also be run directly:
+
+```sh
+./BombeTest
+```
+
 ## Running
 
 Run the game from the repository root so it can find its fonts, textures, sounds, translations, tutorials, and level data:
@@ -88,6 +141,15 @@ Run the game from the repository root so it can find its fonts, textures, sounds
 ```sh
 ./Bombe
 ```
+
+The client loads assets using paths relative to the working directory. A local
+development checkout also needs `music.ogg` in the repository root when SDL
+audio is available; that asset is currently supplied separately rather than
+tracked in Git.
+
+The presence of an empty `FULL` file selects the full build; without it, the
+client runs as the demo. An empty `PLAYTEST` file selects the playtest build.
+These are local packaging markers and are not tracked.
 
 ### Optional local control socket
 
@@ -116,9 +178,9 @@ irrelevant regions until a supporting set remains. Poll `hint-status` until it
 reports `complete`; the output lists target cells, supporting regions, regions
 fixed visible by the user, regions hidden by the hint, and regions not yet
 classified. `hint-clear` stops an active hint, restores only hint-owned
-visibility changes, and clears its targets. A hint waits until the board,
-regions, and rules have all finished processing; retry shortly if it reports
-that they are still busy.
+visibility changes, and clears its targets. The control-socket `hint` command
+waits until the board, regions, and rules have all finished processing; retry
+shortly if it reports that they are still busy.
 
 Add a rule using a single-line JSON description. The success response and the
 `rules` command expand each chosen area into a readable Venn expression:
@@ -161,7 +223,12 @@ programs to select a non-default path; the client also accepts `--socket PATH`.
 
 ## Server configuration
 
-`BombeServer` uses libcurl for Steam ticket authentication. Set the Steam Web API key in the environment before running a production server:
+`BombeServer` is not required for local play. It listens on TCP port 42071 for
+score and level traffic and uses libcurl for Steam ticket authentication. Review
+its deployment and authentication settings before exposing an instance to a
+network.
+
+Set the Steam Web API key in the environment before running a production server:
 
 ```sh
 export BOMBE_STEAM_WEB_API_KEY="your-api-key"
@@ -172,4 +239,6 @@ Do not commit API keys to the repository.
 
 ## License
 
-This project is licensed under the terms in [LICENSE](LICENSE).
+This project is licensed under the
+[Creative Commons Attribution 4.0 International license](LICENSE). The `clip`
+submodule carries its own license.
