@@ -875,6 +875,8 @@ static void add_to_fast_ops(std::vector<GridRule::FastOp>& fast_ops, GridRule::F
             continue;
         if (op.p3 != new_op.p3)
             continue;
+        if (op.set != new_op.set)
+            continue;
         return;
     }
     fast_ops.push_back(new_op);
@@ -895,10 +897,12 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                     if ((i & j) == 0)
                     {
                         int vi = (i | j) - 1;
-                        if (!have[vi])
-                        {
+                        const bool set = !have[vi];
+                        if (set)
                             have[vi] = true;
-                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_ADD, true, vi, i, j));
+                        add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_ADD, set, vi, i, j));
+                        if (set)
+                        {
                             i = 0;
                             break;
                         }
@@ -906,10 +910,12 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                     else if ((i & j) == i)
                     {
                         int vi = (j & ~i) - 1;
-                        if (!have[vi])
-                        {
+                        const bool set = !have[vi];
+                        if (set)
                             have[vi] = true;
-                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_SUB, true, vi, i, j));
+                        add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_SUB, set, vi, i, j));
+                        if (set)
+                        {
                             i = 0;
                             break;
                         }
@@ -917,10 +923,12 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                     else if (have[(i ^ j) - 1]) // AB+BC+CA -> 2ABC
                     {
                         int vi = (i | j) - 1;
-                        if (!have[vi])
-                        {
+                        const bool set = !have[vi];
+                        if (set)
                             have[vi] = true;
-                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_TRIPLE, true, vi, i, j, i ^ j));
+                        add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_TRIPLE, set, vi, i, j, i ^ j));
+                        if (set)
+                        {
                             i = 0;
                             break;
                         }
@@ -950,10 +958,12 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                             int vi = (k ^ cov) - 1;
                             if (!(k ^ cov))
                                 continue;
-                            if (!have[vi])
-                            {
+                            const bool set = !have[vi];
+                            if (set)
                                 have[vi] = true;
-                                add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_QUAD, true, vi, i, j, k));
+                            add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_QUAD, set, vi, i, j, k));
+                            if (set)
+                            {
                                 i = 0;
                                 j = 32;
                                 break;
@@ -977,10 +987,12 @@ void GridRule::jit_preprocess_calc(std::vector<GridRule::FastOp>& fast_ops, bool
                                     continue;
 
                                 int vi = c - 1;
-                                if (!have[vi])
-                                {
+                                const bool set = !have[vi];
+                                if (set)
                                     have[vi] = true;
-                                    add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_BCD, true, vi, i, j, k));
+                                add_to_fast_ops(fast_ops, FastOp(FastOp::OpType::VAR_BCD, set, vi, i, j, k));
+                                if (set)
+                                {
                                     i = 0;
                                     j = 32;
                                     break;
