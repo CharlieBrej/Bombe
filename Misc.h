@@ -6,6 +6,7 @@
 #include <math.h>
 #include <assert.h>
 #include <random>
+#include <chrono>
 
 #define BREAKPOINT __asm__ volatile("int $0x03");
 
@@ -151,7 +152,8 @@ public:
     Rand()
     {
         std::random_device rd;
-        gen.seed(rd());
+        auto t = static_cast<unsigned>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+        gen.seed(rd() ^ t);
     };
 
     Rand(unsigned i)
