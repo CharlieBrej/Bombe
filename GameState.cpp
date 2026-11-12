@@ -873,6 +873,14 @@ static int level_gen_thread_func(void *ptr)
         g = new SquareGrid ();
     else if (c == 'C')
         g = new TriangleGrid ();
+    else if (c == 'D')
+        g = new RhombilleGrid ();
+    else if (c == 'E')
+        g = new TetrakisGrid ();
+    else if (c == 'F')
+        g = new KisrhombilleGrid ();
+    else if (c == 'G')
+        g = new TriakisGrid ();
     else
     {
         assert(0);
@@ -904,7 +912,13 @@ static int level_gen_thread_func(void *ptr)
     int negative = req[15] - '0';
     int if_then = req[16] - '0';
 
+    // randomize() compares the row chance with rnd % 10, so rows * 10 puts a
+    // clue on every row. The newer tilings have many more rows, so for them
+    // the digit is how many row clues to start with, like the original levels.
+    bool newer_tiling = (req[0] >= 'D');
     g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10, negative * 10);
+    if (newer_tiling)
+        g->limit_row_clues(rows);
     g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime, if_then);
     std::string s = g->to_string();
     SDL_LockMutex(game_state->level_gen_mutex);
@@ -2431,6 +2445,7 @@ void GameState::set_region_colour(unsigned type, unsigned col, unsigned fade)
 void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken, std::map<XYPos, int>& total_taken, std::vector<WrapPos>& wraps, int disp_type)
 {
     std::vector<XYPos> elements;
+    std::vector<XYRect> element_cells;
     std::vector<int> element_sizes;
 
     unsigned anim_prog = grid_regions_animation[&region];
@@ -2443,13 +2458,15 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
         FOR_XY_SET(pos, if_if ? region.elements_neg : region.elements)
         {
             XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+            XYRect cell = grid->get_square_pos(pos, grid_pitch);
             XYPos n = d.pos + d.size / 2;
             elements.push_back(n);
+            element_cells.push_back(cell);
             element_sizes.push_back(std::min(d.size.x, d.size.y));
             taken[pos]++;
             for(WrapPos r : wraps)
             {
-                if (XYPosFloat(mouse - grid_offset - r.pos - (d.pos + d.size / 2) * r.size).distance() <= (d.size.x / 2 * r.size))
+                if (XYPosFloat(mouse - grid_offset - r.pos - (d.pos + d.size / 2 + r.cell_shift(cell)) * r.size).distance() <= (d.size.x / 2 * r.size))
                 {
                     if ((mouse - grid_offset).inside(XYPos(grid_size,grid_size)))
                     {
@@ -2493,7 +2510,7 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 //     continue;
                 if (r.size > 1)
                     continue;
-                double dist = (XYPosFloat(elements[j] * r.size + r.pos) - (elements[i] + wraps[0].pos)).distance() / sqrt(r.size);
+                double dist = (XYPosFloat((elements[j] + r.cell_shift(element_cells[j])) * r.size + r.pos) - (elements[i] + wraps[0].pos)).distance() / sqrt(r.size);
                 if (dist < distances[i][j].first)
                 {
                     distances[i][j] = std::make_pair(dist, &r);
@@ -2526,7 +2543,12 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
         {
             assert(best_wrap);
             XYPos pos = elements[best_con.x];
-            XYPos last = elements[best_con.y] * best_wrap->size + best_wrap->pos - wraps[0].pos;
+            XYRect pos_cell = element_cells[best_con.x];
+            XYPos last_shift = best_wrap->cell_shift(element_cells[best_con.y]) + best_wrap->pos - wraps[0].pos;
+            XYPos last = (elements[best_con.y] + best_wrap->cell_shift(element_cells[best_con.y])) * best_wrap->size + best_wrap->pos - wraps[0].pos;
+            // The cell at the far end, where it's drawn next to this one.
+            // Only mirrored copies use it, and they're never scaled.
+            XYRect last_cell(element_cells[best_con.y].pos + last_shift, element_cells[best_con.y].size);
             double dist = XYPosFloat(pos - last).distance();
             double angle = XYPosFloat(pos).angle(XYPosFloat(last));
             int s = std::min(element_sizes[best_con.x], int(element_sizes[best_con.y] * best_wrap->size));
@@ -2543,8 +2565,10 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 SDL_Rect src_rect2 = {1024 - int(f) % 1024, 2528, std::min(int(dist / line_thickness * 10), 1024), 32};
                 for(WrapPos r : wraps)
                 {
-                    XYPos s = r.pos + pos * r.size;
-                    XYPos e = r.pos + last * r.size;
+                    XYPos s = r.pos + (pos + r.cell_shift(pos_cell)) * r.size;
+                    XYPos e = r.pos + (last + r.cell_shift(last_cell)) * r.size;
+                    double dist = XYPosFloat(s - e).distance() / r.size;
+                    double angle = XYPosFloat(s).angle(XYPosFloat(e));
                     if (s.x < -line_thickness && e.x < -line_thickness) continue;
                     if (s.y < -line_thickness && e.y < -line_thickness) continue;
                     if (s.x > grid_size + line_thickness && e.x > grid_size + line_thickness) continue;
@@ -2563,8 +2587,10 @@ void GameState::render_region_bg(GridRegion& region, std::map<XYPos, int>& taken
                 SDL_Rect src_rect = {160, 608, 1, 1};
                 for(WrapPos r : wraps)
                 {
-                    XYPos s = r.pos + pos * r.size;
-                    XYPos e = r.pos + last * r.size;
+                    XYPos s = r.pos + (pos + r.cell_shift(pos_cell)) * r.size;
+                    XYPos e = r.pos + (last + r.cell_shift(last_cell)) * r.size;
+                    double dist = XYPosFloat(s - e).distance() / r.size;
+                    double angle = XYPosFloat(s).angle(XYPosFloat(e));
                     if (s.x < -line_thickness && e.x < -line_thickness) continue;
                     if (s.y < -line_thickness && e.y < -line_thickness) continue;
                     if (s.x > grid_size + line_thickness && e.x > grid_size + line_thickness) continue;
@@ -2614,6 +2640,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
         FOR_XY_SET(pos, if_if ? region.elements_neg : region.elements)
         {
             XYRect d = grid->get_bubble_pos(pos, grid_pitch, taken[pos], total_taken[pos]);
+            XYRect cell = grid->get_square_pos(pos, grid_pitch);
             d.pos -= XYPosFloat(d.size) * (wob / 2);
             d.size += XYPosFloat(d.size) * (wob);
 
@@ -2631,7 +2658,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                     for (int i = 0; i < 8; i++)
                     {
                         XYPos blobs[8] = {{200,200},{-233,-310},{-190,-410},{210,-309},{230,210},{-273,340},{-390,-370},{313,-319}};
-                        XYPos p = r.pos + (d.pos - (margin / 2) + XYPosFloat(margin) * XYPosFloat(sin(float(fr) / blobs[i].x), cos(float(fr) / blobs[i].y))) * r.size;
+                        XYPos p = r.pos + (d.pos + r.cell_shift(cell) - (margin / 2) + XYPosFloat(margin) * XYPosFloat(sin(float(fr) / blobs[i].x), cos(float(fr) / blobs[i].y))) * r.size;
                         XYPos s = (d.size + margin)* r.size;
                         p += grid_offset;
                         SDL_Point rot_center = {s.x / 2, s.y / 2};
@@ -2658,7 +2685,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                 }
                 for(WrapPos r : wraps)
                 {
-                    XYPos p = r.pos + d.pos * r.size;
+                    XYPos p = r.pos + (d.pos + r.cell_shift(cell)) * r.size;
                     XYPos s = d.size * r.size;
                     if(p.x + s.x < 0) continue;
                     if(p.y + s.y < 0) continue;
@@ -2681,7 +2708,7 @@ void GameState::render_region_fg(GridRegion& region, std::map<XYPos, int>& taken
                     RegionType t = region.type;
                     if (if_if)
                         t = region.if_type;
-                    XYPos p = r.pos + d.pos * r.size;
+                    XYPos p = r.pos + (d.pos + r.cell_shift(cell)) * r.size;
                     XYPos s = d.size * r.size;
                     if(p.x + s.x < 0) continue;
                     if(p.y + s.y < 0) continue;
@@ -3972,8 +3999,9 @@ void GameState::render(bool saving)
 
         if ((grid->wrapped == Grid::WRAPPED_IN) && grid_zoom < 1.5)
         {
-            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)));
-            double mag = double(scaled_grid_size) / double(sq_pos.size.x);
+            XYPos innie_pitch = grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size));
+            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, innie_pitch);
+            double mag = grid->get_innie_mag(innie_pitch, scaled_grid_size);
             grid_zoom *= mag;
             target_grid_zoom *= mag;
             scaled_grid_offset = scaled_grid_offset - sq_pos.pos * mag;
@@ -3984,7 +4012,7 @@ void GameState::render(bool saving)
             sq_pos.pos += scaled_grid_offset;
             if (sq_pos.pos.x < 0 && sq_pos.pos.y < 0 && (sq_pos.pos.x + sq_pos.size.x) >= grid_size && (sq_pos.pos.y + sq_pos.size.y) >= grid_size)
             {
-                double mag = double(sq_pos.size.x) / double(scaled_grid_size);
+                double mag = 1 / grid->get_innie_mag(grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)), scaled_grid_size);
                 scaled_grid_offset = sq_pos.pos;
                 grid_zoom *= mag;
                 target_grid_zoom *= mag;
@@ -4017,14 +4045,26 @@ void GameState::render(bool saving)
         }
         else
         {
-            XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
+            // Mirrored surfaces only repeat exactly every two boards along
+            // the mirrored axis.
+            XYPos wrap_size = grid->get_wrapped_size(grid_pitch) * grid->get_copy_period();
+            if (grid->wrapped == Grid::WRAPPED_MOBIUS)
+            {
+                // The strip's top and bottom are real edges: keep the strip
+                // in view, centred if it's shorter than the view.
+                int strip = grid->get_grid_size(grid_pitch).y;
+                if (strip <= grid_size)
+                    scaled_grid_offset.y = (grid_size - strip) / 2;
+                else
+                    scaled_grid_offset.y = std::clamp(scaled_grid_offset.y, grid_size - strip, 0);
+            }
             while (scaled_grid_offset.x > wrap_size.x)
                 scaled_grid_offset.x -= wrap_size.x;
-            while (scaled_grid_offset.y > wrap_size.y)
+            while (scaled_grid_offset.y > wrap_size.y && grid->wrapped != Grid::WRAPPED_MOBIUS)
                 scaled_grid_offset.y -= wrap_size.y;
             while (scaled_grid_offset.x < 0 )
                 scaled_grid_offset.x += wrap_size.x;
-            while (scaled_grid_offset.y < 0)
+            while (scaled_grid_offset.y < 0 && grid->wrapped != Grid::WRAPPED_MOBIUS)
                 scaled_grid_offset.y += wrap_size.y;
         }
 
@@ -5328,8 +5368,9 @@ void GameState::render(bool saving)
         wraps.push_back(WrapPos{scaled_grid_offset, 1.0});
         if (grid->wrapped == Grid::WRAPPED_IN)
         {
-            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size)));
-            double mag = double(scaled_grid_size) / double(sq_pos.size.x);
+            XYPos innie_pitch = grid->get_grid_pitch(XYPos(scaled_grid_size, scaled_grid_size));
+            XYRect sq_pos = grid->get_square_pos(grid->innie_pos, innie_pitch);
+            double mag = grid->get_innie_mag(innie_pitch, scaled_grid_size);
 
             wraps.push_back(WrapPos{scaled_grid_offset - sq_pos.pos * mag, 1.0 * mag});
 
@@ -5348,6 +5389,23 @@ void GameState::render(bool saving)
             FOR_XY(r, XYPos(-2, -2), XYPos(5, 5))
             if (r != XYPos(0, 0))
                 wraps.push_back(WrapPos{scaled_grid_offset + wrap_size * r, 1.0});
+        }
+        else if (grid->wraps_sides())
+        {
+            // The scroll offset can go up to two boards along a mirrored
+            // axis, so draw one more copy back that way.
+            XYPos wrap_size = grid->get_wrapped_size(grid_pitch);
+            XYPos from(-2, -2);
+            XYPos to(5, 5);
+            from -= grid->get_copy_period() - XYPos(1, 1);
+            if (grid->wrapped == Grid::WRAPPED_MOBIUS)
+            {
+                from.y = 0;
+                to.y = 1;
+            }
+            FOR_XY(r, from, to)
+            if (r != XYPos(0, 0))
+                wraps.push_back(WrapPos{scaled_grid_offset + wrap_size * r, 1.0, grid->get_copy_flip(r), wrap_size});
         }
 
 
@@ -5414,16 +5472,35 @@ void GameState::render(bool saving)
             }
             std::vector<RenderCmd> cmds;
             grid->render_square(pos, grid_pitch, cmds);
+            XYRect cell = grid->get_square_pos(pos, grid_pitch);
             for (RenderCmd& cmd : cmds)
             {
                 for(WrapPos r : wraps)
                 {
+                    XYPos shift = r.cell_shift(cell);
                     SDL_SetTextureColorMod(sdl_texture, base.r,  base.g, base.b);
+                    // Mirrored copies of the board have dimmer lines, so
+                    // the twist shows.
+                    if (r.flip != XYPos(0, 0))
+                        SDL_SetTextureColorMod(sdl_texture, base.r * 45 / 100,  base.g * 45 / 100, base.b * 45 / 100);
 
                     if (cmd.bg)
                     {
                         if (bg_col == Colour(0, 0, 0))
                             continue;
+                        if (cmd.triangle)
+                        {
+                            SDL_Vertex verts[3];
+                            for (int i = 0; i < 3; i++)
+                            {
+                                verts[i].position.x = grid_offset.x + r.pos.x + (cmd.points[i].x + shift.x) * r.size;
+                                verts[i].position.y = grid_offset.y + r.pos.y + (cmd.points[i].y + shift.y) * r.size;
+                                verts[i].color = SDL_Color{uint8_t(bg_col.r), uint8_t(bg_col.g), uint8_t(bg_col.b), 255};
+                                verts[i].tex_coord = SDL_FPoint{0, 0};
+                            }
+                            SDL_RenderGeometry(sdl_renderer, NULL, verts, 3, NULL, 0);
+                            continue;
+                        }
                         SDL_SetTextureColorMod(sdl_texture, bg_col.r,  bg_col.g, bg_col.b);
                     }
                     else if (grid->wrapped == Grid::WRAPPED_IN)
@@ -5435,8 +5512,8 @@ void GameState::render(bool saving)
                         SDL_SetTextureColorMod(sdl_texture, r, g, b);
                     }
                     SDL_Rect src_rect = {cmd.src.pos.x, cmd.src.pos.y, cmd.src.size.x, cmd.src.size.y};
-                    SDL_Rect dst_rect = {grid_offset.x + r.pos.x + int(cmd.dst.pos.x * r.size), grid_offset.y + r.pos.y + int(cmd.dst.pos.y * r.size), int(cmd.dst.size.x * r.size), int(ceil(cmd.dst.size.y * r.size))};
-                    SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.center.y)};
+                    SDL_Rect dst_rect = {grid_offset.x + r.pos.x + int((cmd.dst.pos.x + shift.x) * r.size), grid_offset.y + r.pos.y + int((cmd.dst.pos.y + shift.y) * r.size), int(cmd.dst.size.x * r.size), int(ceil(cmd.dst.size.y * r.size))};
+                    SDL_Point rot_center = {int(cmd.center.x * r.size), int(cmd.scale_center ? cmd.center.y * r.size : cmd.center.y)};
                     SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, cmd.angle, &rot_center, SDL_FLIP_NONE);
                 }
             }
@@ -5543,10 +5620,11 @@ void GameState::render(bool saving)
 
                 int icon_width = std::min(sq_pos.size.x, sq_pos.size.y);
                 XYPos gpos = sq_pos.pos + (sq_pos.size - XYPos(icon_width,icon_width)) / 2;
+                XYRect cell = grid->get_square_pos(pos, grid_pitch);
                 SDL_SetTextureAlphaMod(sdl_texture, 255.0 * (1.0 - pow(fade, 0.5)));
                 for(WrapPos r : wraps)
                 {
-                    XYPos mgpos = grid_offset + gpos * r.size + r.pos;
+                    XYPos mgpos = grid_offset + (gpos + r.cell_shift(cell)) * r.size + r.pos;
                     int siz = icon_width * r.size;
                     if (!XYRect(mgpos, XYPos(siz, siz)).overlaps(XYRect(XYPos(0,0), window_size)))
                         continue;
@@ -5587,11 +5665,12 @@ void GameState::render(bool saving)
                     SDL_SetTextureColorMod(overlay_texture, r, g, b);
                 }
                 XYPos mgpos = grid_offset + r.pos;
-                XYPos mgsize = (grid->wrapped == Grid::WRAPPED_SIDE) ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
+                XYPos mgsize = grid->wraps_sides() ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
                 {
                     SDL_Rect src_rect = {0, 0, 2048, 2048};
                     SDL_Rect dst_rect = {mgpos.x, mgpos.y, int(mgsize.x * r.size), int(mgsize.y * r.size)};
-                    SDL_RenderCopy(sdl_renderer, overlay_texture, &src_rect, &dst_rect);
+                    SDL_RendererFlip flip = SDL_RendererFlip((r.flip.x ? SDL_FLIP_HORIZONTAL : 0) | (r.flip.y ? SDL_FLIP_VERTICAL : 0));
+                    SDL_RenderCopyEx(sdl_renderer, overlay_texture, &src_rect, &dst_rect, 0, NULL, flip);
                 }
                 SDL_SetTextureColorMod(overlay_texture, contrast, contrast, contrast);
             }
@@ -5628,6 +5707,63 @@ void GameState::render(bool saving)
                 int arrow_size = edge_clue_border * 82 / 100;
                 int bubble_margin = arrow_size / 16;
                 XYPosFloat epos = -scaled_grid_offset + XYPosFloat(0.1,0.1);
+
+                // Boards that don't fill the play area put the tabs at the
+                // ends of the row, or at the edge of the view when an end is
+                // scrolled out of it.
+                XYPosFloat row_start, row_end;
+                if (grid->wrapped == Grid::WRAPPED_NOT && grid->get_row_ends(edge.rule_pos, grid_pitch, row_start, row_end))
+                {
+                    XYPosFloat a(row_start.x + scaled_grid_offset.x, row_start.y + scaled_grid_offset.y);
+                    XYPosFloat b(row_end.x + scaled_grid_offset.x, row_end.y + scaled_grid_offset.y);
+                    // Clip the row to the view.
+                    double t0 = 0, t1 = 1;
+                    XYPosFloat d(b.x - a.x, b.y - a.y);
+                    double ps[4] = {-d.x, d.x, -d.y, d.y};
+                    double qs[4] = {a.x, grid_size - a.x, a.y, grid_size - a.y};
+                    bool visible = true;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (fabs(ps[i]) < 1e-9)
+                        {
+                            if (qs[i] < 0)
+                                visible = false;
+                            continue;
+                        }
+                        double r = qs[i] / ps[i];
+                        if (ps[i] < 0)
+                            t0 = std::max(t0, r);
+                        else
+                            t1 = std::min(t1, r);
+                    }
+                    if (!visible || t0 > t1)
+                        continue;
+                    double along = atan2(d.y, d.x);
+                    XYPosFloat ends[2] = {XYPosFloat(a.x + d.x * t0, a.y + d.y * t0), XYPosFloat(a.x + d.x * t1, a.y + d.y * t1)};
+                    for (int e = 0; e < 2; e++)
+                    {
+                        // The tab's point touches the end of the row and it
+                        // points inwards along it.
+                        double angle = along + (e ? M_PI : 0);
+                        XYPos tip(ends[e].x, ends[e].y);
+                        SDL_Rect src_rect = {1664, 192, 192, 192};
+                        SDL_Rect dst_rect = {grid_offset.x + tip.x - arrow_size, grid_offset.y + tip.y - arrow_size, arrow_size, arrow_size};
+                        SDL_Point rot_center = {arrow_size, arrow_size};
+                        SDL_RenderCopyEx(sdl_renderer, sdl_texture, &src_rect, &dst_rect, degrees(angle) - 45.0, &rot_center, SDL_FLIP_NONE);
+                        XYPos t = XYPosFloat(-arrow_size / 2.0, -arrow_size / 2.0).rotate(angle - (M_PI / 4)) - XYPos(arrow_size / 2.0, arrow_size / 2.0);
+                        XYPos bubble = grid_offset + t + tip + XYPos(bubble_margin, bubble_margin);
+                        render_region_type(edge.type, bubble, arrow_size - bubble_margin * 2);
+                        double distance = XYPosFloat(mouse - (bubble + XYPos(arrow_size / 2.0, arrow_size / 2.0))).distance();
+                        if (distance < (arrow_size / 2.0))
+                            edge_hover_pos = &edge;
+                        if (distance < best_distance)
+                        {
+                            best_distance = distance;
+                            best_edge_pos = edge;
+                        }
+                    }
+                    continue;
+                }
 
                 double p = edge.pos / std::cos(edge.angle) + std::tan(edge.angle) * (epos.x) - epos.y;
                 if (p >= 0 && p < grid_size && edge.angle != XYPosFloat(0,1).angle())
@@ -9931,7 +10067,7 @@ bool GameState::events()
                     if (mouse_mode == MOUSE_MODE_PAINT)
                     {
                         XYPos pos = mouse - grid_offset - scaled_grid_offset;
-                        XYPos siz = (grid->wrapped == Grid::WRAPPED_SIDE) ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
+                        XYPos siz = grid->wraps_sides() ? grid->get_wrapped_size(grid_pitch) : grid->get_grid_size(grid_pitch);
                         XYPos opos = grid_dragging_last_pos - grid_offset - scaled_grid_offset;
 
                         if (!overlay_texture_pixels)
@@ -9969,6 +10105,18 @@ bool GameState::events()
                                 XYPos p = k + lp;
                                 if (grid->wrapped == Grid::WRAPPED_SIDE)
                                     p = p % XYPos(2048,2048);
+                                else if (grid->wraps_sides())
+                                {
+                                    // Strokes over a mirrored edge come back mirrored.
+                                    XYPos flip = grid->get_copy_flip(p / XYPos(2048,2048));
+                                    if (grid->wrapped == Grid::WRAPPED_MOBIUS && (p.y < 0 || p.y >= 2048))
+                                        continue;
+                                    p = p % XYPos(2048,2048);
+                                    if (flip.x)
+                                        p.x = 2047 - p.x;
+                                    if (flip.y)
+                                        p.y = 2047 - p.y;
+                                }
                                 if (!p.inside(XYPos(2048,2048)))
                                     continue;
                                 if ((k.x < -s) || (k.y < -s) || (k.x >= s) || (k.y >= s))

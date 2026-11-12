@@ -2604,6 +2604,11 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
 {
     size = size_;
     wrapped = wrapped_;
+    if (wrapped == WRAPPED_SIDE)
+    {
+        XYPos step = plane_size_step();
+        size = ((size + step - XYPos(1, 1)) / step) * step;
+    }
     add_random_merged(merged_count);
 
     XYSet grid_squares = get_squares();
@@ -2658,6 +2663,16 @@ void Grid::randomize(XYPos size_, WrapType wrapped_, int merged_count, int row_p
             }
         }
     }
+}
+
+void Grid::limit_row_clues(int count)
+{
+    std::vector<XYPos> rows;
+    for (auto const& [pos, clue] : edges)
+        rows.push_back(pos);
+    std::shuffle(rows.begin(), rows.end(), rnd.gen);
+    for (unsigned i = std::max(count, 0); i < rows.size(); i++)
+        edges.erase(rows[i]);
 }
 
 Grid::Grid()
@@ -3173,6 +3188,14 @@ Grid* Grid::Load(std::string s)
         return new TriangleGrid(s.substr (1, std::string::npos));
     if (a == 2)
         return new HexagonGrid(s.substr (1, std::string::npos));
+    if (a == 3)
+        return new RhombilleGrid(s.substr (1, std::string::npos));
+    if (a == 4)
+        return new TetrakisGrid(s.substr (1, std::string::npos));
+    if (a == 5)
+        return new KisrhombilleGrid(s.substr (1, std::string::npos));
+    if (a == 6)
+        return new TriakisGrid(s.substr (1, std::string::npos));
     assert(0);
 }
 
@@ -5653,7 +5676,11 @@ bool Grid::uses_if_then_clues()
 
 std::string SquareGrid::text_desciption()
 {
-    return "Square " + std::to_string(size.x) + "x" + std::to_string(size.y) + ((wrapped == WRAPPED_NOT) ? "" : ((wrapped == WRAPPED_SIDE) ? " Plane" : " Recursed"));
+    std::string kind = (wrapped == WRAPPED_SIDE) ? " Plane" :
+                       (wrapped == WRAPPED_IN) ? " Recursed" :
+                       (wrapped == WRAPPED_KLEIN) ? " Klein" :
+                       (wrapped == WRAPPED_MOBIUS) ? " Mobius" : "";
+    return "Square " + std::to_string(size.x) + "x" + std::to_string(size.y) + kind;
 }
 
 std::string SquareGrid::to_string()
@@ -5719,8 +5746,8 @@ XYPos SquareGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
     if (grid_pitch == XYPos(0, 0))
         return XYPos(-1,-1);
     XYPos rep((pos / grid_pitch));
-    if (wrapped == WRAPPED_SIDE)
-        rep = rep % size;
+    if (wraps_sides() && !wrap_pos(rep))
+        return XYPos(-1,-1);
     if (!rep.inside(size))
         return XYPos(-1,-1);
 
@@ -5756,9 +5783,11 @@ XYSet SquareGrid::get_neighbors(XYPos p)
         end += p;
         FOR_XY(t, start, end)
         {
-            if (wrapped == WRAPPED_SIDE)
+            if (wraps_sides())
             {
-                rep.set(get_base_square(t % size));
+                XYPos w = t;
+                if (wrap_pos(w))
+                    rep.set(get_base_square(w));
             }
             else if (wrapped == WRAPPED_IN)
             {
@@ -5959,6 +5988,20 @@ XYPos SquareGrid::get_base_square(XYPos p)
     return p;
 }
 
+bool SquareGrid::wrap_pos(XYPos& p)
+{
+    XYPos copy = p / size;
+    XYPos flip = get_copy_flip(copy);
+    if (wrapped == WRAPPED_MOBIUS && (p.y < 0 || p.y >= size.y))
+        return false;
+    p = p % size;
+    if (flip.x)
+        p.x = size.x - 1 - p.x;
+    if (flip.y)
+        p.y = size.y - 1 - p.y;
+    return true;
+}
+
 XYPos SquareGrid::get_wrapped_size(XYPos grid_pitch)
 {
     return size * grid_pitch;
@@ -5975,10 +6018,17 @@ XYPos SquareGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
         return XYPos(-1, -1);
     if (grid_pitch.y < 16)
         return XYPos(-1, -1);
-    if (wrapped == Grid::WRAPPED_SIDE)
+    if (wraps_sides())
     {
-        pos += grid_pitch * size * 100;
-        pos = pos % (grid_pitch * size);
+        XYPos board = grid_pitch * size;
+        if (wrapped == WRAPPED_MOBIUS && (pos.y < 0 || pos.y >= board.y))
+            return XYPos(-1, -1);
+        XYPos flip = get_copy_flip(pos / board);
+        pos = pos % board;
+        if (flip.x)
+            pos.x = board.x - 1 - pos.x;
+        if (flip.y)
+            pos.y = board.y - 1 - pos.y;
     }
     XYPos r(pos / grid_pitch);
     if (!r.inside(size))
@@ -6825,4 +6875,1592 @@ XYPos HexagonGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
         pos = pos % get_wrapped_size(grid_pitch);
     }
     return pos;
+}
+
+// Background fills are drawn as solid triangles. Triangles sharing an edge
+// join exactly, so the pieces of a big cell have no seams between them,
+// which sprites with anti-aliased edges would leave.
+static void add_triangle_fill(XYPosFloat a, XYPosFloat b, XYPosFloat c, std::vector<RenderCmd>& cmds)
+{
+    cmds.push_back(RenderCmd(a, b, c));
+}
+
+XYPos PolygonGrid::wrap_corner(XYPos corner)
+{
+    if (wrapped == WRAPPED_SIDE)
+        return corner % lattice_period();
+    return corner;
+}
+
+XYPos PolygonGrid::lattice_extent()
+{
+    XYPos rep;
+    FOR_XY(cell, XYPos(), size)
+    {
+        if (!piece_in_board(cell))
+            continue;
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(cell, corners);
+        for (int i = 0; i < n; i++)
+            rep = XYPos(std::max(rep.x, corners[i].x), std::max(rep.y, corners[i].y));
+    }
+    return rep;
+}
+
+int PolygonGrid::get_merge_members(XYPos anchor, int kind, XYPos members[MAX_PIECES])
+{
+    members[0] = anchor;
+    if (kind == MERGE_PARENT || kind == MERGE_PAIR)
+    {
+        XYPos pieces[MAX_PIECES];
+        int n = get_parent_pieces(anchor, pieces);
+        int start = 0;
+        while (start < n && pieces[start] != anchor)
+            start++;
+        int count = (kind == MERGE_PARENT) ? n : 2;
+        for (int i = 1; i < count; i++)
+            members[i] = pieces[(start + i) % n];
+        return count;
+    }
+    if (kind == MERGE_ACROSS)
+    {
+        XYPos corners[MAX_CORNERS];
+        get_corners(anchor, corners);
+        FOR_XY(cell, XYPos(), size)
+        {
+            if (cell == anchor || !piece_in_board(cell))
+                continue;
+            XYPos theirs[MAX_CORNERS];
+            int n = get_corners(cell, theirs);
+            bool has_a = false, has_b = false;
+            for (int i = 0; i < n; i++)
+            {
+                has_a |= (theirs[i] == corners[0]);
+                has_b |= (theirs[i] == corners[1]);
+            }
+            if (has_a && has_b)
+            {
+                members[1] = cell;
+                return 2;
+            }
+        }
+    }
+    return 1;
+}
+
+int PolygonGrid::get_members(XYPos base, XYPos members[MAX_PIECES])
+{
+    auto it = merged.find(base);
+    if (it == merged.end())
+    {
+        members[0] = base;
+        return 1;
+    }
+    return get_merge_members(base, it->second.x, members);
+}
+
+XYPos PolygonGrid::get_base_square(XYPos p)
+{
+    for (const auto &m_reg : merged)
+    {
+        XYPos members[MAX_PIECES];
+        int n = get_merge_members(m_reg.first, m_reg.second.x, members);
+        for (int i = 0; i < n; i++)
+            if (members[i] == p)
+                return m_reg.first;
+    }
+    return p;
+}
+
+void PolygonGrid::add_random_merged(int merged_count)
+{
+    int kinds[3];
+    int kind_count = 0;
+    for (int kind = MERGE_PARENT; kind <= MERGE_ACROSS; kind++)
+        if (merge_kind_allowed(kind))
+            kinds[kind_count++] = kind;
+    if (wrapped == WRAPPED_IN)
+    {
+        // The innie comes first: a whole parent shape the same shape as the
+        // board, somewhere it is allowed.
+        std::vector<XYPos> options;
+        FOR_XY(anchor, XYPos(), size)
+            if (piece_in_board(anchor) && innie_allowed(anchor))
+                options.push_back(anchor);
+        if (!options.empty())
+        {
+            innie_pos = options[unsigned(rnd) % options.size()];
+            merged[innie_pos] = XYPos(MERGE_PARENT, 0);
+        }
+        merged_count--;
+    }
+    if (!kind_count)
+        return;
+    // Give up after a while on boards too small or full for more big cells.
+    for (int i = 0, tries = 0; i < merged_count && tries < 1000; tries++)
+    {
+        XYPos anchor(unsigned(rnd) % size.x, unsigned(rnd) % size.y);
+        int kind = kinds[unsigned(rnd) % kind_count];
+        XYPos members[MAX_PIECES];
+        int n = get_merge_members(anchor, kind, members);
+        if (n < 2)
+            continue;
+        bool bad = false;
+        for (int j = 0; j < n; j++)
+        {
+            if (!members[j].inside(size) || !piece_can_merge(members[j]) || get_base_square(members[j]) != members[j] || merged.count(members[j]))
+                bad = true;
+        }
+        if (bad)
+            continue;
+        merged[anchor] = XYPos(kind, 0);
+        // A big cell joins the row its centre is in, which could leave a row
+        // at the edge of the board with no cells for its clue.
+        bool empty_row = false;
+        std::vector<XYPos> row_types;
+        get_row_types(row_types);
+        for (unsigned t = 0; t < row_types.size() && !empty_row; t++)
+            for (int r = row_types[t].x; r < row_types[t].y && !empty_row; r++)
+                if (get_row(t, r).none())
+                    empty_row = true;
+        if (empty_row)
+        {
+            merged.erase(anchor);
+            continue;
+        }
+        i++;
+    }
+}
+XYSet PolygonGrid::get_squares()
+{
+    XYSet rep;
+    FOR_XY(pos, XYPos(), size)
+        if (piece_in_board(pos))
+            rep.set(pos);
+    for (const auto &m_reg : merged)
+    {
+        XYPos members[MAX_PIECES];
+        int n = get_merge_members(m_reg.first, m_reg.second.x, members);
+        for (int i = 1; i < n; i++)
+            rep.clear(members[i]);
+    }
+    // The innie holds the copy of the board and isn't a cell itself.
+    if (wrapped == WRAPPED_IN)
+        rep.clear(innie_pos);
+    return rep;
+}static double row_projection(double angle, XYPosFloat p)
+{
+    double a = radians(angle);
+    return -sin(a) * p.x + cos(a) * p.y;
+}
+
+double PolygonGrid::row_band_start(const RowFamily& family)
+{
+    if (family.centred_on_cells)
+    {
+        // Cell (0, 0) is never merged away from its own centre's band; use
+        // its unmerged shape so the bands don't move when cells merge.
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(XYPos(0, 0), corners);
+        XYPosFloat centre(0, 0);
+        for (int i = 0; i < n; i++)
+        {
+            centre.x += double(corners[i].x) / n;
+            centre.y += corners[i].y * unit_aspect() / n;
+        }
+        return row_projection(family.angle, centre) - family.spacing / 2;
+    }
+    return row_projection(family.angle, family.origin);
+}
+
+double PolygonGrid::row_line(const RowFamily& family, int k)
+{
+    return row_band_start(family) + (k + 0.5) * family.spacing;
+}
+
+bool PolygonGrid::row_line_chord(XYPos pos, const RowFamily& family, int k, double& lo, double& hi)
+{
+    XYPos corners[MAX_CORNERS];
+    int n = get_corners(pos, corners);
+    XYPosFloat v[MAX_CORNERS];
+    double proj[MAX_CORNERS];
+    double line = row_line(family, k);
+    for (int i = 0; i < n; i++)
+    {
+        v[i] = XYPosFloat(corners[i].x, corners[i].y * unit_aspect());
+        proj[i] = row_projection(family.angle, v[i]) - line;
+    }
+    // Measure how much of the line lies inside the piece, so a line only
+    // grazing a corner doesn't count.
+    double a = radians(family.angle);
+    lo = 1e9;
+    hi = -1e9;
+    for (int i = 0; i < n; i++)
+    {
+        int j = (i + 1) % n;
+        auto add = [&](XYPosFloat p) {
+            double along = p.x * cos(a) + p.y * sin(a);
+            lo = std::min(lo, along);
+            hi = std::max(hi, along);
+        };
+        if (fabs(proj[i]) < 1e-9)
+            add(v[i]);
+        if (proj[i] * proj[j] < 0)
+        {
+            double t = proj[i] / (proj[i] - proj[j]);
+            add(XYPosFloat(v[i].x + (v[j].x - v[i].x) * t, v[i].y + (v[j].y - v[i].y) * t));
+        }
+    }
+    return hi - lo > family.spacing * 0.05;
+}
+
+bool PolygonGrid::piece_on_row_line(XYPos pos, const RowFamily& family, int k)
+{
+    double lo, hi;
+    return row_line_chord(pos, family, k, lo, hi);
+}
+
+bool PolygonGrid::get_row_ends(XYPos rule_pos, XYPos grid_pitch, XYPosFloat& start, XYPosFloat& end)
+{
+    if (wrapped == WRAPPED_SIDE)
+        return false;
+    RowFamily families[MAX_ROW_FAMILIES];
+    int count = get_row_families(families);
+    if (rule_pos.x < 0 || rule_pos.x >= count)
+        return false;
+    const RowFamily& family = families[rule_pos.x];
+    int first, last;
+    row_line_range(family, first, last);
+    int k = first + rule_pos.y;
+    double lo = 1e9, hi = -1e9;
+    FOR_XY(cell, XYPos(), size)
+    {
+        double a, b;
+        if (row_line_chord(cell, family, k, a, b))
+        {
+            lo = std::min(lo, a);
+            hi = std::max(hi, b);
+        }
+    }
+    if (lo > hi)
+        return false;
+    double angle = radians(family.angle);
+    double line = row_line(family, k);
+    double aspect = unit_aspect();
+    auto to_pixels = [&](double along) {
+        XYPosFloat p(-sin(angle) * line + cos(angle) * along, cos(angle) * line + sin(angle) * along);
+        return XYPosFloat(p.x * grid_pitch.x, p.y / aspect * grid_pitch.y);
+    };
+    start = to_pixels(lo);
+    end = to_pixels(hi);
+    return true;
+}
+
+void PolygonGrid::row_line_range(const RowFamily& family, int& first, int& last)
+{
+    // From the small pieces; merging cells never changes which lines cross.
+    double lo = 1e9, hi = -1e9;
+    FOR_XY(cell, XYPos(), size)
+    {
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(cell, corners);
+        for (int i = 0; i < n; i++)
+        {
+            double p = row_projection(family.angle, XYPosFloat(corners[i].x, corners[i].y * unit_aspect()));
+            lo = std::min(lo, p);
+            hi = std::max(hi, p);
+        }
+    }
+    double start = row_band_start(family);
+    first = INT_MAX;
+    last = INT_MIN;
+    for (int k = floor((lo - start) / family.spacing) - 1; k <= ceil((hi - start) / family.spacing) + 1; k++)
+    {
+        bool used = false;
+        FOR_XY(cell, XYPos(), size)
+            if (piece_on_row_line(cell, family, k))
+            {
+                used = true;
+                break;
+            }
+        if (used)
+        {
+            first = std::min(first, k);
+            last = std::max(last, k);
+        }
+    }
+}
+
+XYSet PolygonGrid::get_row(unsigned type, int index)
+{
+    RowFamily families[MAX_ROW_FAMILIES];
+    int count = get_row_families(families);
+    XYSet rep;
+    if (int(type) >= count)
+        return rep;
+    int first, last;
+    row_line_range(families[type], first, last);
+    // A big cell is on the line if any of its pieces is.
+    FOR_XY(cell, XYPos(), size)
+    {
+        if (piece_on_row_line(cell, families[type], first + index))
+            rep.set(get_base_square(cell));
+    }
+    return rep;
+}
+
+XYSet PolygonGrid::get_neighbors(XYPos pos)
+{
+    XYPos board_ref, innie_ref;
+    int scale;
+    if (wrapped == WRAPPED_IN && get_recursion(board_ref, innie_ref, scale))
+        return get_recursed_neighbors(pos);
+    // Every corner of every piece; a big cell touches whatever its pieces do.
+    auto all_corners = [&](XYPos cell, std::vector<XYPos>& out)
+    {
+        XYPos members[MAX_PIECES];
+        int n = get_members(cell, members);
+        for (int m = 0; m < n; m++)
+        {
+            XYPos corners[MAX_CORNERS];
+            int c = get_corners(members[m], corners);
+            for (int i = 0; i < c; i++)
+                out.push_back(wrap_corner(corners[i]));
+        }
+    };
+    std::vector<XYPos> mine;
+    all_corners(pos, mine);
+
+    XYSet rep;
+    XYSet grid_squares = get_squares();
+    std::vector<XYPos> theirs;
+    FOR_XY_SET(other, grid_squares)
+    {
+        if (other == pos)
+            continue;
+        theirs.clear();
+        all_corners(other, theirs);
+        bool shared = false;
+        for (XYPos& c : theirs)
+        {
+            for (XYPos& d : mine)
+                if (c == d)
+                {
+                    shared = true;
+                    break;
+                }
+            if (shared)
+                break;
+        }
+        if (shared)
+            rep.set(other);
+    }
+    return rep;
+}
+
+void PolygonGrid::get_row_types(std::vector<XYPos>& rep)
+{
+    // Like the original wrapped levels, plane and recursed boards have no
+    // row clues.
+    if (wrapped != WRAPPED_NOT)
+        return;
+    RowFamily families[MAX_ROW_FAMILIES];
+    int count = get_row_families(families);
+    for (int i = 0; i < count; i++)
+    {
+        int first, last;
+        row_line_range(families[i], first, last);
+        rep.push_back(XYPos(0, last - first + 1));
+    }
+}
+void PolygonGrid::get_edges(std::vector<EdgePos>& rep, XYPos grid_pitch)
+{
+    RowFamily families[MAX_ROW_FAMILIES];
+    int count = get_row_families(families);
+    double aspect = unit_aspect();
+    for (auto const& [pos, type] : edges)
+    {
+        if (pos.x >= count)
+            continue;
+        const RowFamily& family = families[pos.x];
+        int first, last;
+        row_line_range(family, first, last);
+        // The row's line, converted to pixels.
+        double offset = row_line(family, first + pos.y);
+        double a = radians(family.angle);
+        XYPosFloat point(-sin(a) * offset, cos(a) * offset);
+        XYPosFloat pixel(point.x * grid_pitch.x, point.y / aspect * grid_pitch.y);
+        XYPosFloat dir(cos(a) * grid_pitch.x, sin(a) / aspect * grid_pitch.y);
+        // Exactly horizontal and vertical lines are special cased when the
+        // tabs are drawn, so keep their angles exact.
+        if (fabs(dir.y) < 1e-9)
+            dir = XYPosFloat(1, 0);
+        if (fabs(dir.x) < 1e-9)
+            dir = XYPosFloat(0, 1);
+        double angle = dir.angle();
+        double line_pos = pixel.y * cos(angle) - pixel.x * sin(angle);
+        rep.push_back(EdgePos(pos, type, angle, line_pos));
+    }
+}
+XYPos PolygonGrid::get_square_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    if (grid_pitch.x <= 0 || grid_pitch.y <= 0)
+        return XYPos(-1,-1);
+    if (wrapped == WRAPPED_IN)
+        pos = point_out_of_innie(pos, grid_pitch);
+    XYPos tries[4] = {pos, pos, pos, pos};
+    int try_count = 1;
+    if (wrapped == WRAPPED_SIDE)
+    {
+        // Cells can stick out past one copy of the board, so also try the
+        // same point in the next copies to the right and down.
+        XYPos period = get_wrapped_size(grid_pitch);
+        pos = pos % period;
+        tries[0] = pos;
+        tries[1] = pos + XYPos(period.x, 0);
+        tries[2] = pos + XYPos(0, period.y);
+        tries[3] = pos + period;
+        try_count = 4;
+    }
+    for (int t = 0; t < try_count; t++)
+    {
+        FOR_XY(cell, XYPos(), size)
+        {
+            if (!piece_in_board(cell))
+                continue;
+            XYPos corners[MAX_CORNERS];
+            int n = get_corners(cell, corners);
+            bool inside = true;
+            for (int i = 0; i < n; i++)
+            {
+                XYPos a = corners[i] * grid_pitch;
+                XYPos b = corners[(i + 1) % n] * grid_pitch;
+                // Corners run clockwise on screen, so inside points are on the right.
+                int64_t cross = int64_t(b.x - a.x) * (tries[t].y - a.y) - int64_t(b.y - a.y) * (tries[t].x - a.x);
+                if (cross < 0)
+                {
+                    inside = false;
+                    break;
+                }
+            }
+            if (inside)
+            {
+                XYPos base = get_base_square(cell);
+                if (wrapped == WRAPPED_IN && base == innie_pos)
+                    return XYPos(-1,-1);
+                return base;
+            }
+        }
+    }
+    return XYPos(-1,-1);
+}XYPos PolygonGrid::get_grid_pitch(XYPos grid_size)
+{
+    XYPos extent = lattice_extent();
+    if (extent.x <= 0 || extent.y <= 0)
+        return XYPos(1, 1);
+    double s = std::min(double(grid_size.x) / extent.x, grid_size.y / (extent.y * unit_aspect()));
+    return XYPos(s, s * unit_aspect());
+}
+
+XYRect PolygonGrid::get_square_pos(XYPos pos, XYPos grid_pitch)
+{
+    XYPos members[MAX_PIECES];
+    int count = get_members(pos, members);
+    XYPos tl, br;
+    for (int m = 0; m < count; m++)
+    {
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(members[m], corners);
+        for (int i = 0; i < n; i++)
+        {
+            if (m == 0 && i == 0)
+                tl = br = corners[0];
+            tl = XYPos(std::min(tl.x, corners[i].x), std::min(tl.y, corners[i].y));
+            br = XYPos(std::max(br.x, corners[i].x), std::max(br.y, corners[i].y));
+        }
+    }
+    return XYRect(tl * grid_pitch, (br - tl) * grid_pitch);
+}
+
+void PolygonGrid::get_merged_circle(XYPos pos, XYPos grid_pitch, XYPosFloat& centre, double& radius)
+{
+    XYPos members[MAX_PIECES];
+    int count = get_members(pos, members);
+    // Area weighted centre of the pieces, and their outer edges: the ones
+    // not shared with another piece of the same cell.
+    std::vector<std::pair<XYPos, XYPos>> edges;
+    double area = 0;
+    centre = XYPosFloat(0, 0);
+    for (int m = 0; m < count; m++)
+    {
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(members[m], corners);
+        for (int i = 1; i + 1 < n; i++)
+        {
+            XYPosFloat a(corners[0] * grid_pitch), b(corners[i] * grid_pitch), c(corners[i + 1] * grid_pitch);
+            double t = fabs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+            area += t;
+            centre.x += t * (a.x + b.x + c.x) / 3;
+            centre.y += t * (a.y + b.y + c.y) / 3;
+        }
+        for (int i = 0; i < n; i++)
+            edges.push_back(std::make_pair(corners[i], corners[(i + 1) % n]));
+    }
+    centre.x /= area;
+    centre.y /= area;
+    radius = 1e9;
+    for (auto& e : edges)
+    {
+        bool inner = false;
+        for (auto& f : edges)
+            if (f.first == e.second && f.second == e.first)
+                inner = true;
+        if (inner)
+            continue;
+        XYPosFloat a(e.first * grid_pitch), b(e.second * grid_pitch);
+        XYPosFloat d(b.x - a.x, b.y - a.y);
+        double dist = fabs(d.x * (centre.y - a.y) - d.y * (centre.x - a.x)) / d.distance();
+        radius = std::min(radius, dist);
+    }
+}
+void PolygonGrid::get_incircle(XYPos pos, XYPos grid_pitch, XYPosFloat& centre, double& radius)
+{
+    XYPos corners[MAX_CORNERS];
+    int n = get_corners(pos, corners);
+    XYPosFloat v[MAX_CORNERS];
+    for (int i = 0; i < n; i++)
+        v[i] = XYPosFloat(corners[i] * grid_pitch);
+
+    double area = 0;
+    double perimeter = 0;
+    centre = XYPosFloat(0, 0);
+    for (int i = 0; i < n; i++)
+    {
+        XYPosFloat a = v[i];
+        XYPosFloat b = v[(i + 1) % n];
+        area += (a.x * b.y - b.x * a.y) / 2;
+        double side = XYPosFloat(b.x - a.x, b.y - a.y).distance();
+        perimeter += side;
+        if (n == 3)
+        {
+            // Incentre: corners weighted by the length of the opposite side.
+            XYPosFloat opposite = v[(i + 2) % n];
+            centre.x += opposite.x * side;
+            centre.y += opposite.y * side;
+        }
+        else
+        {
+            centre.x += a.x / n;
+            centre.y += a.y / n;
+        }
+    }
+    if (n == 3)
+    {
+        centre.x /= perimeter;
+        centre.y /= perimeter;
+    }
+    // Exact for triangles and rhombi, which have inscribed circles.
+    radius = 2 * fabs(area) / perimeter;
+}
+
+void PolygonGrid::get_inellipse(XYPos pos, XYPos grid_pitch, XYPosFloat& centre, XYPosFloat& major_dir, double& major, double& minor)
+{
+    XYPos corners[MAX_CORNERS];
+    int n = get_corners(pos, corners);
+    XYPosFloat v0(corners[0] * grid_pitch);
+    XYPosFloat v1(corners[1] * grid_pitch);
+    XYPosFloat v2(corners[n - 1] * grid_pitch);
+    // Triangles are affine images of an equilateral triangle and rhombi of a
+    // square, so their largest ellipses are the images of those shapes'
+    // incircles. Map the reference edges e1, e2 onto the cell's edges.
+    XYPosFloat e1(1, 0);
+    XYPosFloat e2 = (n == 3) ? XYPosFloat(0.5, std::sqrt(3) / 2) : XYPosFloat(0, 1);
+    XYPosFloat ref_centre = (n == 3) ? XYPosFloat(0.5, std::sqrt(3) / 6) : XYPosFloat(0.5, 0.5);
+    double ref_radius = (n == 3) ? std::sqrt(3) / 6 : 0.5;
+
+    XYPosFloat d1(v1.x - v0.x, v1.y - v0.y);
+    XYPosFloat d2(v2.x - v0.x, v2.y - v0.y);
+    // M = [d1 d2] * inverse([e1 e2])
+    double det = e1.x * e2.y - e2.x * e1.y;
+    double i00 = e2.y / det, i01 = -e2.x / det, i10 = -e1.y / det, i11 = e1.x / det;
+    double m00 = d1.x * i00 + d2.x * i10, m01 = d1.x * i01 + d2.x * i11;
+    double m10 = d1.y * i00 + d2.y * i10, m11 = d1.y * i01 + d2.y * i11;
+
+    centre = XYPosFloat(v0.x + m00 * ref_centre.x + m01 * ref_centre.y,
+                        v0.y + m10 * ref_centre.x + m11 * ref_centre.y);
+
+    // The ellipse's semi-axes are the singular values of ref_radius * M,
+    // from the eigenvalues of S = M * M^T.
+    double p = (m00 * m00 + m01 * m01) * ref_radius * ref_radius;
+    double q = (m00 * m10 + m01 * m11) * ref_radius * ref_radius;
+    double r = (m10 * m10 + m11 * m11) * ref_radius * ref_radius;
+    double half_trace = (p + r) / 2;
+    double disc = std::sqrt(std::max(0.0, half_trace * half_trace - (p * r - q * q)));
+    double l1 = half_trace + disc;
+    double l2 = std::max(0.0, half_trace - disc);
+    major = std::sqrt(l1);
+    minor = std::sqrt(l2);
+    if (fabs(q) > 1e-9)
+        major_dir = XYPosFloat(q, l1 - p);
+    else
+        major_dir = (p >= r) ? XYPosFloat(1, 0) : XYPosFloat(0, 1);
+    double len = major_dir.distance();
+    major_dir = XYPosFloat(major_dir.x / len, major_dir.y / len);
+}
+
+XYRect PolygonGrid::get_icon_pos(XYPos pos, XYPos grid_pitch)
+{
+    XYPosFloat centre;
+    double radius;
+    if (merged.count(pos))
+        get_merged_circle(pos, grid_pitch, centre, radius);
+    else
+        get_incircle(pos, grid_pitch, centre, radius);
+    int s = radius * 2.1 * content_scale();
+    return XYRect(XYPos(centre.x - s / 2.0, centre.y - s / 2.0), XYPos(s, s));
+}
+
+// A cell's region bubbles should read as one group inside it. They sit in a
+// touching row along the long axis of the cell's largest inscribed ellipse,
+// which follows narrow and flat triangles. When a row would get too small
+// they are packed as a cluster inside the inscribed circle instead.
+XYRect PolygonGrid::get_bubble_pos(XYPos pos, XYPos grid_pitch, unsigned index, unsigned total)
+{
+    XYPosFloat circle_centre;
+    double radius;
+    XYPosFloat ellipse_centre, major_dir;
+    double major, minor;
+    if (merged.count(pos))
+    {
+        // Big cells are roomy, so a cluster in the middle is fine.
+        get_merged_circle(pos, grid_pitch, circle_centre, radius);
+        ellipse_centre = circle_centre;
+        major_dir = XYPosFloat(1, 0);
+        major = minor = radius;
+    }
+    else
+    {
+        get_incircle(pos, grid_pitch, circle_centre, radius);
+        get_inellipse(pos, grid_pitch, ellipse_centre, major_dir, major, minor);
+    }
+
+    total = std::max(total, 1u);
+    // Leave a margin to the cell's edges so bubbles don't sit on the lines.
+    double max_bubble = radius * 0.45 * content_scale();
+
+    double row_bubble = std::min({max_bubble, minor * 0.9, major * 0.9 / total});
+
+    double cluster_bubble;
+    unsigned layers = 0;
+    if (total == 1)
+        cluster_bubble = max_bubble;
+    else if (total <= 6)
+    {
+        double s = sin(M_PI / total);
+        cluster_bubble = std::min(radius * 0.9 * s / (1 + s), max_bubble);
+    }
+    else
+    {
+        layers = 1;
+        while (1 + 3 * layers * (layers + 1) < total)
+            layers++;
+        cluster_bubble = std::min(radius * 0.9 / (2 * layers + 1), max_bubble);
+    }
+
+    XYPosFloat centre;
+    double bubble;
+    if (row_bubble >= cluster_bubble)
+    {
+        bubble = row_bubble;
+        double along = (2.0 * index - (total - 1)) * bubble;
+        centre = XYPosFloat(ellipse_centre.x + major_dir.x * along, ellipse_centre.y + major_dir.y * along);
+    }
+    else if (total <= 6)
+    {
+        // A ring of touching bubbles, starting along the cell's long axis.
+        bubble = cluster_bubble;
+        double ring = bubble / sin(M_PI / total);
+        double angle = major_dir.angle() + 2 * M_PI * index / total;
+        centre = XYPosFloat(circle_centre.x + cos(angle) * ring, circle_centre.y + sin(angle) * ring);
+    }
+    else
+    {
+        // Rings of a hexagonal cluster: 1, 6, 12, ... bubbles.
+        bubble = cluster_bubble;
+        centre = circle_centre;
+        if (index > 0)
+        {
+            unsigned layer = 1;
+            unsigned first = 1;
+            while (index >= first + 6 * layer)
+            {
+                first += 6 * layer;
+                layer++;
+            }
+            unsigned step = index - first;
+            unsigned side = step / layer;
+            unsigned along = step % layer;
+            // Walk the hexagon of this layer, one side at a time.
+            double a0 = major_dir.angle() + side * M_PI / 3;
+            double a1 = a0 + M_PI / 3;
+            double d = bubble * 2 * layer;
+            double t = double(along) / layer;
+            centre.x += cos(a0) * d + (cos(a1) - cos(a0)) * d * t;
+            centre.y += sin(a0) * d + (sin(a1) - sin(a0)) * d * t;
+        }
+    }
+    int size = bubble * 2;
+    return XYRect(XYPos(centre.x - bubble, centre.y - bubble), XYPos(size, size));
+}
+
+void PolygonGrid::render_square(XYPos pos, XYPos grid_pitch, std::vector<RenderCmd>& cmds)
+{
+    XYPos members[MAX_PIECES];
+    int count = get_members(pos, members);
+    XYPos corners[MAX_PIECES][MAX_CORNERS];
+    int corner_count[MAX_PIECES];
+    int thickness = edge_thickness(grid_pitch);
+    for (int m = 0; m < count; m++)
+    {
+        corner_count[m] = get_corners(members[m], corners[m]);
+        int n = corner_count[m];
+        for (int i = 1; i + 1 < n; i++)
+            add_triangle_fill(XYPosFloat(corners[m][0] * grid_pitch), XYPosFloat(corners[m][i] * grid_pitch), XYPosFloat(corners[m][i + 1] * grid_pitch), cmds);
+    }
+
+    // Recursed boards draw the lines on the innie's outline and on the
+    // board's own border to one side instead of centred, as the square and
+    // triangle grids do: cells around the innie draw it inside themselves,
+    // and the board's border is drawn inside the board. The board is drawn
+    // again, bigger, around each smaller copy of itself, so its line around
+    // the innie then sits just outside the copy's border instead of on top.
+    std::vector<std::pair<XYPos, XYPos>> innie_edges;
+    XYPos board_ref, innie_ref;
+    int scale = 1;
+    bool recursed = (wrapped == WRAPPED_IN) && get_recursion(board_ref, innie_ref, scale);
+    if (recursed)
+    {
+        XYPos innie_members[MAX_PIECES];
+        int innie_count = get_members(innie_pos, innie_members);
+        for (int m = 0; m < innie_count; m++)
+        {
+            XYPos c[MAX_CORNERS];
+            int n = get_corners(innie_members[m], c);
+            for (int i = 0; i < n; i++)
+                innie_edges.push_back(std::make_pair(c[i], c[(i + 1) % n]));
+        }
+        // Only its outline: drop edges between two of its pieces.
+        std::vector<std::pair<XYPos, XYPos>> outline;
+        for (auto& e : innie_edges)
+            if (std::find(innie_edges.begin(), innie_edges.end(), std::make_pair(e.second, e.first)) == innie_edges.end())
+                outline.push_back(e);
+        innie_edges = outline;
+    }
+    auto on_innie_outline = [&](XYPos a, XYPos b) {
+        for (auto& e : innie_edges)
+            if (e.first == b && e.second == a)
+                return true;
+        return false;
+    };
+    // The board is the innie's shape scaled up, so an edge is on its border
+    // if, moved into the innie, it lies along the innie's outline. Points are
+    // scaled by `scale` to stay on integers.
+    auto on_board_border = [&](XYPos a, XYPos b) {
+        XYPos s(scale, scale);
+        XYPos pa = innie_ref * s + (a - board_ref);
+        XYPos pb = innie_ref * s + (b - board_ref);
+        for (auto& e : innie_edges)
+        {
+            XYPos c = e.first * s;
+            XYPos d = e.second * s;
+            auto along = [&](XYPos p) {
+                int64_t cross = int64_t(d.x - c.x) * (p.y - c.y) - int64_t(d.y - c.y) * (p.x - c.x);
+                int64_t dot = int64_t(p.x - c.x) * (d.x - c.x) + int64_t(p.y - c.y) * (d.y - c.y);
+                int64_t len = int64_t(d.x - c.x) * (d.x - c.x) + int64_t(d.y - c.y) * (d.y - c.y);
+                return cross == 0 && dot >= 0 && dot <= len;
+            };
+            if (along(pa) && along(pb))
+                return true;
+        }
+        return false;
+    };
+
+    // Edges are centred on the boundary so both neighbours draw the same
+    // line, and sharp corners don't poke into adjacent cells. Edges between
+    // two pieces of a big cell aren't drawn.
+    XYRect src(5, 1024, 1, 1);
+    for (int m = 0; m < count; m++)
+    {
+        int n = corner_count[m];
+        for (int i = 0; i < n; i++)
+        {
+            XYPos a = corners[m][i];
+            XYPos b = corners[m][(i + 1) % n];
+            bool inner = false;
+            for (int o = 0; o < count; o++)
+                for (int j = 0; j < corner_count[o]; j++)
+                    if (o != m && corners[o][j] == b && corners[o][(j + 1) % corner_count[o]] == a)
+                        inner = true;
+            if (inner)
+                continue;
+            XYPosFloat pa(a * grid_pitch);
+            XYPosFloat pb(b * grid_pitch);
+            XYPosFloat d(pb.x - pa.x, pb.y - pa.y);
+            XYPos length(int(d.distance() + 0.5), thickness);
+            // Corners go clockwise on screen, so before rotating, the cell's
+            // side of the line is below it.
+            bool one_sided = recursed && (on_innie_outline(a, b) || on_board_border(a, b));
+            XYPos offset = one_sided ? XYPos(0, 0) : XYPos(0, thickness / 2);
+            RenderCmd cmd(src, XYRect(a * grid_pitch - offset, length), degrees(d.angle()), offset);
+            cmd.scale_center = true;
+            cmds.push_back(cmd);
+        }
+    }
+}
+XYPos PolygonGrid::get_wrapped_size(XYPos grid_pitch)
+{
+    return lattice_period() * grid_pitch;
+}
+
+XYPos PolygonGrid::get_grid_size(XYPos grid_pitch)
+{
+    return lattice_extent() * grid_pitch;
+}
+
+XYPos PolygonGrid::get_pos_from_mouse_pos(XYPos pos, XYPos grid_pitch)
+{
+    if (wrapped == Grid::WRAPPED_SIDE)
+    {
+        pos += get_wrapped_size(grid_pitch) * 100;
+        pos = pos % get_wrapped_size(grid_pitch);
+    }
+    if (wrapped == Grid::WRAPPED_IN)
+        pos = point_out_of_innie(pos, grid_pitch);
+    return pos;
+}
+
+double PolygonGrid::get_innie_mag(XYPos grid_pitch, int scaled_grid_size)
+{
+    // The grid pitch is rounded to whole pixels, so the board is usually a
+    // little narrower than scaled_grid_size. Use the exact scale, as
+    // point_out_of_innie() does, so the copy lines up with the innie's edges.
+    XYPos board_ref, innie_ref;
+    int scale;
+    if (get_recursion(board_ref, innie_ref, scale))
+        return scale;
+    return Grid::get_innie_mag(grid_pitch, scaled_grid_size);
+}
+
+bool PolygonGrid::point_in_innie(XYPos pos, XYPos grid_pitch)
+{
+    XYPos members[MAX_PIECES];
+    int count = get_members(innie_pos, members);
+    for (int m = 0; m < count; m++)
+    {
+        XYPos corners[MAX_CORNERS];
+        int n = get_corners(members[m], corners);
+        bool inside = true;
+        for (int i = 0; i < n; i++)
+        {
+            XYPos a = corners[i] * grid_pitch;
+            XYPos b = corners[(i + 1) % n] * grid_pitch;
+            if (int64_t(b.x - a.x) * (pos.y - a.y) - int64_t(b.y - a.y) * (pos.x - a.x) < 0)
+                inside = false;
+        }
+        if (inside)
+            return true;
+    }
+    return false;
+}
+
+XYPos PolygonGrid::point_out_of_innie(XYPos pos, XYPos grid_pitch)
+{
+    XYPos board_ref, innie_ref;
+    int scale;
+    if (!get_recursion(board_ref, innie_ref, scale))
+        return pos;
+    // Each step zooms into the copy inside the innie. The innie's fixed point
+    // never leaves it, so stop after a while.
+    for (int depth = 0; depth < 20 && point_in_innie(pos, grid_pitch); depth++)
+        pos = board_ref * grid_pitch + (pos - innie_ref * grid_pitch) * XYPos(scale, scale);
+    return pos;
+}
+
+// Two cells are neighbours on a recursed board if they touch anywhere: on the
+// board itself, or where the board meets the copy inside the innie. Points
+// are scaled by `scale` so the copy's corners stay on integers.
+XYSet PolygonGrid::get_recursed_neighbors(XYPos pos)
+{
+    XYPos board_ref, innie_ref;
+    int scale;
+    XYSet rep;
+    if (!get_recursion(board_ref, innie_ref, scale))
+        return rep;
+    typedef std::vector<std::vector<XYPos>> Shape;
+    auto shape = [&](XYPos cell, bool inner) {
+        Shape out;
+        XYPos members[MAX_PIECES];
+        int n = get_members(cell, members);
+        for (int m = 0; m < n; m++)
+        {
+            XYPos corners[MAX_CORNERS];
+            int c = get_corners(members[m], corners);
+            std::vector<XYPos> poly;
+            for (int i = 0; i < c; i++)
+                poly.push_back(inner ? innie_ref * XYPos(scale, scale) + (corners[i] - board_ref) : corners[i] * XYPos(scale, scale));
+            out.push_back(poly);
+        }
+        return out;
+    };
+    auto on_segment = [](XYPos p, XYPos a, XYPos b) {
+        int64_t cross = int64_t(b.x - a.x) * (p.y - a.y) - int64_t(b.y - a.y) * (p.x - a.x);
+        if (cross != 0)
+            return false;
+        int64_t dot = int64_t(p.x - a.x) * (b.x - a.x) + int64_t(p.y - a.y) * (b.y - a.y);
+        int64_t len = int64_t(b.x - a.x) * (b.x - a.x) + int64_t(b.y - a.y) * (b.y - a.y);
+        return dot >= 0 && dot <= len;
+    };
+    auto touch = [&](const Shape& x, const Shape& y) {
+        for (const auto& px : x)
+            for (const auto& py : y)
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    const auto& verts = pass ? py : px;
+                    const auto& poly = pass ? px : py;
+                    for (XYPos v : verts)
+                        for (unsigned i = 0; i < poly.size(); i++)
+                            if (on_segment(v, poly[i], poly[(i + 1) % poly.size()]))
+                                return true;
+                }
+        return false;
+    };
+    Shape mine = shape(pos, false);
+    Shape mine_inner = shape(pos, true);
+    XYSet grid_squares = get_squares();
+    FOR_XY_SET(other, grid_squares)
+    {
+        if (other == pos)
+            continue;
+        Shape theirs = shape(other, false);
+        if (touch(mine, theirs) || touch(mine, shape(other, true)) || touch(mine_inner, theirs))
+            rep.set(other);
+    }
+    return rep;
+}
+static std::string polygon_grid_description(std::string name, XYPos count, Grid::WrapType wrapped)
+{
+    return name + " " + std::to_string(count.x) + "x" + std::to_string(count.y) + ((wrapped == Grid::WRAPPED_SIDE) ? " Plane" : (wrapped == Grid::WRAPPED_IN) ? " Recursed" : "");
+}
+
+// Rhombille. Lattice units are half a rhombus side wide and a triangle
+// height tall, as in TriangleGrid. Corner offsets of the three rhombi from
+// their hexagon's origin; the hexagon's bounding box is 4 x 2 units. Each
+// rhombus starts at an acute corner, so corners 1 and 3 end its short
+// diagonal.
+static const XYPos rhombille_corners[3][4] = {
+    {XYPos(0, 1), XYPos(1, 0), XYPos(3, 0), XYPos(2, 1)},   // top
+    {XYPos(3, 0), XYPos(4, 1), XYPos(3, 2), XYPos(2, 1)},   // right
+    {XYPos(0, 1), XYPos(2, 1), XYPos(3, 2), XYPos(1, 2)},   // bottom left
+};
+
+std::string RhombilleGrid::text_desciption()
+{
+    return polygon_grid_description("Rhombille", XYPos(size.x / 3, size.y), wrapped);
+}
+
+std::string RhombilleGrid::to_string()
+{
+    return "D" + Grid::to_string();
+}
+
+int RhombilleGrid::get_corners(XYPos pos, XYPos corners[MAX_CORNERS])
+{
+    int n = piece_corners(pos, corners);
+    if (!n)
+    {
+        XYPos rhombus[4];
+        rhombus_on_board(pos, rhombus);
+        for (int i = 0; i < 4; i++)
+            corners[i] = rhombus[i];
+        return 4;
+    }
+    // The two triangles at a board corner make one rhombus: add the other
+    // triangle's far corner between the ends of the edge they share. Both
+    // run clockwise, so the shared edge runs the other way in the other.
+    XYPos other;
+    if (n == 3 && corner_pair(pos, other))
+    {
+        XYPos theirs[MAX_CORNERS];
+        piece_corners(other, theirs);
+        for (int i = 0; i < 3; i++)
+        {
+            XYPos a = corners[i];
+            XYPos b = corners[(i + 1) % 3];
+            for (int j = 0; j < 3; j++)
+                if (theirs[j] == b && theirs[(j + 1) % 3] == a)
+                {
+                    XYPos far = theirs[(j + 2) % 3];
+                    XYPos out[4] = {a, far, b, corners[(i + 2) % 3]};
+                    for (int k = 0; k < 4; k++)
+                        corners[k] = out[k];
+                    return 4;
+                }
+        }
+    }
+    return n;
+}
+
+XYPos RhombilleGrid::lattice_period()
+{
+    return XYPos(size.x, size.y * 2);
+}
+
+double RhombilleGrid::unit_aspect()
+{
+    return std::sqrt(3);
+}
+
+int RhombilleGrid::edge_thickness(XYPos grid_pitch)
+{
+    return grid_pitch.y / 14 + 1;
+}
+
+// Tetrakis square. Squares are 2 x 2 lattice units with the centre at (1, 1).
+static const XYPos tetrakis_corners[4][3] = {
+    {XYPos(0, 0), XYPos(2, 0), XYPos(1, 1)},    // top
+    {XYPos(2, 0), XYPos(2, 2), XYPos(1, 1)},    // right
+    {XYPos(0, 2), XYPos(0, 0), XYPos(1, 1)},    // left
+    {XYPos(2, 2), XYPos(0, 2), XYPos(1, 1)},    // bottom
+};
+
+std::string TetrakisGrid::text_desciption()
+{
+    return polygon_grid_description("Tetrakis", size / XYPos(2, 2), wrapped);
+}
+
+std::string TetrakisGrid::to_string()
+{
+    return "E" + Grid::to_string();
+}
+
+int TetrakisGrid::get_corners(XYPos pos, XYPos corners[MAX_CORNERS])
+{
+    XYPos origin = (pos / XYPos(2, 2)) * XYPos(2, 2);
+    int piece = (pos.x & 1) + (pos.y & 1) * 2;
+    for (int i = 0; i < 3; i++)
+        corners[i] = origin + tetrakis_corners[piece][i];
+    return 3;
+}
+
+XYPos TetrakisGrid::lattice_period()
+{
+    return size;
+}
+
+double TetrakisGrid::unit_aspect()
+{
+    return 1;
+}
+
+int TetrakisGrid::edge_thickness(XYPos grid_pitch)
+{
+    return grid_pitch.x / 15 + 1;
+}
+
+// Kisrhombille and triakis cells are pieces of the triangles of a
+// TriangleGrid layout. Lattice units are a quarter of a triangle side wide
+// and a sixth of its height tall, so corners, edge midpoints and centres all
+// land on lattice points. Corners are returned clockwise on screen.
+static void triangle_lattice_corners(XYPos tri, XYPos corners[3], bool flip = false)
+{
+    XYPos o(tri.x * 2, tri.y * 6);
+    if ((tri.x ^ tri.y ^ int(flip)) & 1)
+    {
+        corners[0] = o;
+        corners[1] = o + XYPos(4, 0);
+        corners[2] = o + XYPos(2, 6);
+    }
+    else
+    {
+        corners[0] = o + XYPos(0, 6);
+        corners[1] = o + XYPos(2, 0);
+        corners[2] = o + XYPos(4, 6);
+    }
+}
+
+static XYPos triangle_lattice_centre(XYPos corners[3])
+{
+    return (corners[0] + corners[1] + corners[2]) / XYPos(3, 3);
+}
+
+std::string KisrhombilleGrid::text_desciption()
+{
+    return polygon_grid_description("Kisrhombille", size / XYPos(3, 2), wrapped);
+}
+
+std::string KisrhombilleGrid::to_string()
+{
+    return "F" + Grid::to_string();
+}
+
+int KisrhombilleGrid::get_corners(XYPos pos, XYPos corners[MAX_CORNERS])
+{
+    XYPos v[3];
+    triangle_lattice_corners(pos / XYPos(3, 2), v, flip_triangles());
+    XYPos centre = triangle_lattice_centre(v);
+    int piece = pos.x % 3 + (pos.y % 2) * 3;
+    // Going clockwise, each corner of the triangle is followed by the
+    // midpoint of the next side; each piece joins one such pair to the centre.
+    XYPos ring[6];
+    for (int i = 0; i < 3; i++)
+    {
+        ring[i * 2] = v[i];
+        ring[i * 2 + 1] = (v[i] + v[(i + 1) % 3]) / XYPos(2, 2);
+    }
+    corners[0] = ring[piece];
+    corners[1] = ring[(piece + 1) % 6];
+    corners[2] = centre;
+    return 3;
+}
+
+XYPos KisrhombilleGrid::lattice_period()
+{
+    return XYPos(size.x / 3 * 2, size.y / 2 * 6);
+}
+
+double KisrhombilleGrid::unit_aspect()
+{
+    return 1 / std::sqrt(3);
+}
+
+int KisrhombilleGrid::edge_thickness(XYPos grid_pitch)
+{
+    return grid_pitch.x / 12 + 1;
+}
+
+std::string TriakisGrid::text_desciption()
+{
+    return polygon_grid_description("Triakis", size / XYPos(3, 1), wrapped);
+}
+
+std::string TriakisGrid::to_string()
+{
+    return "G" + Grid::to_string();
+}
+
+int TriakisGrid::get_corners(XYPos pos, XYPos corners[MAX_CORNERS])
+{
+    XYPos v[3];
+    triangle_lattice_corners(XYPos(pos.x / 3, pos.y), v, flip_triangles());
+    int piece = pos.x % 3;
+    corners[0] = v[piece];
+    corners[1] = v[(piece + 1) % 3];
+    corners[2] = triangle_lattice_centre(v);
+    return 3;
+}
+
+XYPos TriakisGrid::lattice_period()
+{
+    return XYPos(size.x / 3 * 2, size.y * 6);
+}
+
+double TriakisGrid::unit_aspect()
+{
+    return 1 / std::sqrt(3);
+}
+
+int TriakisGrid::edge_thickness(XYPos grid_pitch)
+{
+    return grid_pitch.x / 12 + 1;
+}
+
+// Big cells. Each tiling knows the shape its cells were cut from, and allows
+// the kinds of big cell that come out convex.
+
+int RhombilleGrid::get_parent_pieces(XYPos pos, XYPos pieces[MAX_PIECES])
+{
+    int first = pos.x / 3 * 3;
+    for (int i = 0; i < 3; i++)
+        pieces[i] = XYPos(first + i, pos.y);
+    return 3;
+}
+
+bool RhombilleGrid::merge_kind_allowed(int kind)
+{
+    // Two rhombi of a hexagon, or rhombi from neighbouring hexagons, make
+    // concave shapes; the whole hexagon (a "cube") is fine.
+    return kind == MERGE_PARENT;
+}
+
+int TetrakisGrid::get_parent_pieces(XYPos pos, XYPos pieces[MAX_PIECES])
+{
+    XYPos origin = (pos / XYPos(2, 2)) * XYPos(2, 2);
+    // Top, right, bottom, left.
+    pieces[0] = origin;
+    pieces[1] = origin + XYPos(1, 0);
+    pieces[2] = origin + XYPos(1, 1);
+    pieces[3] = origin + XYPos(0, 1);
+    return 4;
+}
+
+bool TetrakisGrid::merge_kind_allowed(int kind)
+{
+    // Square, half square, and a diamond across a square's side.
+    return true;
+}
+
+int KisrhombilleGrid::get_parent_pieces(XYPos pos, XYPos pieces[MAX_PIECES])
+{
+    XYPos first = pos / XYPos(3, 2) * XYPos(3, 2);
+    for (int i = 0; i < 6; i++)
+        pieces[i] = first + XYPos(i % 3, i / 3);
+    return 6;
+}
+
+bool KisrhombilleGrid::merge_kind_allowed(int kind)
+{
+    // Whole triangle, a kite or obtuse triangle from two neighbouring
+    // pieces, and a small equilateral triangle across a half side.
+    return true;
+}
+
+int TriakisGrid::get_parent_pieces(XYPos pos, XYPos pieces[MAX_PIECES])
+{
+    int first = pos.x / 3 * 3;
+    for (int i = 0; i < 3; i++)
+        pieces[i] = XYPos(first + i, pos.y);
+    return 3;
+}
+
+bool TriakisGrid::merge_kind_allowed(int kind)
+{
+    // Two pieces of one triangle make a concave dart; the whole triangle and
+    // a rhombus across a side are fine.
+    return kind != MERGE_PAIR;
+}
+
+// Row clue directions. The triangle based tilings use the triangle sides'
+// directions, like TriangleGrid; rhombille rows run across the rhombus edges.
+
+int RhombilleGrid::get_row_families(RowFamily families[MAX_ROW_FAMILIES])
+{
+    for (int i = 0; i < 3; i++)
+        families[i] = RowFamily{30.0 + 60.0 * i, 1.5, XYPosFloat(0, 0), true};
+    return 3;
+}
+
+int TetrakisGrid::get_row_families(RowFamily families[MAX_ROW_FAMILIES])
+{
+    // Rows and columns of squares, and the strips between full diagonals.
+    families[0] = RowFamily{0, 2, XYPosFloat(0, 0), false};
+    families[1] = RowFamily{90, 2, XYPosFloat(0, 0), false};
+    families[2] = RowFamily{45, std::sqrt(2), XYPosFloat(0, 0), false};
+    families[3] = RowFamily{135, std::sqrt(2), XYPosFloat(0, 0), false};
+    return 4;
+}
+
+int KisrhombilleGrid::get_row_families(RowFamily families[MAX_ROW_FAMILIES])
+{
+    // Half a row of triangles: band edges on the triangle sides and midway
+    // between them.
+    double height = 2 * std::sqrt(3);
+    for (int i = 0; i < 3; i++)
+        families[i] = RowFamily{60.0 * i, height / 2, XYPosFloat(2, 0), false};
+    return 3;
+}
+
+int TriakisGrid::get_row_families(RowFamily families[MAX_ROW_FAMILIES])
+{
+    // Whole rows of triangles, as in TriangleGrid; each piece stays in its
+    // triangle's row.
+    double height = 2 * std::sqrt(3);
+    for (int i = 0; i < 3; i++)
+        families[i] = RowFamily{60.0 * i, height, XYPosFloat(2, 0), false};
+    return 3;
+}
+
+// Recursed boards. Tetrakis boards are N x N squares with one square as the
+// innie. The triangle tilings use one big triangle of n rows, with one whole
+// small triangle as the innie; row r holds the 2r + 1 triangles centred under
+// the top one.
+
+bool TetrakisGrid::get_recursion(XYPos& board_ref, XYPos& innie_ref, int& scale)
+{
+    if (wrapped != WRAPPED_IN || size.x != size.y)
+        return false;
+    board_ref = XYPos(0, 0);
+    innie_ref = innie_pos / XYPos(2, 2) * XYPos(2, 2);
+    scale = size.x / 2;
+    return true;
+}
+
+bool TetrakisGrid::innie_allowed(XYPos anchor)
+{
+    // The top piece of a square that doesn't touch the edge of the board.
+    int squares = size.x / 2;
+    XYPos square = anchor / XYPos(2, 2);
+    return size.x == size.y && !(anchor.x & 1) && !(anchor.y & 1) &&
+           square.x >= 1 && square.y >= 1 && square.x <= squares - 2 && square.y <= squares - 2;
+}
+
+static bool triangle_in_big_triangle(XYPos tri, int rows)
+{
+    return tri.y >= 0 && tri.y < rows && abs(tri.x - (rows - 1)) <= tri.y;
+}
+
+static bool big_triangle_innie_allowed(XYPos tri, int rows, bool flip)
+{
+    // An upward triangle, like the board, clear of the board's edges.
+    bool up = !((tri.x ^ tri.y ^ int(flip)) & 1);
+    return up && tri.y >= 1 && tri.y <= rows - 2 && abs(tri.x - (rows - 1)) <= tri.y - 1;
+}
+
+int KisrhombilleGrid::board_rows()
+{
+    return size.y / 2;
+}
+
+bool KisrhombilleGrid::flip_triangles()
+{
+    return wrapped == WRAPPED_IN && ((board_rows() - 1) & 1);
+}
+
+bool KisrhombilleGrid::piece_in_board(XYPos pos)
+{
+    return wrapped != WRAPPED_IN || triangle_in_big_triangle(pos / XYPos(3, 2), board_rows());
+}
+
+bool KisrhombilleGrid::get_recursion(XYPos& board_ref, XYPos& innie_ref, int& scale)
+{
+    if (wrapped != WRAPPED_IN || size.x != 3 * (2 * board_rows() - 1))
+        return false;
+    // Bottom left corners of the board and of the innie's triangle.
+    XYPos tri = innie_pos / XYPos(3, 2);
+    board_ref = XYPos(0, 6 * board_rows());
+    innie_ref = XYPos(tri.x * 2, tri.y * 6 + 6);
+    scale = board_rows();
+    return true;
+}
+
+bool KisrhombilleGrid::innie_allowed(XYPos anchor)
+{
+    return size.x == 3 * (2 * board_rows() - 1) && anchor.x % 3 == 0 && anchor.y % 2 == 0 &&
+           big_triangle_innie_allowed(anchor / XYPos(3, 2), board_rows(), flip_triangles());
+}
+
+int TriakisGrid::board_rows()
+{
+    return size.y;
+}
+
+bool TriakisGrid::flip_triangles()
+{
+    return wrapped == WRAPPED_IN && ((board_rows() - 1) & 1);
+}
+
+bool TriakisGrid::piece_in_board(XYPos pos)
+{
+    return wrapped != WRAPPED_IN || triangle_in_big_triangle(XYPos(pos.x / 3, pos.y), board_rows());
+}
+
+bool TriakisGrid::get_recursion(XYPos& board_ref, XYPos& innie_ref, int& scale)
+{
+    if (wrapped != WRAPPED_IN || size.x != 3 * (2 * board_rows() - 1))
+        return false;
+    XYPos tri(innie_pos.x / 3, innie_pos.y);
+    board_ref = XYPos(0, 6 * board_rows());
+    innie_ref = XYPos(tri.x * 2, tri.y * 6 + 6);
+    scale = board_rows();
+    return true;
+}
+
+bool TriakisGrid::innie_allowed(XYPos anchor)
+{
+    return size.x == 3 * (2 * board_rows() - 1) && anchor.x % 3 == 0 &&
+           big_triangle_innie_allowed(XYPos(anchor.x / 3, anchor.y), board_rows(), flip_triangles());
+}
+
+// Rhombille recursed boards are a hexagon with sides `side` rhombus sides
+// long, centred on a corner where six rhombi meet so every side of the board
+// looks the same. The rhombi covering it take side + 1 hexagon rows, and
+// enough columns to reach its right corner.
+static XYPos rhombille_board_centre(int side)
+{
+    // The first hexagon corner of this kind at least 2 * side units from
+    // the left, in a column whose stagger puts it in the right row.
+    int col = (2 * side + 2) / 3 - 1;
+    int y = side + 1;
+    if ((y + col) & 1)
+        y++;
+    return XYPos(col * 3 + 3, y);
+}
+
+// Whether p, in 1 / mult lattice units, is strictly inside the board hexagon
+// once moved by board_shift(). Corners go clockwise on screen, so inside
+// points are on the right of every side.
+static XYPos rhombille_board_vertex(int i, int side)
+{
+    static const XYPos v[6] = {XYPos(1, 0), XYPos(3, 0), XYPos(4, 1),
+                               XYPos(3, 2), XYPos(1, 2), XYPos(0, 1)};
+    return v[i] * XYPos(side, side);
+}
+
+static bool inside_rhombille_board(XYPos p, int side, int mult)
+{
+    for (int i = 0; i < 6; i++)
+    {
+        XYPos a = rhombille_board_vertex(i, side) * XYPos(mult, mult);
+        XYPos b = rhombille_board_vertex((i + 1) % 6, side) * XYPos(mult, mult);
+        if (int64_t(b.x - a.x) * (p.y - a.y) - int64_t(b.y - a.y) * (p.x - a.x) <= 0)
+            return false;
+    }
+    return true;
+}
+
+XYPos RhombilleGrid::recursed_size(int side)
+{
+    XYPos centre = rhombille_board_centre(side);
+    return XYPos((centre.x + 2 * side + 1) / 3 * 3, side + 1);
+}
+
+bool RhombilleGrid::is_recursed_board()
+{
+    int side = size.y - 1;
+    return wrapped == WRAPPED_IN && side >= 1 && size == recursed_size(side);
+}
+
+XYPos RhombilleGrid::board_shift()
+{
+    if (!is_recursed_board())
+        return XYPos(0, 0);
+    int side = size.y - 1;
+    return rhombille_board_centre(side) - XYPos(2 * side, side);
+}
+
+int RhombilleGrid::rhombus_on_board(XYPos pos, XYPos rhombus[4])
+{
+    int col = pos.x / 3;
+    XYPos origin = XYPos(col * 3, pos.y * 2 + (col & 1)) - board_shift();
+    for (int i = 0; i < 4; i++)
+        rhombus[i] = origin + rhombille_corners[pos.x % 3][i];
+    if (!is_recursed_board())
+        return 3;
+    // The board's sides run along short diagonals, so each half is wholly on
+    // or off the board; test its centre, in thirds of a unit.
+    int side = size.y - 1;
+    int halves = 0;
+    if (inside_rhombille_board(rhombus[3] + rhombus[0] + rhombus[1], side, 3))
+        halves |= 1;
+    if (inside_rhombille_board(rhombus[1] + rhombus[2] + rhombus[3], side, 3))
+        halves |= 2;
+    return halves;
+}
+
+int RhombilleGrid::piece_corners(XYPos pos, XYPos corners[MAX_CORNERS])
+{
+    XYPos rhombus[4];
+    int halves = rhombus_on_board(pos, rhombus);
+    if (!halves)
+        return 0;
+    // A rhombus cut by the board's edge is the equilateral triangle left on it.
+    if (halves == 1 || halves == 2)
+    {
+        int first = (halves == 1) ? 3 : 1;
+        for (int i = 0; i < 3; i++)
+            corners[i] = rhombus[(first + i) % 4];
+        return 3;
+    }
+    for (int i = 0; i < 4; i++)
+        corners[i] = rhombus[i];
+    return 4;
+}
+
+bool RhombilleGrid::corner_pair(XYPos pos, XYPos& other)
+{
+    if (!is_recursed_board())
+        return false;
+    XYPos mine[MAX_CORNERS];
+    if (piece_corners(pos, mine) != 3)
+        return false;
+    int side = size.y - 1;
+    int corner = -1;
+    for (int i = 0; i < 3 && corner < 0; i++)
+        for (int v = 0; v < 6; v++)
+            if (mine[i] == rhombille_board_vertex(v, side))
+                corner = i;
+    if (corner < 0)
+        return false;
+    // The partner is the other triangle at that corner, sharing an edge
+    // running out of it. It is always a few pieces away.
+    for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -6; dx <= 6; dx++)
+        {
+            XYPos q = pos + XYPos(dx, dy);
+            if (q == pos || !q.inside(size))
+                continue;
+            XYPos theirs[MAX_CORNERS];
+            if (piece_corners(q, theirs) != 3)
+                continue;
+            int shared = 0;
+            bool has_corner = false;
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                    if (mine[i] == theirs[j])
+                    {
+                        shared++;
+                        has_corner |= (i == corner);
+                    }
+            if (shared == 2 && has_corner)
+            {
+                other = q;
+                return true;
+            }
+        }
+    return false;
+}
+
+bool RhombilleGrid::piece_in_board(XYPos pos)
+{
+    XYPos rhombus[4];
+    if (!rhombus_on_board(pos, rhombus))
+        return false;
+    // The second triangle of a corner pair is part of the first's cell.
+    XYPos other;
+    return !(corner_pair(pos, other) && other < pos);
+}
+
+bool RhombilleGrid::piece_can_merge(XYPos pos)
+{
+    XYPos rhombus[4];
+    return rhombus_on_board(pos, rhombus) == 3;
+}
+
+bool RhombilleGrid::get_recursion(XYPos& board_ref, XYPos& innie_ref, int& scale)
+{
+    if (!is_recursed_board())
+        return false;
+    // Left corners of the board and of the innie's hexagon, which is the
+    // first corner of its top rhombus.
+    XYPos rhombus[4];
+    rhombus_on_board(XYPos(innie_pos.x / 3 * 3, innie_pos.y), rhombus);
+    board_ref = XYPos(0, size.y - 1);
+    innie_ref = rhombus[0];
+    scale = size.y - 1;
+    return true;
+}
+
+bool RhombilleGrid::innie_allowed(XYPos anchor)
+{
+    // A whole hexagon clear of the board's edges.
+    if (!is_recursed_board() || anchor.x % 3)
+        return false;
+    for (int piece = 0; piece < 3; piece++)
+    {
+        XYPos rhombus[4];
+        rhombus_on_board(anchor + XYPos(piece, 0), rhombus);
+        for (int i = 0; i < 4; i++)
+            if (!inside_rhombille_board(rhombus[i], size.y - 1, 1))
+                return false;
+    }
+    return true;
 }

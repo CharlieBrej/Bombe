@@ -558,6 +558,115 @@ void test_ordinary_wildcard_still_loses_data()
         rule, GridRule::LOSES_DATA);
 }
 
+// Exposes the rhombille geometry the recursed board tests check.
+class TestRhombilleGrid : public RhombilleGrid
+{
+public:
+    TestRhombilleGrid(XYPos size_)
+    {
+        size = size_;
+        wrapped = WRAPPED_IN;
+    }
+    using RhombilleGrid::get_corners;
+    using RhombilleGrid::piece_in_board;
+    using RhombilleGrid::innie_allowed;
+    using RhombilleGrid::get_recursion;
+};
+
+void test_rhombille_recursed_geometry()
+{
+    // Equilateral triangles cut from rhombi along the board's edges, from
+    // working the board out by hand for each size. The two triangles at a
+    // corner of the board are joined into one rhombus, so only those along
+    // the sides are left.
+    const int expected_triangles[] = {0, 0, 0, 6, 0, 6, 12, 6};
+    for (int side = 1; side <= 7; side++)
+    {
+        std::string name = "rhombille recursed side " + std::to_string(side);
+        XYPos size = RhombilleGrid::recursed_size(side);
+        expect_condition((name + " fits in XYSet").c_str(),
+                         size.x <= 32 && size.y <= 32 && size.x % 3 == 0);
+
+        TestRhombilleGrid g(size);
+        // In triangles: the board hexagon is 6 * side^2 of them.
+        int area = 0;
+        int triangles = 0;
+        XYPos extent;
+        FOR_XY(pos, XYPos(), size)
+        {
+            if (!g.piece_in_board(pos))
+                continue;
+            XYPos corners[4];
+            int n = g.get_corners(pos, corners);
+            area += n - 2;
+            if (n == 3)
+                triangles++;
+            for (int i = 0; i < n; i++)
+                extent = XYPos(std::max(extent.x, corners[i].x), std::max(extent.y, corners[i].y));
+        }
+        expect_integer((name + " area").c_str(), area, 6 * side * side);
+        expect_integer((name + " helper triangles").c_str(), triangles, expected_triangles[side]);
+        expect_condition((name + " bounding box").c_str(), extent == XYPos(4 * side, 2 * side));
+
+        int innies = 0;
+        FOR_XY(pos, XYPos(), size)
+            if (g.piece_in_board(pos) && g.innie_allowed(pos))
+                innies++;
+        // Smaller boards have no hexagon clear of the edges.
+        expect_condition((name + " innie spots").c_str(), (innies > 0) == (side >= 3));
+    }
+
+    // A size that doesn't fit the hexagon isn't a recursed board.
+    TestRhombilleGrid odd(XYPos(12, 3));
+    XYPos board_ref, innie_ref;
+    int scale;
+    expect_condition("rhombille recursed wrong size",
+                     !odd.get_recursion(board_ref, innie_ref, scale));
+}
+
+void test_rhombille_recursed_board()
+{
+    for (int side = 3; side <= 7; side++)
+    {
+        std::string name = "rhombille recursed board side " + std::to_string(side);
+        RhombilleGrid g;
+        g.randomize(RhombilleGrid::recursed_size(side), Grid::WRAPPED_IN, 3, 0, 0);
+        expect_condition((name + " has innie").c_str(),
+                         g.merged.count(g.innie_pos) && !g.get_squares().get(g.innie_pos));
+
+        XYSet squares = g.get_squares();
+        bool symmetric = true;
+        bool connected = true;
+        FOR_XY_SET(a, squares)
+        {
+            XYSet neighbours = g.get_neighbors(a);
+            if (neighbours.none() || neighbours.get(a))
+                connected = false;
+            FOR_XY_SET(b, neighbours)
+                if (!squares.get(b) || !g.get_neighbors(b).get(a))
+                    symmetric = false;
+        }
+        expect_condition((name + " neighbours symmetric").c_str(), symmetric);
+        expect_condition((name + " neighbours sane").c_str(), connected);
+
+        // Cells on the innie's edge also touch the copy of the board's edge
+        // inside it, so they have more neighbours than on a flat board.
+        RhombilleGrid flat(g);
+        flat.wrapped = Grid::WRAPPED_NOT;
+        bool through_innie = false;
+        FOR_XY_SET(a, squares)
+            if (g.get_neighbors(a).count() > (flat.get_neighbors(a) & squares).count())
+                through_innie = true;
+        expect_condition((name + " neighbours through innie").c_str(), through_innie);
+
+        std::string s = g.to_string();
+        Grid* loaded = Grid::Load(s);
+        expect_condition((name + " round trip").c_str(),
+                         loaded->to_string() == s && loaded->get_squares() == squares);
+        delete loaded;
+    }
+}
+
 }
 
 int main()
@@ -577,6 +686,8 @@ int main()
     test_second_wildcard_implication();
     test_tautological_wildcard_consequent();
     test_ordinary_wildcard_still_loses_data();
+    test_rhombille_recursed_geometry();
+    test_rhombille_recursed_board();
 
     if (failures)
         std::cerr << failures
