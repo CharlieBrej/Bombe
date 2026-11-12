@@ -25,7 +25,7 @@ static std::string default_socket_path()
 static void usage(const char* program)
 {
     std::cerr << "Usage: " << program
-              << " [--socket PATH] {state|rules|add-rule JSON|hint|hint-status|hint-clear|ping|help}\n";
+              << " [--socket PATH] {state|rules|add-rule JSON|hint|hint-status|hint-clear|load-level LEVEL|ping|help}\n";
 }
 
 int main(int argc, char* argv[])

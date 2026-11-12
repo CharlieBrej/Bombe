@@ -334,6 +334,22 @@ public:
     {
         XYPos pos;
         double size;
+        // Klein bottle and Moebius strip: which axes this copy of the board
+        // is mirrored in, and the size of one board in pixels.
+        XYPos flip = XYPos(0, 0);
+        XYPos board = XYPos(0, 0);
+        // How far to move whatever is drawn in a cell occupying `cell` so
+        // this copy shows the board mirrored. Cells are moved, not flipped,
+        // so clues stay readable.
+        XYPos cell_shift(XYRect cell) const
+        {
+            XYPos shift;
+            if (flip.x)
+                shift.x = board.x - 2 * cell.pos.x - cell.size.x;
+            if (flip.y)
+                shift.y = board.y - 2 * cell.pos.y - cell.size.y;
+            return shift;
+        }
     };
 
     EdgePos best_edge_pos;

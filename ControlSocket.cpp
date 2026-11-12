@@ -171,10 +171,18 @@ std::string ControlSocket::execute(const std::string& request)
             return std::string("error: cannot add rule: ") + error.what() + '\n';
         }
     }
+    const std::string load_level_prefix = "load-level ";
+    if (request.compare(0, load_level_prefix.size(), load_level_prefix) == 0)
+    {
+        // Plays a level string, like pasting a level from the clipboard.
+        game_state.load_grid(request.substr(load_level_prefix.size()));
+        game_state.current_level_is_temp = true;
+        return "Loaded " + game_state.grid->text_desciption() + ".\n";
+    }
     if (request == "ping")
         return "pong\n";
     if (request == "help")
-        return "Commands: state, rules, add-rule JSON, hint, hint-status, hint-clear, ping, help\n";
+        return "Commands: state, rules, add-rule JSON, hint, hint-status, hint-clear, load-level LEVEL, ping, help\n";
     return "error: unknown command: " + request + "\n";
 }
 
