@@ -169,8 +169,12 @@ While the game is running, query it with:
 ./BombeControl hint
 ./BombeControl hint-status
 ./BombeControl hint-clear
+./BombeControl load-level LEVEL
 ./BombeControl ping
 ```
+
+`load-level` plays a level string, such as one printed by
+`./GridGenerator one REQUEST`, the same way as pasting a level from the clipboard.
 
 `hint` starts the same asynchronous reduction as the in-game Hint button. It
 reports cells that are logically determined by the shown regions, then hides

@@ -1,8 +1,79 @@
 #include "Grid.h"
 #include "LevelSet.h"
 #include <algorithm>
+#include <cstring>
 
 static pthread_mutex_t glob_mutex;
+
+// Builds one level from a generator request string:
+// (type)(x)(y)(wrap)(merged)(rows)(+-)(x_y)(x_y3)(x_y_z)(exc)(parity)(xor1)(xor11)(prime)(neg)(if_then)
+// Type is A=hexagon, B=square, C=triangle, D=rhombille, E=tetrakis square,
+// F=kisrhombille, G=triakis triangular.
+static Grid* make_level(const char* req)
+{
+    Grid* g;
+
+    char c = req[0];
+    if (c == 'A')
+        g = new HexagonGrid ();
+    else if (c == 'B')
+        g = new SquareGrid ();
+    else if (c == 'C')
+        g = new TriangleGrid ();
+    else if (c == 'D')
+        g = new RhombilleGrid ();
+    else if (c == 'E')
+        g = new TetrakisGrid ();
+    else if (c == 'F')
+        g = new KisrhombilleGrid ();
+    else if (c == 'G')
+        g = new TriakisGrid ();
+    else
+    {
+        assert(0);
+        return 0;
+    }
+    XYPos siz;
+    c = req[1];
+    if (c >= 'A' && c <= 'Z')
+        siz.x = (c - 'A') + 10;
+    else
+        siz.x = c - '0';
+    c = req[2];
+    if (c >= 'A' && c <= 'Z')
+        siz.y = (c - 'A') + 10;
+    else
+        siz.y = c - '0';
+    int wrap = req[3] - '0';
+    if ((wrap == Grid::WRAPPED_KLEIN || wrap == Grid::WRAPPED_MOBIUS) && req[0] != 'B')
+    {
+        fprintf(stderr, "Klein bottle and Moebius boards are square grid only\n");
+        return 0;
+    }
+    int merged = req[4] - '0';
+    int rows = req[5] - '0';
+    int pm = req[6] - '0';
+    int xy = req[7] - '0';
+    int xy3 = req[8] - '0';
+    int xyz = req[9] - '0';
+    int exc = req[10] - '0';
+    int parity = req[11] - '0';
+    int xor1 = req[12] - '0';
+    int xor11 = req[13] - '0';
+    int prime = req[14] - '0';
+    int negative = req[15] - '0';
+    int if_then = req[16] - '0';
+
+    // randomize() compares the row chance with rnd % 10, so rows * 10 puts a
+    // clue on every row. The newer tilings have many more rows, so for them
+    // the digit is how many row clues to start with, like the original levels.
+    bool newer_tiling = (req[0] >= 'D');
+    g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10, negative * 10);
+    if (newer_tiling)
+        g->limit_row_clues(rows);
+    g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime, if_then);
+    return g;
+}
 
 void* exec(void* dummy)
 {
@@ -207,49 +278,10 @@ void* exec(void* dummy)
             {
                 printf("%lu of %d\n", third_global_level_sets[j][cnt]->levels.size(), params[i].cnt);
                 pthread_mutex_unlock(&glob_mutex);
-                const char* req = params[i].pars;
-                Grid* g;
-
-                char c = req[0];
-                if (c == 'A')
-                    g = new HexagonGrid ();
-                else if (c == 'B')
-                    g = new SquareGrid ();
-                else if (c == 'C')
-                    g = new TriangleGrid ();
-                else
-                {
-                    assert(0);
+                Grid* g = make_level(params[i].pars);
+                if (!g)
                     return 0;
-                }
-                XYPos siz;
-                c = req[1];
-                if (c >= 'A' && c <= 'Z')
-                    siz.x = (c - 'A') + 10;
-                else
-                    siz.x = c - '0';
-                c = req[2];
-                if (c >= 'A' && c <= 'Z')
-                    siz.y = (c - 'A') + 10;
-                else
-                    siz.y = c - '0';
-                int wrap = req[3] - '0';
-                int merged = req[4] - '0';
-                int rows = req[5] - '0';
-                int pm = req[6] - '0';
-                int xy = req[7] - '0';
-                int xy3 = req[8] - '0';
-                int xyz = req[9] - '0';
-                int exc = req[10] - '0';
-                int parity = req[11] - '0';
-                int xor1 = req[12] - '0';
-                int xor11 = req[13] - '0';
-                int prime = req[14] - '0';
-                int negative = req[15] - '0';
-                int if_then = req[16] - '0';
-
-                g->randomize(siz, Grid::WrapType(wrap), merged, rows * 10, negative * 10);
-                g->make_harder(pm, xy, xy3, xyz, exc, parity, xor1, xor11, prime, if_then);
+                int if_then = params[i].pars[16] - '0';
 
                 if (if_then && !g->uses_if_then_clues())
                 {
@@ -300,6 +332,37 @@ void global_mutex_unlock()
 
 int main( int argc, char* argv[] )
 {
+    // "GridGenerator one <request>" prints a single level instead of
+    // filling levels.data.
+    if (argc == 3 && std::string(argv[1]) == "one")
+    {
+        if (strlen(argv[2]) < 17)
+        {
+            fprintf(stderr, "request must be 17 characters\n");
+            return 1;
+        }
+        Grid* g = make_level(argv[2]);
+        if (!g)
+            return 1;
+        if (g->wrapped == Grid::WRAPPED_IN && !g->merged.count(g->innie_pos))
+        {
+            fprintf(stderr, "this tiling can't be recursed at this size\n");
+            return 1;
+        }
+        std::string s = g->to_string();
+        delete g;
+        Grid* check = Grid::Load(s);
+        bool solveable = check->is_solveable();
+        delete check;
+        if (!solveable)
+        {
+            fprintf(stderr, "generated level is not solveable\n");
+            return 1;
+        }
+        printf("%s\n", s.c_str());
+        return 0;
+    }
+
     //grid_set_rnd(1);
     const int TNUM = 15 ;
     pthread_t thread[TNUM];
